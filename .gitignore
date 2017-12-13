@@ -101,4 +101,8 @@ ENV/
 .mypy_cache/
 
 
+# alber development ignores.
 *~
+bin3.5*
+sak*.py
+nosetests.cfg
