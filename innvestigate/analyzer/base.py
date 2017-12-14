@@ -9,20 +9,20 @@ from io import open
 import six
 # End: Python 2/3 compatability header small
 
-# Todo: fix:
-#from ...utils.tests import dryrun
-from innvestigate.utils.tests import dryrun
+
+__all__ = ["BaseAnalyzer"]
 
 
-class TestDryRunAnalyzerTestCase(dryrun.AnalyzerTestCase):
-    """
-    Sanity test for the TestCase.
-    """
+class BaseAnalyzer(object):
 
-    def _method(self, output_layer):
+    properties = {
+        "name": "undefined",
+        "show_as": "undefined",
+    }
 
-        class TestAnalyzer(object):
-            def analyze(self, X):
-                return X
+    def __init__(self, model):
+        self._model = model
+        pass
 
-        return TestAnalyzer()
+    def explain(self, X):
+        raise NotImplementedError("Has to be implemented by the subclass")

@@ -9,20 +9,25 @@ from io import open
 import six
 # End: Python 2/3 compatability header small
 
-# Todo: fix:
+# todo:fix relative imports:
 #from ...utils.tests import dryrun
+
+#from ...explainer import InputExplainer
+#from ...explainer import RandomExplainer
+
 from innvestigate.utils.tests import dryrun
 
+from innvestigate.analyzer import InputAnalyzer
+from innvestigate.analyzer import RandomAnalyzer
 
-class TestDryRunAnalyzerTestCase(dryrun.AnalyzerTestCase):
-    """
-    Sanity test for the TestCase.
-    """
 
-    def _method(self, output_layer):
+class TestInputAnalyzer(dryrun.AnalyzerTestCase):
 
-        class TestAnalyzer(object):
-            def analyze(self, X):
-                return X
+    def _method(self, model):
+        return InputAnalyzer(model)
 
-        return TestAnalyzer()
+
+class TestRandomAnalyzer(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return RandomAnalyzer(model)

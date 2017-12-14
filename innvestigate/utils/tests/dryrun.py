@@ -18,13 +18,13 @@ from . import networks
 
 __all__ = [
     "BaseTestCase",
-    "ExplainerTestCase",
+    "AnalyzerTestCase",
 ]
 
 
 class BaseTestCase(unittest.TestCase):
     """
-    A dryrun test on various networks for an explanation method.
+    A dryrun test on various networks for an analyzing method.
 
     For each network the test check that the generated network
     has the right output shape, can be compiled
@@ -44,32 +44,32 @@ class BaseTestCase(unittest.TestCase):
         pass
 
 
-class ExplainerTestCase(BaseTestCase):
+class AnalyzerTestCase(BaseTestCase):
 
-    def _method(self, output_layer):
+    def _method(self, model):
         raise NotImplementedError("Set in subclass.")
 
     def _assert(self, method, network, x, explanation):
         pass
 
     def _apply_test(self, method, network):
-        # Get explainer.
-        explainer = method(network["out"])
+        # Get analyzer.
+        analyzer = method(network["out"])
         # Dryrun.
         x = np.random.rand(1, *(network["input_shape"][1:]))
-        explanation = explainer.explain(x)
-        self.assertEqual(tuple(explanation.shape[1:]),
+        analysis = analyzer.analyze(x)
+        self.assertEqual(tuple(analysis.shape[1:]),
                          tuple(network["input_shape"][1:]))
-        self._assert(method, network, x, explanation)
+        self._assert(method, network, x, analysis)
         pass
 
 
 class PatternComputerTestCase(BaseTestCase):
 
-    def _method(self, output_layer):
+    def _method(self, model):
         raise NotImplementedError("Set in subclass.")
 
-    def _assert(self, method, network, x, explanation):
+    def _assert(self, method, network, x, patterns):
         pass
 
     def _apply_test(self, method, network):
