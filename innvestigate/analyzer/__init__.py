@@ -1,7 +1,7 @@
 
 from .base import *
 
-#from .gradient_based import *
+from .gradient_based import *
 from .misc import *
 #from .pattern_based import *
 #from .relevance_based import *
@@ -17,7 +17,7 @@ def create_analyzer(name, moderl, **kwargs):
         # "gradient": GradientAnalyzer,
         # "deconvnet": DeConvNetAnalyzer,
         # "guided": GuidedBackpropAnalyzer,
-        # "gradient.alt": AlternativeGradientAnalyzer,
+        "gradient.baseline": BaselineGradientAnalyzer,
 
         # # Relevance based
         # "lrp.z": LRPZAnalyzer,
