@@ -10,6 +10,8 @@ import six
 # End: Python 2/3 compatability header small
 
 
+import keras.backend as K
+import keras.models
 import numpy as np
 import unittest
 
@@ -35,6 +37,11 @@ class BaseTestCase(unittest.TestCase):
         raise NotImplementedError("Set in subclass.")
 
     def test_dryrun(self):
+        # test shapes have channels first.
+        # todo: check why import above fails
+        import keras.backend as K 
+        K.set_image_data_format("channels_first")
+
         for network in networks.iterator():
             if six.PY2:
                 self._apply_test(self._method, network)
@@ -53,8 +60,10 @@ class AnalyzerTestCase(BaseTestCase):
         pass
 
     def _apply_test(self, method, network):
+        # Create model.
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         # Get analyzer.
-        analyzer = method(network["out"])
+        analyzer = method(model)
         # Dryrun.
         x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
@@ -73,8 +82,10 @@ class PatternComputerTestCase(BaseTestCase):
         pass
 
     def _apply_test(self, method, network):
-        # Get explainer.
-        computer = method(network["out"])
+        # Create model.
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        # Get analyzer.
+        analyzer = method(model)
         # Dryrun.
         x = np.random.rand(10, *(network["input_shape"][1:]))
         patterns = computer.compute_patterns(x, 2)

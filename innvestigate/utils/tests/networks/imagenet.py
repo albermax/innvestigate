@@ -15,11 +15,8 @@ import six
 ###############################################################################
 
 
-#import lasagne.init
-#import lasagne.layers
-#import lasagne.nonlinearities
+import keras.layers
 import numpy as np
-#import theano
 
 from . import base
 
@@ -78,15 +75,16 @@ def vgg16(activation=None):
         # todo: take care of theano to keras port:
         # flip_filters=False))
     ))
-    
-    net["dense_1"] = base.dense_layer(net["conv_5_pool"], units=4096,
+
+    net["conv_flat"] = keras.layers.Flatten()(net["conv_5_pool"])
+    net["dense_1"] = base.dense_layer(net["conv_flat"], units=4096,
                                       activation=activation,
                                       kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = base.dropout_layer(net['dense_1'], 0.5)
+    net["dense_1_dropout"] = base.dropout_layer(net["dense_1"], 0.5)
     net["dense_2"] = base.dense_layer(net["dense_1_dropout"], units=4096,
                                       activation=activation,
                                       kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = base.dropout_layer(net['dense_2'], 0.5)
+    net["dense_2_dropout"] = base.dropout_layer(net["dense_2"], 0.5)
     net["out"] = base.dense_layer(net["dense_2_dropout"], units=output_n,
                                   activation="softmax",
                                   kernel_initializer="glorot_uniform")
@@ -147,7 +145,7 @@ def vgg16_all_conv(activation=None):
                                      # flip_filters=False,
                                      activation=activation,
                                      kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = base.dropout_layer(net['dense_1'], 0.5)
+    net["dense_1_dropout"] = base.dropout_layer(net["dense_1"], 0.5)
     net["dense_2"] = base.conv_layer(net["dense_1_dropout"],
                                      filters=4096, kernel_size=1,
                                      padding="valid",
@@ -155,7 +153,7 @@ def vgg16_all_conv(activation=None):
                                      # flip_filters=False,
                                      activation=activation,
                                      kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = base.dropout_layer(net['dense_2'], 0.5)
+    net["dense_2_dropout"] = base.dropout_layer(net["dense_2"], 0.5)
     net["dense_3"] = base.conv_layer(net["dense_2_dropout"], output_n, 1,
                                      padding="valid",
                                      # todo: take care of theano to keras port:

@@ -21,13 +21,13 @@ import keras.layers
 __all__ = [
     "log_reg",
 
-    "mlp_1dense",
     "mlp_2dense",
+    "mlp_3dense",
 
-    "cnn_1convb_1dense",
-    "cnn_2convb_1dense",
+    "cnn_1convb_2dense",
     "cnn_2convb_2dense",
-    "cnn_3convb_2dense",
+    "cnn_2convb_3dense",
+    "cnn_3convb_3dense",
 ]
 
 
@@ -81,7 +81,8 @@ def log_reg(input_shape, output_n, activation=None):
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["out"] = dense_layer(net["in"], units=output_n,
+    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["out"] = dense_layer(net["in_flat"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")
 
@@ -98,17 +99,18 @@ def log_reg(input_shape, output_n, activation=None):
 ###############################################################################
 
 
-def mlp_1dense(input_shape, output_n, activation=None,
+def mlp_2dense(input_shape, output_n, activation=None,
                dense_units=512, dropout_rate=0.25):
     if activation is None:
         activation = "relu"
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["dense_1"] = dense_layer(net["in"], units=dense_units,
+    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["dense_1"] = dense_layer(net["in_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")
@@ -121,21 +123,22 @@ def mlp_1dense(input_shape, output_n, activation=None,
     return net
 
 
-def mlp_2dense(input_shape, output_n, activation=None,
+def mlp_3dense(input_shape, output_n, activation=None,
                dense_units=512, dropout_rate=0.25):
     if activation is None:
         activation = "relu"
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["dense_1"] = dense_layer(net["in"], units=dense_units,
+    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["dense_1"] = dense_layer(net["in_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["dense_2"] = dense_layer(net["dense_1_dropout"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = dropout_layer(net['dense_2'], dropout_rate)
+    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")
@@ -153,7 +156,7 @@ def mlp_2dense(input_shape, output_n, activation=None,
 ###############################################################################
 
 
-def cnn_1convb_1dense(input_shape, output_n, activation=None,
+def cnn_1convb_2dense(input_shape, output_n, activation=None,
                       dense_units=512, dropout_rate=0.25):
     if activation is None:
         activation = "relu"
@@ -162,37 +165,11 @@ def cnn_1convb_1dense(input_shape, output_n, activation=None,
     net["in"] = input_layer(shape=input_shape)
     net.update(conv_pool(net["in"], 2, "conv_1", 128,
                          activation=activation))
-    net["dense_1"] = dense_layer(net["conv_1_pool"], units=dense_units,
+    net["conv_flat"] = keras.layers.Flatten()(net["conv_1_pool"])
+    net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
-    net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
-                             activation="softmax",
-                             kernel_initializer="glorot_uniform")
-
-    net.update({
-        "input_shape": input_shape,
-
-        "output_n": output_n,
-    })
-    return net
-
-
-def cnn_2convb_1dense(input_shape, output_n, activation=None,
-                      dense_units=512, dropout_rate=0.25):
-    if activation is None:
-        activation = "relu"
-
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 128,
-                         activation=activation))
-    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
-                         activation=activation))
-    net["dense_1"] = dense_layer(net["conv_2_pool"], units=dense_units,
-                                 activation=activation,
-                                 kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")
@@ -216,14 +193,43 @@ def cnn_2convb_2dense(input_shape, output_n, activation=None,
                          activation=activation))
     net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
                          activation=activation))
-    net["dense_1"] = dense_layer(net["conv_2_pool"], units=dense_units,
+    net["conv_flat"] = keras.layers.Flatten()(net["conv_2_pool"])
+    net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
+    net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
+                             activation="softmax",
+                             kernel_initializer="glorot_uniform")
+
+    net.update({
+        "input_shape": input_shape,
+
+        "output_n": output_n,
+    })
+    return net
+
+
+def cnn_2convb_3dense(input_shape, output_n, activation=None,
+                      dense_units=512, dropout_rate=0.25):
+    if activation is None:
+        activation = "relu"
+
+    net = {}
+    net["in"] = input_layer(shape=input_shape)
+    net.update(conv_pool(net["in"], 2, "conv_1", 128,
+                         activation=activation))
+    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
+                         activation=activation))
+    net["conv_flat"] = keras.layers.Flatten()(net["conv_2_pool"])
+    net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
+                                 activation=activation,
+                                 kernel_initializer="glorot_uniform")
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["dense_2"] = dense_layer(net["dense_1_dropout"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = dropout_layer(net['dense_2'], dropout_rate)
+    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")
@@ -236,7 +242,7 @@ def cnn_2convb_2dense(input_shape, output_n, activation=None,
     return net
 
 
-def cnn_3convb_2dense(input_shape, output_n, activation=None,
+def cnn_3convb_3dense(input_shape, output_n, activation=None,
                       dense_units=512, dropout_rate=0.25):
     if activation is None:
         activation = "relu"
@@ -249,49 +255,15 @@ def cnn_3convb_2dense(input_shape, output_n, activation=None,
                          activation=activation))
     net.update(conv_pool(net["conv_2_pool"], 2, "conv_3", 128,
                          activation=activation))
-    net["dense_1"] = dense_layer(net["conv_3_pool"], units=dense_units,
+    net["conv_flat"] = keras.layers.Flatten()(net["conv_3_pool"])
+    net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], dropout_rate)
+    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["dense_2"] = dense_layer(net["dense_1_dropout"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = dropout_layer(net['dense_2'], dropout_rate)
-    net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
-                             activation="softmax",
-                             kernel_initializer="glorot_uniform")
-
-    net.update({
-        "input_shape": input_shape,
-
-        "output_n": output_n,
-    })
-    return net
-
-
-def cnn_3convb_3dense(input_shape, output_n, activation=None):
-    if activation is None:
-        activation = "relu"
-
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 64,
-                         activation=activation))
-    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
-                         activation=activation))
-    net.update(conv_pool(net["conv_2_pool"], 3, "conv_3", 256,
-                         activation=activation))
-    net['conv_3_dropout'] = dropout_layer(net['conv_3_pool'], 0.25)
-
-    net["dense_1"] = dense_layer(net["conv_3_dropout"], units=1024,
-                                 activation=activation,
-                                 kernel_initializer="glorot_uniform")
-    net['dense_1_dropout'] = dropout_layer(net['dense_1'], 0.5)
-
-    net["dense_2"] = dense_layer(net["dense_1_dropout"], units=1024,
-                                 activation=activation,
-                                 kernel_initializer="glorot_uniform")
-    net['dense_2_dropout'] = dropout_layer(net['dense_2'], 0.5)
+    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
                              activation="softmax",
                              kernel_initializer="glorot_uniform")

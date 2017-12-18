@@ -21,13 +21,12 @@ from . import base
 __all__ = [
     "log_reg",
 
-    "mlp_1dense",
     "mlp_2dense",
+    "mlp_3dense",
 
-    "cnn_1convb_1dense",
-    "cnn_2convb_1dense",
+    "cnn_1convb_2dense",
     "cnn_2convb_2dense",
-    "cnn_3convb_2dense",
+    "cnn_2convb_3dense",
     "cnn_3convb_3dense",
 ]
 
@@ -56,31 +55,25 @@ def log_reg(activation=None):
 ###############################################################################
 
 
-def mlp_1dense(activation=None):
-    return base.mlp_1dense(__input_shape__, __output_n__,
-                           activation=activation,
-                           dense_units=1024, dropout_rate=0.5)
-
-
 def mlp_2dense(activation=None):
     return base.mlp_2dense(__input_shape__, __output_n__,
                            activation=activation,
                            dense_units=1024, dropout_rate=0.5)
 
 
+def mlp_3dense(activation=None):
+    return base.mlp_3dense(__input_shape__, __output_n__,
+                           activation=activation,
+                           dense_units=1024, dropout_rate=0.5)
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-def cnn_1convb_1dense(activation=None):
-    return base.cnn_1convb_1dense(__input_shape__, __output_n__,
-                                  activation=activation,
-                                  dense_units=1024, dropout_rate=0.5)
-
-
-def cnn_2convb_1dense(activation=None):
-    return base.cnn_2convb_1dense(__input_shape__, __output_n__,
+def cnn_1convb_2dense(activation=None):
+    return base.cnn_1convb_2dense(__input_shape__, __output_n__,
                                   activation=activation,
                                   dense_units=1024, dropout_rate=0.5)
 
@@ -91,12 +84,13 @@ def cnn_2convb_2dense(activation=None):
                                   dense_units=1024, dropout_rate=0.5)
 
 
-def cnn_3convb_2dense(activation=None):
-    return base.cnn_3convb_2dense(__input_shape__, __output_n__,
+def cnn_2convb_3dense(activation=None):
+    return base.cnn_2convb_3dense(__input_shape__, __output_n__,
                                   activation=activation,
                                   dense_units=1024, dropout_rate=0.5)
 
 
 def cnn_3convb_3dense(activation=None):
     return base.cnn_3convb_3dense(__input_shape__, __output_n__,
-                                  activation=activation)
+                                  activation=activation,
+                                  dense_units=1024, dropout_rate=0.5)
