@@ -10,13 +10,28 @@ import six
 # End: Python 2/3 compatability header small
 
 
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 from .. import layers as ilayers
+from ..utils.keras import graph
 
 import keras.layers
 import keras.models
 
 
-__all__ = ["BaseAnalyzer", "BaseNetworkAnalyzer"]
+__all__ = [
+    "BaseAnalyzer",
+    "BaseNetworkAnalyzer",
+    "BaseReverseNetworkAnalyzer"
+]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class BaseAnalyzer(object):
@@ -34,14 +49,12 @@ class BaseAnalyzer(object):
         raise NotImplementedError("Has to be implemented by the subclass")
 
 
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class BaseNetworkAnalyzer(BaseAnalyzer):
-
-    properties = {
-        "name": "undefined",
-        "show_as": "undefined",
-    }
 
     def __init__(self, model, neuron_selection_mode="max_activation"):
         super(BaseNetworkAnalyzer, self).__init__(model)
@@ -61,13 +74,13 @@ class BaseNetworkAnalyzer(BaseAnalyzer):
             raise NotImplementedError("Only a stub present so far.")
             neuron_indexing = keras.layers.Input(shape=[None, None])
             neuron_selection_inputs += neuron_indexing
- 
+
             model_output = keras.layers.Index()([model_output, neuron_indexing])
 
         model = keras.models.Model(inputs=model_inputs+neuron_selection_inputs,
                                    outputs=model_output)
         analysis_output = self._create_analysis(model)
-        
+
         self._analyzer_model = keras.models.Model(
             inputs=model_inputs+neuron_selection_inputs,
             outputs=analysis_output)
@@ -91,3 +104,15 @@ class BaseNetworkAnalyzer(BaseAnalyzer):
             return self._analyzer_model.predict_on_batch(X, neuron_selection)
         else:
             return self._analyzer_model.predict_on_batch(X)
+
+
+class BaseReverseNetworkAnalyzer(BaseNetworkAnalyzer):
+
+    # Should be specified by the base class.
+    reverse_mappings = {}
+    default_reverse = None
+
+    def _create_analysis(self, model):
+        return graph.reverse_model(model,
+                                   reverse_mapping=self.reverse_mappings,
+                                   default_reverse=self.default_reverse)

@@ -10,12 +10,23 @@ import six
 # End: Python 2/3 compatability header small
 
 
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 import fnmatch
 import os
 
+from . import trivia
 from . import mnist
 from . import cifar10
 from . import imagenet
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 def iterator():
@@ -25,7 +36,7 @@ def iterator():
 
     # TODO: make this more transparent!
     # Default test only for one network. To test all put "*"
-    #name_filter = "mnist.cnn_2convb_2dense"
+    #name_filter = "mnist.log_reg"
     name_filter = "*"
     if "NNPATTERNS_TEST_FILTER" in os.environ:
         name_filter = os.environ["NNPATTERNS_TEST_FILTER"]
@@ -45,6 +56,7 @@ def iterator():
         return [x[1] for x in sorted(ret)]
 
     networks = (
+        fetch_networks("trivia", trivia) +
         fetch_networks("mnist", mnist) +
         fetch_networks("cifar10", cifar10) +
         fetch_networks("imagenet", imagenet)

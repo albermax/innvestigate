@@ -14,12 +14,13 @@ import six
 ###############################################################################
 ###############################################################################
 
-from .base import *
 
-from .gradient_based import *
-from .misc import *
-#from .pattern_based import *
-#from .relevance_based import *
+from . import base
+
+
+__all__ = [
+    "dot",
+]
 
 
 ###############################################################################
@@ -27,24 +28,19 @@ from .misc import *
 ###############################################################################
 
 
-def create_analyzer(name, moderl, **kwargs):
-    return {
-        # Utility.
-        "input": InputAnalyzer,
-        "random": RandomAnalyzer,
+def dot():
+    input_shape = [None, 2]
+    output_n = 1
 
-        # # Gradient based
-        # "gradient": GradientAnalyzer,
-        # "deconvnet": DeConvNetAnalyzer,
-        # "guided": GuidedBackpropAnalyzer,
-        "gradient.baseline": BaselineGradientAnalyzer,
+    net = {}
+    net["in"] = base.input_layer(shape=input_shape)
+    net["out"] = base.dense_layer(net["in"], units=output_n,
+                                  activation="linear")
 
-        # # Relevance based
-        # "lrp.z": LRPZAnalyzer,
-        # "lrp.eps": LRPEpsAnalyzer,
+    net.update({
+        "input_shape": input_shape,
 
-        # # Pattern based
-        # "patternnet": PatternNetAnalyzer,
-        # "patternnet.guided": GuidedPatternNetAnalyzer,
-        # "patternlrp": PatternLRPAnalyzer,
-    }[name](model **kwargs)
+        "output_n": output_n,
+    })
+
+    return net

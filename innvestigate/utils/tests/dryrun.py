@@ -10,6 +10,11 @@ import six
 # End: Python 2/3 compatability header small
 
 
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 import keras.backend as K
 import keras.models
 import numpy as np
@@ -21,7 +26,13 @@ from . import networks
 __all__ = [
     "BaseTestCase",
     "AnalyzerTestCase",
+    "EqualAnalyzerTestCase",
 ]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class BaseTestCase(unittest.TestCase):
@@ -33,7 +44,7 @@ class BaseTestCase(unittest.TestCase):
     and executed with random inputs.
     """
 
-    def _apply_test(self, method, network):
+    def _apply_test(self, network):
         raise NotImplementedError("Set in subclass.")
 
     def test_dryrun(self):
@@ -44,11 +55,16 @@ class BaseTestCase(unittest.TestCase):
 
         for network in networks.iterator():
             if six.PY2:
-                self._apply_test(self._method, network)
+                self._apply_test(network)
             else:
                 with self.subTest(network_name=network["name"]):
-                    self._apply_test(self._method, network)
+                    self._apply_test(network)
         pass
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class AnalyzerTestCase(BaseTestCase):
@@ -56,21 +72,49 @@ class AnalyzerTestCase(BaseTestCase):
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
 
-    def _assert(self, method, network, x, explanation):
-        pass
-
-    def _apply_test(self, method, network):
+    def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         # Get analyzer.
-        analyzer = method(model)
+        analyzer = self._method(model)
         # Dryrun.
         x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape[1:]),
                          tuple(network["input_shape"][1:]))
-        self._assert(method, network, x, analysis)
         pass
+
+
+class EqualAnalyzerTestCase(BaseTestCase):
+
+    def _method1(self, model):
+        raise NotImplementedError("Set in subclass.")
+
+    def _method2(self, model):
+        raise NotImplementedError("Set in subclass.")
+
+    def _apply_test(self, network):
+        # Create model.
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        # Get analyzer.
+        analyzer1 = self._method1(model)
+        analyzer2 = self._method2(model)
+        # Dryrun.
+        x = np.random.rand(1, *(network["input_shape"][1:]))
+        analysis1 = analyzer1.analyze(x)
+        analysis2 = analyzer2.analyze(x)
+
+        self.assertEqual(tuple(analysis1.shape[1:]),
+                         tuple(network["input_shape"][1:]))
+        self.assertEqual(tuple(analysis2.shape[1:]),
+                         tuple(network["input_shape"][1:]))
+        self.assertTrue(np.allclose(analysis1, analysis2))
+        pass
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class PatternComputerTestCase(BaseTestCase):

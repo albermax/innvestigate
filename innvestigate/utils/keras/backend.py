@@ -14,12 +14,13 @@ import six
 ###############################################################################
 ###############################################################################
 
-from .base import *
 
-from .gradient_based import *
-from .misc import *
-#from .pattern_based import *
-#from .relevance_based import *
+import keras.backend as K
+
+
+__all__ = [
+    "gradients",
+]
 
 
 ###############################################################################
@@ -27,24 +28,20 @@ from .misc import *
 ###############################################################################
 
 
-def create_analyzer(name, moderl, **kwargs):
-    return {
-        # Utility.
-        "input": InputAnalyzer,
-        "random": RandomAnalyzer,
-
-        # # Gradient based
-        # "gradient": GradientAnalyzer,
-        # "deconvnet": DeConvNetAnalyzer,
-        # "guided": GuidedBackpropAnalyzer,
-        "gradient.baseline": BaselineGradientAnalyzer,
-
-        # # Relevance based
-        # "lrp.z": LRPZAnalyzer,
-        # "lrp.eps": LRPEpsAnalyzer,
-
-        # # Pattern based
-        # "patternnet": PatternNetAnalyzer,
-        # "patternnet.guided": GuidedPatternNetAnalyzer,
-        # "patternlrp": PatternLRPAnalyzer,
-    }[name](model **kwargs)
+def gradients(Xs, Ys, known_Ys):
+    "Partial derivates."
+    backend = K.backend()
+    if backend == "theano":
+        # no global import => do not break if module is not present
+        assert len(Ys) == 1
+        import theano.gradient
+        known_Ys = {k:v for k, v in zip(Ys, known_Ys)}
+        return theano.gradient.grad(K.sum(Ys[0]), Xs, known_grads=known_Ys)
+    elif backend == "tensorflow":
+        # no global import => do not break if module is not present
+        import tensorflow
+        return tensorflow.gradients(Ys, Xs, grad_ys=known_Ys)
+    else:
+        # todo: add cntk
+        raise NotImplementedError()
+    pass

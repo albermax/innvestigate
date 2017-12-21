@@ -9,6 +9,12 @@ from io import open
 import six
 # End: Python 2/3 compatability header small
 
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 # todo:fix relative imports:
 #from ...utils.tests import dryrun
 
@@ -18,9 +24,35 @@ import six
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradientAnalyzer
+from innvestigate.analyzer import GradientAnalyzer
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class TestBaselineGradientAnalyzer(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return BaselineGradientAnalyzer(model)
+
+
+class TestGradientAnalyzer(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return GradientAnalyzer(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestBasicGraphReversalAnalyzer(dryrun.EqualAnalyzerTestCase):
+
+    def _method1(self, model):
+        return BaselineGradientAnalyzer(model)
+
+    def _method2(self, model):
+        return GradientAnalyzer(model)

@@ -10,17 +10,32 @@ import six
 # End: Python 2/3 compatability header small
 
 
-__all__ = ["BaselineGradientAnalyzer"]
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 from . import base
 from .. import layers as ilayers
+from .. import utils
 
 import keras.backend as K
+import keras.models
+
+
+__all__ = [
+    "BaselineGradientAnalyzer",
+    "GradientAnalyzer",
+]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class BaselineGradientAnalyzer(base.BaseNetworkAnalyzer):
-    
+
     properties = {
         "name": "BaselineGradient",
         "show_as": "rgb",
@@ -29,7 +44,25 @@ class BaselineGradientAnalyzer(base.BaseNetworkAnalyzer):
 
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0],])
-        import keras.layers
-        ret = keras.layers.Lambda(lambda x: K.gradients(x[1].sum(), x[0]))([model.inputs[0], model.outputs[0]])
-        print(type(ret[0]))
-        return ret[0]
+
+
+class GradientAnalyzer(base.BaseReverseNetworkAnalyzer):
+
+    properties = {
+        "name": "Gradient",
+        "show_as": "rgb",
+    }
+
+    def __init__(self, *args, **kwargs):
+        # we assume there is only one head!
+        gradient_head_processed = [False]
+        def gradient_reverse(Xs, Ys, reversed_Ys, reverse_state):
+            if gradient_head_processed[0] is not True:
+                # replace function value with ones as the last element
+                # chain rule is a one.
+                gradient_head_processed[0] = True
+                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
+            return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+
+        self.default_reverse = gradient_reverse
+        return super(GradientAnalyzer, self).__init__(*args, **kwargs)
