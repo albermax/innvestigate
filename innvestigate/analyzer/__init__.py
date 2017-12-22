@@ -35,7 +35,7 @@ def create_analyzer(name, moderl, **kwargs):
 
         # # Gradient based
         # "gradient": GradientAnalyzer,
-        # "deconvnet": DeConvNetAnalyzer,
+        # "deconvnet": DeconvnetAnalyzer,
         # "guided": GuidedBackpropAnalyzer,
         "gradient.baseline": BaselineGradientAnalyzer,
 

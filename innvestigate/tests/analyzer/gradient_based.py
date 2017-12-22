@@ -25,6 +25,7 @@ from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradientAnalyzer
 from innvestigate.analyzer import GradientAnalyzer
+from innvestigate.analyzer import DeconvnetAnalyzer
 
 
 ###############################################################################
@@ -42,6 +43,17 @@ class TestGradientAnalyzer(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return GradientAnalyzer(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestDeconvnetAnalyzer(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return DeconvnetAnalyzer(model)
 
 
 ###############################################################################
