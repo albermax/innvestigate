@@ -93,24 +93,15 @@ class Deconvnet(base.BaseReverseNetwork):
             # todo: modularize
             if(hasattr(layer, "activation") and
                layer.activation == keras.activations.relu):
-                # todo: make more reliable, modularize
-                try:
-                    reversed_Ys = keras.layers.Activation("relu")(reversed_Ys)
-                except (TypeError, AttributeError):
-                    reversed_Ys = [keras.layers.Activation("relu")(tmp)
-                                   for tmp in reversed_Ys]
+                activation = keras.layers.Activation("relu")
+                reversed_Ys = ilayers.easy_apply(activation, reversed_Ys)
 
                 # todo: cache and do this only once per layer
                 config = layer.get_config()
                 config["name"] = "reversed_%s" % config["name"]
                 config["activation"] = None
                 layer_wo_relu = layer.__class__.from_config(config)
-                # todo: make more reliable, modularize
-                try:
-                    Ys_wo_relu = layer_wo_relu(Xs)
-                except (TypeError, AttributeError):
-                    Ys_wo_relu = [layer_wo_relu(tmp)
-                                  for tmp in Xs]
+                Ys_wo_relu = ilayers.easy_apply(layer_wo_relu, Xs)
                 layer_wo_relu.set_weights(layer.get_weights())
 
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)

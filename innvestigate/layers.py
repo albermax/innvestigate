@@ -24,6 +24,8 @@ from keras.engine.topology import Layer
 
 
 __all__ = [
+    "easy_apply",
+
     "OnesLike",
 
     "Gradient",
@@ -32,6 +34,25 @@ __all__ = [
     "Max",
     "Sum",
 ]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def easy_apply(layer, inputs):
+    """
+    Apply a layer to input[s].
+    """
+    try:
+        ret = layer(inputs)
+    except (TypeError, AttributeError):
+        # layer expects a single tensor.
+        if len(inputs) != 1:
+            raise ValueError("Layer expects only a single input!")
+        ret = [layer(inputs[0])]
+    return ret
 
 
 ###############################################################################
