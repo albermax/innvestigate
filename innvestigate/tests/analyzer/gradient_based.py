@@ -1,4 +1,4 @@
- # Begin: Python 2/3 compatibility header small
+# Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals

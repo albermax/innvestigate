@@ -20,7 +20,9 @@ import keras.activations
 
 __all__ = [
     "easy_apply",
+
     "contains_activation",
+    "contains_kernel",
 ]
 
 
@@ -61,5 +63,18 @@ def contains_activation(layer, activation=None):
             return layer.activation == keras.activations.get(activation)
         else:
             return True
+    else:
+        return False
+
+
+def contains_kernel(layer):
+    """
+    Check whether the layer contains a kernel.
+    """
+
+    # todo: add test and check this more throughroughly.
+    # rely on Keras convention.
+    if hasattr(layer, "kernel"):
+        return True
     else:
         return False
