@@ -15,8 +15,12 @@ import six
 ###############################################################################
 
 
+import keras.activations
+
+
 __all__ = [
     "easy_apply",
+    "contains_activation",
 ]
 
 
@@ -37,3 +41,25 @@ def easy_apply(layer, inputs):
             raise ValueError("Layer expects only a single input!")
         ret = [layer(inputs[0])]
     return ret
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def contains_activation(layer, activation=None):
+    """
+    Check whether the layer contains an activation function.
+    activation is None then we only check if layer can contain an activation.
+    """
+
+    # todo: add test and check this more throughroughly.
+    # rely on Keras convention.
+    if hasattr(layer, "activation"):
+        if activation is not None:
+            return layer.activation == keras.activations.get(activation)
+        else:
+            return True
+    else:
+        return False

@@ -23,7 +23,6 @@ from ..utils import keras as kutils
 import keras.backend as K
 import keras.models
 import keras
-import keras.activations
 
 
 __all__ = [
@@ -83,27 +82,33 @@ class Deconvnet(base.BaseReverseNetwork):
     def __init__(self, *args, **kwargs):
         # we assume there is only one head!
         gradient_head_processed = [False]
+        layer_cache = {}
+
         def gradient_reverse(Xs, Ys, reversed_Ys, reverse_state):
             if gradient_head_processed[0] is not True:
                 # replace function value with ones as the last element
                 # chain rule is a one.
                 gradient_head_processed[0] = True
                 reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
+
             layer = reverse_state["layer"]
-            # todo: make failsafer
-            # todo: modularize
-            if(hasattr(layer, "activation") and
-               layer.activation == keras.activations.relu):
+            if kutils.contains_activation(layer, "relu"):
                 activation = keras.layers.Activation("relu")
                 reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
-                # todo: cache and do this only once per layer
-                config = layer.get_config()
-                config["name"] = "reversed_%s" % config["name"]
-                config["activation"] = None
-                layer_wo_relu = layer.__class__.from_config(config)
-                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-                layer_wo_relu.set_weights(layer.get_weights())
+                # layers can be applied to several nodes.
+                # but we need to revert it only once.
+                if layer in layer_cache:
+                    layer_wo_relu = layer_cache[layer]
+                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                else:
+                    config = layer.get_config()
+                    config["name"] = "reversed_%s" % config["name"]
+                    config["activation"] = None
+                    layer_wo_relu = layer.__class__.from_config(config)
+                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                    layer_wo_relu.set_weights(layer.get_weights())
+                    layer_cache[layer] = layer_wo_relu
 
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
             else:
