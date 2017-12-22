@@ -28,7 +28,9 @@ import keras
 __all__ = [
     "BaselineGradient",
     "Gradient",
+
     "Deconvnet",
+    "GuidedBackprop",
 ]
 
 
@@ -69,6 +71,11 @@ class Gradient(base.BaseReverseNetwork):
 
         self.default_reverse = gradient_reverse
         return super(Gradient, self).__init__(*args, **kwargs)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 class Deconvnet(base.BaseReverseNetwork):
@@ -116,3 +123,34 @@ class Deconvnet(base.BaseReverseNetwork):
 
         self.default_reverse = gradient_reverse
         return super(Deconvnet, self).__init__(*args, **kwargs)
+
+
+class GuidedBackprop(base.BaseReverseNetwork):
+
+    properties = {
+        "name": "GuidedBackprop",
+        # todo: set right value
+        "show_as": "rgb",
+    }
+
+    def __init__(self, *args, **kwargs):
+        # we assume there is only one head!
+        gradient_head_processed = [False]
+        layer_cache = {}
+
+        def gradient_reverse(Xs, Ys, reversed_Ys, reverse_state):
+            if gradient_head_processed[0] is not True:
+                # replace function value with ones as the last element
+                # chain rule is a one.
+                gradient_head_processed[0] = True
+                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
+
+            layer = reverse_state["layer"]
+            if kutils.contains_activation(layer, "relu"):
+                activation = keras.layers.Activation("relu")
+                reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+
+            return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+
+        self.default_reverse = gradient_reverse
+        return super(GuidedBackprop, self).__init__(*args, **kwargs)

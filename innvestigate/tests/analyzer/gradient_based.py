@@ -25,7 +25,9 @@ from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradient
 from innvestigate.analyzer import Gradient
+
 from innvestigate.analyzer import Deconvnet
+from innvestigate.analyzer import GuidedBackprop
 
 
 ###############################################################################
@@ -50,17 +52,6 @@ class TestGradient(dryrun.AnalyzerTestCase):
 ###############################################################################
 
 
-class TestDeconvnet(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
-        return Deconvnet(model)
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 class TestBasicGraphReversal(dryrun.EqualAnalyzerTestCase):
 
     def _method1(self, model):
@@ -68,3 +59,20 @@ class TestBasicGraphReversal(dryrun.EqualAnalyzerTestCase):
 
     def _method2(self, model):
         return Gradient(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestDeconvnet(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return Deconvnet(model)
+
+
+class TestGuidedBackprop(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return GuidedBackprop(model)
