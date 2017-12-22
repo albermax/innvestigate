@@ -47,7 +47,7 @@ class PatternNet(base.BaseReverseNetwork):
 
     def __init__(self, *args, patterns=None, **kwargs):
         # we assume there is only one head!
-        gradient_head_processed = [False]
+        head_processed = [False]
         layer_cache = {}
 
         if patterns is None:
@@ -56,11 +56,11 @@ class PatternNet(base.BaseReverseNetwork):
         # copy patterns
         self.patterns = list(patterns)
 
-        def gradient_reverse(Xs, Ys, reversed_Ys, reverse_state):
-            if gradient_head_processed[0] is not True:
+        def reverse(Xs, Ys, reversed_Ys, reverse_state):
+            if head_processed[0] is not True:
                 # replace function value with ones as the last element
                 # chain rule is a one.
-                gradient_head_processed[0] = True
+                head_processed[0] = True
                 reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
 
             layer = reverse_state["layer"]
@@ -92,7 +92,7 @@ class PatternNet(base.BaseReverseNetwork):
             else:
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)   
 
-        self.default_reverse = gradient_reverse
+        self.default_reverse = reverse
         return super(PatternNet, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, *args, **kwargs):

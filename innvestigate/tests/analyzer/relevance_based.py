@@ -14,12 +14,13 @@ import six
 ###############################################################################
 ###############################################################################
 
-from .base import *
 
-from .gradient_based import *
-from .misc import *
-from .pattern_based import *
-from .relevance_based import *
+# todo:fix relative imports:
+#from ...utils.tests import dryrun
+
+from innvestigate.utils.tests import dryrun
+
+from innvestigate.analyzer import BaselineLRPZ
 
 
 ###############################################################################
@@ -27,24 +28,7 @@ from .relevance_based import *
 ###############################################################################
 
 
-def create_analyzer(name, model, **kwargs):
-    return {
-        # Utility.
-        "input": Input,
-        "random": Random,
+class TestBaselineLRPZ(dryrun.AnalyzerTestCase):
 
-        # # Gradient based
-        # "gradient": Gradient,
-        # "deconvnet": Deconvnet,
-        # "guided": GuidedBackprop,
-        "gradient.baseline": BaselineGradient,
-
-        # # Relevance based
-        # "lrp.z": LRPZ,
-        # "lrp.eps": LRPEps,
-
-        # # Pattern based
-        # "patternnet": PatternNet,
-        # "patternnet.guided": GuidedPatternNet,
-        # "patternlrp": PatternLRP,
-    }[name](model **kwargs)
+    def _method(self, model):
+        return BaselineLRPZ(model)
