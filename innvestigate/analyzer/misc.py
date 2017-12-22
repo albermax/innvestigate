@@ -17,10 +17,10 @@ import six
 
 import numpy as np
 
-from .base import BaseAnalyzer
+from .base import Base
 
 
-__all__ = ["RandomAnalyzer", "InputAnalyzer"]
+__all__ = ["Random", "Input"]
 
 
 ###############################################################################
@@ -28,7 +28,7 @@ __all__ = ["RandomAnalyzer", "InputAnalyzer"]
 ###############################################################################
 
 
-class InputAnalyzer(BaseAnalyzer):
+class Input(Base):
 
     properties = {
         "name": "Input",
@@ -39,7 +39,7 @@ class InputAnalyzer(BaseAnalyzer):
         return X
 
 
-class RandomAnalyzer(BaseAnalyzer):
+class Random(Base):
 
     properties = {
         "name": "Random",

@@ -26,9 +26,9 @@ import keras.activations
 
 
 __all__ = [
-    "BaselineGradientAnalyzer",
-    "GradientAnalyzer",
-    "DeconvnetAnalyzer",
+    "BaselineGradient",
+    "Gradient",
+    "Deconvnet",
 ]
 
 
@@ -37,7 +37,7 @@ __all__ = [
 ###############################################################################
 
 
-class BaselineGradientAnalyzer(base.BaseNetworkAnalyzer):
+class BaselineGradient(base.BaseNetwork):
 
     properties = {
         "name": "BaselineGradient",
@@ -49,7 +49,7 @@ class BaselineGradientAnalyzer(base.BaseNetworkAnalyzer):
         return ilayers.Gradient()(model.inputs+[model.outputs[0],])
 
 
-class GradientAnalyzer(base.BaseReverseNetworkAnalyzer):
+class Gradient(base.BaseReverseNetwork):
 
     properties = {
         "name": "Gradient",
@@ -68,14 +68,12 @@ class GradientAnalyzer(base.BaseReverseNetworkAnalyzer):
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
         self.default_reverse = gradient_reverse
-        return super(GradientAnalyzer, self).__init__(*args, **kwargs)
+        return super(Gradient, self).__init__(*args, **kwargs)
 
 
-# todo: remove analyzer postfixes        
-class DeconvnetAnalyzer(base.BaseReverseNetworkAnalyzer):
+class Deconvnet(base.BaseReverseNetwork):
 
     properties = {
-        # todo: set right name
         "name": "Deconvnet",
         # todo: set right value
         "show_as": "rgb",
@@ -120,4 +118,4 @@ class DeconvnetAnalyzer(base.BaseReverseNetworkAnalyzer):
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)   
 
         self.default_reverse = gradient_reverse
-        return super(DeconvnetAnalyzer, self).__init__(*args, **kwargs)
+        return super(Deconvnet, self).__init__(*args, **kwargs)

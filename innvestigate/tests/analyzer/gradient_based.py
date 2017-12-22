@@ -23,9 +23,9 @@ import six
 
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import BaselineGradientAnalyzer
-from innvestigate.analyzer import GradientAnalyzer
-from innvestigate.analyzer import DeconvnetAnalyzer
+from innvestigate.analyzer import BaselineGradient
+from innvestigate.analyzer import Gradient
+from innvestigate.analyzer import Deconvnet
 
 
 ###############################################################################
@@ -33,27 +33,16 @@ from innvestigate.analyzer import DeconvnetAnalyzer
 ###############################################################################
 
 
-class TestBaselineGradientAnalyzer(dryrun.AnalyzerTestCase):
+class TestBaselineGradient(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return BaselineGradientAnalyzer(model)
+        return BaselineGradient(model)
 
 
-class TestGradientAnalyzer(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
-        return GradientAnalyzer(model)
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class TestDeconvnetAnalyzer(dryrun.AnalyzerTestCase):
+class TestGradient(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return DeconvnetAnalyzer(model)
+        return Gradient(model)
 
 
 ###############################################################################
@@ -61,10 +50,21 @@ class TestDeconvnetAnalyzer(dryrun.AnalyzerTestCase):
 ###############################################################################
 
 
-class TestBasicGraphReversalAnalyzer(dryrun.EqualAnalyzerTestCase):
+class TestDeconvnet(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return Deconvnet(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestBasicGraphReversal(dryrun.EqualAnalyzerTestCase):
 
     def _method1(self, model):
-        return BaselineGradientAnalyzer(model)
+        return BaselineGradient(model)
 
     def _method2(self, model):
-        return GradientAnalyzer(model)
+        return Gradient(model)

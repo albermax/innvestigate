@@ -22,8 +22,8 @@ import six
 
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import InputAnalyzer
-from innvestigate.analyzer import RandomAnalyzer
+from innvestigate.analyzer import Input
+from innvestigate.analyzer import Random
 
 
 ###############################################################################
@@ -31,13 +31,13 @@ from innvestigate.analyzer import RandomAnalyzer
 ###############################################################################
 
 
-class TestInputAnalyzer(dryrun.AnalyzerTestCase):
+class TestInput(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return InputAnalyzer(model)
+        return Input(model)
 
 
-class TestRandomAnalyzer(dryrun.AnalyzerTestCase):
+class TestRandom(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return RandomAnalyzer(model)
+        return Random(model)

@@ -27,24 +27,24 @@ from .misc import *
 ###############################################################################
 
 
-def create_analyzer(name, moderl, **kwargs):
+def create_analyzer(name, model, **kwargs):
     return {
         # Utility.
-        "input": InputAnalyzer,
-        "random": RandomAnalyzer,
+        "input": Input,
+        "random": Random,
 
         # # Gradient based
-        # "gradient": GradientAnalyzer,
-        # "deconvnet": DeconvnetAnalyzer,
-        # "guided": GuidedBackpropAnalyzer,
-        "gradient.baseline": BaselineGradientAnalyzer,
+        # "gradient": Gradient,
+        # "deconvnet": Deconvnet,
+        # "guided": GuidedBackprop,
+        "gradient.baseline": BaselineGradient,
 
         # # Relevance based
-        # "lrp.z": LRPZAnalyzer,
-        # "lrp.eps": LRPEpsAnalyzer,
+        # "lrp.z": LRPZ,
+        # "lrp.eps": LRPEps,
 
         # # Pattern based
-        # "patternnet": PatternNetAnalyzer,
-        # "patternnet.guided": GuidedPatternNetAnalyzer,
-        # "patternlrp": PatternLRPAnalyzer,
+        # "patternnet": PatternNet,
+        # "patternnet.guided": GuidedPatternNet,
+        # "patternlrp": PatternLRP,
     }[name](model **kwargs)

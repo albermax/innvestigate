@@ -23,9 +23,9 @@ import keras.models
 
 
 __all__ = [
-    "BaseAnalyzer",
-    "BaseNetworkAnalyzer",
-    "BaseReverseNetworkAnalyzer"
+    "Base",
+    "BaseNetwork",
+    "BaseReverseNetwork"
 ]
 
 
@@ -34,7 +34,7 @@ __all__ = [
 ###############################################################################
 
 
-class BaseAnalyzer(object):
+class Base(object):
 
     properties = {
         "name": "undefined",
@@ -54,10 +54,10 @@ class BaseAnalyzer(object):
 ###############################################################################
 
 
-class BaseNetworkAnalyzer(BaseAnalyzer):
+class BaseNetwork(Base):
 
     def __init__(self, model, neuron_selection_mode="max_activation"):
-        super(BaseNetworkAnalyzer, self).__init__(model)
+        super(BaseNetwork, self).__init__(model)
 
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
@@ -106,7 +106,7 @@ class BaseNetworkAnalyzer(BaseAnalyzer):
             return self._analyzer_model.predict_on_batch(X)
 
 
-class BaseReverseNetworkAnalyzer(BaseNetworkAnalyzer):
+class BaseReverseNetwork(BaseNetwork):
 
     # Should be specified by the base class.
     reverse_mappings = {}
