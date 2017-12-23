@@ -69,6 +69,7 @@ class GradientWRT(keras.layers.Layer):
         super(GradientWRT, self).__init__(*args, **kwargs)
 
     def call(self, x):
+        assert isinstance(x, (list, tuple))
         Xs, tmp_Ys = x[:self.n_inputs], x[self.n_inputs:]
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2

@@ -17,6 +17,8 @@ import six
 
 import keras.activations
 
+from ... import utils as iutils
+
 
 __all__ = [
     "easy_apply",
@@ -34,15 +36,23 @@ __all__ = [
 def easy_apply(layer, inputs):
     """
     Apply a layer to input[s].
+
+    We don't know at this point if layer can handle a list of tensor and
+    just try therefore.
     """
-    try:
-        ret = layer(inputs)
-    except (TypeError, AttributeError):
-        # layer expects a single tensor.
-        if len(inputs) != 1:
-            raise ValueError("Layer expects only a single input!")
-        ret = [layer(inputs[0])]
-    return ret
+
+    if isinstance(inputs, list) and len(inputs) > 1:
+        try:
+            ret = layer(inputs)
+        except (TypeError, AttributeError):
+            # layer expects a single tensor.
+            if len(inputs) != 1:
+                raise ValueError("Layer expects only a single input!")
+            ret = layer(inputs[0])
+    else:
+        ret = layer(inputs[0])
+
+    return iutils.listify(ret)
 
 
 ###############################################################################
