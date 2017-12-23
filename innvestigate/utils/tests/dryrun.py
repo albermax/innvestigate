@@ -82,6 +82,7 @@ class AnalyzerTestCase(BaseTestCase):
         analysis = analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape[1:]),
                          tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 
 
@@ -106,8 +107,10 @@ class EqualAnalyzerTestCase(BaseTestCase):
 
         self.assertEqual(tuple(analysis1.shape[1:]),
                          tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isnan(analysis1.ravel())))
         self.assertEqual(tuple(analysis2.shape[1:]),
                          tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isnan(analysis2.ravel())))
         self.assertTrue(np.allclose(analysis1, analysis2))
         pass
 

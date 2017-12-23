@@ -41,7 +41,7 @@ def vgg16(activation=None):
 
     input_shape = [None, 3, 224, 224]
     output_n = 1000
-    
+
     net = {}
     net["in"] = base.input_layer(shape=input_shape)
 
@@ -86,8 +86,8 @@ def vgg16(activation=None):
                                       kernel_initializer="glorot_uniform")
     net["dense_2_dropout"] = base.dropout_layer(net["dense_2"], 0.5)
     net["out"] = base.dense_layer(net["dense_2_dropout"], units=output_n,
-                                  activation="softmax",
                                   kernel_initializer="glorot_uniform")
+    net["sm_out"] = base.softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,

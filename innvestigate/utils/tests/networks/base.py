@@ -36,6 +36,8 @@ __all__ = [
 ###############################################################################
 
 
+# todo: more consistent nameing
+
 def input_layer(shape, *args, **kwargs):
     return keras.layers.Input(shape=shape[1:], *args, **kwargs)
 
@@ -61,13 +63,18 @@ def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
         ret[conv_prefix % i] = conv
 
         ret["%s_pool" % prefix] = keras.layers.MaxPooling2D(
-            pool_size=(2, 2)
+            pool_size=(2, 2),
+            strides=(2, 2),
         )(current_layer)
     return ret
 
 
 def dropout_layer(layer_in, *args, **kwargs):
     return keras.layers.Dropout(*args, **kwargs)(layer_in)
+
+
+def softmax(layer_in):
+    return keras.layers.Activation("softmax")(layer_in)
 
 
 ###############################################################################
@@ -83,8 +90,8 @@ def log_reg(input_shape, output_n, activation=None):
     net["in"] = input_layer(shape=input_shape)
     net["in_flat"] = keras.layers.Flatten()(net["in"])
     net["out"] = dense_layer(net["in_flat"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -112,8 +119,8 @@ def mlp_2dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -140,8 +147,8 @@ def mlp_3dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -171,8 +178,8 @@ def cnn_1convb_2dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -199,8 +206,8 @@ def cnn_2convb_2dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
     net["out"] = dense_layer(net["dense_1_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -231,8 +238,8 @@ def cnn_2convb_3dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
@@ -265,8 +272,8 @@ def cnn_3convb_3dense(input_shape, output_n, activation=None,
                                  kernel_initializer="glorot_uniform")
     net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
     net["out"] = dense_layer(net["dense_2_dropout"], units=output_n,
-                             activation="softmax",
                              kernel_initializer="glorot_uniform")
+    net["sm_out"] = softmax(net["out"])
 
     net.update({
         "input_shape": input_shape,
