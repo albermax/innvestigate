@@ -24,6 +24,7 @@ from keras.engine.topology import Layer
 
 
 __all__ = [
+    "FiniteCheck",
     "OnesLike",
 
     "Gradient",
@@ -37,6 +38,12 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
+class FiniteCheck(keras.layers.Layer):
+    def call(self, x):
+        return [K.sum(K.cast(iK.is_not_finite(tmp), K.floatx()))
+                for tmp in utils.listify(x)]
 
 
 class OnesLike(keras.layers.Layer):

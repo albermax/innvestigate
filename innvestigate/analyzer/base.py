@@ -16,10 +16,12 @@ import six
 
 
 from .. import layers as ilayers
+from .. import utils as iutils
 from ..utils.keras import graph
 
 import keras.layers
 import keras.models
+import numpy as np
 
 
 __all__ = [
@@ -79,11 +81,16 @@ class BaseNetwork(Base):
 
         model = keras.models.Model(inputs=model_inputs+neuron_selection_inputs,
                                    outputs=model_output)
-        analysis_output = self._create_analysis(model)
+        tmp = self._create_analysis(model)
+        try:
+            analysis_output, debug_output = tmp
+        except (TypeError, ValueError):
+            analysis_output, debug_output = iutils.listify(tmp), list()
 
+        self._n_debug_output = len(debug_output)
         self._analyzer_model = keras.models.Model(
             inputs=model_inputs+neuron_selection_inputs,
-            outputs=analysis_output)
+            outputs=analysis_output+debug_output)
         self._analyzer_model.compile(optimizer="sgd", loss="mse")
         pass
 
@@ -101,9 +108,17 @@ class BaseNetwork(Base):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
-            return self._analyzer_model.predict_on_batch(X, neuron_selection)
+            ret = self._analyzer_model.predict_on_batch(X, neuron_selection)
         else:
-            return self._analyzer_model.predict_on_batch(X)
+            ret = self._analyzer_model.predict_on_batch(X)
+
+        if self._n_debug_output > 0:
+            self._handle_debug_output(ret[-self._n_debug_output:])
+            ret = ret[:-self._n_debug_output]
+
+        if isinstance(ret, list) and len(ret) == 1:
+            ret = ret[0]
+        return ret
 
 
 class BaseReverseNetwork(BaseNetwork):
@@ -112,7 +127,35 @@ class BaseReverseNetwork(BaseNetwork):
     reverse_mappings = {}
     default_reverse = None
 
+    def __init__(self, *args,
+                 reverse_verbose=False, reverse_check_finite=False, **kwargs):
+        self._reverse_verbose = reverse_verbose
+        self._reverse_check_finite = reverse_check_finite
+        return super(BaseReverseNetwork, self).__init__(*args, **kwargs)
+
     def _create_analysis(self, model):
-        return graph.reverse_model(model,
-                                   reverse_mapping=self.reverse_mappings,
-                                   default_reverse=self.default_reverse)
+        ret = graph.reverse_model(
+            model,
+            reverse_mapping=self.reverse_mappings,
+            default_reverse=self.default_reverse,
+            verbose=self._reverse_verbose,
+            return_all_reversed_tensors=self._reverse_check_finite)
+
+        if self._reverse_check_finite is True:
+            values = list(six.itervalues(ret[1]))
+            mapping = {i: v["id"] for i, v in enumerate(values)}
+            tensors = [v["tensor"] for v in values]
+            ret = (ret[0], iutils.listify(ilayers.FiniteCheck()(tensors)))
+            self._reverse_tensors_mapping = mapping
+
+        return ret
+
+    def _handle_debug_output(self, debug_values):
+        nfinite_tensors = np.flatnonzero(np.asarray(debug_values) > 0)
+
+        if len(nfinite_tensors) > 0:
+            nfinite_tensors = [self._reverse_tensors_mapping[i]
+                               for i in nfinite_tensors]
+            print("Not finite values found in following nodes: "
+                  "(ReverseID, TensorID) - {}".format(nfinite_tensors))
+        pass

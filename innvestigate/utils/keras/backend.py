@@ -20,6 +20,7 @@ import keras.backend as K
 
 __all__ = [
     "gradients",
+    "is_not_finite",
 ]
 
 
@@ -41,6 +42,29 @@ def gradients(Xs, Ys, known_Ys):
         # no global import => do not break if module is not present
         import tensorflow
         return tensorflow.gradients(Ys, Xs, grad_ys=known_Ys)
+    else:
+        # todo: add cntk
+        raise NotImplementedError()
+    pass
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def is_not_finite(x):
+    backend = K.backend()
+    if backend == "theano":
+        # no global import => do not break if module is not present
+        import theano.tensor
+        return theano.tensor.or_(theano.tensor.isnan(x),
+                                 theano.tensor.isinf(x))
+    elif backend == "tensorflow":
+        # no global import => do not break if module is not present
+        import tensorflow
+        #x = tensorflow.check_numerics(x, "innvestigate - is_finite check")
+        return tensorflow.logical_not(tensorflow.is_finite(x))
     else:
         # todo: add cntk
         raise NotImplementedError()

@@ -26,24 +26,18 @@ from innvestigate.utils.tests import dryrun
 from innvestigate.analyzer import BaselineGradient
 from innvestigate.analyzer import Gradient
 
-from innvestigate.analyzer import Deconvnet
-from innvestigate.analyzer import GuidedBackprop
-
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestBaselineGradient(dryrun.AnalyzerTestCase):
+class TestBasicGraphReversal(dryrun.EqualAnalyzerTestCase):
 
-    def _method(self, model):
+    def _method1(self, model):
         return BaselineGradient(model)
 
-
-class TestGradient(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
+    def _method2(self, model):
         return Gradient(model)
 
 
@@ -52,13 +46,13 @@ class TestGradient(dryrun.AnalyzerTestCase):
 ###############################################################################
 
 
-class TestDeconvnet(dryrun.AnalyzerTestCase):
+class TestBaseReverseNetwork_reverse_debug(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return Deconvnet(model)
+        return Gradient(model, reverse_verbose=True)
 
 
-class TestGuidedBackprop(dryrun.AnalyzerTestCase):
+class TestBaseReverseNetwork_reverse_check_finite(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return GuidedBackprop(model)
+        return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
