@@ -20,6 +20,7 @@ from .. import layers as ilayers
 from .. import utils
 from ..utils import keras as kutils
 
+import keras.activations
 import keras.backend as K
 import keras.models
 import keras
@@ -46,49 +47,76 @@ class PatternNet(base.BaseReverseNetwork):
     }
 
     def __init__(self, *args, patterns=None, **kwargs):
-        # we assume there is only one head!
-        head_processed = [False]
         layer_cache = {}
 
         if patterns is None:
             raise ValueError("Patterns are required.")
 
-        # copy patterns
+        # copy patterns, will be used as stack
         self.patterns = list(patterns)
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            if head_processed[0] is not True:
-                # replace function value with ones as the last element
-                # chain rule is a one.
-                head_processed[0] = True
-                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
-
             layer = reverse_state["layer"]
             if kutils.contains_kernel(layer):
+                # we want to apply the filter weights on the forward pass
+                # on the backward pass we want copy the gradient computation
+                # except that using the pattern weights instead of the filter w
+                # i.e. we need to revert the activation with the forward
+                # activations to keep the relu patterns of the gradient comp.
+                # this is the reason for splitting the gradient mimicking:
+
                 # layers can be applied to several nodes.
                 # but we need to revert it only once.
                 if layer in layer_cache:
-                    layer_wo_relu = layer_cache[layer]
-                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                    kernel_layer, pattern_layer, act_layer = layer_cache[layer]
+                    act_Xs = kutils.easy_apply(kernel_layer, Xs)
+                    act_Ys = kutils.easy_apply(act_layer, act_Xs)
+                    pattern_Ys = kutils.easy_apply(pattern_layer, Xs)
                 else:
                     config = layer.get_config()
-                    config["name"] = "reversed_%s" % config["name"]
-                    layer_wo_relu = layer.__class__.from_config(config)
-                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
 
+                    activation = None
+                    if "activation" in config:
+                        activation = config["activation"]
+                        config["activation"] = None
+                    act_layer = keras.layers.Activation(
+                        activation,
+                        name="reversed_act_%s" % config["name"])
+
+                    config["name"] = "reversed_kernel_%s" % config["name"]
+                    kernel_layer = layer.__class__.from_config(config)
+                    act_Xs = kutils.easy_apply(kernel_layer, Xs)
+                    act_Ys = kutils.easy_apply(act_layer, act_Xs)
+                    weights = layer.get_weights()
+                    kernel_layer.set_weights(weights)
+
+                    config["name"] = "reversed_pattern_%s" % config["name"]
+                    pattern_layer = layer.__class__.from_config(config)
+                    pattern_Ys = kutils.easy_apply(pattern_layer, Xs)
                     # replace kernel weights with pattern weights
                     # assume that only one matches
                     pattern = self.patterns.pop()
-                    weights = layer.get_weights()
                     tmp = [pattern.shape == x.shape for x in weights]
                     if np.sum(tmp) != 1:
                         raise Exception("Cannot match pattern to kernel.")
                     idx = np.argmax(tmp)
                     weights[idx] = pattern
-                    layer_wo_relu.set_weights(weights)
-                    layer_cache[layer] = layer_wo_relu
+                    pattern_layer.set_weights(weights)
 
-                return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+                    layer_cache[layer] = (kernel_layer,
+                                          pattern_layer,
+                                          act_layer)
+
+                grad_act = ilayers.GradientWRT(len(act_Xs))
+                grad_pattern = ilayers.GradientWRT(len(Xs))
+
+                if act_layer.activation in [None,
+                                            keras.activations.get("linear")]:
+                    tmp = reversed_Ys
+                else:
+                    # if linear activation this behaves strange
+                    tmp = utils.listify(grad_act(act_Xs+act_Ys+reversed_Ys))
+                return grad_pattern(Xs+pattern_Ys+tmp)
             else:
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)   
 
@@ -117,6 +145,9 @@ class PatternAttribution(PatternNet):
     def __init__(self, model, *args, patterns=None, **kwargs):
         if patterns is None:
             raise ValueError("Patterns are required.")
+
+        # copy patterns, will be used as stack
+        patterns = list(patterns)
 
         # copy patterns
         new_patterns = []
