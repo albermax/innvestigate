@@ -33,18 +33,17 @@ def create_analyzer(name, model, **kwargs):
         "input": Input,
         "random": Random,
 
-        # # Gradient based
-        # "gradient": Gradient,
-        # "deconvnet": Deconvnet,
-        # "guided": GuidedBackprop,
+        # Gradient based
+        "gradient": Gradient,
+        "deconvnet": Deconvnet,
+        "guided": GuidedBackprop,
         "gradient.baseline": BaselineGradient,
 
-        # # Relevance based
-        # "lrp.z": LRPZ,
-        # "lrp.eps": LRPEps,
+        # Relevance based
+        "lrp.z_baseline": BaselineLRPZ,
+        #"lrp.eps": LRPEps,
 
-        # # Pattern based
-        # "patternnet": PatternNet,
-        # "patternnet.guided": GuidedPatternNet,
-        # "patternlrp": PatternLRP,
-    }[name](model **kwargs)
+        # Pattern based
+        "pattern.net": PatternNet,
+        "pattern.attribution": PatternAttribution,
+    }[name](model, **kwargs)
