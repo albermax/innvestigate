@@ -15,26 +15,12 @@ import six
 ###############################################################################
 
 
-import keras.utils
-import math
+# todo:fix relative imports:
+#from ...utils.tests import dryrun
 
+from innvestigate.utils.tests import dryrun
 
-__all__ = [
-    "listify",
-    "BatchSequence",
-]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def listify(l):
-    if not isinstance(l, list):
-        return [l,]
-    else:
-        return l
+from innvestigate.tools import PatternComputer
 
 
 ###############################################################################
@@ -42,15 +28,15 @@ def listify(l):
 ###############################################################################
 
 
-class BatchSequence(keras.utils.Sequence):
+class TestPatterComputer_dummy_parallel(dryrun.PatternComputerTestCase):
 
-    def __init__(self, X, batch_size=32):
-        self.X = X
-        self.batch_size = batch_size
-        super(BatchSequence, self).__init__()
+    def _method(self, model):
+        return PatternComputer(model, pattern_type="dummy",
+                               compute_layers_in_parallel=True)
 
-    def __len__(self):
-        return int(math.ceil(float(len(self.X)) / self.batch_size))
 
-    def __getitem__(self, idx):
-        return self.X[idx*self.batch_size:(idx+1)*self.batch_size]
+class TestPatterComputer_dummy_sequential(dryrun.PatternComputerTestCase):
+
+    def _method(self, model):
+        return PatternComputer(model, pattern_type="dummy",
+                               compute_layers_in_parallel=False)

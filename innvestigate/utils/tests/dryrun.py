@@ -27,6 +27,7 @@ __all__ = [
     "BaseTestCase",
     "AnalyzerTestCase",
     "EqualAnalyzerTestCase",
+    "PatternComputerTestCase",
 ]
 
 
@@ -125,16 +126,12 @@ class PatternComputerTestCase(BaseTestCase):
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
 
-    def _assert(self, method, network, x, patterns):
-        pass
-
-    def _apply_test(self, method, network):
+    def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        # Get analyzer.
-        analyzer = method(model)
+        # Get computer.
+        computer = self._method(model)
         # Dryrun.
         x = np.random.rand(10, *(network["input_shape"][1:]))
-        patterns = computer.compute_patterns(x, 2)
-        self._assert(method, network, x, patterns)
+        patterns = computer.compute(x)
         pass
