@@ -15,13 +15,16 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 import keras.models
 import keras.utils
 import numpy as np
 
+
 from .. import layers as ilayers
 from .. import utils as iutils
-from ..utils import keras as ikeras
+from ..utils import keras as kutils
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -42,15 +45,6 @@ class BasePattern(object):
         self.layer = layer
         self._stats = None
 
-    def _get_layer_io(self, layer):
-        # todo: what to do with several nodes?
-        assert len(layer.inbound_nodes) == 1
-
-        node_index = 0
-        Xs = iutils.listify(layer.get_input_at(node_index))
-        Ys = iutils.listify(layer.get_output_at(node_index))
-        return Xs, Ys
-
     def _stats_to_dict(self, stats):
         return {k: stats[idx]
                 for idx, k in enumerate(self._stats_keys)}
@@ -59,7 +53,8 @@ class BasePattern(object):
         return [stats[k] for k in self._stats_keys]
 
     def has_pattern(self):
-        return ikeras.contains_kernel(self.layer)
+        #return kgraph.contains_kernel(self.layer)
+        return kgraph.contains_kernel(self.layer) and len(self.layer.get_weights()[0].shape) == 2
 
     def stats_from_batch(self):
         raise NotImplementedError()
@@ -85,7 +80,9 @@ class DummyPattern(BasePattern):
     _stats_keys = ["sum"]
 
     def get_stats_from_batch(self):
-        Xs, Ys = self._get_layer_io(self.layer)
+        # code is not ready for shared layers
+        assert kgraph.get_layer_inbound_count(self.layer) == 1
+        Xs, Ys = kgraph.get_layer_io(self.layer)
         return ilayers.Sum()(Xs)
 
     def _update_stats(self, stats, batch_stats):
@@ -96,9 +93,102 @@ class DummyPattern(BasePattern):
         return self._stats_to_list(self._stats)
 
 
+class LinearPattern(BasePattern):
+
+    _stats_keys = [
+        "count",
+        "mean_x",
+        "mean_y",
+        "mean_xy",
+        "mean_yy",
+    ]
+
+    def _get_neuron_mask(self):
+        layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
+        _, Y = kgraph.get_layer_io(layer)
+        return ilayers.OnesLike()(Y)
+
+    def get_stats_from_batch(self):
+        layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=False)
+        X, Y = kgraph.get_layer_io(layer)
+        X, Y = X[0], Y[0]
+
+        mask = ilayers.AsFloatX()(self._get_neuron_mask())
+        Y_masked = keras.layers.multiply([Y, mask])
+        count = ilayers.CountNonZero(axis=0)(mask)
+        def norm(x):
+            return ilayers.SaveDivide()([x, count])
+
+        mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]))
+        mean_y = norm(ilayers.Sum(axis=0)(Y_masked))
+        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]))
+        mean_yy = norm(ilayers.Sum(axis=0)(ilayers.Square()(Y_masked)))
+        return [count, mean_x, mean_y, mean_xy, mean_yy]
+
+    def _update_stats(self, stats, batch_stats):
+        """
+        Updating stats neuronwise with a running average.
+        """
+        old_count, new_count = stats["count"], batch_stats["count"]
+        total_count = old_count+new_count
+
+        def save_divide(a, b):
+            return K.cast_to_floatx(a) / np.maximum(b, 1)
+        factor_old = save_divide(old_count, total_count)
+        factor_new = save_divide(new_count, total_count)
+
+        def update(old, new):
+            # old_count/total_count * old_val + new_count/total_count * new_val
+            old *= factor_old
+            old += factor_new * new
+            pass
+
+        stats["count"] = total_count
+        for k in self._stats_keys[1:]:
+            update(stats[k], batch_stats[k])
+        pass
+
+    def compute_pattern(self):
+        W = kgraph.get_kernel(self.layer)
+
+        def save_divide(a, b):
+            return a / (b + (b == 0))
+
+        ExEy = self._stats["mean_x"] * self._stats["mean_y"]
+        EyEy = self._stats["mean_y"] * self._stats["mean_y"]
+        cov_xy = self._stats["mean_xy"] - ExEy
+        sq_sigma_y = self._stats["mean_yy"] - EyEy
+
+        A = save_divide(cov_xy, sq_sigma_y)
+        # todo: need to reshape to meet W's dimensions
+
+        return A
+
+
+class ReluPositivePattern(LinearPattern):
+
+    def _get_neuron_mask(self):
+        layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
+        _, Y = kgraph.get_layer_io(layer)
+        return ilayers.GreaterThanZero()(Y[0])
+
+
+class ReluNegativePattern(LinearPattern):
+
+    def _get_neuron_mask(self):
+        layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
+        _, Y = kgraph.get_layer_io(layer)
+        return ilayers.LessThanZero()(Y[0])
+
+
 def get_pattern_class(pattern_type):
     return {
         "dummy": DummyPattern,
+
+        "linear": LinearPattern,
+        "relu": ReluPositivePattern,
+        "relu.positive": ReluPositivePattern,
+        "relu.negative": ReluNegativePattern,
     }.get(pattern_type, pattern_type)
 
 

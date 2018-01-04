@@ -15,14 +15,16 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
+import keras.models
+import keras
+
+
 from . import base
 from .. import layers as ilayers
 from .. import utils
 from ..utils import keras as kutils
-
-import keras.backend as K
-import keras.models
-import keras
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -111,7 +113,7 @@ class BaseLRP(base.BaseReverseNetwork):
                 layer = new_layer
                 Ys = new_Ys    
 
-            if kutils.contains_kernel(layer):
+            if kgraph.contains_kernel(layer):
                 if any([tmp in model.inputs for tmp in Xs]):
                     current_rule = first_layer_rule
                 else:

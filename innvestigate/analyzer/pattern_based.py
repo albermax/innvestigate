@@ -14,17 +14,18 @@ import six
 ###############################################################################
 ###############################################################################
 
-
-from . import base
-from .. import layers as ilayers
-from .. import utils
-from ..utils import keras as kutils
-
 import keras.activations
 import keras.backend as K
 import keras.models
 import keras
 import numpy as np
+
+
+from . import base
+from .. import layers as ilayers
+from .. import utils
+from ..utils import keras as kutils
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -57,7 +58,7 @@ class PatternNet(base.BaseReverseNetwork):
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
             layer = reverse_state["layer"]
-            if kutils.contains_kernel(layer):
+            if kgraph.contains_kernel(layer):
                 # we want to apply the filter weights on the forward pass
                 # on the backward pass we want copy the gradient computation
                 # except that using the pattern weights instead of the filter w
@@ -83,25 +84,25 @@ class PatternNet(base.BaseReverseNetwork):
                         activation,
                         name="reversed_act_%s" % config["name"])
 
-                    config["name"] = "reversed_kernel_%s" % config["name"]
-                    kernel_layer = layer.__class__.from_config(config)
+                    kernel_layer = kgraph.get_layer_wo_activation(
+                        layer, name_template="reversed_kernel_%s")
                     act_Xs = kutils.easy_apply(kernel_layer, Xs)
                     act_Ys = kutils.easy_apply(act_layer, act_Xs)
-                    weights = layer.get_weights()
-                    kernel_layer.set_weights(weights)
 
-                    config["name"] = "reversed_pattern_%s" % config["name"]
-                    pattern_layer = layer.__class__.from_config(config)
-                    pattern_Ys = kutils.easy_apply(pattern_layer, Xs)
+
                     # replace kernel weights with pattern weights
                     # assume that only one matches
+                    pattern_weights = layer.get_weights()
                     pattern = self.patterns.pop()
-                    tmp = [pattern.shape == x.shape for x in weights]
+                    tmp = [pattern.shape == x.shape for x in pattern_weights]
                     if np.sum(tmp) != 1:
                         raise Exception("Cannot match pattern to kernel.")
-                    idx = np.argmax(tmp)
-                    weights[idx] = pattern
-                    pattern_layer.set_weights(weights)
+                    pattern_weights[np.argmax(tmp)] = pattern
+                    pattern_layer = kgraph.get_layer_wo_activation(
+                        layer,
+                        name_template="reversed_pattern_%s",
+                        weights=pattern_weights)
+                    pattern_Ys = kutils.easy_apply(pattern_layer, Xs)
 
                     layer_cache[layer] = (kernel_layer,
                                           pattern_layer,

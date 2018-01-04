@@ -15,15 +15,16 @@ import six
 ###############################################################################
 
 
-from . import base
-from .. import layers as ilayers
-from .. import utils
-from ..utils import keras as kutils
-
 import keras.backend as K
 import keras.models
 import keras
 
+
+from . import base
+from .. import layers as ilayers
+from .. import utils
+from ..utils import keras as kutils
+from ..utils.keras import graph as kgraph
 
 __all__ = [
     "BaselineGradient",
@@ -100,7 +101,7 @@ class Deconvnet(base.BaseReverseNetwork):
 
             layer = reverse_state["layer"]
             # todo: add check for other non-linearities. 
-            if kutils.contains_activation(layer, "relu"):
+            if kgraph.contains_activation(layer, "relu"):
                 activation = keras.layers.Activation("relu")
                 reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
@@ -110,12 +111,11 @@ class Deconvnet(base.BaseReverseNetwork):
                     layer_wo_relu = layer_cache[layer]
                     Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
                 else:
-                    config = layer.get_config()
-                    config["name"] = "reversed_%s" % config["name"]
-                    config["activation"] = None
-                    layer_wo_relu = layer.__class__.from_config(config)
+                    layer_wo_ = kgraph.get_layer_wo_activation(
+                        layer,
+                        name_template="reversed_%s",
+                    )
                     Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-                    layer_wo_relu.set_weights(layer.get_weights())
                     layer_cache[layer] = layer_wo_relu
 
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
@@ -148,7 +148,7 @@ class GuidedBackprop(base.BaseReverseNetwork):
 
             # todo: add check for other non-linearities.
             layer = reverse_state["layer"]
-            if kutils.contains_activation(layer, "relu"):
+            if kgraph.contains_activation(layer, "relu"):
                 activation = keras.layers.Activation("relu")
                 reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 

@@ -15,14 +15,115 @@ import six
 ###############################################################################
 
 
-from ... import utils
+from ... import utils as iutils
 
 import keras.engine.topology
 
 
 __all__ = [
+    "contains_activation",
+    "contains_kernel",
+    "get_kernel",
+
+    "get_layer_inbound_count",
+    "get_layer_outbound_count",
+    "get_layer_io",
+    "get_layer_wo_activation",
+
     "reverse_model",
 ]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def contains_activation(layer, activation=None):
+    """
+    Check whether the layer contains an activation function.
+    activation is None then we only check if layer can contain an activation.
+    """
+
+    # todo: add test and check this more throughroughly.
+    # rely on Keras convention.
+    if hasattr(layer, "activation"):
+        if activation is not None:
+            return layer.activation == keras.activations.get(activation)
+        else:
+            return True
+    else:
+        return False
+
+
+def contains_kernel(layer):
+    """
+    Check whether the layer contains a kernel.
+    """
+
+    # todo: add test and check this more throughroughly.
+    # rely on Keras convention.
+    if hasattr(layer, "kernel"):
+        return True
+    else:
+        return False
+
+
+def get_kernel(layer):
+    ret = [x for x in layer.get_weights() if len(x.shape) > 1]
+    assert len(ret) == 1
+    return ret[0]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def get_layer_inbound_count(layer):
+    return len(layer.inbound_nodes)
+
+
+def get_layer_outbound_count(layer):
+    return len(layer.outbound_nodes)
+
+
+def get_layer_io(layer, node_index=0):
+    Xs = iutils.listify(layer.get_input_at(node_index))
+    Ys = iutils.listify(layer.get_output_at(node_index))
+    return Xs, Ys
+
+
+def get_layer_from_config(old_layer, new_config, weights=None):
+    new_layer = old_layer.__class__.from_config(new_config)
+
+    if weights is None:
+        weights = old_layer.get_weights()
+
+    if len(weights) > 0:
+        # init weights
+        new_layer(old_layer.get_input_at(0))
+        new_layer.set_weights(weights)
+
+    return new_layer
+
+
+def get_layer_wo_activation(layer,
+                            keep_bias=True,
+                            name_template=None,
+                            weights=None):
+    config = layer.get_config()
+    if name_template is None:
+        config["name"] = None
+    else:
+        config["name"] = name_template % config["name"]
+    if contains_activation(layer):
+        config["activation"] = None
+    if keep_bias is False and config.get("use_bias", False):
+        config["use_bias"] = False
+        if weights is None:
+            weights = layer.get_weights()[:-1]
+    return get_layer_from_config(layer, config, weights=weights)
 
 
 ###############################################################################
@@ -60,8 +161,8 @@ def reverse_model(model, reverse_mapping,
                 # A layer can be shared, i.e., applied several times.
                 # This leads to several in- and outbound tensors.
                 for node_index in range(len(layer.inbound_nodes)):
-                    Xs = utils.listify(layer.get_input_at(node_index))
-                    Ys = utils.listify(layer.get_output_at(node_index))
+                    Xs = iutils.listify(layer.get_input_at(node_index))
+                    Ys = iutils.listify(layer.get_output_at(node_index))
                     reversed_Ys = [reversed_tensors[ys]["tensor"]
                                    for ys in Ys]
                     reverse_id = state["reverse_id"]
@@ -83,7 +184,7 @@ def reverse_model(model, reverse_mapping,
                             "layer_index": layer_index,
                             "node_index": node_index,
                         })
-                    reversed_Xs = utils.listify(reversed_Xs)
+                    reversed_Xs = iutils.listify(reversed_Xs)
 
                     tmp = zip(Xs, reversed_Xs)
                     for i, (xs, reversed_xs) in enumerate(tmp):
@@ -103,4 +204,3 @@ def reverse_model(model, reverse_mapping,
         return reversed_input_tensors, reversed_tensors
     else:
         return reversed_input_tensors
-

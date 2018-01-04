@@ -15,13 +15,14 @@ import six
 ###############################################################################
 
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils.keras import graph
-
 import keras.layers
 import keras.models
 import numpy as np
+
+
+from .. import layers as ilayers
+from .. import utils as iutils
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -134,7 +135,7 @@ class BaseReverseNetwork(BaseNetwork):
         return super(BaseReverseNetwork, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
-        ret = graph.reverse_model(
+        ret = kgraph.reverse_model(
             model,
             reverse_mapping=self.reverse_mappings,
             default_reverse=self.default_reverse,
