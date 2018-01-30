@@ -111,7 +111,7 @@ class Deconvnet(base.BaseReverseNetwork):
                     layer_wo_relu = layer_cache[layer]
                     Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
                 else:
-                    layer_wo_ = kgraph.get_layer_wo_activation(
+                    layer_wo_relu = kgraph.get_layer_wo_activation(
                         layer,
                         name_template="reversed_%s",
                     )
