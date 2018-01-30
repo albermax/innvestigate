@@ -34,6 +34,7 @@ def iterator():
     Iterator over various networks.
     """
 
+    # TODO: change environment variable name.
     # TODO: make this more transparent!
     # Default test only for one network. To test all put "*"
     #name_filter = "mnist.log_reg"
