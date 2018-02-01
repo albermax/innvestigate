@@ -75,6 +75,7 @@ def contains_kernel(layer):
 
 
 def is_convnet_layer(layer):
+    # todo: add checks, e.g., no recurrent layers
     return True
 
 
