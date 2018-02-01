@@ -18,6 +18,7 @@ import six
 import keras.layers
 import keras.models
 import numpy as np
+import warnings
 
 
 from .. import layers as ilayers
@@ -26,7 +27,10 @@ from ..utils.keras import graph as kgraph
 
 
 __all__ = [
-    "Base",
+    "BaseAnalyzer",
+    "TrainerMixin",
+    "OneEpochTrainerMixin",
+
     "BaseNetwork",
     "BaseReverseNetwork"
 ]
@@ -37,19 +41,72 @@ __all__ = [
 ###############################################################################
 
 
-class Base(object):
+class BaseAnalyzer(object):
+    """
+    The basic interface of an Innvestigate analyzer.
+    """
 
     properties = {
         "name": "undefined",
-        "show_as": "undefined",
     }
 
     def __init__(self, model):
         self._model = model
         pass
 
-    def explain(self, X):
-        raise NotImplementedError("Has to be implemented by the subclass")
+    def fit(self, *args, disable_no_training_warning=False, **kwargs):
+        if not disable_no_training_warning:
+            # issue warning if not training is foreseen,
+            # but is fit is still called.
+            warnings.warn("This analyzer does not need to be trained."
+                          " Still fit() is called.", RuntimeWarning)
+        pass
+
+    def analyze(self, X):
+        raise NotImplementedError()
+
+    def _get_state(self):
+        model_json = self._model.to_json()
+        model_weights = self._model.get_weights()
+        return {"model_json": model_json, "model_weights": model_weights}
+
+    def save(self):
+        state = self._get_state()
+        class_name = self.__class__.__name__
+        return class_name, state
+
+    def save_npz(self, fname):
+        class_name, state = self.save()
+        np.savez(fname, **{"class_name": class_name,
+                           "state": state})
+        pass
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        model_json = state.pop("model_json")
+        model_weights = state.pop("model_weights")
+        assert len(state) == 0
+
+        model = keras.models.model_from_json(model_json)
+        model.set_weights(model_weights)
+        return {"model": model}
+
+    @staticmethod
+    def load(class_name, state):
+        # Todo:do in a smarter way!
+        import innvestigate.analyzer
+        clazz = getattr(innvestigate.analyzer, class_name)
+
+        kwargs = clazz._state_to_kwargs(state)
+        return clazz(**kwargs)
+
+    @staticmethod
+    def load_npz(fname):
+        f = np.load(fname)
+
+        class_name = f["class_name"].item()
+        state = f["state"].item()
+        return BaseAnalyzer.load(class_name, state)
 
 
 ###############################################################################
@@ -57,7 +114,27 @@ class Base(object):
 ###############################################################################
 
 
-class BaseNetwork(Base):
+class TrainerMixin(object):
+
+    # todo: create a common interface for a trained analyzer.
+    pass
+
+
+class OneEpochTrainerMixin(TrainerMixin):
+
+    # todo: Wrapper around trainer mixin that allows training for one epoch.
+    pass
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class BaseNetwork(BaseAnalyzer):
+    """
+    Analyzer itself is defined as keras graph.
+    """
 
     def __init__(self, model, neuron_selection_mode="max_activation"):
         super(BaseNetwork, self).__init__(model)
@@ -121,6 +198,18 @@ class BaseNetwork(Base):
             ret = ret[0]
         return ret
 
+    def _get_state(self):
+        state = super(BaseNetwork, self)._get_state()
+        state.update({"neuron_selection_mode": self._neuron_selection_mode})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        neuron_selection_mode = state.pop("neuron_selection_mode")
+        kwargs = super(BaseNetwork, clazz)._state_to_kwargs(state)
+        kwargs.update({"neuron_selection_mode": neuron_selection_mode})
+        return kwargs
+
 
 class BaseReverseNetwork(BaseNetwork):
 
@@ -160,3 +249,18 @@ class BaseReverseNetwork(BaseNetwork):
             print("Not finite values found in following nodes: "
                   "(ReverseID, TensorID) - {}".format(nfinite_tensors))
         pass
+
+    def _get_state(self):
+        state = super(BaseReverseNetwork, self)._get_state()
+        state.update({"reverse_verbose": self._reverse_verbose})
+        state.update({"reverse_check_finite": self._reverse_check_finite})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        reverse_verbose = state.pop("reverse_verbose")
+        reverse_check_finite = state.pop("reverse_check_finite")
+        kwargs = super(BaseReverseNetwork, clazz)._state_to_kwargs(state)
+        kwargs.update({"reverse_verbose": reverse_verbose,
+                       "reverse_check_finite": reverse_check_finite})
+        return kwargs

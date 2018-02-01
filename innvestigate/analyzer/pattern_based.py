@@ -53,8 +53,8 @@ class PatternNet(base.BaseReverseNetwork):
         if patterns is None:
             raise ValueError("Patterns are required.")
 
-        # copy patterns, will be used as stack
-        self.patterns = list(patterns)
+        # copy pattern references
+        self._patterns = list(patterns)
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
             layer = reverse_state["layer"]
@@ -93,7 +93,7 @@ class PatternNet(base.BaseReverseNetwork):
                     # replace kernel weights with pattern weights
                     # assume that only one matches
                     pattern_weights = layer.get_weights()
-                    pattern = self.patterns.pop()
+                    pattern = patterns[self._tmp_pattern_idx_stack.pop()]
                     tmp = [pattern.shape == x.shape for x in pattern_weights]
                     if np.sum(tmp) != 1:
                         raise Exception("Cannot match pattern to kernel.")
@@ -119,20 +119,35 @@ class PatternNet(base.BaseReverseNetwork):
                     tmp = utils.listify(grad_act(act_Xs+act_Ys+reversed_Ys))
                 return grad_pattern(Xs+pattern_Ys+tmp)
             else:
-                return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)   
+                return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
         self.default_reverse = reverse
         return super(PatternNet, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, *args, **kwargs):
+
+        # todo: this is not a very clean way. improve!
+        self._tmp_pattern_idx_stack = list(range(len(self._patterns)))
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
 
-        if len(self.patterns) == 0:
-            del self.patterns
+        if len(self._tmp_pattern_idx_stack) == 0:
+            del self._tmp_pattern_idx_stack
         else:
             raise Exception("Not all patterns consumed. Something is wrong.")
 
         return ret
+
+    def _get_state(self):
+        state = super(PatternNet, self)._get_state()
+        state.update({"patterns": self._patterns})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        patterns = state.pop("patterns")
+        kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
+        kwargs.update({"patterns": patterns})
+        return kwargs
 
 
 class PatternAttribution(PatternNet):
@@ -147,10 +162,12 @@ class PatternAttribution(PatternNet):
         if patterns is None:
             raise ValueError("Patterns are required.")
 
-        # copy patterns, will be used as stack
+        # copy pattern references
+        self._patterns = list(patterns)
+        # copy pattern references; will be used as stack
         patterns = list(patterns)
 
-        # copy patterns
+        # create PatternAttributions "patterns""
         new_patterns = []
         for W in model.get_weights():
             if W.shape == patterns[0].shape:
@@ -166,3 +183,18 @@ class PatternAttribution(PatternNet):
                                                         *args,
                                                         patterns=new_patterns,
                                                         **kwargs)
+
+    def _get_state(self):
+        state = super(PatternAttribution, self)._get_state()
+        # This overwrites the patterns parameter from PatterNet.
+        state.update({"patterns": self._patterns})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        # Don't pop patterns key-value-pair; PatternNet expects it.
+        patterns = state["patterns"]
+        kwargs = super(PatternAttribution, clazz)._state_to_kwargs(state)
+        # This overwrites the patterns parameter from PatternNet.
+        kwargs.update({"patterns": patterns})
+        return kwargs

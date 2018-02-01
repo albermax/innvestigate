@@ -47,9 +47,8 @@ class BaselineGradient(base.BaseNetwork):
         "show_as": "rgb",
     }
 
-
     def _create_analysis(self, model):
-        return ilayers.Gradient()(model.inputs+[model.outputs[0],])
+        return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
 class Gradient(base.BaseReverseNetwork):
@@ -62,6 +61,7 @@ class Gradient(base.BaseReverseNetwork):
     def __init__(self, *args, **kwargs):
         # we assume there is only one head!
         head_processed = [False]
+
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
             if head_processed[0] is not True:
                 # replace function value with ones as the last element

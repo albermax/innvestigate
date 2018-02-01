@@ -20,6 +20,7 @@ import keras.models
 import numpy as np
 import unittest
 
+from ...analyzer import BaseAnalyzer
 from . import networks
 
 
@@ -113,6 +114,31 @@ class EqualAnalyzerTestCase(BaseTestCase):
                          tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isnan(analysis2.ravel())))
         self.assertTrue(np.allclose(analysis1, analysis2))
+        pass
+
+
+# todo: merge with base test case? if we don't run the analysis
+# its only half the test.
+class SerializeAnalyzerTestCase(BaseTestCase):
+
+    def _method(self, model):
+        raise NotImplementedError("Set in subclass.")
+
+    def _apply_test(self, network):
+        # Create model.
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        # Get analyzer.
+        analyzer = self._method(model)
+        # Dryrun.
+        x = np.random.rand(1, *(network["input_shape"][1:]))
+
+        class_name, state = analyzer.save()
+        new_analyzer = BaseAnalyzer.load(class_name, state)
+
+        analysis = new_analyzer.analyze(x)
+        self.assertEqual(tuple(analysis.shape[1:]),
+                         tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 
 
