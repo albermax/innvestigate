@@ -106,7 +106,7 @@ class HaufePatternExample(unittest.TestCase):
         #print(a_s, A)
 
         def allclose(a, b):
-            return np.allclose(a, b, rtol=0.01, atol=0.01)
+            return np.allclose(a, b, rtol=0.05, atol=0.05)
 
         # perpendicular to a_d
         self.assertTrue(allclose(a_d.ravel(), abs(W.ravel())))
