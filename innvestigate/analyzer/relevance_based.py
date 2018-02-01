@@ -44,7 +44,6 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
         "show_as": "rgb",
     }
 
-
     def _create_analysis(self, model):
         gradients = utils.listify(ilayers.Gradient()(
             model.inputs+[model.outputs[0], ]))
@@ -74,17 +73,9 @@ class BaseLRP(base.ReverseAnalyzerBase):
             else:
                 first_layer_rule = rule
 
-        # we assume there is only one head!
-        head_processed = [False]
         layer_cache = {}
 
         def reverse(Xs, Ys, Rs, reverse_state):
-            if head_processed[0] is not True:
-                # replace function value with ones as the last element
-                # chain rule is a one.
-                head_processed[0] = True
-                Rs = utils.listify(ilayers.OnesLike()(Rs))
-
             layer = reverse_state["layer"]
             # activations do not affect relevances
             # also biases are not used
@@ -124,3 +115,6 @@ class BaseLRP(base.ReverseAnalyzerBase):
 
         self.default_reverse = reverse
         return super(BaseLRP, self).__init__(*args, **kwargs)
+
+    def _head_mapping(self, X):
+        return ilayers.OnesLike()(X)

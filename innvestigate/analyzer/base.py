@@ -223,11 +223,15 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
 
+    def _head_mapping(self, X):
+        return X
+
     def _create_analysis(self, model):
         ret = kgraph.reverse_model(
             model,
             reverse_mapping=self.reverse_mappings,
             default_reverse=self.default_reverse,
+            head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,
             return_all_reversed_tensors=self._reverse_check_finite)
 

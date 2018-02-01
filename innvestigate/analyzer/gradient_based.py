@@ -59,19 +59,14 @@ class Gradient(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
-        # we assume there is only one head!
-        head_processed = [False]
-
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            if head_processed[0] is not True:
-                # replace function value with ones as the last element
-                # chain rule is a one.
-                head_processed[0] = True
-                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
         self.default_reverse = reverse
         return super(Gradient, self).__init__(*args, **kwargs)
+
+    def _head_mapping(self, X):
+        return ilayers.OnesLike()(X)
 
 
 ###############################################################################
@@ -88,17 +83,9 @@ class Deconvnet(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
-        # we assume there is only one head!
-        head_processed = [False]
         layer_cache = {}
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            if head_processed[0] is not True:
-                # replace function value with ones as the last element
-                # chain rule is a one.
-                head_processed[0] = True
-                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
-
             layer = reverse_state["layer"]
             # todo: add check for other non-linearities. 
             if kgraph.contains_activation(layer, "relu"):
@@ -125,6 +112,9 @@ class Deconvnet(base.ReverseAnalyzerBase):
         self.default_reverse = reverse
         return super(Deconvnet, self).__init__(*args, **kwargs)
 
+    def _head_mapping(self, X):
+        return ilayers.OnesLike()(X)
+
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
 
@@ -135,17 +125,9 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
-        # we assume there is only one head!
-        head_processed = [False]
         layer_cache = {}
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            if head_processed[0] is not True:
-                # replace function value with ones as the last element
-                # chain rule is a one.
-                head_processed[0] = True
-                reversed_Ys = utils.listify(ilayers.OnesLike()(reversed_Ys))
-
             # todo: add check for other non-linearities.
             layer = reverse_state["layer"]
             if kgraph.contains_activation(layer, "relu"):
@@ -156,3 +138,6 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
         self.default_reverse = reverse
         return super(GuidedBackprop, self).__init__(*args, **kwargs)
+
+    def _head_mapping(self, X):
+        return ilayers.OnesLike()(X)

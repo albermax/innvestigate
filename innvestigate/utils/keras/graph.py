@@ -133,14 +133,20 @@ def get_layer_wo_activation(layer,
 
 def reverse_model(model, reverse_mapping,
                   default_reverse=None,
+                  head_mapping=None,
                   verbose=False,
                   return_all_reversed_tensors=False):
 
-    reversed_tensors = {tmp: {"id": (-1, i), "tensor": tmp}
+    if head_mapping is None:
+        def head_mapping(X):
+            return X
+
+    reversed_tensors = {tmp: {"id": (-1, i), "tensor": head_mapping(tmp)}
                         for i, tmp in enumerate(model.outputs)}
 
     if not callable(reverse_mapping):
         reverse_mapping_data = reverse_mapping
+
         def reverse_mapping(layer):
             try:
                 return reverse_mapping_data[type(layer)]
