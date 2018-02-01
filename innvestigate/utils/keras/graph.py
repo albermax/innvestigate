@@ -165,7 +165,27 @@ def reverse_model(model, reverse_mapping,
                 reverse_container(layer, state)
             else:
                 # A layer can be shared, i.e., applied several times.
-                # This leads to several in- and outbound tensors.
+                # This leads to several in- and outbound tensors combinations.
+                # Each is indexed by a node_index.
+
+                # If reverse mapping returns a function we use this function
+                # for the whole layer. This a way to cache the layer reversion
+                # by reverting it once and then returning a function that
+                # applies the reverted layer.
+                reverse_f = reverse_mapping(layer)
+                if reverse_f is None:
+                    reverse_f = default_reverse_mapping
+                # workaround to be replaceable in local function
+                reverse_f = [reverse_f, ]
+
+                def apply_mapping(Xs, Ys, reversed_Ys, reverse_state):
+                    ret = reverse_f[0](Xs, Ys, reversed_Ys, reverse_state)
+                    if callable(ret):
+                        # cache/replace function; see above
+                        reverse_f[0] = ret
+                        ret = ret(Xs, Ys, reversed_Ys, reverse_state)
+                    return ret
+
                 for node_index in range(len(layer.inbound_nodes)):
                     Xs = iutils.listify(layer.get_input_at(node_index))
                     Ys = iutils.listify(layer.get_output_at(node_index))
@@ -177,10 +197,8 @@ def reverse_model(model, reverse_mapping,
                     _print("  [RID: {}] Reverse layer {}"
                            " -> node {} ({})".format(reverse_id, layer_index,
                                                      node_index, layer))
-                    reverse_f = reverse_mapping(layer)
-                    if reverse_f is None:
-                        reverse_f = default_reverse_mapping
-                    reversed_Xs = reverse_f(
+
+                    reversed_Xs = apply_mapping(
                         Xs, Ys, reversed_Ys,
                         {
                             "reverse_id": reverse_id,

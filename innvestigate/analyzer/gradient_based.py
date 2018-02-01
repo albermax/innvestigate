@@ -76,32 +76,28 @@ class Deconvnet(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
-        layer_cache = {}
 
-        def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            layer = reverse_state["layer"]
-
+        def reverse_layer(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
-            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+            layer_wo_relu = kgraph.get_layer_wo_activation(
+                layer,
+                name_template="reversed_%s",
+            )
 
-            # layers can be applied to several nodes.
-            # but we need to revert it only once.
-            if layer in layer_cache:
-                layer_wo_relu = layer_cache[layer]
-                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-            else:
-                layer_wo_relu = kgraph.get_layer_wo_activation(
-                    layer,
-                    name_template="reversed_%s",
-                )
-                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-                layer_cache[layer] = layer_wo_relu
+            def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
+                # apply relus conditioned on backpropagated values.
+                reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
-            return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+                # apply gradient of forward without relus
+                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+
+            return reverse_layer_instance
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"), reverse),
+            (lambda layer: kgraph.contains_activation(layer, "relu"),
+             reverse_layer),
         ]
         return super(Deconvnet, self).__init__(*args, **kwargs)
 
@@ -119,7 +115,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
     def __init__(self, *args, **kwargs):
 
-        def reverse(Xs, Ys, reversed_Ys, reverse_state):
+        def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
             reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
@@ -127,7 +123,8 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"), reverse),
+            (lambda layer: kgraph.contains_activation(layer, "relu"),
+             reverse_layer_instance),
         ]
         return super(GuidedBackprop, self).__init__(*args, **kwargs)
 
