@@ -46,12 +46,26 @@ class AnalyzerBase(object):
     The basic interface of an Innvestigate analyzer.
     """
 
+    # Should be specified by the base class.
+    _model_checks = []
+    _model_checks_msg = "Model does not fit the method's assumptions."
+
     properties = {
         "name": "undefined",
     }
 
-    def __init__(self, model):
+    def __init__(self, model, model_checks_raise_exception=True):
         self._model = model
+        self._model_checks_raise_exception = model_checks_raise_exception
+
+        if len(self._model_checks) > 0:
+            checks = kgraph.model_contains(self._model, self._model_checks,
+                                           return_only_counts=True)
+            if sum(iutils.listify(checks)) > 0:
+                if self._model_checks_raise_exception is True:
+                    raise Exception(self._model_checks_msg)
+                else:
+                    warnings.warn(self._model_checks_msg)
         pass
 
     def fit(self, *args, disable_no_training_warning=False, **kwargs):
@@ -216,8 +230,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     # Should be specified by the base class.
     _conditional_mappings = []
 
-    def __init__(self, *args,
-                 reverse_verbose=False, reverse_check_finite=False, **kwargs):
+    def __init__(self,
+                 *args,
+                 reverse_verbose=False,
+                 reverse_check_finite=False,
+                 **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_check_finite = reverse_check_finite
         return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)

@@ -76,6 +76,13 @@ class Deconvnet(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
+        self._model_checks = [
+            lambda layer: not kgraph.is_relu_convnet_layer(layer),
+        ]
+        self._model_checks_msg = (
+            "Deconvnet is only well defined for "
+            "convluational neural networks with non-relu activations."
+            )
 
         def reverse_layer(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
@@ -114,6 +121,13 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
+        self._model_checks = [
+            lambda layer: not kgraph.is_relu_convnet_layer(layer),
+        ]
+        self._model_checks_msg = (
+            "GuidedBackprop is only well defined for "
+            "convluational neural networks with non-relu activations."
+            )
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")

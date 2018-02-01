@@ -23,12 +23,17 @@ import keras.engine.topology
 __all__ = [
     "contains_activation",
     "contains_kernel",
+    "is_convnet_layer",
+    "is_relu_convnet_layer",
+
     "get_kernel",
 
     "get_layer_inbound_count",
     "get_layer_outbound_count",
     "get_layer_io",
     "get_layer_wo_activation",
+
+    "model_contains",
 
     "reverse_model",
 ]
@@ -67,6 +72,23 @@ def contains_kernel(layer):
         return True
     else:
         return False
+
+
+def is_convnet_layer(layer):
+    return True
+
+
+def is_relu_convnet_layer(layer):
+    return (is_convnet_layer(layer) and
+            (not contains_activation(layer) or
+             contains_activation(layer, None) or
+             contains_activation(layer, "linear") or
+             contains_activation(layer, "relu")))
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 def get_kernel(layer):
@@ -124,6 +146,39 @@ def get_layer_wo_activation(layer,
         if weights is None:
             weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def model_contains(model, layer_condition, return_only_counts=False):
+    if callable(layer_condition):
+        layer_condition = [layer_condition, ]
+        single_condition = True
+    else:
+        single_condition = False
+
+    collected_layers = [[] for _ in range(len(layer_condition))]
+
+    def collect_layers(container):
+        for layer_index, layer in enumerate(container.layers):
+            for i, condition in enumerate(layer_condition):
+                if condition(layer):
+                    collected_layers[i].append(layer)
+
+            if isinstance(layer, keras.engine.topology.Container):
+                collect_layers(layer)
+    collect_layers(model)
+
+    if return_only_counts is True:
+        collected_layers = [len(v) for v in collected_layers]
+
+    if single_condition is True:
+        return collected_layers[0]
+    else:
+        return collected_layers
 
 
 ###############################################################################

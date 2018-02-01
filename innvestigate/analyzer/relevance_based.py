@@ -62,6 +62,13 @@ class BaseLRP(base.ReverseAnalyzerBase):
     def __init__(self,
                  model, *args, rule=None,
                  first_layer_rule=None, first_layer_use_ZB=False, **kwargs):
+        self._model_checks = [
+            lambda layer: not kgraph.is_convnet_layer(layer),
+        ]
+        self._model_checks_msg = (
+            "Deconvnet is only tested for "
+            "convluational neural networks."
+            )
 
         if rule is None:
             raise ValueError("Need LRP rule.")

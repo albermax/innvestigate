@@ -48,11 +48,16 @@ class PatternNet(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, patterns=None, **kwargs):
-        layer_cache = {}
+        self._model_checks = [
+            lambda layer: not kgraph.is_relu_convnet_layer(layer),
+        ]
+        self._model_checks_msg = (
+            "PatternNet is only well defined for "
+            "convluational neural networks with non-relu activations."
+            )
 
         if patterns is None:
             raise ValueError("Patterns are required.")
-
         # copy pattern references
         self._patterns = list(patterns)
 
