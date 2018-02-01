@@ -102,19 +102,25 @@ class BaseLRP(base.ReverseAnalyzerBase):
                 layer_cache[layer] = new_layer
 
                 layer = new_layer
-                Ys = new_Ys    
+                Ys = new_Ys
 
-            if kgraph.contains_kernel(layer):
-                if any([tmp in model.inputs for tmp in Xs]):
-                    current_rule = first_layer_rule
-                else:
-                    current_rule = rule
+            if any([tmp in model.inputs for tmp in Xs]):
+                current_rule = first_layer_rule
             else:
-                current_rule = identity_rule
+                current_rule = rule
+
             return ilayers.LRP(len(Xs), layer, rule)(Xs+Ys+Rs)
 
-        self.default_reverse = reverse
+        self._conditional_mappings = [
+            (kgraph.contains_kernel, reverse),
+        ]
         return super(BaseLRP, self).__init__(*args, **kwargs)
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
+
+    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        # Expect Xs and Ys to have the same shapes.
+        # There is not mixing of relevances as there is kernel,
+        # therefore we pass them as they are.
+        return reversed_Ys

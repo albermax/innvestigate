@@ -214,8 +214,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     # Should be specified by the base class.
-    reverse_mappings = {}
-    default_reverse = None
+    _conditional_mappings = []
 
     def __init__(self, *args,
                  reverse_verbose=False, reverse_check_finite=False, **kwargs):
@@ -223,14 +222,24 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
 
+    def _reverse_mapping(self, layer):
+        for condition, reverse_f in self._conditional_mappings:
+            if condition(layer):
+                return reverse_f
+        return None
+
+    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        # The gradient.
+        return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+
     def _head_mapping(self, X):
         return X
 
     def _create_analysis(self, model):
         ret = kgraph.reverse_model(
             model,
-            reverse_mapping=self.reverse_mappings,
-            default_reverse=self.default_reverse,
+            reverse_mapping=self._reverse_mapping,
+            default_reverse_mapping=self._default_reverse_mapping,
             head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,
             return_all_reversed_tensors=self._reverse_check_finite)

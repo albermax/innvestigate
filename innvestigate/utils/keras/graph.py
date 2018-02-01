@@ -132,7 +132,7 @@ def get_layer_wo_activation(layer,
 
 
 def reverse_model(model, reverse_mapping,
-                  default_reverse=None,
+                  default_reverse_mapping=None,
                   head_mapping=None,
                   verbose=False,
                   return_all_reversed_tensors=False):
@@ -179,7 +179,7 @@ def reverse_model(model, reverse_mapping,
                                                      node_index, layer))
                     reverse_f = reverse_mapping(layer)
                     if reverse_f is None:
-                        reverse_f = default_reverse
+                        reverse_f = default_reverse_mapping
                     reversed_Xs = reverse_f(
                         Xs, Ys, reversed_Ys,
                         {

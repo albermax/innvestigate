@@ -58,13 +58,6 @@ class Gradient(base.ReverseAnalyzerBase):
         "show_as": "rgb",
     }
 
-    def __init__(self, *args, **kwargs):
-        def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
-
-        self.default_reverse = reverse
-        return super(Gradient, self).__init__(*args, **kwargs)
-
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
 
@@ -87,29 +80,29 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
             layer = reverse_state["layer"]
-            # todo: add check for other non-linearities. 
-            if kgraph.contains_activation(layer, "relu"):
-                activation = keras.layers.Activation("relu")
-                reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
-                # layers can be applied to several nodes.
-                # but we need to revert it only once.
-                if layer in layer_cache:
-                    layer_wo_relu = layer_cache[layer]
-                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-                else:
-                    layer_wo_relu = kgraph.get_layer_wo_activation(
-                        layer,
-                        name_template="reversed_%s",
-                    )
-                    Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
-                    layer_cache[layer] = layer_wo_relu
+            activation = keras.layers.Activation("relu")
+            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
-                return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+            # layers can be applied to several nodes.
+            # but we need to revert it only once.
+            if layer in layer_cache:
+                layer_wo_relu = layer_cache[layer]
+                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
             else:
-                return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)   
+                layer_wo_relu = kgraph.get_layer_wo_activation(
+                    layer,
+                    name_template="reversed_%s",
+                )
+                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                layer_cache[layer] = layer_wo_relu
 
-        self.default_reverse = reverse
+            return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+
+        # todo: add check for other non-linearities.
+        self._conditional_mappings = [
+            (lambda layer: kgraph.contains_activation(layer, "relu"), reverse),
+        ]
         return super(Deconvnet, self).__init__(*args, **kwargs)
 
     def _head_mapping(self, X):
@@ -125,18 +118,17 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
     }
 
     def __init__(self, *args, **kwargs):
-        layer_cache = {}
 
         def reverse(Xs, Ys, reversed_Ys, reverse_state):
-            # todo: add check for other non-linearities.
-            layer = reverse_state["layer"]
-            if kgraph.contains_activation(layer, "relu"):
-                activation = keras.layers.Activation("relu")
-                reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+            activation = keras.layers.Activation("relu")
+            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
 
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
-        self.default_reverse = reverse
+        # todo: add check for other non-linearities.
+        self._conditional_mappings = [
+            (lambda layer: kgraph.contains_activation(layer, "relu"), reverse),
+        ]
         return super(GuidedBackprop, self).__init__(*args, **kwargs)
 
     def _head_mapping(self, X):
