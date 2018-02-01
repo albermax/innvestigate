@@ -35,7 +35,7 @@ def iterator():
     """
 
     # TODO: change environment variable name.
-    # TODO: make this more transparent!
+    # TODO: make this more transparent! use attributes/tags of unittests
     # Default test only for one network. To test all put "*"
     #name_filter = "mnist.log_reg"
     name_filter = "*"
