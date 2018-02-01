@@ -27,12 +27,12 @@ from ..utils.keras import graph as kgraph
 
 
 __all__ = [
-    "BaseAnalyzer",
+    "AnalyzerBase",
     "TrainerMixin",
     "OneEpochTrainerMixin",
 
-    "BaseNetwork",
-    "BaseReverseNetwork"
+    "AnalyzerNetworkBase",
+    "ReverseAnalyzerBase"
 ]
 
 
@@ -41,7 +41,7 @@ __all__ = [
 ###############################################################################
 
 
-class BaseAnalyzer(object):
+class AnalyzerBase(object):
     """
     The basic interface of an Innvestigate analyzer.
     """
@@ -106,7 +106,7 @@ class BaseAnalyzer(object):
 
         class_name = f["class_name"].item()
         state = f["state"].item()
-        return BaseAnalyzer.load(class_name, state)
+        return AnalyzerBase.load(class_name, state)
 
 
 ###############################################################################
@@ -131,13 +131,13 @@ class OneEpochTrainerMixin(TrainerMixin):
 ###############################################################################
 
 
-class BaseNetwork(BaseAnalyzer):
+class AnalyzerNetworkBase(AnalyzerBase):
     """
     Analyzer itself is defined as keras graph.
     """
 
     def __init__(self, model, neuron_selection_mode="max_activation"):
-        super(BaseNetwork, self).__init__(model)
+        super(AnalyzerNetworkBase, self).__init__(model)
 
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
@@ -199,19 +199,19 @@ class BaseNetwork(BaseAnalyzer):
         return ret
 
     def _get_state(self):
-        state = super(BaseNetwork, self)._get_state()
+        state = super(AnalyzerNetworkBase, self)._get_state()
         state.update({"neuron_selection_mode": self._neuron_selection_mode})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         neuron_selection_mode = state.pop("neuron_selection_mode")
-        kwargs = super(BaseNetwork, clazz)._state_to_kwargs(state)
+        kwargs = super(AnalyzerNetworkBase, clazz)._state_to_kwargs(state)
         kwargs.update({"neuron_selection_mode": neuron_selection_mode})
         return kwargs
 
 
-class BaseReverseNetwork(BaseNetwork):
+class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     # Should be specified by the base class.
     reverse_mappings = {}
@@ -221,7 +221,7 @@ class BaseReverseNetwork(BaseNetwork):
                  reverse_verbose=False, reverse_check_finite=False, **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_check_finite = reverse_check_finite
-        return super(BaseReverseNetwork, self).__init__(*args, **kwargs)
+        return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
         ret = kgraph.reverse_model(
@@ -251,7 +251,7 @@ class BaseReverseNetwork(BaseNetwork):
         pass
 
     def _get_state(self):
-        state = super(BaseReverseNetwork, self)._get_state()
+        state = super(ReverseAnalyzerBase, self)._get_state()
         state.update({"reverse_verbose": self._reverse_verbose})
         state.update({"reverse_check_finite": self._reverse_check_finite})
         return state
@@ -260,7 +260,7 @@ class BaseReverseNetwork(BaseNetwork):
     def _state_to_kwargs(clazz, state):
         reverse_verbose = state.pop("reverse_verbose")
         reverse_check_finite = state.pop("reverse_check_finite")
-        kwargs = super(BaseReverseNetwork, clazz)._state_to_kwargs(state)
+        kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
         kwargs.update({"reverse_verbose": reverse_verbose,
                        "reverse_check_finite": reverse_check_finite})
         return kwargs

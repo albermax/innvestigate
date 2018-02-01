@@ -20,7 +20,7 @@ import keras.models
 import numpy as np
 import unittest
 
-from ...analyzer import BaseAnalyzer
+from ...analyzer import AnalyzerBase
 from . import networks
 
 
@@ -133,7 +133,7 @@ class SerializeAnalyzerTestCase(BaseTestCase):
         x = np.random.rand(1, *(network["input_shape"][1:]))
 
         class_name, state = analyzer.save()
-        new_analyzer = BaseAnalyzer.load(class_name, state)
+        new_analyzer = AnalyzerBase.load(class_name, state)
 
         analysis = new_analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape[1:]),

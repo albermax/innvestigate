@@ -40,7 +40,7 @@ __all__ = [
 ###############################################################################
 
 
-class BaselineGradient(base.BaseNetwork):
+class BaselineGradient(base.AnalyzerNetworkBase):
 
     properties = {
         "name": "BaselineGradient",
@@ -51,7 +51,7 @@ class BaselineGradient(base.BaseNetwork):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
-class Gradient(base.BaseReverseNetwork):
+class Gradient(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "Gradient",
@@ -79,7 +79,7 @@ class Gradient(base.BaseReverseNetwork):
 ###############################################################################
 
 
-class Deconvnet(base.BaseReverseNetwork):
+class Deconvnet(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "Deconvnet",
@@ -126,7 +126,7 @@ class Deconvnet(base.BaseReverseNetwork):
         return super(Deconvnet, self).__init__(*args, **kwargs)
 
 
-class GuidedBackprop(base.BaseReverseNetwork):
+class GuidedBackprop(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "GuidedBackprop",

@@ -37,7 +37,7 @@ __all__ = [
 ###############################################################################
 
 
-class BaselineLRPZ(base.BaseNetwork):
+class BaselineLRPZ(base.AnalyzerNetworkBase):
 
     properties = {
         "name": "BaselineLRP-Z",
@@ -52,7 +52,7 @@ class BaselineLRPZ(base.BaseNetwork):
                 for i, g in zip(model.inputs, gradients)]
 
 
-class BaseLRP(base.BaseReverseNetwork):
+class BaseLRP(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "Deconvnet",

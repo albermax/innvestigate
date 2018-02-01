@@ -39,7 +39,7 @@ __all__ = [
 ###############################################################################
 
 
-class PatternNet(base.BaseReverseNetwork):
+class PatternNet(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "PatternNet",
