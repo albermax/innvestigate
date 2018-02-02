@@ -84,28 +84,27 @@ class Deconvnet(base.ReverseAnalyzerBase):
             "convluational neural networks with non-relu activations."
             )
 
-        def reverse_layer(Xs, Ys, reversed_Ys, reverse_state):
-            activation = keras.layers.Activation("relu")
-            layer = reverse_state["layer"]
-            layer_wo_relu = kgraph.get_layer_wo_activation(
-                layer,
-                name_template="reversed_%s",
-            )
+        class ReverseLayer(kgraph.ReverseMappingBase):
 
-            def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
+            def __init__(self, layer, state):
+                self._activation = keras.layers.Activation("relu")
+                self._layer_wo_relu = kgraph.get_layer_wo_activation(
+                    layer,
+                    name_template="reversed_%s",
+                )
+
+            def apply(self, Xs, Ys, reversed_Ys, reverse_state):
                 # apply relus conditioned on backpropagated values.
-                reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+                reversed_Ys = kutils.easy_apply(self._activation, reversed_Ys)
 
                 # apply gradient of forward without relus
-                Ys_wo_relu = kutils.easy_apply(layer_wo_relu, Xs)
+                Ys_wo_relu = kutils.easy_apply(self._layer_wo_relu, Xs)
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
-
-            return reverse_layer_instance
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
             (lambda layer: kgraph.contains_activation(layer, "relu"),
-             reverse_layer),
+             ReverseLayer),
         ]
         return super(Deconvnet, self).__init__(*args, **kwargs)
 

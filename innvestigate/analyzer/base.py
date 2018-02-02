@@ -255,7 +255,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _create_analysis(self, model):
         ret = kgraph.reverse_model(
             model,
-            reverse_mapping=self._reverse_mapping,
+            reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
             head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,

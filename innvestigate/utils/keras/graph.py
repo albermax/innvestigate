@@ -15,9 +15,11 @@ import six
 ###############################################################################
 
 
-from ... import utils as iutils
-
+import inspect
 import keras.engine.topology
+
+
+from ... import utils as iutils
 
 
 __all__ = [
@@ -35,6 +37,7 @@ __all__ = [
 
     "model_contains",
 
+    "ReverseMappingBase",
     "reverse_model",
 ]
 
@@ -187,7 +190,16 @@ def model_contains(model, layer_condition, return_only_counts=False):
 ###############################################################################
 
 
-def reverse_model(model, reverse_mapping,
+class ReverseMappingBase(object):
+
+    def __init__(self, layer, state):
+        pass
+
+    def apply(self, Xs, Yx, reversed_Ys, reverse_state):
+        raise NotImplementedError()
+
+
+def reverse_model(model, reverse_mappings,
                   default_reverse_mapping=None,
                   head_mapping=None,
                   verbose=False,
@@ -200,10 +212,11 @@ def reverse_model(model, reverse_mapping,
     reversed_tensors = {tmp: {"id": (-1, i), "tensor": head_mapping(tmp)}
                         for i, tmp in enumerate(model.outputs)}
 
-    if not callable(reverse_mapping):
-        reverse_mapping_data = reverse_mapping
+    if not callable(reverse_mappings):
+        # not callable, assume a dict that maps from layer to mapping
+        reverse_mapping_data = reverse_mappings
 
-        def reverse_mapping(layer):
+        def reverse_mappings(layer):
             try:
                 return reverse_mapping_data[type(layer)]
             except KeyError:
@@ -224,23 +237,24 @@ def reverse_model(model, reverse_mapping,
                 # This leads to several in- and outbound tensors combinations.
                 # Each is indexed by a node_index.
 
-                # If reverse mapping returns a function we use this function
-                # for the whole layer. This a way to cache the layer reversion
-                # by reverting it once and then returning a function that
-                # applies the reverted layer.
-                reverse_f = reverse_mapping(layer)
-                if reverse_f is None:
-                    reverse_f = default_reverse_mapping
-                # workaround to be replaceable in local function
-                reverse_f = [reverse_f, ]
+                reverse_mapping = reverse_mappings(layer)
+                if reverse_mapping is None:
+                    reverse_mapping = default_reverse_mapping
 
-                def apply_mapping(Xs, Ys, reversed_Ys, reverse_state):
-                    ret = reverse_f[0](Xs, Ys, reversed_Ys, reverse_state)
-                    if callable(ret):
-                        # cache/replace function; see above
-                        reverse_f[0] = ret
-                        ret = ret(Xs, Ys, reversed_Ys, reverse_state)
-                    return ret
+                if(inspect.isclass(reverse_mapping) and
+                   issubclass(reverse_mapping, ReverseMappingBase)):
+                    reverse_mapping_obj = reverse_mapping(
+                        layer,
+                        {
+                            "model": model,
+                            "container": container,
+                            "layer": layer,
+                            "layer_index": layer_index,
+                        }
+                    )
+
+                    def reverse_mapping(*args, **kwargs):
+                        return reverse_mapping_obj.apply(*args, **kwargs)
 
                 for node_index in range(len(layer.inbound_nodes)):
                     Xs = iutils.listify(layer.get_input_at(node_index))
@@ -254,7 +268,7 @@ def reverse_model(model, reverse_mapping,
                            " -> node {} ({})".format(reverse_id, layer_index,
                                                      node_index, layer))
 
-                    reversed_Xs = apply_mapping(
+                    reversed_Xs = reverse_mapping(
                         Xs, Ys, reversed_Ys,
                         {
                             "reverse_id": reverse_id,

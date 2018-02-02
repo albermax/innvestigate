@@ -44,6 +44,16 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
         "show_as": "rgb",
     }
 
+    def __init__(self, *args, **kwargs):
+        self._model_checks = [
+            lambda layer: not kgraph.is_convnet_layer(layer),
+        ]
+        self._model_checks_msg = (
+            "LRP-Z only collapses to gradient times input for "
+            "(convluational) relu neural networks."
+            )
+        super(BaselineLRPZ, self).__init__(*args, **kwargs)
+
     def _create_analysis(self, model):
         gradients = utils.listify(ilayers.Gradient()(
             model.inputs+[model.outputs[0], ]))
@@ -51,7 +61,12 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
                 for i, g in zip(model.inputs, gradients)]
 
 
-class BaseLRP(base.ReverseAnalyzerBase):
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class LRPBase(base.ReverseAnalyzerBase):
 
     properties = {
         "name": "Deconvnet",
@@ -66,28 +81,24 @@ class BaseLRP(base.ReverseAnalyzerBase):
             lambda layer: not kgraph.is_convnet_layer(layer),
         ]
         self._model_checks_msg = (
-            "Deconvnet is only tested for "
+            "LRP is only tested for "
             "convluational neural networks."
             )
 
         if rule is None:
             raise ValueError("Need LRP rule.")
 
-        if first_layer_rule is None:
-            if first_layer_use_ZB is True:
-                # todo: add ZB layer here
-                raise NotImplementedError()
-            else:
-                first_layer_rule = rule
-
         def reverse_layer(Xs, Ys, Rs, reverse_state):
             # activations do not affect relevances
             # also biases are not used
             # remove them on the backward way
+            layer = reverse_state["layer"]
             config = layer.get_config()
+            # todo: create helper function that does this:
             config["name"] = "reversed_%s" % config["name"]
             if "activation" in config:
                 config["activation"] = None
+            # todo: ask for some lrp rules this might be wrong.
             if "bias" in config:
                 config["use_bias"] = False
             layer_wo_a_b = layer.__class__.from_config(config)
@@ -96,13 +107,10 @@ class BaseLRP(base.ReverseAnalyzerBase):
             layer_wo_a_b.set_weights([W for W in layer.get_weights()
                                       if len(W.shape) > 1])
 
+            rule = select_rule(layer, reverse_state)
+
             def reverse_layer_instance(Xs, Ys, Rs, reverse_state):
                 Ys = kutils.easy_apply(layer_wo_a_b, Xs)
-
-                if any([tmp in model.inputs for tmp in Xs]):
-                    current_rule = first_layer_rule
-                else:
-                    current_rule = rule
 
                 return ilayers.LRP(len(Xs), layer, rule)(Xs+Ys+Rs)
 
@@ -112,9 +120,6 @@ class BaseLRP(base.ReverseAnalyzerBase):
             (kgraph.contains_kernel, reverse_layer),
         ]
         return super(BaseLRP, self).__init__(*args, **kwargs)
-
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         # Expect Xs and Ys to have the same shapes.
