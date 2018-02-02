@@ -109,9 +109,6 @@ class Deconvnet(base.ReverseAnalyzerBase):
         ]
         return super(Deconvnet, self).__init__(*args, **kwargs)
 
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
-
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
 
@@ -142,6 +139,3 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
              reverse_layer_instance),
         ]
         return super(GuidedBackprop, self).__init__(*args, **kwargs)
-
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
