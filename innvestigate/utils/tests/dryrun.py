@@ -52,7 +52,8 @@ class BaseTestCase(unittest.TestCase):
     def test_dryrun(self):
         # test shapes have channels first.
         # todo: check why import above fails
-        import keras.backend as K 
+        import keras.backend as K
+        K.clear_session()
         K.set_image_data_format("channels_first")
 
         for network in networks.iterator():
