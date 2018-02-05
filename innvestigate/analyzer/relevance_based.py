@@ -86,6 +86,11 @@ class LRPZRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 
+LRP_RULES = {
+    "Z": LRPZRule,
+}
+
+
 class LRPBase(base.ReverseAnalyzerBase):
 
     properties = {
@@ -119,7 +124,7 @@ class LRPBase(base.ReverseAnalyzerBase):
            issubclass(rule, kgraph.ReverseMappingBase)):
             use_conditions = True
             rules = [(lambda a, b: True, rule)]
-        elif not isinstance(rule[0]):
+        elif not isinstance(rule[0], tuple):
             use_conditions = False
             rules = list(rule)
         else:
@@ -139,6 +144,8 @@ class LRPBase(base.ReverseAnalyzerBase):
 
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state)
+                if isinstance(rule_class, six.string_types):
+                    rule_class = LRP_RULES[rule]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
@@ -186,6 +193,4 @@ class LRPZ(LRPBase):
     }
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZ, self).__init__(model, *args,
-                                          rule=LRPZRule, **kwargs)
-    
+        return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
