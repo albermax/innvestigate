@@ -30,7 +30,7 @@ from ..utils.keras import graph as kgraph
 
 __all__ = [
     "BaselineLRPZ",
-    "LRPBase",
+    "LRP",
     "LRPZ",
 ]
 
@@ -91,10 +91,10 @@ LRP_RULES = {
 }
 
 
-class LRPBase(base.ReverseAnalyzerBase):
+class LRP(base.ReverseAnalyzerBase):
 
     properties = {
-        "name": "LRPBase",
+        "name": "LRP",
         # todo: set right value
         "show_as": "rgb",
     }
@@ -154,7 +154,7 @@ class LRPBase(base.ReverseAnalyzerBase):
         self._conditional_mappings = [
             (kgraph.contains_kernel, ReverseLayer),
         ]
-        return super(LRPBase, self).__init__(model, *args, **kwargs)
+        return super(LRP, self).__init__(model, *args, **kwargs)
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         if(len(Xs) == len(Ys) and
@@ -169,7 +169,7 @@ class LRPBase(base.ReverseAnalyzerBase):
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
     def _get_state(self):
-        state = super(LRPBase, self)._get_state()
+        state = super(LRP, self)._get_state()
         state.update({"rule": self._rule})
         state.update({"first_layer_rule": self._first_layer_rule})
         return state
@@ -178,13 +178,13 @@ class LRPBase(base.ReverseAnalyzerBase):
     def _state_to_kwargs(clazz, state):
         rule = state.pop("rule")
         first_layer_rule = state.pop("first_layer_rule")
-        kwargs = super(LRPBase, clazz)._state_to_kwargs(state)
+        kwargs = super(LRP, clazz)._state_to_kwargs(state)
         kwargs.update({"rule": rule,
                        "first_layer_rule": first_layer_rule})
         return kwargs
 
 
-class LRPZ(LRPBase):
+class LRPZ(LRP):
 
     properties = {
         "name": "LRP-Z",
