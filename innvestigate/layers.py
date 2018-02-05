@@ -157,7 +157,7 @@ class Min(_Reduce):
 
 class Max(_Reduce):
     def _apply_reduce(self, x, axis):
-        return K.sum(x, axis=axis)
+        return K.max(x, axis=axis)
 
 
 class Sum(_Reduce):
