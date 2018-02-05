@@ -20,7 +20,7 @@ import six
 
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import BaselineLRPZ
+from innvestigate.analyzer import BaselineLRPZ, LRPZ
 
 
 ###############################################################################
@@ -32,3 +32,23 @@ class TestBaselineLRPZ(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return BaselineLRPZ(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestLRPZ(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZ(model)
+
+
+class TestLRPZ__equal_BaselineLRPZ(dryrun.EqualAnalyzerTestCase):
+
+    def _method1(self, model):
+        return BaselineLRPZ(model)
+
+    def _method2(self, model):
+        return LRPZ(model)

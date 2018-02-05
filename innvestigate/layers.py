@@ -238,6 +238,16 @@ class Dot(keras.layers.Layer):
         return (input_shapes[0][0], input_shapes[1][1])
 
 
+class Divide(keras.layers.Layer):
+
+    def call(self, x):
+        a, b = x
+        return a / b
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes[0]
+
+
 class SaveDivide(keras.layers.Layer):
 
     def call(self, x):

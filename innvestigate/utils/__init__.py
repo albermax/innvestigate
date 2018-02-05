@@ -32,7 +32,7 @@ __all__ = [
 
 def listify(l):
     if not isinstance(l, list):
-        return [l,]
+        return [l, ]
     else:
         return l
 
