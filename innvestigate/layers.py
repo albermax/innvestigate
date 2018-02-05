@@ -46,7 +46,7 @@ __all__ = [
 
     "Transpose",
     "Dot",
-    "SaveDivide",
+    "SafeDivide",
 ]
 
 
@@ -248,11 +248,18 @@ class Divide(keras.layers.Layer):
         return input_shapes[0]
 
 
-class SaveDivide(keras.layers.Layer):
+class SafeDivide(keras.layers.Layer):
+
+    def __init__(self, *args, factor=None, **kwargs):
+        if factor is None:
+            factor = K.epsilon()
+        self._factor = factor
+
+        return super(SafeDivide, self).__init__(*args, **kwargs)
 
     def call(self, x):
         a, b = x
-        return a / (b + iK.to_floatx(K.equal(b, K.constant(0))))
+        return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * self._factor)
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[0]

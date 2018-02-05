@@ -103,7 +103,7 @@ class ZRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
 
         Zs = kutils.easy_apply(self._layer_wo_act, Xs)
-        tmp = [ilayers.Divide()([a, b])
+        tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return [keras.layers.Multiply()([a, b])
@@ -124,7 +124,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
         ones = [ones_like(x) for x in Xs]
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
-        tmp = [ilayers.Divide()([a, b])
+        tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return tmp
@@ -144,7 +144,7 @@ class FlatRule(kgraph.ReverseMappingBase):
 
         ones = [ones_like(x) for x in Xs]
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
-        tmp = [ilayers.Divide()([a, b])
+        tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return tmp
@@ -175,7 +175,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
         def f(layer):
             Zs = kutils.easy_apply(layer, Xs)
-            tmp = [ilayers.Divide()([a, b])
+            tmp = [ilayers.SafeDivide()([a, b])
                    for a, b in zip(Rs, Zs)]
             tmp = utils.listify(grad(Xs+Zs+tmp))
             return [keras.layers.Multiply()([a, b])
@@ -223,7 +223,7 @@ class BoxedRule(kgraph.ReverseMappingBase):
                     for a, b,c in zip(A, B, C)]
 
         Zs = f(Xs)
-        tmp = [ilayers.Divide()([a, b])
+        tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return tmp
@@ -274,8 +274,13 @@ class LRP(base.ReverseAnalyzerBase):
             self._rule = rule
         self._first_layer_rule = first_layer_rule
 
-        if(inspect.isclass(rule) and
-           issubclass(rule, kgraph.ReverseMappingBase)):
+        if(
+                isinstance(rule, six.string_types) or
+                (
+                    inspect.isclass(rule) and
+                    issubclass(rule, kgraph.ReverseMappingBase)
+                )
+        ):
             use_conditions = True
             rules = [(lambda a, b: True, rule)]
         elif not isinstance(rule[0], tuple):

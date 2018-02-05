@@ -116,8 +116,9 @@ class LinearPattern(BasePattern):
         mask = ilayers.AsFloatX()(self._get_neuron_mask())
         Y_masked = keras.layers.multiply([Y, mask])
         count = ilayers.CountNonZero(axis=0)(mask)
+
         def norm(x):
-            return ilayers.SaveDivide()([x, count])
+            return ilayers.SafeDivide(factor=1)([x, count])
 
         mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]))
         mean_y = norm(ilayers.Sum(axis=0)(Y_masked))
@@ -132,10 +133,10 @@ class LinearPattern(BasePattern):
         old_count, new_count = stats["count"], batch_stats["count"]
         total_count = old_count+new_count
 
-        def save_divide(a, b):
+        def safe_divide(a, b):
             return K.cast_to_floatx(a) / np.maximum(b, 1)
-        factor_old = save_divide(old_count, total_count)
-        factor_new = save_divide(new_count, total_count)
+        factor_old = safe_divide(old_count, total_count)
+        factor_new = safe_divide(new_count, total_count)
 
         def update(old, new):
             # old_count/total_count * old_val + new_count/total_count * new_val
@@ -151,7 +152,7 @@ class LinearPattern(BasePattern):
     def compute_pattern(self):
         W = kgraph.get_kernel(self.layer)
 
-        def save_divide(a, b):
+        def safe_divide(a, b):
             return a / (b + (b == 0))
 
         ExEy = self._stats["mean_x"] * self._stats["mean_y"]
@@ -159,7 +160,7 @@ class LinearPattern(BasePattern):
         cov_xy = self._stats["mean_xy"] - ExEy
         sq_sigma_y = self._stats["mean_yy"] - EyEy
 
-        A = save_divide(cov_xy, sq_sigma_y)
+        A = safe_divide(cov_xy, sq_sigma_y)
         # todo: need to reshape to meet W's dimensions
 
         return A
