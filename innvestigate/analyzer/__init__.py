@@ -36,13 +36,21 @@ def create_analyzer(name, model, **kwargs):
 
         # Gradient based
         "gradient": Gradient,
-        "deconvnet": Deconvnet,
-        "guided": GuidedBackprop,
         "gradient.baseline": BaselineGradient,
+        "deconvnet": Deconvnet,
+        "guided_backprop": GuidedBackprop,
 
         # Relevance based
+        "lrp": LRP,
         "lrp.z_baseline": BaselineLRPZ,
-        #"lrp.eps": LRPEps,
+        "lrp.z": LRPZ,
+        "lrp.epsilon": LRPEpsilon,
+        "lrp.w_square": LRPWSquare,
+        "lrp.flat": LRPFlat,
+        "lrp.alpha_beta": LRPAlphaBeta,
+        "lrp.alpha_1_beta_1": LRPAlpha1Beta1,
+        "lrp.alpha_2_beta_1": LRPAlpha2Beta1,
+        "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
 
         # Pattern based
         "pattern.net": PatternNet,

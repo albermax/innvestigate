@@ -45,18 +45,6 @@ class TestLRPZ(dryrun.AnalyzerTestCase):
         return LRPZ(model)
 
 
-class TestLRPWSquare(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
-        return LRPWSquare(model)
-
-
-class TestLRPFlat(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
-        return LRPFlat(model)
-
-
 class TestLRPZ__equal_BaselineLRPZ(dryrun.EqualAnalyzerTestCase):
 
     def _method1(self, model):
@@ -72,13 +60,37 @@ class TestLRPEpsilon(dryrun.AnalyzerTestCase):
         return LRPEpsilon(model)
 
 
-class TestLRPA1B1(dryrun.AnalyzerTestCase):
+class TestLRPWSquare(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return LRPA1B1(model)
+        return LRPWSquare(model)
 
 
-class TestLRPBoxed(dryrun.AnalyzerTestCase):
+class TestLRPFlat(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return LRPBoxed(model)
+        return LRPFlat(model)
+
+
+class TestLRPAlphaBeta(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlphaBeta(model)
+
+
+class TestLRPAlpha1Beta1(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha1Beta1(model)
+
+
+class TestLRPAlpha2Beta1(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha2Beta1(model)
+
+
+class TestLRPAlpha1Beta0(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha1Beta0(model)

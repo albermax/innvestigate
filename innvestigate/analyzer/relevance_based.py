@@ -31,13 +31,19 @@ from ..utils.keras import graph as kgraph
 
 __all__ = [
     "BaselineLRPZ",
+
+    "LRP_RULES",
+
     "LRP",
+
     "LRPZ",
-    "LRPWSquare",
     "LRPEpsilon",
-    "LRPA1B1",
+    "LRPWSquare",
     "LRPFlat",
-    "LRPBoxed",
+    "LRPAlphaBeta",
+    "LRPAlpha1Beta1",
+    "LRPAlpha2Beta1",
+    "LRPAlpha1Beta0",
 ]
 
 
@@ -343,17 +349,21 @@ class LRP(base.ReverseAnalyzerBase):
         return kwargs
 
 
-class LRPA1B1(LRP):
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class LRPZ(LRP):
 
     properties = {
-        "name": "LRP-A1B1",
+        "name": "LRP-Z",
         # todo: set right value
         "show_as": "rgb",
     }
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPA1B1, self).__init__(model, *args,
-                                             rule="A1B1", **kwargs)
+        return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
 class LRPEpsilon(LRP):
@@ -395,26 +405,69 @@ class LRPFlat(LRP):
                                              rule="Flat", **kwargs)
 
 
-class LRPBoxed(LRP):
+class LRPAlphaBeta(LRP):
 
     properties = {
-        "name": "LRP-Boxed",
+        "name": "LRP-AlphaBeta",
+        # todo: set right value
+        "show_as": "rgb",
+    }
+
+    def __init__(self, model, alpha=1, beta=1, *args, **kwargs):
+
+        class CustomizedAlphaBetaRule(AlphaBetaRule):
+            def __init__(self, *args, **kwargs):
+
+                super(CustomizedAlphaBetaRule, self).__init__(*args,
+                                                              alpha=alpha,
+                                                              beta=beta,
+                                                              **kwargs)
+
+        return super(LRPAlphaBeta, self).__init__(model, *args,
+                                                  rule=CustomizedAlphaBetaRule,
+                                                  **kwargs)
+
+
+class LRPAlpha1Beta1(LRPAlphaBeta):
+
+    properties = {
+        "name": "LRP-Alpha1Beta1",
         # todo: set right value
         "show_as": "rgb",
     }
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPBoxed, self).__init__(model, *args,
-                                              rule="Boxed", **kwargs)
+        return super(LRPAlpha1Beta1, self).__init__(model, *args,
+                                                    alpha=1,
+                                                    beta=1,
+                                                    **kwargs)
 
 
-class LRPZ(LRP):
+class LRPAlpha2Beta1(LRPAlphaBeta):
 
     properties = {
-        "name": "LRP-Z",
+        "name": "LRP-Alpha2Beta1",
         # todo: set right value
         "show_as": "rgb",
     }
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
+        return super(LRPAlpha2Beta1, self).__init__(model, *args,
+                                                    alpha=2,
+                                                    beta=1,
+                                                    **kwargs)
+
+
+class LRPAlpha1Beta0(LRPAlphaBeta):
+
+    properties = {
+        "name": "LRP-Alpha1Beta0",
+        # todo: set right value
+        "show_as": "rgb",
+    }
+
+    def __init__(self, model, *args, **kwargs):
+        return super(LRPAlpha1Beta0, self).__init__(model, *args,
+                                                    alpha=1,
+                                                    beta=0,
+                                                    **kwargs)
