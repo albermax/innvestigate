@@ -66,6 +66,12 @@ class TestLRPZ__with_boxed_input_layer_rule(dryrun.AnalyzerTestCase):
         return LRPZ(model, input_layer_rule=(-10, 10))
 
 
+class TestLRPZWithBias(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZWithBias(model)
+
+
 class TestLRPZPlus(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
@@ -76,6 +82,12 @@ class TestLRPEpsilon(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return LRPEpsilon(model)
+
+
+class TestLRPEpsilonWithBias(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPEpsilonWithBias(model)
 
 
 class TestLRPWSquare(dryrun.AnalyzerTestCase):
@@ -102,13 +114,31 @@ class TestLRPAlpha1Beta1(dryrun.AnalyzerTestCase):
         return LRPAlpha1Beta1(model)
 
 
+class TestLRPAlpha1Beta1WithBias(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha1Beta1WithBias(model)
+
+
 class TestLRPAlpha2Beta1(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return LRPAlpha2Beta1(model)
 
 
+class TestLRPAlpha2Beta1WithBias(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha2Beta1WithBias(model)
+
+
 class TestLRPAlpha1Beta0(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return LRPAlpha1Beta0(model)
+
+
+class TestLRPAlpha1Beta0WithBias(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha1Beta0WithBias(model)
