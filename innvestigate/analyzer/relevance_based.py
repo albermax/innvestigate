@@ -192,7 +192,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                                 f(self._layer_wo_act_negative))]
 
 
-class BoxedRule(kgraph.ReverseMappingBase):
+class BoxRule(kgraph.ReverseMappingBase):
     # todo: this only works for relu networks, needs to be extended.
     def __init__(self, layer, state, low=-1, high=1):
         self._low = low
@@ -226,7 +226,7 @@ class BoxedRule(kgraph.ReverseMappingBase):
             B = kutils.easy_apply(self._layer_wo_act_positive, low)
             C = kutils.easy_apply(self._layer_wo_act_negative, high)
             return [keras.layers.Add()([a, b, c])
-                    for a, b,c in zip(A, B, C)]
+                    for a, b, c in zip(A, B, C)]
 
         Zs = f(Xs)
         tmp = [ilayers.SafeDivide()([a, b])
@@ -242,7 +242,7 @@ LRP_RULES = {
     "WSquare": WSquareRule,
     "Flat": FlatRule,
     "Z": ZRule,
-    "Boxed": BoxedRule,
+    "Box": BoxRule,
 }
 
 
@@ -261,13 +261,15 @@ class LRP(base.ReverseAnalyzerBase):
 
     def __init__(self,
                  model, *args,
-                 rule=None, first_layer_rule=None, **kwargs):
+                 rule=None,
+                 input_layer_rule=None,
+                 **kwargs):
         self._model_checks = [
             lambda layer: not kgraph.is_convnet_layer(layer),
         ]
         self._model_checks_msg = (
             "LRP is only tested for "
-            "convluational neural networks."
+            "convolutional neural networks."
             )
 
         if rule is None:
@@ -278,7 +280,7 @@ class LRP(base.ReverseAnalyzerBase):
             self._rule = list(rule)
         else:
             self._rule = rule
-        self._first_layer_rule = first_layer_rule
+        self._input_layer_rule = input_layer_rule
 
         if(
                 isinstance(rule, six.string_types) or
@@ -295,6 +297,23 @@ class LRP(base.ReverseAnalyzerBase):
         else:
             use_conditions = True
             rules = rule
+
+        if self._input_layer_rule is not None:
+            input_layer_rule = self._input_layer_rule
+            if isinstance(input_layer_rule, tuple):
+                low, high = input_layer_rule
+
+                class input_layer_rule(BoxRule):
+                    def __init__(self, *args, **kwars):
+                        return super(input_layer_rule, self).__init__(
+                            *args, low=low, high=high, **kwargs)
+
+            if use_conditions is True:
+                rules.insert(0,
+                             (lambda layer, foo: kgraph.is_input_layer(layer),
+                              input_layer_rule))
+            else:
+                rules.insert(0, input_layer_rule)
 
         def select_rule(layer, reverse_state):
             if use_conditions is True:
@@ -336,16 +355,16 @@ class LRP(base.ReverseAnalyzerBase):
     def _get_state(self):
         state = super(LRP, self)._get_state()
         state.update({"rule": self._rule})
-        state.update({"first_layer_rule": self._first_layer_rule})
+        state.update({"input_layer_rule": self._input_layer_rule})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         rule = state.pop("rule")
-        first_layer_rule = state.pop("first_layer_rule")
+        input_layer_rule = state.pop("input_layer_rule")
         kwargs = super(LRP, clazz)._state_to_kwargs(state)
         kwargs.update({"rule": rule,
-                       "first_layer_rule": first_layer_rule})
+                       "input_layer_rule": input_layer_rule})
         return kwargs
 
 

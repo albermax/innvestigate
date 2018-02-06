@@ -17,6 +17,7 @@ import six
 
 import inspect
 import keras.engine.topology
+import keras.layers
 
 
 from ... import utils as iutils
@@ -90,6 +91,39 @@ def is_relu_convnet_layer(layer):
              contains_activation(layer, "relu")))
 
 
+def is_input_layer(layer):
+    # Triggers if ALL inputs of layer are connected
+    # to a Keras input layer object or
+    # the layer itself is the first layer.
+
+    layer_inputs = get_input_layers(layer)
+    # We ignore certain layers, that do not modify
+    # the data content.
+    # todo: update this list!
+    IGNORED_LAYERS = (
+        keras.layers.Flatten,
+        keras.layers.Permute,
+        keras.layers.Reshape,
+    )
+    while any([isinstance(x, IGNORED_LAYERS) for x in layer_inputs]):
+        tmp = set()
+        for l in layer_inputs:
+            if isinstance(l, IGNORED_LAYERS):
+                tmp.update(get_input_layers(l))
+            else:
+                tmp.add(l)
+        layer_inputs = tmp
+
+    if all([isinstance(x, keras.layers.InputLayer)
+            for x in layer_inputs]):
+        return True
+    elif getattr(layer, "input_shape", None) is not None:
+        # relies on Keras convention
+        return True
+    else:
+        return False
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -99,6 +133,17 @@ def get_kernel(layer):
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
     return ret[0]
+
+
+def get_input_layers(layer):
+    ret = set()
+
+    for node_index in range(len(layer.inbound_nodes)):
+        Xs = iutils.listify(layer.get_input_at(node_index))
+        for X in Xs:
+            ret.add(X._keras_history[0])
+
+    return ret
 
 
 ###############################################################################

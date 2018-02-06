@@ -54,6 +54,18 @@ class TestLRPZ__equal_BaselineLRPZ(dryrun.EqualAnalyzerTestCase):
         return LRPZ(model)
 
 
+class TestLRPZ__with_input_layer_rule(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZ(model, input_layer_rule="Flat")
+
+
+class TestLRPZ__with_boxed_input_layer_rule(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZ(model, input_layer_rule=(-10, 10))
+
+
 class TestLRPEpsilon(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
