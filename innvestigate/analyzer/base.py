@@ -165,6 +165,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max()(model_output)
         if neuron_selection_mode == "index":
+            # todo: implement index mode
             raise NotImplementedError("Only a stub present so far.")
             neuron_indexing = keras.layers.Input(shape=[None, None])
             neuron_selection_inputs += neuron_indexing

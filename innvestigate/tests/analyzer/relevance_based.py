@@ -66,6 +66,12 @@ class TestLRPZ__with_boxed_input_layer_rule(dryrun.AnalyzerTestCase):
         return LRPZ(model, input_layer_rule=(-10, 10))
 
 
+class TestLRPZPlus(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZPlus(model)
+
+
 class TestLRPEpsilon(dryrun.AnalyzerTestCase):
 
     def _method(self, model):

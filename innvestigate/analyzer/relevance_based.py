@@ -37,6 +37,7 @@ __all__ = [
     "LRP",
 
     "LRPZ",
+    "LRPZPlus",
     "LRPEpsilon",
     "LRPWSquare",
     "LRPFlat",
@@ -116,6 +117,27 @@ class ZRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 
+class ZPlusRule(kgraph.ReverseMappingBase):
+
+    def __init__(self, layer, state):
+        self._layer_wo_act_b_positive = kgraph.get_layer_wo_activation(
+            layer, keep_bias=False,
+            name_template="reversed_kernel_positive_%s")
+        tmp = [x * (x > 0)
+               for x in self._layer_wo_act_b_positive.get_weights()]
+        self._layer_wo_act_b_positive.set_weights(tmp)
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        grad = ilayers.GradientWRT(len(Xs))
+
+        Zs = kutils.easy_apply(self._layer_wo_act_b_positive, Xs)
+        tmp = [ilayers.SafeDivide()([a, b])
+               for a, b in zip(Rs, Zs)]
+        tmp = utils.listify(grad(Xs+Zs+tmp))
+        return [keras.layers.Multiply()([a, b])
+                for a, b in zip(Xs, tmp)]
+
+
 class WSquareRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
@@ -127,12 +149,13 @@ class WSquareRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         ones_like = keras.layers.Lambda(lambda x: x * 0 + 1)
+        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
         ones = [ones_like(x) for x in Xs]
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
-        tmp = utils.listify(grad(Xs+Zs+tmp))
+        tmp = utils.listify(grad(Xs+Ys+Rs))
         return tmp
 
 
@@ -147,12 +170,13 @@ class FlatRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         ones_like = keras.layers.Lambda(lambda x: x * 0 + 1)
+        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
         ones = [ones_like(x) for x in Xs]
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
-        tmp = utils.listify(grad(Xs+Zs+tmp))
+        tmp = utils.listify(grad(Xs+Ys+tmp))
         return tmp
 
 
@@ -187,12 +211,12 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             return [keras.layers.Multiply()([a, b])
                     for a, b in zip(Xs, tmp)]
 
-        return [keras.layers.Add()([times_alpha(a), times_beta(b)])
+        return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
                 for a, b in zip(f(self._layer_wo_act_positive),
                                 f(self._layer_wo_act_negative))]
 
 
-class BoxRule(kgraph.ReverseMappingBase):
+class BoundedRule(kgraph.ReverseMappingBase):
     # todo: this only works for relu networks, needs to be extended.
     def __init__(self, layer, state, low=-1, high=1):
         self._low = low
@@ -225,7 +249,7 @@ class BoxRule(kgraph.ReverseMappingBase):
             A = kutils.easy_apply(self._layer_wo_act, Xs)
             B = kutils.easy_apply(self._layer_wo_act_positive, low)
             C = kutils.easy_apply(self._layer_wo_act_negative, high)
-            return [keras.layers.Add()([a, b, c])
+            return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
                     for a, b, c in zip(A, B, C)]
 
         Zs = f(Xs)
@@ -234,15 +258,16 @@ class BoxRule(kgraph.ReverseMappingBase):
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return tmp
 
-
+#        alpha-beta all networks
+#        bias+- for some other rules
 LRP_RULES = {
-    "A1B1": AlphaBetaRule,
-    "E": EpsilonRule,
+    "AlphaBeta": AlphaBetaRule,
     "Epsilon": EpsilonRule,
     "WSquare": WSquareRule,
     "Flat": FlatRule,
     "Z": ZRule,
-    "Box": BoxRule,
+    "ZPlus": ZPlusRule,
+    "Bounded": BoundedRule,
 }
 
 
@@ -303,7 +328,7 @@ class LRP(base.ReverseAnalyzerBase):
             if isinstance(input_layer_rule, tuple):
                 low, high = input_layer_rule
 
-                class input_layer_rule(BoxRule):
+                class input_layer_rule(BoundedRule):
                     def __init__(self, *args, **kwars):
                         return super(input_layer_rule, self).__init__(
                             *args, low=low, high=high, **kwargs)
@@ -383,6 +408,19 @@ class LRPZ(LRP):
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
+
+
+class LRPZPlus(LRP):
+
+    properties = {
+        "name": "LRP-ZPlus",
+        # todo: set right value
+        "show_as": "rgb",
+    }
+
+    def __init__(self, model, *args, **kwargs):
+        return super(LRPZPlus, self).__init__(model, *args,
+                                              rule="ZPlus", **kwargs)
 
 
 class LRPEpsilon(LRP):
