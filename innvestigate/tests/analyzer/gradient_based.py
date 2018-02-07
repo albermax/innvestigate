@@ -29,6 +29,8 @@ from innvestigate.analyzer import Gradient
 from innvestigate.analyzer import Deconvnet
 from innvestigate.analyzer import GuidedBackprop
 
+from innvestigate.analyzer import IntegratedGradients
+
 
 ###############################################################################
 ###############################################################################
@@ -62,3 +64,14 @@ class TestGuidedBackprop(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return GuidedBackprop(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestIntegratedGradients(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return IntegratedGradients(model)

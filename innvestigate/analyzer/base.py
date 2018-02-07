@@ -176,13 +176,18 @@ class AnalyzerNetworkBase(AnalyzerBase):
                                    outputs=model_output)
         tmp = self._create_analysis(model)
         try:
-            analysis_output, debug_output = tmp
+            analysis_output, debug_output, constant_input = tmp
         except (TypeError, ValueError):
-            analysis_output, debug_output = iutils.listify(tmp), list()
+            try:
+                analysis_output, debug_output = tmp
+                constant_input = list()
+            except (TypeError, ValueError):
+                analysis_output = iutils.listify(tmp)
+                constant_input, debug_output = list(), list()
 
         self._n_debug_output = len(debug_output)
         self._analyzer_model = keras.models.Model(
-            inputs=model_inputs+neuron_selection_inputs,
+            inputs=model_inputs+neuron_selection_inputs+constant_input,
             outputs=analysis_output+debug_output)
         self._analyzer_model.compile(optimizer="sgd", loss="mse")
         pass
@@ -191,6 +196,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         raise NotImplementedError()
 
     def analyze(self, X, neuron_selection=None):
+        # todo: update all interfaces, X can be a list.
         if(neuron_selection is not None and
            self._neuron_selection_mode != "index"):
             raise ValueError("Only neuron_selection_mode 'index' expects "

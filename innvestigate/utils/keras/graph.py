@@ -120,6 +120,9 @@ def is_input_layer(layer):
     elif getattr(layer, "input_shape", None) is not None:
         # relies on Keras convention
         return True
+    elif getattr(layer, "batch_input_shape", None) is not None:
+        # relies on Keras convention
+        return True
     else:
         return False
 
@@ -138,7 +141,7 @@ def get_kernel(layer):
 def get_input_layers(layer):
     ret = set()
 
-    for node_index in range(len(layer.inbound_nodes)):
+    for node_index in range(len(layer._inbound_nodes)):
         Xs = iutils.listify(layer.get_input_at(node_index))
         for X in Xs:
             ret.add(X._keras_history[0])
@@ -152,7 +155,7 @@ def get_input_layers(layer):
 
 
 def get_layer_inbound_count(layer):
-    return len(layer.inbound_nodes)
+    return len(layer._inbound_nodes)
 
 
 def get_layer_outbound_count(layer):
@@ -250,12 +253,11 @@ def reverse_model(model, reverse_mappings,
                   verbose=False,
                   return_all_reversed_tensors=False):
 
+    # Set default values ######################################################
+
     if head_mapping is None:
         def head_mapping(X):
             return X
-
-    reversed_tensors = {tmp: {"id": (-1, i), "tensor": head_mapping(tmp)}
-                        for i, tmp in enumerate(model.outputs)}
 
     if not callable(reverse_mappings):
         # not callable, assume a dict that maps from layer to mapping
@@ -272,10 +274,69 @@ def reverse_model(model, reverse_mappings,
             print(s)
         pass
 
+    # Initialize structure that keeps track of reversed tensors ###############
+
+    reversed_tensors = {}
+
+    def add_reversed_tensors(reverse_id,
+                             tensors_list,
+                             reversed_tensors_list,
+                             initialization=False):
+
+        def add_reversed_tensor(i, xs, reversed_xs):
+            assert xs not in reversed_tensors
+            reversed_tensors[xs] = {"id": (reverse_id, i),
+                                    "tensor": reversed_xs}
+
+        tmp = zip(tensors_list, reversed_tensors_list)
+        for i, (xs, reversed_xs) in enumerate(tmp):
+            add_reversed_tensor(i, xs, reversed_xs)
+
+            continue
+            # The following piece of code is for a nested container
+            # model. But this does not work yet.
+
+            if initialization is True:
+                continue
+
+            while False and isinstance(xs._keras_history[0],
+                                       keras.engine.topology.Container):
+                # Container create a new reference of their
+                # output tensors, need to follow them otherwise
+                # we run into a disconnected state.
+                xs_history = xs._keras_history
+                print(xs, xs_history, model)
+                xs_layer, xs_node_index, xs_tensor_index = xs_history
+
+                xs = xs_layer.get_output_at(xs_node_index)
+                xs = iutils.listify(xs)[xs_tensor_index]
+            add_reversed_tensor(i, xs, reversed_xs)
+
+    add_reversed_tensors(-1,
+                         model.outputs,
+                         [head_mapping(tmp) for tmp in model.outputs],
+                         initialization=True)
+
+    # Reverse the model #######################################################
+
     def reverse_container(container, state):
         for layer_index, layer in list(enumerate(container.layers))[::-1]:
-            if isinstance(layer, keras.engine.topology.Container):
+
+            if isinstance(layer, keras.layers.InputLayer):
+                # Special case. Do nothing.
+                pass
+            elif isinstance(layer, keras.engine.topology.Container):
                 _print(" Reverse container: {}".format(layer))
+                raise Exception("Not well understood and not working.")
+                # It seems like Container does not behave as we hoped
+                # whenever it is applied to some input values.
+                # We are not able to track down the individual layers
+                # anymore as the container call/application
+                # results in a single layer that is represented
+                # as graph with nodes.
+
+                # We remap the outside-container references of tensors
+                # to the inside-container references.
                 reverse_container(layer, state)
             else:
                 # A layer can be shared, i.e., applied several times.
@@ -301,9 +362,13 @@ def reverse_model(model, reverse_mappings,
                     def reverse_mapping(*args, **kwargs):
                         return reverse_mapping_obj.apply(*args, **kwargs)
 
-                for node_index in range(len(layer.inbound_nodes)):
+                for node_index in range(len(layer._inbound_nodes)):
                     Xs = iutils.listify(layer.get_input_at(node_index))
                     Ys = iutils.listify(layer.get_output_at(node_index))
+                    if not all([ys in reversed_tensors for ys in Ys]):
+                        # This node is not part of our computational graph.
+                        # The (node-)world is bigger than this model.
+                        continue
                     reversed_Ys = [reversed_tensors[ys]["tensor"]
                                    for ys in Ys]
                     reverse_id = state["reverse_id"]
@@ -325,17 +390,15 @@ def reverse_model(model, reverse_mappings,
                         })
                     reversed_Xs = iutils.listify(reversed_Xs)
 
-                    tmp = zip(Xs, reversed_Xs)
-                    for i, (xs, reversed_xs) in enumerate(tmp):
-                        assert xs not in reversed_Ys
-                        reversed_tensors[xs] = {"id": (reverse_id, i),
-                                                "tensor": reversed_xs}
+                    add_reversed_tensors(reverse_id, Xs, reversed_Xs)
 
     _print("Reverse model: {}".format(model))
     # [workaround for closures in python 2 and 3]
     # sequence id for reverse calls in our reversal routine
     state = {"reverse_id": 0}
     reverse_container(model, state)
+
+    # Return requested values #################################################
 
     reversed_input_tensors = [reversed_tensors[tmp]["tensor"]
                               for tmp in model.inputs]
