@@ -241,9 +241,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                  *args,
                  reverse_verbose=False,
                  reverse_check_finite=False,
+                 reverse_reapply_on_copied_layers=False,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_check_finite = reverse_check_finite
+        self._reverse_reapply_on_copied_layers = (
+            reverse_reapply_on_copied_layers)
         return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
 
     def _reverse_mapping(self, layer):
@@ -291,13 +294,19 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         state = super(ReverseAnalyzerBase, self)._get_state()
         state.update({"reverse_verbose": self._reverse_verbose})
         state.update({"reverse_check_finite": self._reverse_check_finite})
+        state.update({"reverse_reapply_on_copied_layers":
+                      self._reverse_reapply_on_copied_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         reverse_verbose = state.pop("reverse_verbose")
         reverse_check_finite = state.pop("reverse_check_finite")
+        reverse_reapply_on_copied_layers = (
+            state.pop("reverse_reapply_on_copied_layers"))
         kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
         kwargs.update({"reverse_verbose": reverse_verbose,
-                       "reverse_check_finite": reverse_check_finite})
+                       "reverse_check_finite": reverse_check_finite,
+                       "reverse_reapply_on_copied_layers":
+                       reverse_reapply_on_copied_layers})
         return kwargs

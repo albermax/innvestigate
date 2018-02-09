@@ -18,6 +18,7 @@ import six
 import inspect
 import keras.engine.topology
 import keras.layers
+import keras.models
 
 
 from ... import utils as iutils
@@ -35,6 +36,7 @@ __all__ = [
     "get_layer_outbound_count",
     "get_layer_io",
     "get_layer_wo_activation",
+    "copy_layer",
 
     "model_contains",
 
@@ -200,6 +202,22 @@ def get_layer_wo_activation(layer,
     return get_layer_from_config(layer, config, weights=weights)
 
 
+def copy_layer(layer,
+               keep_bias=True,
+               name_template=None,
+               weights=None):
+
+    config = layer.get_config()
+    if name_template is None:
+        name_template = "copied_%s"
+    config["name"] = name_template % config["name"]
+    if keep_bias is False and config.get("use_bias", False):
+        config["use_bias"] = False
+        if weights is None:
+            weights = layer.get_weights()[:-1]
+    return get_layer_from_config(layer, config, weights=weights)
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -259,20 +277,8 @@ def reverse_model(model, reverse_mappings,
                   default_reverse_mapping=None,
                   head_mapping=None,
                   verbose=False,
-                  return_all_reversed_tensors=False):
-    # In principle one can follow the graph of a keras model by mimicking
-    # the BF-traversal as in keras.engine.topology:Container:run_internal_graph
-    # There are two problem with this:
-    # * [Minor] We rebuild the graph and it will be disjoint from the input
-    #           models graph.
-    # * [Major] Given nested models, we actually cannot track back to the
-    #           original tensors as their nodes are not stored in the
-    #           aforementioned function. Therefore in the case of nested
-    #           models we need to rebuild the graph to invert it.
-    # * [Major] To do the inversion properly we need to follow the nodes by
-    #           depth and cannot go layer by layer. On the other hand we
-    #           would like to support the ReverseMappingBase interface that
-    #           allows to cache the reversion.
+                  return_all_reversed_tensors=False,
+                  reapply_on_copied_layers=False):
 
     # Set default values ######################################################
 
@@ -324,6 +330,95 @@ def reverse_model(model, reverse_mappings,
                                isinstance(l, keras.engine.topology.Container))
                               for l in layers])
 
+    # If so rebuild the graph, otherwise recycle computations,
+    # and create node execution list. (Keep track of paths?)
+    if contains_container is True:
+        # When containers/models are used as layers, then layers
+        # inside the container/model do not keep track of nodes.
+        # This makes it impossible to iterate of the nodes list and
+        # recover the input output tensors. (see else clause)
+        #
+        # To recover the computational graph we need to re-apply it.
+        # This implies that the tensors-object we use for the forward
+        # pass are different to the passed model. This it not the case
+        # for the else clause.
+        #
+        # Note that reapplying the model does only change the inbound
+        # and outbound nodes of the model itself. We copy the model
+        # so the passed model should not be affected from the
+        # reapplication.
+        execution_list = []
+
+        # Monkeypatch the call function in all the used layer classes.
+        monkey_patches = [(layer, getattr(layer, "call")) for layer in layers]
+        try:
+            def patch(self, method):
+                if hasattr(method, "__patched__") is True:
+                    raise Exception("Should not happen as we patch "
+                                    "objects not classes.")
+
+                def f(*args, **kwargs):
+                    input_tensors = args[0]
+                    output_tensors = method(*args, **kwargs)
+                    execution_list.append((self,
+                                           input_tensors,
+                                           output_tensors))
+                    return output_tensors
+                f.__patched__ = True
+                return f
+
+            # Apply the patches.
+            for layer in layers:
+                setattr(layer, "call", patch(layer, getattr(layer, "call")))
+
+            # Trigger reapplication of model.
+            model_copy = keras.models.Model(inputs=model.inputs,
+                                            outputs=model.outputs)
+            outputs = iutils.listify(model_copy(model.inputs))
+        finally:
+            # Revert the monkey patches
+            for layer, old_method in monkey_patches:
+                setattr(layer, "call", old_method)
+
+        # Now we have the problem that all the tensors
+        # do not have a keras_history attribute as they are not part
+        # of any node. Apply the flat model to get it.
+        from . import easy_apply
+        new_execution_list = []
+        tensor_mapping = {tmp: tmp for tmp in model.inputs}
+        if reapply_on_copied_layers is True:
+            layer_mapping = {layer: copy_layer(layer) for layer in layers}
+        else:
+            layer_mapping = {layer: layer for layer in layers}
+
+        for layer, Xs, Ys in execution_list:
+            layer = layer_mapping[layer]
+            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
+
+            if isinstance(layer, keras.layers.InputLayer):
+                # Special case. Do nothing.
+                new_Xs, new_Ys = Xs, Ys
+            else:
+                new_Xs = [tensor_mapping[x] for x in Xs]
+                new_Ys = iutils.listify(easy_apply(layer, new_Xs))
+
+            tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
+            new_execution_list.append((layer, new_Xs, new_Ys))
+
+        layers = [layer_mapping[layer] for layer in layers]
+        outputs = [tensor_mapping[x] for x in outputs]
+
+        reverse_execution_list = reversed(new_execution_list)
+    else:
+        # Easy and safe way.
+        reverse_execution_list = [
+            (node.outbound_layer, node.input_tensors, node.output_tensors)
+            for depth in sorted(model._nodes_by_depth.keys())
+            for node in model._nodes_by_depth[depth]
+        ]
+        outputs = model.outputs
+        pass
+
     # Initialize the reverse mapping functions.
     initialized_reverse_mappings = {}
     for layer in layers:
@@ -348,22 +443,6 @@ def reverse_model(model, reverse_mappings,
 
         initialized_reverse_mappings[layer] = reverse_mapping
 
-    # If so rebuild the graph, otherwise recycle computations,
-    # and create node execution list. (Keep track of paths?)
-    if contains_container is True:
-        raise NotImplementedError()
-        pass
-    else:
-        # Easy and safe way.
-        reverse_execution_list = [
-            (node.outbound_layer, node.input_tensors, node.output_tensors)
-            for depth in sorted(model._nodes_by_depth.keys())
-            for node in model._nodes_by_depth[depth]
-        ]
-        inputs = model.inputs
-        outputs = model.outputs
-        pass
-
     # Initialize the reverse tensor mappings.
     add_reversed_tensors(-1,
                          outputs,
@@ -378,7 +457,6 @@ def reverse_model(model, reverse_mappings,
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
-
             if not all([ys in reversed_tensors for ys in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
@@ -401,7 +479,7 @@ def reverse_model(model, reverse_mappings,
 
     # Return requested values #################################################
     reversed_input_tensors = [reversed_tensors[tmp]["tensor"]
-                              for tmp in inputs]
+                              for tmp in model.inputs]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:
