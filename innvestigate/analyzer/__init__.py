@@ -16,6 +16,7 @@ import six
 
 
 from .base import *
+from .wrapper import *
 
 from .gradient_based import *
 from .misc import *

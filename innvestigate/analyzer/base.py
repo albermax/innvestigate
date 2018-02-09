@@ -176,19 +176,22 @@ class AnalyzerNetworkBase(AnalyzerBase):
                                    outputs=model_output)
         tmp = self._create_analysis(model)
         try:
-            analysis_output, debug_output, constant_input = tmp
+            analysis_outputs, debug_outputs, constant_inputs = tmp
         except (TypeError, ValueError):
             try:
-                analysis_output, debug_output = tmp
-                constant_input = list()
+                analysis_outputs, debug_outputs = tmp
+                constant_inputs = list()
             except (TypeError, ValueError):
-                analysis_output = iutils.listify(tmp)
-                constant_input, debug_output = list(), list()
+                analysis_outputs = iutils.listify(tmp)
+                constant_inputs, debug_outputs = list(), list()
 
-        self._n_debug_output = len(debug_output)
+        self._n_data_input = len(model_inputs)
+        self._n_constant_input = len(constant_inputs)
+        self._n_data_output = len(analysis_outputs)
+        self._n_debug_output = len(debug_outputs)
         self._analyzer_model = keras.models.Model(
-            inputs=model_inputs+neuron_selection_inputs+constant_input,
-            outputs=analysis_output+debug_output)
+            inputs=model_inputs+neuron_selection_inputs+constant_inputs,
+            outputs=analysis_outputs+debug_outputs)
         self._analyzer_model.compile(optimizer="sgd", loss="mse")
         pass
 

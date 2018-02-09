@@ -41,12 +41,16 @@ __all__ = [
     "Greater",
     "Less",
     "Sum",
+    "Mean",
     "Square",
     "CountNonZero",
 
     "Transpose",
     "Dot",
     "SafeDivide",
+
+    "Repeat",
+    "Reshape",
 ]
 
 
@@ -165,6 +169,11 @@ class Sum(_Reduce):
         return K.sum(x, axis=axis)
 
 
+class Mean(_Reduce):
+    def _apply_reduce(self, x, axis):
+        return K.mean(x, axis=axis)
+
+
 class CountNonZero(_Reduce):
     def _apply_reduce(self, x, axis):
         return K.sum(iK.to_floatx(K.not_equal(x, K.constant(0))), axis=axis)
@@ -263,3 +272,43 @@ class SafeDivide(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[0]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class Repeat(keras.layers.Layer):
+
+    def __init__(self, n, axis, *args, **kwargs):
+        self._n = n
+        self._axis = axis
+        return super(Repeat, self).__init__(*args, **kwargs)
+
+    def call(self, x):
+        return K.repeat_elements(x, self._n, self._axis)
+
+    def compute_output_shape(self, input_shapes):
+        if isinstance(input_shapes, list):
+            input_shape = input_shapes[0]
+        else:
+            input_shape = input_shapes
+
+        if input_shape[0] is None:
+            return input_shape
+        else:
+            return (input_shape[0]*self._n,)+input_shape[1:]
+
+
+class Reshape(keras.layers.Layer):
+
+    def __init__(self, shape, *args, **kwargs):
+        self._shape = shape
+        return super(Reshape, self).__init__(*args, **kwargs)
+
+    def call(self, x):
+        return K.reshape(x, self._shape)
+
+    def compute_output_shape(self, input_shapes):
+        return self._shape
