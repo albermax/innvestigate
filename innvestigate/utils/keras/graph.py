@@ -205,6 +205,20 @@ def get_layer_wo_activation(layer,
 ###############################################################################
 
 
+def get_model_layers(model):
+    ret = []
+
+    def collect_layers(container):
+        for layer in container.layers:
+            assert layer not in ret
+            ret.append(layer)
+            if isinstance(layer, keras.engine.topology.Container):
+                collect_layers(layer)
+    collect_layers(model)
+
+    return ret
+
+
 def model_contains(model, layer_condition, return_only_counts=False):
     if callable(layer_condition):
         layer_condition = [layer_condition, ]
@@ -212,17 +226,11 @@ def model_contains(model, layer_condition, return_only_counts=False):
     else:
         single_condition = False
 
-    collected_layers = [[] for _ in range(len(layer_condition))]
-
-    def collect_layers(container):
-        for layer_index, layer in enumerate(container.layers):
-            for i, condition in enumerate(layer_condition):
-                if condition(layer):
-                    collected_layers[i].append(layer)
-
-            if isinstance(layer, keras.engine.topology.Container):
-                collect_layers(layer)
-    collect_layers(model)
+    layers = get_model_layers(model)
+    collected_layers = []
+    for condition in layer_condition:
+        tmp = [layer for layer in layers if condition(layer)]
+        collected_layers.append(tmp)
 
     if return_only_counts is True:
         collected_layers = [len(v) for v in collected_layers]
@@ -252,6 +260,19 @@ def reverse_model(model, reverse_mappings,
                   head_mapping=None,
                   verbose=False,
                   return_all_reversed_tensors=False):
+    # In principle one can follow the graph of a keras model by mimicking
+    # the BF-traversal as in keras.engine.topology:Container:run_internal_graph
+    # There are two problem with this:
+    # * [Minor] We rebuild the graph and it will be disjoint from the input
+    #           models graph.
+    # * [Major] Given nested models, we actually cannot track back to the
+    #           original tensors as their nodes are not stored in the
+    #           aforementioned function. Therefore in the case of nested
+    #           models we need to rebuild the graph to invert it.
+    # * [Major] To do the inversion properly we need to follow the nodes by
+    #           depth and cannot go layer by layer. On the other hand we
+    #           would like to support the ReverseMappingBase interface that
+    #           allows to cache the reversion.
 
     # Set default values ######################################################
 
@@ -280,8 +301,7 @@ def reverse_model(model, reverse_mappings,
 
     def add_reversed_tensors(reverse_id,
                              tensors_list,
-                             reversed_tensors_list,
-                             initialization=False):
+                             reversed_tensors_list):
 
         def add_reversed_tensor(i, xs, reversed_xs):
             assert xs not in reversed_tensors
@@ -292,116 +312,96 @@ def reverse_model(model, reverse_mappings,
         for i, (xs, reversed_xs) in enumerate(tmp):
             add_reversed_tensor(i, xs, reversed_xs)
 
-            continue
-            # The following piece of code is for a nested container
-            # model. But this does not work yet.
-
-            if initialization is True:
-                continue
-
-            while False and isinstance(xs._keras_history[0],
-                                       keras.engine.topology.Container):
-                # Container create a new reference of their
-                # output tensors, need to follow them otherwise
-                # we run into a disconnected state.
-                xs_history = xs._keras_history
-                print(xs, xs_history, model)
-                xs_layer, xs_node_index, xs_tensor_index = xs_history
-
-                xs = xs_layer.get_output_at(xs_node_index)
-                xs = iutils.listify(xs)[xs_tensor_index]
-            add_reversed_tensor(i, xs, reversed_xs)
-
-    add_reversed_tensors(-1,
-                         model.outputs,
-                         [head_mapping(tmp) for tmp in model.outputs],
-                         initialization=True)
-
     # Reverse the model #######################################################
-
-    def reverse_container(container, state):
-        for layer_index, layer in list(enumerate(container.layers))[::-1]:
-
-            if isinstance(layer, keras.layers.InputLayer):
-                # Special case. Do nothing.
-                pass
-            elif isinstance(layer, keras.engine.topology.Container):
-                _print(" Reverse container: {}".format(layer))
-                raise Exception("Not well understood and not working.")
-                # It seems like Container does not behave as we hoped
-                # whenever it is applied to some input values.
-                # We are not able to track down the individual layers
-                # anymore as the container call/application
-                # results in a single layer that is represented
-                # as graph with nodes.
-
-                # We remap the outside-container references of tensors
-                # to the inside-container references.
-                reverse_container(layer, state)
-            else:
-                # A layer can be shared, i.e., applied several times.
-                # This leads to several in- and outbound tensors combinations.
-                # Each is indexed by a node_index.
-
-                reverse_mapping = reverse_mappings(layer)
-                if reverse_mapping is None:
-                    reverse_mapping = default_reverse_mapping
-
-                if(inspect.isclass(reverse_mapping) and
-                   issubclass(reverse_mapping, ReverseMappingBase)):
-                    reverse_mapping_obj = reverse_mapping(
-                        layer,
-                        {
-                            "model": model,
-                            "container": container,
-                            "layer": layer,
-                            "layer_index": layer_index,
-                        }
-                    )
-
-                    def reverse_mapping(*args, **kwargs):
-                        return reverse_mapping_obj.apply(*args, **kwargs)
-
-                for node_index in range(len(layer._inbound_nodes)):
-                    Xs = iutils.listify(layer.get_input_at(node_index))
-                    Ys = iutils.listify(layer.get_output_at(node_index))
-                    if not all([ys in reversed_tensors for ys in Ys]):
-                        # This node is not part of our computational graph.
-                        # The (node-)world is bigger than this model.
-                        continue
-                    reversed_Ys = [reversed_tensors[ys]["tensor"]
-                                   for ys in Ys]
-                    reverse_id = state["reverse_id"]
-                    state["reverse_id"] += 1
-
-                    _print("  [RID: {}] Reverse layer {}"
-                           " -> node {} ({})".format(reverse_id, layer_index,
-                                                     node_index, layer))
-
-                    reversed_Xs = reverse_mapping(
-                        Xs, Ys, reversed_Ys,
-                        {
-                            "reverse_id": reverse_id,
-                            "model": model,
-                            "container": container,
-                            "layer": layer,
-                            "layer_index": layer_index,
-                            "node_index": node_index,
-                        })
-                    reversed_Xs = iutils.listify(reversed_Xs)
-
-                    add_reversed_tensors(reverse_id, Xs, reversed_Xs)
-
     _print("Reverse model: {}".format(model))
-    # [workaround for closures in python 2 and 3]
-    # sequence id for reverse calls in our reversal routine
-    state = {"reverse_id": 0}
-    reverse_container(model, state)
+
+    # Get all layers in model.
+    layers = get_model_layers(model)
+
+    # Check if some layers are containers.
+    # Ignoring the outermost container, i.e. the passed model.
+    contains_container = any([((l is not model) and
+                               isinstance(l, keras.engine.topology.Container))
+                              for l in layers])
+
+    # Initialize the reverse mapping functions.
+    initialized_reverse_mappings = {}
+    for layer in layers:
+        # A layer can be shared, i.e., applied several times.
+        # Allow to share a ReverMappingBase for each layer instance
+        # in order to reduce the overhead.
+
+        reverse_mapping = reverse_mappings(layer)
+        if reverse_mapping is None:
+            reverse_mapping = default_reverse_mapping
+
+        if(inspect.isclass(reverse_mapping) and
+           issubclass(reverse_mapping, ReverseMappingBase)):
+            reverse_mapping_obj = reverse_mapping(
+                layer,
+                {
+                    "model": model,
+                    "layer": layer,
+                }
+            )
+            reverse_mapping = reverse_mapping_obj.apply
+
+        initialized_reverse_mappings[layer] = reverse_mapping
+
+    # If so rebuild the graph, otherwise recycle computations,
+    # and create node execution list. (Keep track of paths?)
+    if contains_container is True:
+        raise NotImplementedError()
+        pass
+    else:
+        # Easy and safe way.
+        reverse_execution_list = [
+            (node.outbound_layer, node.input_tensors, node.output_tensors)
+            for depth in sorted(model._nodes_by_depth.keys())
+            for node in model._nodes_by_depth[depth]
+        ]
+        inputs = model.inputs
+        outputs = model.outputs
+        pass
+
+    # Initialize the reverse tensor mappings.
+    add_reversed_tensors(-1,
+                         outputs,
+                         [head_mapping(tmp) for tmp in outputs])
+
+    # Follow the list in reverse order and revert the graph.
+    for reverse_id, (layer, Xs, Ys) in enumerate(reverse_execution_list):
+        if isinstance(layer, keras.layers.InputLayer):
+            # Special case. Do nothing.
+            pass
+        elif isinstance(layer, keras.engine.topology.Container):
+            raise Exception("This is not supposed to happen!")
+        else:
+            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
+
+            if not all([ys in reversed_tensors for ys in Ys]):
+                # This node is not part of our computational graph.
+                # The (node-)world is bigger than this model.
+                continue
+            reversed_Ys = [reversed_tensors[ys]["tensor"]
+                           for ys in Ys]
+
+            _print("  [RID: {}] Reverse layer {}".format(reverse_id, layer))
+            reverse_mapping = initialized_reverse_mappings[layer]
+            reversed_Xs = reverse_mapping(
+                Xs, Ys, reversed_Ys,
+                {
+                    "reverse_id": reverse_id,
+                    "model": model,
+                    "layer": layer,
+                })
+            reversed_Xs = iutils.listify(reversed_Xs)
+
+            add_reversed_tensors(reverse_id, Xs, reversed_Xs)
 
     # Return requested values #################################################
-
     reversed_input_tensors = [reversed_tensors[tmp]["tensor"]
-                              for tmp in model.inputs]
+                              for tmp in inputs]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:

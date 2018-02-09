@@ -93,7 +93,7 @@ class PatternNet(base.ReverseAnalyzerBase):
 
                 # replace kernel weights with pattern weights
                 pattern_weights = layer.get_weights()
-                pattern = patterns[tmp_pattern_idx_stack.pop()]
+                pattern = patterns[tmp_pattern_idx_stack.pop(0)]
                 # assume that only one matches
                 tmp = [pattern.shape == x.shape for x in pattern_weights]
                 if np.sum(tmp) != 1:
