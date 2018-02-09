@@ -22,6 +22,7 @@ from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import WrapperBase
 from innvestigate.analyzer import AugmentReduceBase
+from innvestigate.analyzer import GaussianSmoother
 
 from innvestigate.analyzer import Input
 from innvestigate.analyzer import Gradient
@@ -53,3 +54,20 @@ class TestAugmentReduceBase__keras_based(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return AugmentReduceBase(Gradient(model))
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestGaussianSmoother__python_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return GaussianSmoother(Input(model))
+
+
+class TestGaussianSmoother__keras_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return GaussianSmoother(Gradient(model))

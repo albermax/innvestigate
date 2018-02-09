@@ -29,6 +29,7 @@ from ..utils import keras as kutils
 __all__ = [
     "WrapperBase",
     "AugmentReduceBase",
+    "GaussianSmoother",
 ]
 
 
@@ -163,4 +164,44 @@ class AugmentReduceBase(WrapperBase):
         augment_by_n = state.pop("augment_by_n")
         kwargs = super(AugmentReduceBase, clazz)._state_to_kwargs(state)
         kwargs.update({"augment_by_n": augment_by_n})
+        return kwargs
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class GaussianSmoother(WrapperBase):
+
+    properties = {
+        "name": "GaussianSmoother",
+        "show_as": "rgb",
+    }
+
+    def __init__(self, subanalyzer, *args, noise_scale=1, **kwargs):
+        self._noise_scale = noise_scale
+        return super(GaussianSmoother, self).__init__(subanalyzer,
+                                                      *args, **kwargs)
+
+    def _python_based_augment(self, X):
+        tmp = super(GaussianSmoother, self)._python_based_augment(X)
+        return [x + np.random.normal(0, self._noise_scale, size=x.shape)
+                for x in X]
+
+    def _keras_based_augment(self, X):
+        tmp = super(GaussianSmoother, self)._keras_based_augment(X)
+        noise = ilayers.AddGaussianNoise(mean=0, scale=self._noise_scale)
+        return [noise(x) for x in tmp]
+
+    def _get_state(self):
+        state = super(GaussianSmoother, self)._get_state()
+        state.update({"noise_scale": self._noise_scale})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        noise_scale = state.pop("noise_scale")
+        kwargs = super(GaussianSmoother, clazz)._state_to_kwargs(state)
+        kwargs.update({"noise_scale": noise_scale})
         return kwargs

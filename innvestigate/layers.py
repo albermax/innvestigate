@@ -42,8 +42,10 @@ __all__ = [
     "Less",
     "Sum",
     "Mean",
-    "Square",
     "CountNonZero",
+
+    "Square",
+    "AddGaussianNoise",
 
     "Transpose",
     "Dot",
@@ -199,6 +201,17 @@ class _Map(keras.layers.Layer):
 class Square(_Map):
     def _apply_map(self, x):
         return K.square(x)
+
+
+class AddGaussianNoise(_Map):
+
+    def __init__(self, mean, scale, *args, **kwargs):
+        self._mean = mean
+        self._scale = scale
+        return super(AddGaussianNoise, self).__init__(*args, **kwargs)
+
+    def _apply_map(self, x):
+        return x+K.random_normal_variable(x.shape, self._mean, self._scale)
 
 
 ###############################################################################
