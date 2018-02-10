@@ -45,7 +45,6 @@ __all__ = [
     "CountNonZero",
 
     "Square",
-    "AddGaussianNoise",
 
     "Transpose",
     "Dot",
@@ -53,6 +52,7 @@ __all__ = [
 
     "Repeat",
     "Reshape",
+    "MultiplyWithLinspace",
 ]
 
 
@@ -203,17 +203,6 @@ class Square(_Map):
         return K.square(x)
 
 
-class AddGaussianNoise(_Map):
-
-    def __init__(self, mean, scale, *args, **kwargs):
-        self._mean = mean
-        self._scale = scale
-        return super(AddGaussianNoise, self).__init__(*args, **kwargs)
-
-    def _apply_map(self, x):
-        return x+K.random_normal_variable(x.shape, self._mean, self._scale)
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -325,3 +314,31 @@ class Reshape(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         return self._shape
+
+
+class MultiplyWithLinspace(keras.layers.Layer):
+
+    def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
+        self._start = start
+        self._end = end
+        self._n = n
+        self._axis = axis
+        return super(MultiplyWithLinspace, self).__init__(*args, **kwargs)
+
+    def call(self, x):
+        linspace = (self._start +
+                    (self._end-self._start) *
+                    (K.arange(self._n, dtype=K.floatx())/self._n))
+
+        # Make broadcastable.
+        shape = np.ones(len(K.int_shape(x)))
+        shape[self._axis] = self._n
+        linspace = K.reshape(linspace, shape)
+        return x * linspace
+
+    def compute_output_shape(self, input_shapes):
+        ret = input_shapes[:]
+        ret = (ret[:self._axis] +
+               (max(self._n, ret[self._axis]),) +
+               ret[self._axis+1:])
+        return ret

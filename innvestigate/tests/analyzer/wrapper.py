@@ -23,6 +23,7 @@ from innvestigate.utils.tests import dryrun
 from innvestigate.analyzer import WrapperBase
 from innvestigate.analyzer import AugmentReduceBase
 from innvestigate.analyzer import GaussianSmoother
+from innvestigate.analyzer import PathIntegrator
 
 from innvestigate.analyzer import Input
 from innvestigate.analyzer import Gradient
@@ -71,3 +72,20 @@ class TestGaussianSmoother__keras_based(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return GaussianSmoother(Gradient(model))
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestPathIntegrator__python_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return PathIntegrator(Input(model))
+
+
+class TestPathIntegrator__keras_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return PathIntegrator(Gradient(model))
