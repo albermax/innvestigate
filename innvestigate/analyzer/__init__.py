@@ -40,7 +40,7 @@ def create_analyzer(name, model, **kwargs):
         "gradient.baseline": BaselineGradient,
         "deconvnet": Deconvnet,
         "guided_backprop": GuidedBackprop,
-        "integrated_gradients": IntegraedGradients,
+        "integrated_gradients": IntegratedGradients,
 
         # Relevance based
         "lrp": LRP,
