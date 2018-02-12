@@ -158,7 +158,7 @@ class AugmentReduceBase(WrapperBase):
         X_shape = [K.int_shape(x) for x in iutils.listify(X)]
         reshape = [ilayers.Reshape((-1, self._augment_by_n)+shape[1:])
                    for shape in X_shape]
-        mean = ilayers.Mean(axis=0)
+        mean = ilayers.Mean(axis=1)
 
         return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
 
@@ -238,14 +238,18 @@ class PathIntegrator(AugmentReduceBase):
                                                     **kwargs)
 
     def _python_based_compute_difference(self, X):
-        reference_inputs = iutils.listify(self._reference_inputs)
-        return [ri-x for ri, x in zip(reference_inputs, X)]
+        if getattr(self, "_difference", None) is None:
+            reference_inputs = iutils.listify(self._reference_inputs)
+            difference = [ri-x for ri, x in zip(reference_inputs, X)]
+            self._difference = difference
+        return self._difference
 
     def _python_based_augment(self, X):
+        difference = self._python_based_compute_difference(X)
+
         tmp = super(PathIntegrator, self)._python_based_augment(X)
         tmp = [x.reshape((-1, self._augment_by_n)+x.shape[1:]) for x in tmp]
 
-        difference = self._python_based_compute_difference(X)
         # Make broadcastable.
         difference = [x.reshape((-1, 1)+x.shape[1:]) for x in difference]
 
@@ -264,7 +268,9 @@ class PathIntegrator(AugmentReduceBase):
 
     def _python_based_reduce(self, X):
         tmp = super(PathIntegrator, self)._python_based_reduce(X)
+        # todo: make this part nicer!
         difference = self._python_based_compute_difference(X)
+        del self._difference
 
         return [x*d for x, d in zip(tmp, difference)]
 
