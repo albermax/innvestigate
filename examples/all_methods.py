@@ -111,8 +111,11 @@ if __name__ == "__main__":
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
     modelp.set_weights(parameters)
 
+    patterns = lasagne_weights_to_keras_weights(
+        load_patterns(pattern_file)["A"])
+
     ###########################################################################
-    # Utility function.
+    # Utility functions.
     ###########################################################################
 
     def preprocess(X):
@@ -123,32 +126,22 @@ if __name__ == "__main__":
 
     def postprocess(X):
         X = X.copy()
+        X = ivis.postprocess_images(X,
+                                    color_coding="BGRtoRGB",
+                                    channels_first=False)
         return X
 
     def image(X):
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_invert_preprocess(X)
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
-        X = ivis.project(X, absmax=255.0, input_is_postive_only=True)
-        return X
+        X = X.copy()
+        return ivis.project(X, absmax=255.0, input_is_postive_only=True)
 
     def bk_proj(X):
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
         return ivis.project(X)
 
     def heatmap(X):
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
         return ivis.heatmap(X)
 
     def graymap(X):
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
         return ivis.graymap(np.abs(X), input_is_postive_only=True)
 
     ###########################################################################
@@ -160,40 +153,37 @@ if __name__ == "__main__":
         # NAME             POSTPROCESSING     TITLE
 
         # Show input.
-        ("input",               image,   "Input"),
+        ("input",                 {},                       image,   "Input"),
 
         # Function
-        ("gradient",            graymap, "Gradient"),
-        ("integrated_gradients",graymap, ("Integrated", "Gradients")),
+        ("gradient",              {},                       graymap, "Gradient"),
+        ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
+        ("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
 
         # Signal
-        ("deconvnet",           bk_proj, "Deconvnet"),
-        ("guided_backprop",     bk_proj, ("Guided", "Backprop"),),
-        ("pattern.net",         bk_proj, "PatterNet"),
+        ("deconvnet",             {},                       bk_proj, "Deconvnet"),
+        ("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
+        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
 
         # Interaction
-        ("pattern.attribution", heatmap, "PatternAttribution"),
-        ("lrp.z_baseline",      heatmap, "LRP-Z"),
+        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
+        ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
     ]
 
     # Create analyzers.
-    patterns = lasagne_weights_to_keras_weights(
-        load_patterns(pattern_file)["A"])
     analyzers = []
     for method in methods:
-        kwargs = {}
-        if method[0].startswith("pattern"):
-            kwargs["patterns"] = patterns
         analyzers.append(innvestigate.create_analyzer(method[0],
                                                       model,
-                                                      **kwargs))
+                                                      **method[1]))
 
     # Create analysis.
     analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
     text = []
     for i, (image, y) in enumerate(images):
+        image = image[None, :, :, :]
         # Predict label.
-        x = preprocess(image[None, :, :, :])
+        x = preprocess(image)
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
@@ -202,11 +192,13 @@ if __name__ == "__main__":
                      r"\textit{%s}" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
+            is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            a = analyzer.analyze(x)
+            a = analyzer.analyze(image if is_input_analyzer else x)
             # Postprocess.
-            a = postprocess(a)
-            a = methods[aidx][1](a)
+            if not is_input_analyzer:
+                a = postprocess(a)
+            a = methods[aidx][2](a)
             analysis[i, aidx] = a[0]
 
     ###########################################################################
@@ -216,7 +208,7 @@ if __name__ == "__main__":
     grid = [[analysis[i, j] for j in range(analysis.shape[1])]
             for i in range(analysis.shape[0])]
     row_labels = text
-    col_labels = [method[2] for method in methods]
+    col_labels = [method[3] for method in methods]
 
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,

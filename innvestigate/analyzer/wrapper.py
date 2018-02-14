@@ -200,7 +200,7 @@ class GaussianSmoother(AugmentReduceBase):
 
     def _keras_based_augment(self, X):
         tmp = super(GaussianSmoother, self)._keras_based_augment(X)
-        noise = keras.layers.GaussianNoise(stddev=self._noise_scale)
+        noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
         return [noise(x) for x in tmp]
 
     def _get_state(self):

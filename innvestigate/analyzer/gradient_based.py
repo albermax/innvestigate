@@ -36,6 +36,8 @@ __all__ = [
     "GuidedBackprop",
 
     "IntegratedGradients",
+
+    "SmoothGrad",
 ]
 
 
@@ -156,10 +158,36 @@ class IntegratedGradients(wrapper.PathIntegrator):
         "show_as": "rgb",
     }
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, *args, steps=64, **kwargs):
         subanalyzer = Gradient(model)
         ret = super(IntegratedGradients, self).__init__(subanalyzer,
-                                                        *args, **kwargs)
+                                                        *args,
+                                                        steps=steps,
+                                                        **kwargs)
         # Was overwritten by base class.
         self.properties["name"] = "Integrated-Gradients"
+        return ret
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class SmoothGrad(wrapper.GaussianSmoother):
+
+    properties = {
+        "name": "SmoothGrad",
+        "show_as": "rgb",
+    }
+
+    def __init__(self, model, *args, augment_by_n=64, **kwargs):
+        subanalyzer = Gradient(model)
+        ret = super(SmoothGrad, self).__init__(
+            subanalyzer,
+            *args,
+            augment_by_n=augment_by_n,
+            **kwargs)
+        # Was overwritten by base class.
+        self.properties["name"] = "SmoothGrad"
         return ret
