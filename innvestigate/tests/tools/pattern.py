@@ -36,16 +36,16 @@ from innvestigate.tools import PatternComputer
 
 class TestPatterComputer_dummy_parallel(dryrun.PatternComputerTestCase):
 
-   def _method(self, model):
-       return PatternComputer(model, pattern_type="dummy",
-                              compute_layers_in_parallel=True)
+    def _method(self, model):
+        return PatternComputer(model, pattern_type="dummy",
+                               compute_layers_in_parallel=True)
 
 
 class TestPatterComputer_dummy_sequential(dryrun.PatternComputerTestCase):
 
-   def _method(self, model):
-       return PatternComputer(model, pattern_type="dummy",
-                              compute_layers_in_parallel=False)
+    def _method(self, model):
+        return PatternComputer(model, pattern_type="dummy",
+                               compute_layers_in_parallel=False)
 
 
 ###############################################################################
