@@ -24,10 +24,10 @@ __all__ = [
     "mlp_2dense",
     "mlp_3dense",
 
-    "cnn_1convb_2dense",
-    "cnn_2convb_2dense",
-    "cnn_2convb_3dense",
-    "cnn_3convb_3dense",
+    #"cnn_1convb_2dense",
+    #"cnn_2convb_2dense",
+    #"cnn_2convb_3dense",
+    #"cnn_3convb_3dense",
 ]
 
 

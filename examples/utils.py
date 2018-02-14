@@ -65,13 +65,13 @@ def plot_image_grid(grid,
                     col_label_offset=0,
                     usetex=False,
                     size_per_cell=3,
-                    dpi=224,
-                    fontsize=10):
+                    dpi=224):
     n_rows = len(grid)
     n_cols = len(grid[0])
     shape_per_image = grid[0][0].shape[:2]
     n_padding = shape_per_image[0]//5
     shape_per_image_padded = [s + 2 * n_padding for s in shape_per_image]
+    fontsize = shape_per_image[1]//2
 
     plt.clf()
     plt.figure(figsize=(n_rows * size_per_cell,
@@ -109,8 +109,8 @@ def plot_image_grid(grid,
             plt.text(0,
                      row_label_offset+
                      n_padding +
-                     shape_per_image_padded[0] * i +
-                     fontsize * 2 * 3 * j,
+                     shape_per_image_padded[1] * i +
+                     shape_per_image[1] * j / len(label),
                      s, fontsize=fontsize, ha="right")
 
     # Plot the col labels.
@@ -119,7 +119,8 @@ def plot_image_grid(grid,
             label = (label,)
         for j, s in enumerate(label):
             plt.text(n_padding + shape_per_image_padded[1] * i,
-                     col_label_offset + fontsize * 2 * 3 * j,
+                     col_label_offset - shape_per_image[1] +
+                     shape_per_image[1] * j / len(label),
                      s, fontsize=fontsize, ha="left")
 
     if file_name is None:
