@@ -17,6 +17,7 @@ import six
 import keras
 import keras.backend as K
 from keras.engine.topology import Layer
+import keras.layers
 import numpy as np
 
 
@@ -53,6 +54,7 @@ __all__ = [
     "Repeat",
     "Reshape",
     "MultiplyWithLinspace",
+    "TestPhaseGaussianNoise",
 ]
 
 
@@ -342,3 +344,10 @@ class MultiplyWithLinspace(keras.layers.Layer):
                (max(self._n, ret[self._axis]),) +
                ret[self._axis+1:])
         return ret
+
+
+class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
+
+    def call(self, inputs):
+        # Always add Gaussian noise!
+        return super(TestPhaseGaussianNoise, self).call(inputs, training=True)

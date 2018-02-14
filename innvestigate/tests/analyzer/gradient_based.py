@@ -31,6 +31,8 @@ from innvestigate.analyzer import GuidedBackprop
 
 from innvestigate.analyzer import IntegratedGradients
 
+from innvestigate.analyzer import SmoothGrad
+
 
 ###############################################################################
 ###############################################################################
@@ -75,3 +77,14 @@ class TestIntegratedGradients(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return IntegratedGradients(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestSmoothGrad(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return SmoothGrad(model)

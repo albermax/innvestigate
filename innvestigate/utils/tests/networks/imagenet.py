@@ -50,18 +50,6 @@ def vgg16_preprocess(X):
     return X
 
 
-def vgg16_invert_preprocess(X):
-    if X.shape[1] == 3:
-        shape = [1, 3, 1, 1]
-    else:
-        shape = [1, 1, 1, 3]
-
-    offset = VGG16_OFFSET.reshape(shape)
-    # Add pixel-wise mean.
-    X += offset
-    return X
-
-
 def vgg16(activation=None):
     if activation is None:
         activation = "relu"

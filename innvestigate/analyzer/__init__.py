@@ -41,6 +41,7 @@ def create_analyzer(name, model, **kwargs):
         "deconvnet": Deconvnet,
         "guided_backprop": GuidedBackprop,
         "integrated_gradients": IntegratedGradients,
+        "smoothgrad": SmoothGrad,
 
         # Relevance based
         "lrp": LRP,
