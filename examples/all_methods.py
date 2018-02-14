@@ -145,6 +145,12 @@ if __name__ == "__main__":
                                     channels_first=False)
         return ivis.heatmap(X)
 
+    def graymap(X):
+        X = ivis.postprocess_images(X,
+                                    color_coding="BGRtoRGB",
+                                    channels_first=False)
+        return ivis.graymap(np.abs(X), input_is_postive_only=True)
+
     ###########################################################################
     # Analysis.
     ###########################################################################
@@ -157,7 +163,8 @@ if __name__ == "__main__":
         ("input",               image,   "Input"),
 
         # Function
-        ("gradient",            bk_proj, "Gradient"),
+        ("gradient",            graymap, "Gradient"),
+        ("integrated_gradients",graymap, ("Integrated", "Gradients")),
 
         # Signal
         ("deconvnet",           bk_proj, "Deconvnet"),

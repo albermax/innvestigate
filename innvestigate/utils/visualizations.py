@@ -20,12 +20,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+# todo: rename this module!
 __all__ = [
     "preprocess_images",
     "postprocess_images",
 
     "project",
     "heatmap",
+    "graymap",
 ]
 
 
@@ -96,7 +98,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
     return X
 
 
-def heatmap(X, cmap_type="seismic", reduce_op="sum"):
+def heatmap(X, cmap_type="seismic", reduce_op="sum", **kwargs):
     cmap = plt.cm.get_cmap(cmap_type)
 
     tmp = X
@@ -118,13 +120,17 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum"):
         else:
             raise NotImplementedError()
 
-    tmp = project(tmp, output_range=(0, 255)).astype(np.int64)
+    tmp = project(tmp, output_range=(0, 255), **kwargs).astype(np.int64)
 
     tmp = cmap(tmp.flatten())[:, :3]
     if shape[1] == 3:
         tmp = tmp.T
 
     return tmp.reshape(shape).astype(np.float32)
+
+
+def graymap(X, **kwargs):
+    return heatmap(X, cmap_type="gray", **kwargs)
 
 
 def clip_quantile(X, quantile=1):
