@@ -217,6 +217,8 @@ class PatternComputer(object):
         computer_outputs = []
         # todo: this does not work with more nodes!
         for layer_id, layer in enumerate(model.layers):
+            if keras.graph.is_container(layer):
+                raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
                 pinstance = clazz(model, layer)
                 if pinstance.has_pattern() is False:

@@ -27,6 +27,7 @@ from ... import utils as iutils
 __all__ = [
     "contains_activation",
     "contains_kernel",
+    "is_container",
     "is_convnet_layer",
     "is_relu_convnet_layer",
 
@@ -78,6 +79,10 @@ def contains_kernel(layer):
         return True
     else:
         return False
+
+
+def is_container(layer):
+    return isinstance(layer, keras.engine.topology.Container)
 
 
 def is_convnet_layer(layer):
@@ -231,7 +236,7 @@ def get_model_layers(model):
         for layer in container.layers:
             assert layer not in ret
             ret.append(layer)
-            if isinstance(layer, keras.engine.topology.Container):
+            if is_container(layer):
                 collect_layers(layer)
     collect_layers(model)
 
@@ -327,8 +332,7 @@ def reverse_model(model, reverse_mappings,
 
     # Check if some layers are containers.
     # Ignoring the outermost container, i.e. the passed model.
-    contains_container = any([((l is not model) and
-                               isinstance(l, keras.engine.topology.Container))
+    contains_container = any([((l is not model) and is_container(l))
                               for l in layers])
 
     # If so rebuild the graph, otherwise recycle computations,
@@ -454,7 +458,7 @@ def reverse_model(model, reverse_mappings,
         if isinstance(layer, keras.layers.InputLayer):
             # Special case. Do nothing.
             pass
-        elif isinstance(layer, keras.engine.topology.Container):
+        elif is_container(layer):
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
