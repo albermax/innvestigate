@@ -91,7 +91,7 @@ class ZRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state, bias=False):
         self._layer_wo_act = kgraph.get_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
+            layer, keep_bias=bias, name_template="reversed_kernel_%s")
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
@@ -205,9 +205,11 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
         self._layer_wo_act_positive = kgraph.get_layer_wo_activation(
             layer,
+            keep_bias=bias,
             name_template="reversed_kernel_positive_%s")
         self._layer_wo_act_negative = kgraph.get_layer_wo_activation(
             layer,
+            keep_bias=bias,
             name_template="reversed_kernel_negative_%s")
         positive_weights = [x * (x > 0)
                             for x in self._layer_wo_act_positive.get_weights()]
@@ -681,7 +683,7 @@ class LRPAlpha1Beta0(LRPAlphaBeta):
         return super(LRPAlpha1Beta0, self).__init__(model, *args,
                                                     alpha=1,
                                                     beta=0,
-                                                    bias=True,
+                                                    bias=False,
                                                     **kwargs)
 
 

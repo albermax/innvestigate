@@ -184,6 +184,7 @@ def get_layer_from_config(old_layer, new_config, weights=None):
     return new_layer
 
 
+# todo: rename to copy layer
 def get_layer_wo_activation(layer,
                             keep_bias=True,
                             name_template=None,

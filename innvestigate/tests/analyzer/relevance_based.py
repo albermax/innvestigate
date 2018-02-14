@@ -47,11 +47,14 @@ class TestLRPZ(dryrun.AnalyzerTestCase):
 
 class TestLRPZ__equal_BaselineLRPZ(dryrun.EqualAnalyzerTestCase):
 
+    _all_close_rtol = 10**-5
+    _all_close_atol = 10**-5
+
     def _method1(self, model):
         return BaselineLRPZ(model)
 
     def _method2(self, model):
-        return LRPZ(model)
+        return LRPZWithBias(model)
 
 
 class TestLRPZ__with_input_layer_rule(dryrun.AnalyzerTestCase):
