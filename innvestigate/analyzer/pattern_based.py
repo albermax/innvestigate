@@ -56,18 +56,30 @@ class PatternNet(base.ReverseAnalyzerBase):
             "convluational neural networks with non-relu activations."
             )
 
-        if patterns is None:
-            raise ValueError("Patterns are required.")
-        # copy pattern references
-        self._patterns = list(patterns)
+        self._patterns = patterns
+        if self._patterns is not None:
+            # copy pattern references
+            self._patterns = list(patterns)
 
         return super(PatternNet, self).__init__(*args, **kwargs)
+
+    def _prepare_pattern(self, layer, state, pattern):
+        return pattern
 
     def _create_analysis(self, *args, **kwargs):
 
         # shared information among the created reverse mappings
-        patterns = self._patterns
+        # todo: make this more flexible.
         tmp_pattern_idx_stack = list(range(len(self._patterns)))
+
+        def get_pattern(layer, state):
+            if self._patterns is None:
+                raise Exception("Patterns are required. "
+                                "Either train them or "
+                                "pass them to the constructor.")
+
+            pattern = self._patterns[tmp_pattern_idx_stack.pop(0)]
+            return self._prepare_pattern(layer, state, pattern)
 
         class ReverseLayer(kgraph.ReverseMappingBase):
 
@@ -93,7 +105,7 @@ class PatternNet(base.ReverseAnalyzerBase):
 
                 # replace kernel weights with pattern weights
                 pattern_weights = layer.get_weights()
-                pattern = patterns[tmp_pattern_idx_stack.pop(0)]
+                pattern = get_pattern(layer, state)
                 # assume that only one matches
                 tmp = [pattern.shape == x.shape for x in pattern_weights]
                 if np.sum(tmp) != 1:
@@ -155,43 +167,10 @@ class PatternAttribution(PatternNet):
         "show_as": "rgb",
     }
 
-    def __init__(self, model, *args, patterns=None, **kwargs):
-        if patterns is None:
-            raise ValueError("Patterns are required.")
-
-        # copy pattern references
-        self._patterns = list(patterns)
-        # copy pattern references; will be used as stack
-        patterns = list(patterns)
-
-        # create PatternAttributions "patterns""
-        new_patterns = []
-        for W in model.get_weights():
-            if W.shape == patterns[0].shape:
-                new_patterns.append(np.multiply(W, patterns[0]))
-                patterns.pop(0)
-            if len(patterns) == 0:
-                break
-
-        if len(patterns) != 0:
-            raise Exception("Not all patterns consumed. Something is wrong.")
-
-        return super(PatternAttribution, self).__init__(model,
-                                                        *args,
-                                                        patterns=new_patterns,
-                                                        **kwargs)
-
-    def _get_state(self):
-        state = super(PatternAttribution, self)._get_state()
-        # This overwrites the patterns parameter from PatterNet.
-        state.update({"patterns": self._patterns})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        # Don't pop patterns key-value-pair; PatternNet expects it.
-        patterns = state["patterns"]
-        kwargs = super(PatternAttribution, clazz)._state_to_kwargs(state)
-        # This overwrites the patterns parameter from PatternNet.
-        kwargs.update({"patterns": patterns})
-        return kwargs
+    def _prepare_pattern(self, layer, state, pattern):
+        weights = layer.get_weights()
+        tmp = [pattern.shape == x.shape for x in weights]
+        if np.sum(tmp) != 1:
+            raise Exception("Cannot match pattern to kernel.")
+        weight = weights[np.argmax(tmp)]
+        return np.multiply(pattern, weight)

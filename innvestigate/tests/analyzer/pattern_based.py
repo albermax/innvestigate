@@ -68,14 +68,3 @@ class TestSerializePatternNet(dryrun.SerializeAnalyzerTestCase):
         patterns = [x for x in model.get_weights()
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
-
-
-class TestSerializePatternAttribution(dryrun.SerializeAnalyzerTestCase):
-
-    def _method(self, model):
-        # enough for test purposes, only pattern application is tested here
-        # pattern computation is tested separately.
-        # assume that one dim weights are biases, drop them.
-        patterns = [x for x in model.get_weights()
-                    if len(x.shape) > 1]
-        return PatternAttribution(model, patterns=patterns)
