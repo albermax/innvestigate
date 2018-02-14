@@ -172,7 +172,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             workers=workers,
             use_multiprocessing=use_multiprocessing,
             verbose=verbose)
-        print(len(self._patterns), len(self._model.get_weights()))
         pass
 
     def _get_state(self):
