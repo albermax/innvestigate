@@ -98,34 +98,30 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
     return X
 
 
-def heatmap(X, cmap_type="seismic", reduce_op="sum", **kwargs):
+def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
     cmap = plt.cm.get_cmap(cmap_type)
 
     tmp = X
     shape = tmp.shape
 
-    # has color channels?
-    if shape[1] == 3 or (len(shape) >= 4 and shape[3] == 3):
-        # reduce color channels
-        color_axis = 1 if shape[1] == 3 else 3
-
-        if reduce_op == "sum":
-            tmp = tmp.sum(axis=color_axis)
-        elif reduce_op == "absmax":
-            pos_max = tmp.max(axis=color_axis)
-            neg_max = (-tmp).max(axis=color_axis)
-            abs_neg_max = -neg_max
-            tmp = np.select([pos_max >= abs_neg_max, pos_max < abs_neg_max],
-                            [pos_max, neg_max])
-        else:
-            raise NotImplementedError()
+    if reduce_op == "sum":
+        tmp = tmp.sum(axis=reduce_axis)
+    elif reduce_op == "absmax":
+        pos_max = tmp.max(axis=reduce_axis)
+        neg_max = (-tmp).max(axis=reduce_axis)
+        abs_neg_max = -neg_max
+        tmp = np.select([pos_max >= abs_neg_max, pos_max < abs_neg_max],
+                        [pos_max, neg_max])
+    else:
+        raise NotImplementedError()
 
     tmp = project(tmp, output_range=(0, 255), **kwargs).astype(np.int64)
 
-    tmp = cmap(tmp.flatten())[:, :3]
-    if shape[1] == 3:
-        tmp = tmp.T
+    tmp = cmap(tmp.flatten())[:, :3].T
+    tmp = tmp.T
 
+    shape = list(shape)
+    shape[reduce_axis] = 3
     return tmp.reshape(shape).astype(np.float32)
 
 
