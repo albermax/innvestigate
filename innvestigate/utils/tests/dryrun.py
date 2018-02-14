@@ -92,11 +92,35 @@ class AnalyzerTestCase(BaseTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"],
+                                   outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
         # Dryrun.
+        x = np.random.rand(1, *(network["input_shape"][1:]))
+        analysis = analyzer.analyze(x)
+        self.assertEqual(tuple(analysis.shape),
+                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isnan(analysis.ravel())))
+        pass
+
+
+class AnalyzerTrainTestCase(BaseTestCase):
+
+    def _method(self, model):
+        raise NotImplementedError("Set in subclass.")
+
+    def _apply_test(self, network):
+        # Create model.
+        model = keras.models.Model(inputs=network["in"],
+                                   outputs=network["out"])
+        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
+        # Get analyzer.
+        analyzer = self._method(model)
+        # Dryrun.
+        x = np.random.rand(16, *(network["input_shape"][1:]))
+        analyzer.fit(x)
         x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape),
@@ -115,7 +139,8 @@ class EqualAnalyzerTestCase(BaseTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"],
+                                   outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer1 = self._method1(model)
@@ -150,7 +175,8 @@ class SerializeAnalyzerTestCase(BaseTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"],
+                                   outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -162,7 +188,7 @@ class SerializeAnalyzerTestCase(BaseTestCase):
 
         analysis = new_analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape),
-                         (1,)+tuple(network["input_shape"]))
+                         (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 

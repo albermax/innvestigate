@@ -28,6 +28,7 @@ from ..utils.keras import graph as kgraph
 
 __all__ = [
     "AnalyzerBase",
+
     "TrainerMixin",
     "OneEpochTrainerMixin",
 
@@ -74,6 +75,15 @@ class AnalyzerBase(object):
             # but is fit is still called.
             warnings.warn("This analyzer does not need to be trained."
                           " Still fit() is called.", RuntimeWarning)
+        pass
+
+    def fit_generator(self, *args,
+                      disable_no_training_warning=False, **kwargs):
+        if not disable_no_training_warning:
+            # issue warning if not training is foreseen,
+            # but is fit is still called.
+            warnings.warn("This analyzer does not need to be trained."
+                          " Still fit_generator() is called.", RuntimeWarning)
         pass
 
     def analyze(self, X):
@@ -130,14 +140,42 @@ class AnalyzerBase(object):
 
 class TrainerMixin(object):
 
-    # todo: create a common interface for a trained analyzer.
+    # todo: extend with Y
+    def fit(self,
+            X=None,
+            batch_size=32,
+            **kwargs):
+        generator = iutils.BatchSequence(X, batch_size)
+        return self._fit_generator(generator,
+                                  **kwargs)
+
+    def fit_generator(self, *args, **kwargs):
+        return self._fit_generator(*args, **kwargs)
+
+    def _fit_generator(self,
+                       generator,
+                       steps_per_epoch=None,
+                       epochs=1,
+                       max_queue_size=10,
+                       workers=1,
+                       use_multiprocessing=False,
+                       verbose=0,
+                       disable_no_training_warning=None):
+        raise NotImplementedError()
     pass
 
 
 class OneEpochTrainerMixin(TrainerMixin):
 
-    # todo: Wrapper around trainer mixin that allows training for one epoch.
-    pass
+    def fit(self, *args, **kwargs):
+        return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
+
+    def fit_generator(self, *args, steps=None, **kwargs):
+        return super(OneEpochTrainerMixin, self).fit_generator(
+            *args,
+            steps_per_epoch=steps,
+            epochs=1,
+            **kwargs)
 
 
 ###############################################################################
@@ -156,6 +194,11 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
         self._neuron_selection_mode = neuron_selection_mode
+        pass
+
+    def compile_analyzer(self):
+        model = self._model
+        neuron_selection_mode = self._neuron_selection_mode
 
         neuron_selection_inputs = []
         model_inputs, model_output = model.inputs, model.outputs
@@ -199,6 +242,9 @@ class AnalyzerNetworkBase(AnalyzerBase):
         raise NotImplementedError()
 
     def analyze(self, X, neuron_selection=None):
+        if not hasattr(self, "_analyzer_model"):
+            self.compile_analyzer()
+
         # todo: update all interfaces, X can be a list.
         if(neuron_selection is not None and
            self._neuron_selection_mode != "index"):

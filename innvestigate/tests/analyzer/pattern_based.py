@@ -32,26 +32,16 @@ from innvestigate.analyzer import PatternAttribution
 ###############################################################################
 
 
-class TestPatternNet(dryrun.AnalyzerTestCase):
+class TestPatternNet(dryrun.AnalyzerTrainTestCase):
 
     def _method(self, model):
-        # enough for test purposes, only pattern application is tested here
-        # pattern computation is tested separately.
-        # assume that one dim weights are biases, drop them.
-        patterns = [x for x in model.get_weights()
-                    if len(x.shape) > 1]
-        return PatternNet(model, patterns=patterns)
+        return PatternNet(model)
 
 
-class TestPatternAttribution(dryrun.AnalyzerTestCase):
+class TestPatternAttribution(dryrun.AnalyzerTrainTestCase):
 
     def _method(self, model):
-        # enough for test purposes, only pattern application is tested here
-        # pattern computation is tested separately.
-        # assume that one dim weights are biases, drop them.
-        patterns = [x for x in model.get_weights()
-                    if len(x.shape) > 1]
-        return PatternAttribution(model, patterns=patterns)
+        return PatternAttribution(model)
 
 
 ###############################################################################
