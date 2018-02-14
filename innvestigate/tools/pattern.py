@@ -215,9 +215,9 @@ class PatternComputer(object):
         self._work_sequence = []
         self._pattern_instances = {k: [] for k in self.pattern_types}
         computer_outputs = []
-        # todo: this does not work with more nodes!
+        # todo: this does not work with more nodes or containers!
         for layer_id, layer in enumerate(model.layers):
-            if keras.graph.is_container(layer):
+            if kgraph.is_container(layer):
                 raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
                 pinstance = clazz(model, layer)

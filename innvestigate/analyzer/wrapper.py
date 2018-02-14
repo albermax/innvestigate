@@ -98,34 +98,43 @@ class AugmentReduceBase(WrapperBase):
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
 
-            if self._subanalyzer._n_debug_output > 0:
-                raise Exception("No debug output at subanalyzer is supported.")
-
-            model = self._subanalyzer._analyzer_model
-            inputs = model.inputs[:self._subanalyzer._n_data_input]
-            extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
-            outputs = model.outputs[:self._subanalyzer._n_data_input]
-            extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
-
-            if len(extra_outputs) > 0:
-                raise Exception("No extra output is allowed "
-                                "with this wrapper.")
-
-            new_inputs = iutils.listify(self._keras_based_augment(inputs))
-            tmp = iutils.listify(kutils.easy_apply(model, new_inputs))
-            new_outputs = iutils.listify(self._keras_based_reduce(tmp))
-            new_constant_inputs = self._keras_get_constant_inputs()
-
-            new_model = keras.models.Model(
-                inputs=inputs+extra_inputs+new_constant_inputs,
-                outputs=new_outputs+extra_outputs)
-            new_model.compile(optimizer="sgd", loss="mse")
-            self._subanalyzer._analyzer_model = new_model
-
         return ret
+
+    def compile_analyzer(self):
+        if not self._keras_based_augment_reduce:
+            return
+
+        self._subanalyzer.compile_analyzer()
+
+        if self._subanalyzer._n_debug_output > 0:
+            raise Exception("No debug output at subanalyzer is supported.")
+
+        model = self._subanalyzer._analyzer_model
+        inputs = model.inputs[:self._subanalyzer._n_data_input]
+        extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
+        outputs = model.outputs[:self._subanalyzer._n_data_input]
+        extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
+
+        if len(extra_outputs) > 0:
+            raise Exception("No extra output is allowed "
+                            "with this wrapper.")
+
+        new_inputs = iutils.listify(self._keras_based_augment(inputs))
+        tmp = iutils.listify(kutils.easy_apply(model, new_inputs))
+        new_outputs = iutils.listify(self._keras_based_reduce(tmp))
+        new_constant_inputs = self._keras_get_constant_inputs()
+
+        new_model = keras.models.Model(
+            inputs=inputs+extra_inputs+new_constant_inputs,
+            outputs=new_outputs+extra_outputs)
+        new_model.compile(optimizer="sgd", loss="mse")
+        self._subanalyzer._analyzer_model = new_model
+        pass
 
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:
+            if not hasattr(self._subanalyzer, "_analyzer_model"):
+                self.compile_analyzer()
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
             return_list = isinstance(X, list)

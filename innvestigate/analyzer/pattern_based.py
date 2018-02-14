@@ -24,6 +24,7 @@ import numpy as np
 from . import base
 from .. import layers as ilayers
 from .. import utils
+from .. import tools as itools
 from ..utils import keras as kutils
 from ..utils.keras import graph as kgraph
 
@@ -39,7 +40,7 @@ __all__ = [
 ###############################################################################
 
 
-class PatternNet(base.ReverseAnalyzerBase):
+class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
     properties = {
         "name": "PatternNet",
@@ -67,7 +68,6 @@ class PatternNet(base.ReverseAnalyzerBase):
         return pattern
 
     def _create_analysis(self, *args, **kwargs):
-
         # shared information among the created reverse mappings
         # todo: make this more flexible.
         tmp_pattern_idx_stack = list(range(len(self._patterns)))
@@ -138,13 +138,42 @@ class PatternNet(base.ReverseAnalyzerBase):
         ]
 
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
-
         if len(tmp_pattern_idx_stack) == 0:
             del tmp_pattern_idx_stack
         else:
             raise Exception("Not all patterns consumed. Something is wrong.")
 
         return ret
+
+    def _fit_generator(self,
+                       generator,
+                       steps_per_epoch=None,
+                       epochs=1,
+                       max_queue_size=10,
+                       workers=1,
+                       use_multiprocessing=False,
+                       verbose=0,
+                       disable_no_training_warning=None,
+                       pattern_type="linear",
+                       **kwargs):
+
+        if isinstance(pattern_type, (list, tuple)):
+            raise ValueError("Only one pattern type allowed. "
+                             "Please pass string.")
+
+        computer = itools.PatternComputer(self._model,
+                                          pattern_type=pattern_type,
+                                          **kwargs)
+
+        self._patterns = computer.compute_generator(
+            generator,
+            steps=steps_per_epoch,
+            max_queue_size=max_queue_size,
+            workers=workers,
+            use_multiprocessing=use_multiprocessing,
+            verbose=verbose)
+        print(len(self._patterns), len(self._model.get_weights()))
+        pass
 
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
