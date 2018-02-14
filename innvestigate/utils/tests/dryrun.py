@@ -37,6 +37,20 @@ __all__ = [
 ###############################################################################
 
 
+def _set_zero_weights_to_random(weights):
+    ret = []
+    for weight in weights:
+        if weight.sum() == 0:
+            weight = np.random.rand(*weight.shape)
+        ret.append(weight)
+    return ret
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 class BaseTestCase(unittest.TestCase):
     """
     A dryrun test on various networks for an analyzing method.
@@ -53,6 +67,7 @@ class BaseTestCase(unittest.TestCase):
         # test shapes have channels first.
         # todo: check why import above fails
         import keras.backend as K
+        np.random.seed(2349784365)
         K.clear_session()
         K.set_image_data_format("channels_first")
 
@@ -78,6 +93,7 @@ class AnalyzerTestCase(BaseTestCase):
     def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
         # Dryrun.
@@ -100,21 +116,28 @@ class EqualAnalyzerTestCase(BaseTestCase):
     def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer1 = self._method1(model)
         analyzer2 = self._method2(model)
         # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:]))
+        x = np.random.rand(1, *(network["input_shape"][1:]))*100
         analysis1 = analyzer1.analyze(x)
         analysis2 = analyzer2.analyze(x)
 
         self.assertEqual(tuple(analysis1.shape),
-                         (1,)+tuple(network["input_shape"]))
+                         (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isnan(analysis1.ravel())))
         self.assertEqual(tuple(analysis2.shape),
-                         (1,)+tuple(network["input_shape"]))
+                         (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isnan(analysis2.ravel())))
-        self.assertTrue(np.allclose(analysis1, analysis2))
+
+        all_close_kwargs = {}
+        if hasattr(self, "_all_close_rtol"):
+            all_close_kwargs["rtol"] = self._all_close_rtol
+        if hasattr(self, "_all_close_atol"):
+            all_close_kwargs["atol"] = self._all_close_atol
+        self.assertTrue(np.allclose(analysis1, analysis2, **all_close_kwargs))
         pass
 
 
@@ -128,6 +151,7 @@ class SerializeAnalyzerTestCase(BaseTestCase):
     def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
         # Dryrun.
@@ -156,6 +180,7 @@ class PatternComputerTestCase(BaseTestCase):
     def _apply_test(self, network):
         # Create model.
         model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get computer.
         computer = self._method(model)
         # Dryrun.
