@@ -18,6 +18,7 @@ import keras
 import keras.backend as K
 from keras.engine.topology import Layer
 import keras.layers
+from keras.utils import conv_utils
 import numpy as np
 
 
@@ -389,20 +390,30 @@ class ExtractConv2DPatches(keras.layers.Layer):
                                          self._padding)
 
     def compute_output_shape(self, input_shapes):
-        if self._padding.lower() == "valid":
-            raise NotImplementedError()
-        elif self._padding.lower() == "same":
-            if not all([x == 1 for x in self._strides]):
-                raise NotImplementedError()
-            if not all([x == 1 for x in self._rates]):
-                raise NotImplementedError()
-            if K.image_data_format() == "channels_first":
-                out_dim = input_shapes[2:4]
-            else:
-                out_dim = input_shapes[1:3]
-        else:
-            raise NotImplementedError()
+        if K.image_data_format() == 'channels_first':
+            space = input_shapes[2:]
+            new_space = []
+            for i in range(len(space)):
+                new_dim = conv_utils.conv_output_length(
+                    space[i],
+                    self._kernel_shape[i],
+                    padding=self._padding,
+                    stride=self._strides[i],
+                    dilation=self._rates[i])
+                new_space.append(new_dim)
 
-        return (input_shapes[0],
-                out_dim[0], out_dim[1],
-                np.product(self._kernel_shape)*self._depth)
+        if K.image_data_format() == 'channels_last':
+            space = input_shapes[1:-1]
+            new_space = []
+            for i in range(len(space)):
+                new_dim = conv_utils.conv_output_length(
+                    space[i],
+                    self._kernel_shape[i],
+                    padding=self._padding,
+                    stride=self._strides[i],
+                    dilation=self._rates[i])
+                new_space.append(new_dim)
+
+        return ((input_shapes[0],) +
+                tuple(new_space) +
+                (np.product(self._kernel_shape) * self._depth,))
