@@ -90,6 +90,7 @@ def is_not_finite(x):
 def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
     backend = K.backend()
     if backend == "theano":
+        # todo: add theano function.
         raise NotImplementedError()
     elif backend == "tensorflow":
         # no global import => do not break if module is not present
