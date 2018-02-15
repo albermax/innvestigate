@@ -55,6 +55,7 @@ __all__ = [
     "Reshape",
     "MultiplyWithLinspace",
     "TestPhaseGaussianNoise",
+    "ExtractConv2DPatches",
 ]
 
 
@@ -361,3 +362,47 @@ class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
     def call(self, inputs):
         # Always add Gaussian noise!
         return super(TestPhaseGaussianNoise, self).call(inputs, training=True)
+
+
+class ExtractConv2DPatches(keras.layers.Layer):
+
+    def __init__(self,
+                 kernel_shape,
+                 depth,
+                 strides,
+                 rates,
+                 padding,
+                 *args,
+                 **kwargs):
+        self._kernel_shape = kernel_shape
+        self._depth = depth
+        self._strides = strides
+        self._rates = rates
+        self._padding = padding
+        return super(ExtractConv2DPatches, self).__init__(*args, **kwargs)
+
+    def call(self, x):
+        return iK.extract_conv2d_patches(x,
+                                         self._kernel_shape,
+                                         self._strides,
+                                         self._rates,
+                                         self._padding)
+
+    def compute_output_shape(self, input_shapes):
+        if self._padding.lower() == "valid":
+            raise NotImplementedError()
+        elif self._padding.lower() == "same":
+            if not all([x == 1 for x in self._strides]):
+                raise NotImplementedError()
+            if not all([x == 1 for x in self._rates]):
+                raise NotImplementedError()
+            if K.image_data_format() == "channels_first":
+                out_dim = input_shapes[2:4]
+            else:
+                out_dim = input_shapes[1:3]
+        else:
+            raise NotImplementedError()
+
+        return (input_shapes[0],
+                out_dim[0], out_dim[1],
+                np.product(self._kernel_shape)*self._depth)

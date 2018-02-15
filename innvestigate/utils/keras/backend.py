@@ -22,6 +22,7 @@ __all__ = [
     "to_floatx",
     "gradients",
     "is_not_finite",
+    "extract_conv2d_patches",
 ]
 
 
@@ -79,3 +80,29 @@ def is_not_finite(x):
         # todo: add cntk
         raise NotImplementedError()
     pass
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
+    backend = K.backend()
+    if backend == "theano":
+        raise NotImplementedError()
+    elif backend == "tensorflow":
+        # no global import => do not break if module is not present
+        import tensorflow
+
+        kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
+        strides = [1, strides[0], strides[1], 1]
+        rates = [1, rates[0], rates[1], 1]
+        return tensorflow.extract_image_patches(x,
+                                                kernel_shape,
+                                                strides,
+                                                rates,
+                                                padding.upper())
+    else:
+        # todo: add cntk
+        raise NotImplementedError()
