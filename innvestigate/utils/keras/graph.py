@@ -16,11 +16,14 @@ import six
 
 
 import inspect
+import keras.backend as K
 import keras.engine.topology
 import keras.layers
 import keras.models
 
 
+from .. import keras as kutils
+from ... import layers as ilayers
 from ... import utils as iutils
 
 
@@ -35,7 +38,7 @@ __all__ = [
 
     "get_layer_inbound_count",
     "get_layer_outbound_count",
-    "get_layer_io",
+    "get_layer_neuronwise_io",
     "get_layer_wo_activation",
     "copy_layer",
 
@@ -76,6 +79,19 @@ def contains_kernel(layer):
     # todo: add test and check this more throughroughly.
     # rely on Keras convention.
     if hasattr(layer, "kernel"):
+        return True
+    else:
+        return False
+
+
+def contains_bias(layer):
+    """
+    Check whether the layer contains a bias.
+    """
+
+    # todo: add test and check this more throughroughly.
+    # rely on Keras convention.
+    if hasattr(layer, "bias"):
         return True
     else:
         return False
@@ -169,10 +185,60 @@ def get_layer_outbound_count(layer):
     return len(layer.outbound_nodes)
 
 
-def get_layer_io(layer, node_index=0):
+def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
+    if not contains_kernel(layer):
+        raise NotImplementedError()
+
     Xs = iutils.listify(layer.get_input_at(node_index))
     Ys = iutils.listify(layer.get_output_at(node_index))
-    return Xs, Ys
+
+    if isinstance(layer, keras.layers.Dense):
+        # Xs and Ys are already in shape.
+        ret_Xs = Xs
+        ret_Ys = Ys
+    elif isinstance(layer, keras.layers.Conv2D):
+        kernel = get_kernel(layer)
+        # Expect filter dimension to be last.
+        n_channels = kernel.shape[-1]
+
+        # Get Ys into shape (n, channels)
+        if K.image_data_format() == "channels_first":
+            def reshape(x):
+                x = ilayers.Transpose((0, 2, 3, 1))(x)
+                x = ilayers.Reshape((-1, n_channels))(x)
+                return x
+        else:
+            def reshape(x):
+                x = ilayers.Reshape((-1, n_channels))
+                return x
+
+        ret_Ys = [reshape(x) for x in Ys]
+
+        # This takes time, only do it if needed.
+        if return_i:
+            tmp = ret_Ys
+            # Create Xs with backward pass.
+            # (n, channels) dot (dimension, channels).T = (n, dimensions)
+            if contains_bias(layer):
+                layer_wo_bias = copy_layer(layer, keep_bias=False)
+                tmp = iutils.listify(kutils.easy_apply(layer_wo_bias, Xs))
+                tmp = [reshape(x) for x in tmp]
+
+            kernel = kernel.reshape((-1, n_channels))
+            dense = keras.layers.Dense(kernel.shape[0], use_bias=False)
+            ret_Xs = [dense(x) for x in tmp]
+    else:
+        raise NotImplementedError()
+
+    # Xs is (n, d) and Ys is (d, channels)
+    if return_i and return_o:
+        return ret_Xs, ret_Ys
+    elif return_i:
+        return ret_Xs
+    elif return_o:
+        return ret_Ys
+    else:
+        raise Exception()
 
 
 def get_layer_from_config(old_layer, new_config, weights=None):

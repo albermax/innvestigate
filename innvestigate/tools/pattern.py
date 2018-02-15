@@ -53,8 +53,7 @@ class BasePattern(object):
         return [stats[k] for k in self._stats_keys]
 
     def has_pattern(self):
-        #return kgraph.contains_kernel(self.layer)
-        return kgraph.contains_kernel(self.layer) and len(self.layer.get_weights()[0].shape) == 2
+        return kgraph.contains_kernel(self.layer)
 
     def stats_from_batch(self):
         raise NotImplementedError()
@@ -68,7 +67,7 @@ class BasePattern(object):
             self._stats = batch_stats
         else:
             # force in place updates
-            self._update_stats(self._stats, batch_stats) 
+            self._update_stats(self._stats, batch_stats)
         pass
 
     def compute_pattern(self):
@@ -82,7 +81,7 @@ class DummyPattern(BasePattern):
     def get_stats_from_batch(self):
         # code is not ready for shared layers
         assert kgraph.get_layer_inbound_count(self.layer) == 1
-        Xs, Ys = kgraph.get_layer_io(self.layer)
+        Xs, Ys = kgraph.get_layer_neuronwise_io(self.layer)
         return ilayers.Sum()(Xs)
 
     def _update_stats(self, stats, batch_stats):
@@ -105,12 +104,13 @@ class LinearPattern(BasePattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
-        _, Y = kgraph.get_layer_io(layer)
+        Y = kgraph.get_layer_neuronwise_io(layer,
+                                           return_i=False, return_o=True)
         return ilayers.OnesLike()(Y)
 
     def get_stats_from_batch(self):
         layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=False)
-        X, Y = kgraph.get_layer_io(layer)
+        X, Y = kgraph.get_layer_neuronwise_io(layer)
         X, Y = X[0], Y[0]
 
         mask = ilayers.AsFloatX()(self._get_neuron_mask())
@@ -161,16 +161,16 @@ class LinearPattern(BasePattern):
         sq_sigma_y = self._stats["mean_yy"] - EyEy
 
         A = safe_divide(cov_xy, sq_sigma_y)
-        # todo: need to reshape to meet W's dimensions
 
-        return A
+        return A.reshape(W.shape)
 
 
 class ReluPositivePattern(LinearPattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
-        _, Y = kgraph.get_layer_io(layer)
+        Y = kgraph.get_layer_neuronwise_io(layer,
+                                           return_i=False, return_o=True)
         return ilayers.GreaterThanZero()(Y[0])
 
 
@@ -178,7 +178,8 @@ class ReluNegativePattern(LinearPattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
-        _, Y = kgraph.get_layer_io(layer)
+        Y = kgraph.get_layer_neuronwise_io(layer,
+                                           return_i=False, return_o=True)
         return ilayers.LessThanZero()(Y[0])
 
 
