@@ -248,6 +248,7 @@ class PatternComputer(object):
         if self.gpus is not None and self.gpus > 1:
             self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
                                for tmp in self._computers]
+        # todo: model compiling?
         pass
 
     def compute(self, X, batch_size=32, verbose=0):
