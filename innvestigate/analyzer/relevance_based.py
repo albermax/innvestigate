@@ -69,7 +69,11 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
         self._model_checks = [
             (lambda layer: not kgraph.is_convnet_layer(layer),
              "LRP-Z only collapses to gradient times input for "
-             "(convolutional) relu neural networks.")
+             "(convolutional) relu neural networks."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
@@ -384,7 +388,11 @@ class LRP(base.ReverseAnalyzerBase):
         self._model_checks = [
             (lambda layer: not kgraph.is_convnet_layer(layer),
              "LRP is only tested for "
-             "convolutional neural networks.")
+             "convolutional neural networks."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
 
         if rule is None:

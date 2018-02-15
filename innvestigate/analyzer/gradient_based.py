@@ -85,7 +85,11 @@ class Deconvnet(base.ReverseAnalyzerBase):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
              "Deconvnet is only well defined for "
-             "convolutional neural networks with non-relu activations.")
+             "convolutional neural networks with non-relu activations."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
 
         class ReverseLayer(kgraph.ReverseMappingBase):
@@ -125,7 +129,11 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
              "GuidedBackprop is only well defined for "
-             "convolutional neural networks with non-relu activations.")
+             "convolutional neural networks with non-relu activations."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
