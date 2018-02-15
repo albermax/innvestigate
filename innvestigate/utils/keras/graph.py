@@ -20,6 +20,7 @@ import keras.backend as K
 import keras.engine.topology
 import keras.layers
 import keras.models
+import numpy as np
 
 
 from .. import keras as kutils
@@ -201,32 +202,28 @@ def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
         # Expect filter dimension to be last.
         n_channels = kernel.shape[-1]
 
-        # Get Ys into shape (n, channels)
-        if K.image_data_format() == "channels_first":
-            def reshape(x):
-                x = ilayers.Transpose((0, 2, 3, 1))(x)
-                x = ilayers.Reshape((-1, n_channels))(x)
-                return x
-        else:
-            def reshape(x):
-                x = ilayers.Reshape((-1, n_channels))
-                return x
-
-        ret_Ys = [reshape(x) for x in Ys]
-
-        # This takes time, only do it if needed.
         if return_i:
-            tmp = ret_Ys
-            # Create Xs with backward pass.
-            # (n, channels) dot (dimension, channels).T = (n, dimensions)
-            if contains_bias(layer):
-                layer_wo_bias = copy_layer(layer, keep_bias=False)
-                tmp = iutils.listify(kutils.easy_apply(layer_wo_bias, Xs))
-                tmp = [reshape(x) for x in tmp]
+            extract_patches = ilayers.ExtractConv2DPatches(kernel.shape[:2],
+                                                           kernel.shape[2],
+                                                           layer.strides,
+                                                           layer.dilation_rate,
+                                                           layer.padding)
+            reshape = ilayers.Reshape((-1, np.product(kernel.shape[:3])))
+            ret_Xs = [reshape(extract_patches(x)) for x in Xs]
 
-            kernel = kernel.reshape((-1, n_channels))
-            dense = keras.layers.Dense(kernel.shape[0], use_bias=False)
-            ret_Xs = [dense(x) for x in tmp]
+        if return_o:
+            # Get Ys into shape (n, channels)
+            if K.image_data_format() == "channels_first":
+                def reshape(x):
+                    x = ilayers.Transpose((0, 2, 3, 1))(x)
+                    x = ilayers.Reshape((-1, n_channels))(x)
+                    return x
+            else:
+                def reshape(x):
+                    x = ilayers.Reshape((-1, n_channels))
+                    return x
+            ret_Ys = [reshape(x) for x in Ys]
+
     else:
         raise NotImplementedError()
 
