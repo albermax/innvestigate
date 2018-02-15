@@ -234,11 +234,21 @@ class LessThanZero(keras.layers.Layer):
 
 class Transpose(keras.layers.Layer):
 
+    def __init__(self, axes=None, **kwargs):
+        self._axes = axes
+        super(Transpose, self).__init__(**kwargs)
+
     def call(self, x):
-        return K.transpose(x)
+        if self._axes is None:
+            return K.transpose(x)
+        else:
+            return K.permute_dimensions(x, self._axes)
 
     def compute_output_shape(self, input_shape):
-        return input_shape[::-1]
+        if self._axes is None:
+            return input_shape[::-1]
+        else:
+            return tuple(np.asarray(input_shape)[list(self._axes)])
 
 
 class Dot(keras.layers.Layer):
