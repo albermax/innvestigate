@@ -63,13 +63,13 @@ class TestBaseReverseNetwork_reverse_check_finite(dryrun.AnalyzerTestCase):
 ###############################################################################
 
 
-class TestSerializeBaseAnalyzer(dryrun.SerializeAnalyzerTestCase):
+class TestSerializeAnalyzerBase(dryrun.SerializeAnalyzerTestCase):
 
     def _method(self, model):
         return BaselineGradient(model)
 
 
-class TestSerializeBaseNetwork(dryrun.SerializeAnalyzerTestCase):
+class TestSerializeReverseAnalyzerkBase(dryrun.SerializeAnalyzerTestCase):
 
     def _method(self, model):
         return Gradient(model)

@@ -40,6 +40,12 @@ class TestWrapperBase(dryrun.AnalyzerTestCase):
         return WrapperBase(Gradient(model))
 
 
+class TestSerializeWrapperBase(dryrun.SerializeAnalyzerTestCase):
+
+    def _method(self, model):
+        return WrapperBase(Gradient(model))
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -52,6 +58,12 @@ class TestAugmentReduceBase__python_based(dryrun.AnalyzerTestCase):
 
 
 class TestAugmentReduceBase__keras_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return AugmentReduceBase(Gradient(model))
+
+
+class TestSerializeAugmentReduceBase(dryrun.SerializeAnalyzerTestCase):
 
     def _method(self, model):
         return AugmentReduceBase(Gradient(model))
@@ -74,6 +86,12 @@ class TestGaussianSmoother__keras_based(dryrun.AnalyzerTestCase):
         return GaussianSmoother(Gradient(model))
 
 
+class TestSerializeGaussianSmoother(dryrun.SerializeAnalyzerTestCase):
+
+    def _method(self, model):
+        return GaussianSmoother(Gradient(model))
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -86,6 +104,12 @@ class TestPathIntegrator__python_based(dryrun.AnalyzerTestCase):
 
 
 class TestPathIntegrator__keras_based(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return PathIntegrator(Gradient(model))
+
+
+class TestSerializePathIntegrator(dryrun.SerializeAnalyzerTestCase):
 
     def _method(self, model):
         return PathIntegrator(Gradient(model))
