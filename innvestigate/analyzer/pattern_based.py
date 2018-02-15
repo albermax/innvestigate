@@ -50,12 +50,10 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
     def __init__(self, *args, patterns=None, **kwargs):
         self._model_checks = [
-            lambda layer: not kgraph.is_relu_convnet_layer(layer),
+            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
+             "PatternNet is only well defined for "
+             "convluational neural networks with non-relu activations.")
         ]
-        self._model_checks_msg = (
-            "PatternNet is only well defined for "
-            "convluational neural networks with non-relu activations."
-            )
 
         self._patterns = patterns
         if self._patterns is not None:

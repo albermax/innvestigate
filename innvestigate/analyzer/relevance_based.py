@@ -67,12 +67,10 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            lambda layer: not kgraph.is_convnet_layer(layer),
+            (lambda layer: not kgraph.is_convnet_layer(layer),
+             "LRP-Z only collapses to gradient times input for "
+             "(convolutional) relu neural networks.")
         ]
-        self._model_checks_msg = (
-            "LRP-Z only collapses to gradient times input for "
-            "(convluational) relu neural networks."
-            )
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
@@ -384,12 +382,10 @@ class LRP(base.ReverseAnalyzerBase):
                  input_layer_rule=None,
                  **kwargs):
         self._model_checks = [
-            lambda layer: not kgraph.is_convnet_layer(layer),
+            (lambda layer: not kgraph.is_convnet_layer(layer),
+             "LRP is only tested for "
+             "convolutional neural networks.")
         ]
-        self._model_checks_msg = (
-            "LRP is only tested for "
-            "convolutional neural networks."
-            )
 
         if rule is None:
             raise ValueError("Need LRP rule(s).")
