@@ -287,6 +287,26 @@ def copy_layer(layer,
     return get_layer_from_config(layer, config, weights=weights)
 
 
+def pre_softmax_tensors(Xs):
+    Xs = iutils.listify(Xs)
+    ret = []
+    for x in Xs:
+        layer, node_index, tensor_index = x._keras_history
+        if contains_activation(layer, activation="softmax"):
+            if isinstance(layer, keras.layers.Activation):
+                ret.append(layer.get_input_at(node_index)[0])
+            else:
+                layer_wo_act = get_layer_wo_activation(layer)
+                ret.append(layer_wo_act(layer.get_input_at(node_index)))
+    return ret
+
+
+def model_without_softmax(model):
+    return keras.model.Model(inputs=model.inputs,
+                             outputs=pre_softmax_tensor(model.outputs),
+                             name=model.name)
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
