@@ -399,13 +399,28 @@ def reverse_model(model, reverse_mappings,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, xs, reversed_xs):
-            assert xs not in reversed_tensors
-            reversed_tensors[xs] = {"id": (reverse_id, i),
-                                    "tensor": reversed_xs}
+            if xs not in reversed_tensors:
+                reversed_tensors[xs] = {"id": (reverse_id, i),
+                                        "tensor": reversed_xs}
+            else:
+                tmp = reversed_tensors[xs]
+                if "tensor" in tmp and "tensors" in tmp:
+                    raise Exception("Wrong order, tensors already aggregated!")
+                if "tensor" in tmp:
+                    tmp["tensors"] = [tmp["tensor"], reversed_xs]
+                    del tmp["tensor"]
+                else:
+                    tmp["tensors"].append(reversed_xs)
 
         tmp = zip(tensors_list, reversed_tensors_list)
         for i, (xs, reversed_xs) in enumerate(tmp):
             add_reversed_tensor(i, xs, reversed_xs)
+
+    def get_reversed_tensor(tensor):
+        tmp = reversed_tensors[tensor]
+        if "tensor" not in tmp:
+            tmp["tensor"] = keras.layers.Add()(tmp["tensors"])
+        return tmp["tensor"]
 
     # Reverse the model #######################################################
     _print("Reverse model: {}".format(model))
@@ -549,7 +564,7 @@ def reverse_model(model, reverse_mappings,
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
                 continue
-            reversed_Ys = [reversed_tensors[ys]["tensor"]
+            reversed_Ys = [get_reversed_tensor(ys)
                            for ys in Ys]
 
             _print("  [RID: {}] Reverse layer {}".format(reverse_id, layer))
@@ -562,11 +577,10 @@ def reverse_model(model, reverse_mappings,
                     "layer": layer,
                 })
             reversed_Xs = iutils.listify(reversed_Xs)
-
             add_reversed_tensors(reverse_id, Xs, reversed_Xs)
 
     # Return requested values #################################################
-    reversed_input_tensors = [reversed_tensors[tmp]["tensor"]
+    reversed_input_tensors = [get_reversed_tensor(tmp)
                               for tmp in model.inputs]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
