@@ -18,6 +18,8 @@ import six
 import keras.applications.resnet50
 import keras.applications.vgg16
 import keras.applications.vgg19
+import keras.applications.inception_v3
+import keras.applications.inception_resnet_v2
 import keras.layers
 import numpy as np
 
@@ -27,8 +29,9 @@ from ...keras import graph as kgraph
 __all__ = [
     "vgg16",
     "vgg19",
-
     "resnet50",
+    "inception_v3",
+    "inception_resnet_v2",
 ]
 
 
@@ -110,5 +113,39 @@ def resnet50(activation=None, weights=None):
     return _prepare_keras_net(
         keras.applications.resnet50.ResNet50,
         [None, 3, 224, 224],
+        1000,
+        weights=weights)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def inception_v3_preprocess(X):
+    return keras.applications.inception_v3.preprocess_input(X)
+
+
+def inception_v3(activation=None, weights=None):
+    return _prepare_keras_net(
+        keras.applications.inception_v3.InceptionV3,
+        [None, 3, 299, 299],
+        1000,
+        weights=weights)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def inception_resnet_v2_preprocess(X):
+    return keras.applications.inception_resnet_v2.preprocess_input(X)
+
+
+def inception_resnet_v2(activation=None, weights=None):
+    return _prepare_keras_net(
+        keras.applications.inception_resnet_v2.InceptionResNetV2,
+        [None, 3, 299, 299],
         1000,
         weights=weights)
