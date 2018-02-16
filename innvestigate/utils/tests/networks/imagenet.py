@@ -28,7 +28,7 @@ __all__ = [
     "vgg16",
     "vgg19",
 
-    #"resnet50",
+    "resnet50",
 ]
 
 

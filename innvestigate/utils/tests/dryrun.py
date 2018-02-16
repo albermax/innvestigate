@@ -162,6 +162,7 @@ class EqualAnalyzerTestCase(BaseTestCase):
             all_close_kwargs["rtol"] = self._all_close_rtol
         if hasattr(self, "_all_close_atol"):
             all_close_kwargs["atol"] = self._all_close_atol
+        #print(analysis1.sum(), analysis2.sum())
         self.assertTrue(np.allclose(analysis1, analysis2, **all_close_kwargs))
         pass
 
