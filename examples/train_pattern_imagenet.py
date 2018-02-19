@@ -22,7 +22,8 @@ matplotlib.use('Agg')
 import imp
 import keras.backend
 import keras.models
-import keras.preprocessing
+import keras.preprocessing.image
+import keras.utils
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -85,84 +86,97 @@ param_file = "./imagenet_224_vgg_16.npz"
 param_url = "https://www.dropbox.com/s/cvjj8x19hzya9oe/imagenet_224_vgg_16.npz?dl=1"
 
 
-imagenet_train_dir = ""
-imagenet_val_dir = ""
+imagenet_train_dir = "/temp/datasets/imagenet/2012/train_set_small"
+imagenet_val_dir = "/temp/datasets/imagenet/2012/train_set_small"
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-    # Download the necessary parameters for VGG16 and the according patterns.
+    # Download the necessary parameters for VGG16.
     eutils.download(param_url, param_file)
-    eutils.download(pattern_url, pattern_file)
 
     # Get some example test set images.
-    images, label_to_class_name = eutils.get_imagenet_data()[:2]
+    images, label_to_class_name = eutils.get_imagenet_data()
 
-    VGG16_OFFSET = np.array([103.939, 116.779, 123.68])
-    if X.shape[1] == 3:
-        shape = [1, 3, 1, 1]
-    else:
-        shape = [1, 1, 1, 3]
-    offset = VGG16_OFFSET.reshape(shape)
+    steps = None
+    gpu_count = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
+    max_queue_size = 100
+    workers = 4 * gpu_count
+    use_multiprocessing = True
+    print("GPU_COUNT", gpu_count)
+
+    def preprocess(X):
+        X = X.copy()[None, :, :, :]
+        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
+        X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
+        return X[0]
+
     train_data_generator = keras.preprocessing.image.ImageDataGenerator(
-        rescale=1./VGG16_OFFSET,
+        preprocessing_function=preprocess,
         horizontal_flip=True)
     test_data_generator = keras.preprocessing.image.ImageDataGenerator(
-        rescale=1./VGG16_OFFSET)
+        preprocessing_function=preprocess)
 
-    batch_size = 32
-    train_generator = train_datagen.flow_from_directory(
+    train_generator = train_data_generator.flow_from_directory(
         imagenet_train_dir,
         target_size=(224, 224),
-        batch_size=batch_size,
+        batch_size=32*gpu_count,
         class_mode=None)
-    val_generator = train_datagen.flow_from_directory(
+    val_generator = test_data_generator.flow_from_directory(
         imagenet_val_dir,
         target_size=(224, 224),
-        batch_size=batch_size,
-        class_mode='binary')
-
-    max_queue_size = 100
-    workers = 16
-    use_multiprocessing = True
+        batch_size=32*gpu_count,
+        class_mode='categorical')
 
     ###########################################################################
     # Build model.
     ###########################################################################
     parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
     vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16()
+    print("Compile model1.")
     model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
     model.set_weights(parameters)
+    print("Compile model2.")
     modelp = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["sm_out"])
     modelp.compile(optimizer="adam",
                    loss="categorical_crossentropy",
                    metrics=["accuracy"])
     modelp.set_weights(parameters)
+    if gpu_count > 1:
+        modelp = keras.utils.multi_gpu_model(modelp, gpus=gpu_count)
+        modelp.compile(optimizer="adam",
+                       loss="categorical_crossentropy",
+                       metrics=["accuracy"])
 
     # Check if all works correctly.
+    print("Evaluate:")
     val_evaluation = modelp.evaluate_generator(
         val_generator,
-        steps=10,
+        steps=steps,
         max_queue_size=max_queue_size,
         workers=workers,
         use_multiprocessing=use_multiprocessing)
     print(val_evaluation)
 
+    print("Compute patterns:")
     pattern_computer = innvestigate.tools.PatternComputer(
         model,
-        pattern_type="linear",
+        pattern_type="relu",
         compute_layers_in_parallel=True,
-        gpus=None)
-    patterns = pattern_computer.copmute_generator(
+        gpus=gpu_count)
+    patterns = pattern_computer.compute_generator(
         train_generator,
-        steps=10,
+        steps=steps,
         max_queue_size=max_queue_size,
-        workers=workers
-        use_multiprocessing=use_multiprocessing
+        workers=workers,
+        use_multiprocessing=use_multiprocessing,
         verbose=1)
+
+    np.savez("trained_patterns.npz", *patterns)
 
     ###########################################################################
     # Utility functions.
