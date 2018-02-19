@@ -327,7 +327,7 @@ class Reshape(keras.layers.Layer):
         return K.reshape(x, self._shape)
 
     def compute_output_shape(self, input_shapes):
-        return self._shape
+        return tuple(x if x >= 0 else None for x in self._shape)
 
 
 class MultiplyWithLinspace(keras.layers.Layer):
