@@ -152,17 +152,39 @@ class LinearPattern(BasePattern):
 
     def compute_pattern(self):
         W = kgraph.get_kernel(self.layer)
-        # todo: 0 if cnt is 0
+
         def safe_divide(a, b):
             return a / (b + (b == 0))
 
-        ExEy = self._stats["mean_x"] * self._stats["mean_y"]
-        EyEy = self._stats["mean_y"] * self._stats["mean_y"]
-        cov_xy = self._stats["mean_xy"] - ExEy
-        sq_sigma_y = self._stats["mean_yy"] - EyEy
+        def get_2D(x):
+            return x.reshape((-1, x.shape[-1]))
+        if True:
+            # todo: 0 if cnt is 0
 
-        A = safe_divide(cov_xy, sq_sigma_y)
+            ExEy = self._stats["mean_x"] * self._stats["mean_y"]
+            EyEy = self._stats["mean_y"] * self._stats["mean_y"]
+            cov_xy = self._stats["mean_xy"] - ExEy
+            sq_sigma_y = self._stats["mean_yy"] - EyEy
 
+            A = safe_divide(cov_xy, sq_sigma_y)
+        else:
+            # this looks like a bug.
+            #return stats[l_i][key]['xty'] - stats[l_i][key]['m_x'] * stats[l_i]['basic']['m_y']  # D,O
+            numerator = self._stats["mean_xy"] - self._stats["mean_x"] * self._stats["mean_y"]
+
+            denumerator = np.dot(get_2D(W).T, numerator)  # O,O
+            denumerator = np.diag(denumerator)  # 1,O
+            A = safe_divide(numerator, denumerator[np.newaxis])
+
+        # check pattern
+        #print(np.diag(np.dot(get_2D(W).T,A)).min(), np.diag(np.dot(get_2D(W).T,A)).max())
+
+        # update length
+        norm = np.diag(np.dot(get_2D(W).T, A))[np.newaxis]
+        A = safe_divide(A, norm)
+        #print(abs(A).sum())
+
+        # check pattern
         return A.reshape(W.shape)
 
 
