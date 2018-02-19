@@ -141,7 +141,8 @@ class LinearPattern(BasePattern):
         def update(old, new):
             # old_count/total_count * old_val + new_count/total_count * new_val
             old *= factor_old
-            old += factor_new * new
+            new *= factor_new
+            old += new
             pass
 
         stats["count"] = total_count
@@ -151,7 +152,7 @@ class LinearPattern(BasePattern):
 
     def compute_pattern(self):
         W = kgraph.get_kernel(self.layer)
-
+        # todo: 0 if cnt is 0
         def safe_divide(a, b):
             return a / (b + (b == 0))
 
@@ -203,6 +204,8 @@ class PatternComputer(object):
 
     def __init__(self, model,
                  pattern_type="linear",
+                 # todo: this options seems to be buggy,
+                 # if it sequential tensorflow still pushes all models to gpus
                  compute_layers_in_parallel=True,
                  gpus=None):
         self.model = model
