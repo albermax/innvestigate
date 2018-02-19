@@ -208,17 +208,20 @@ def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
                                                            layer.strides,
                                                            layer.dilation_rate,
                                                            layer.padding)
+            # shape [samples, out_row, out_col, weight_size]
             reshape = ilayers.Reshape((-1, np.product(kernel.shape[:3])))
             ret_Xs = [reshape(extract_patches(x)) for x in Xs]
 
         if return_o:
-            # Get Ys into shape (n, channels)
+            # Get Ys into shape (samples, channels)
             if K.image_data_format() == "channels_first":
+                # Ys shape is [samples, channels, out_row, out_col]
                 def reshape(x):
                     x = ilayers.Transpose((0, 2, 3, 1))(x)
                     x = ilayers.Reshape((-1, n_channels))(x)
                     return x
             else:
+                # Ys shape is [samples, out_row, out_col, channels]
                 def reshape(x):
                     x = ilayers.Reshape((-1, n_channels))
                     return x
