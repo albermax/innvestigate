@@ -169,7 +169,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
         self._patterns = computer.compute_generator(
             generator,
-            steps=steps_per_epoch,
+            steps_per_epoch=steps_per_epoch,
             max_queue_size=max_queue_size,
             workers=workers,
             use_multiprocessing=use_multiprocessing,
