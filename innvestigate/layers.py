@@ -47,6 +47,7 @@ __all__ = [
     "CountNonZero",
 
     "Square",
+    "Print",
 
     "Transpose",
     "Dot",
@@ -224,6 +225,11 @@ class _Map(keras.layers.Layer):
 class Square(_Map):
     def _apply_map(self, x):
         return K.square(x)
+
+
+class Print(_Map):
+    def _apply_map(self, x):
+        return K.print_tensor(x)
 
 
 ###############################################################################
