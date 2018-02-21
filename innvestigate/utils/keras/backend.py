@@ -47,12 +47,15 @@ def gradients(Xs, Ys, known_Ys):
         # no global import => do not break if module is not present
         assert len(Ys) == 1
         import theano.gradient
-        known_Ys = {k:v for k, v in zip(Ys, known_Ys)}
+        known_Ys = {k: v for k, v in zip(Ys, known_Ys)}
+        # todo: check the stop gradient issue here!
         return theano.gradient.grad(K.sum(Ys[0]), Xs, known_grads=known_Ys)
     elif backend == "tensorflow":
         # no global import => do not break if module is not present
         import tensorflow
-        return tensorflow.gradients(Ys, Xs, grad_ys=known_Ys)
+        return tensorflow.gradients(Ys, Xs,
+                                    grad_ys=known_Ys,
+                                    stop_gradients=Xs)
     else:
         # todo: add cntk
         raise NotImplementedError()

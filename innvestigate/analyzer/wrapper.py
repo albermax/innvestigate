@@ -59,19 +59,21 @@ class WrapperBase(base.AnalyzerBase):
         return self._subanalyzer.analyze(*args, **kwargs)
 
     def _get_state(self):
-        state = super(WrapperBase, self)._get_state()
-        class_name, state = self._subanalyzer.save()
-        state.update({"subanalyzer_class_name": class_name})
-        state.update({"subanalyzer_state": state})
+        sa_class_name, sa_state = self._subanalyzer.save()
+
+        state = {}
+        state.update({"subanalyzer_class_name": sa_class_name})
+        state.update({"subanalyzer_state": sa_state})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
-        class_name = state.pop("subanalyzer_class_name")
-        state = state.pop("subanalyzer_state")
-        kwargs = super(WrapperBase, clazz)._state_to_kwargs(state)
-        subanalyzer = base.AnalyzerBase.load(class_name, state)
-        kwargs.update({"subanalyzer": subanalyzer})
+        sa_class_name = state.pop("subanalyzer_class_name")
+        sa_state = state.pop("subanalyzer_state")
+        assert len(state) == 0
+
+        subanalyzer = base.AnalyzerBase.load(sa_class_name, sa_state)
+        kwargs = {"subanalyzer": subanalyzer}
         return kwargs
 
 
