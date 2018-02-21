@@ -22,7 +22,7 @@ from keras.utils import conv_utils
 import numpy as np
 
 
-from . import utils
+from . import utils as iutils
 from .utils.keras import backend as iK
 
 
@@ -57,6 +57,8 @@ __all__ = [
     "MultiplyWithLinspace",
     "TestPhaseGaussianNoise",
     "ExtractConv2DPatches",
+    "RunningMeans",
+    "Broadcast",
 ]
 
 
@@ -83,23 +85,23 @@ def One(reference=None):
 
 class ZerosLike(keras.layers.Layer):
     def call(self, x):
-        return [K.zeros_like(tmp) for tmp in utils.listify(x)]
+        return [K.zeros_like(tmp) for tmp in iutils.listify(x)]
 
 
 class OnesLike(keras.layers.Layer):
     def call(self, x):
-        return [K.ones_like(tmp) for tmp in utils.listify(x)]
+        return [K.ones_like(tmp) for tmp in iutils.listify(x)]
 
 
 class AsFloatX(keras.layers.Layer):
     def call(self, x):
-        return [iK.to_floatx(tmp) for tmp in utils.listify(x)]
+        return [iK.to_floatx(tmp) for tmp in iutils.listify(x)]
 
 
 class FiniteCheck(keras.layers.Layer):
     def call(self, x):
         return [K.sum(iK.to_floatx(iK.is_not_finite(tmp)))
-                for tmp in utils.listify(x)]
+                for tmp in iutils.listify(x)]
 
 
 ###############################################################################
@@ -145,44 +147,61 @@ class GradientWRT(keras.layers.Layer):
 
 class _Reduce(keras.layers.Layer):
 
-    def __init__(self, axis=-1, *args, **kwargs):
+    def __init__(self, axis=-1, keepdims=False, *args, **kwargs):
         self.axis = axis
+        self.keepdims = keepdims
         super(_Reduce, self).__init__(*args, **kwargs)
 
     def call(self, x):
-        return self._apply_reduce(x, axis=self.axis)
+        return self._apply_reduce(x, axis=self.axis, keepdims=self.keepdims)
 
     def compute_output_shape(self, input_shape):
-        return tuple(list(input_shape[:self.axis]) +
-                     list(input_shape[self.axis+1:]))
+        if self.axis is None:
+            if self.keepdims is False:
+                return (1,)
+            else:
+                return tuple(np.ones_like(input_shape))
+        else:
+            axes = np.arange(len(input_shape))
+            if self.keepdims is False:
+                for i in iutils.listify(self.axis):
+                    axes = np.delete(axes, i, 0)
+            else:
+                for i in iutils.listify(self.axis):
+                    axes[i] = 1
+            return tuple([idx
+                          for i, idx in enumerate(input_shape)
+                          if i in axes])
 
-    def _apply_reduce(self, x, axis):
+    def _apply_reduce(self, x, axis, keepdims):
         raise NotImplementedError()
 
 
 class Min(_Reduce):
-    def _apply_reduce(self, x, axis):
-        return K.min(x, axis=axis)
+    def _apply_reduce(self, x, axis, keepdims):
+        return K.min(x, axis=axis, keepdims=keepdims)
 
 
 class Max(_Reduce):
-    def _apply_reduce(self, x, axis):
-        return K.max(x, axis=axis)
+    def _apply_reduce(self, x, axis, keepdims):
+        return K.max(x, axis=axis, keepdims=keepdims)
 
 
 class Sum(_Reduce):
-    def _apply_reduce(self, x, axis):
-        return K.sum(x, axis=axis)
+    def _apply_reduce(self, x, axis, keepdims):
+        return K.sum(x, axis=axis, keepdims=keepdims)
 
 
 class Mean(_Reduce):
-    def _apply_reduce(self, x, axis):
-        return K.mean(x, axis=axis)
+    def _apply_reduce(self, x, axis, keepdims):
+        return K.mean(x, axis=axis, keepdims=keepdims)
 
 
 class CountNonZero(_Reduce):
-    def _apply_reduce(self, x, axis):
-        return K.sum(iK.to_floatx(K.not_equal(x, K.constant(0))), axis=axis)
+    def _apply_reduce(self, x, axis, keepdims):
+        return K.sum(iK.to_floatx(K.not_equal(x, K.constant(0))),
+                     axis=axis,
+                     keepdims=keepdims)
 
 
 ###############################################################################
@@ -417,3 +436,60 @@ class ExtractConv2DPatches(keras.layers.Layer):
         return ((input_shapes[0],) +
                 tuple(new_space) +
                 (np.product(self._kernel_shape) * self._depth,))
+
+
+class RunningMeans(keras.layers.Layer):
+
+    def __init__(self, *args, **kwargs):
+        self.stateful = True
+        super(RunningMeans, self).__init__(*args, **kwargs)
+
+    def build(self, input_shapes):
+        means_shape, counts_shape = input_shapes
+
+        self.means = self.add_weight(shape=means_shape,
+                                     initializer="zeros",
+                                     name="means",
+                                     trainable=False)
+        self.counts = self.add_weight(shape=counts_shape,
+                                      initializer="zeros",
+                                      name="counts",
+                                      trainable=False)
+        self.built = True
+
+    def call(self, x):
+        def safe_divide(a, b):
+            return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
+
+        means, counts = x
+
+        new_counts = counts + self.counts
+
+        # If new_means are not used for the model output,
+        # the following part of the code will be executed after
+        # self.counts is updated, therefore we cannot use it
+        # hereafter.
+        factor_new = safe_divide(counts, new_counts)
+        factor_old = K.ones_like(factor_new) - factor_new
+        new_means = self.means * factor_old + means * factor_new
+
+        # Update state.
+        self.add_update([
+            K.update(self.means, new_means),
+            K.update(self.counts, new_counts),
+        ])
+
+        return [new_means, new_counts]
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes
+
+
+class Broadcast(keras.layers.Layer):
+
+    def call(self, x):
+        target_shapped, x = x
+        return target_shapped * 0 + x
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes[0]

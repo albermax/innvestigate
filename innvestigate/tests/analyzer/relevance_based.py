@@ -145,3 +145,26 @@ class TestLRPAlpha1Beta0WithBias(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
         return LRPAlpha1Beta0WithBias(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class TestSerializeLRPZ(dryrun.SerializeAnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPZ(model)
+
+
+class TestSerializeLRPAlphaBeta(dryrun.SerializeAnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlphaBeta(model)
+
+
+class TestSerializeLRPAlpha1Beta1(dryrun.SerializeAnalyzerTestCase):
+
+    def _method(self, model):
+        return LRPAlpha1Beta1(model)
