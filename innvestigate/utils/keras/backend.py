@@ -99,14 +99,21 @@ def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
         # no global import => do not break if module is not present
         import tensorflow
 
+        if K.image_data_format() == "channels_first":
+            x = K.permute_dimensions(x, (0, 2, 3, 1))
         kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
         strides = [1, strides[0], strides[1], 1]
         rates = [1, rates[0], rates[1], 1]
-        return tensorflow.extract_image_patches(x,
-                                                kernel_shape,
-                                                strides,
-                                                rates,
-                                                padding.upper())
+        ret = tensorflow.extract_image_patches(x,
+                                               kernel_shape,
+                                               strides,
+                                               rates,
+                                               padding.upper())
+
+        if K.image_data_format() == "channels_first":
+            # todo: check if we need to permute again.xs
+            pass
+        return ret
     else:
         # todo: add cntk
         raise NotImplementedError()
