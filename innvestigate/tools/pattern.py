@@ -88,32 +88,36 @@ class LinearPattern(BasePattern):
         X, Y = kgraph.get_layer_neuronwise_io(layer)
         X, Y = X[0], Y[0]
 
-        mask = ilayers.AsFloatX()(self._get_neuron_mask())
-        Y_masked = keras.layers.multiply([Y, mask])
-        count = ilayers.CountNonZero(axis=0)(mask)
-
-        def norm(x):
-            return ilayers.SafeDivide(factor=1)([x, count])
-
-        mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]))
-        mean_y = norm(ilayers.Sum(axis=0)(Y_masked))
-        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]))
-        mean_yy = norm(ilayers.Sum(axis=0)(ilayers.Square()(Y_masked)))
-
         self.mean_x = ilayers.RunningMeans()
         self.mean_y = ilayers.RunningMeans()
         self.mean_xy = ilayers.RunningMeans()
-        self.mean_yy = ilayers.RunningMeans()
+
+        # Compute mask and active neuron counts.
+        mask = ilayers.AsFloatX()(self._get_neuron_mask())
+        Y_masked = keras.layers.multiply([Y, mask])
+        count = ilayers.CountNonZero(axis=0)(mask)
+        count_all = ilayers.Sum(axis=0)(ilayers.OnesLike()(mask))
+
+        # Get means ...
+        def norm(x, count):
+            return ilayers.SafeDivide(factor=1)([x, count])
+
+        # ... along active neurons.
+        mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]), count)
+        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]),
+                       count)
 
         _, a = self.mean_x([mean_x, count])
-        _, b = self.mean_y([mean_y, count])
-        _, c = self.mean_xy([mean_xy, count])
-        _, d = self.mean_yy([mean_yy, count])
+        _, b = self.mean_xy([mean_xy, count])
+
+        # ... along all neurons.
+        mean_y = norm(ilayers.Sum(axis=0)(Y_masked), count_all)
+        _, c = self.mean_y([mean_y, count_all])
 
         # Create a dummy output to have a connected graph.
         # Needs to have the shape (mb_size, 1)
-        count = keras.layers.Average()([a, b, c, d])
-        return ilayers.Sum(axis=None)(count)
+        dummy = keras.layers.Average()([a, b, c])
+        return ilayers.Sum(axis=None)(dummy)
 
     def compute_pattern(self):
 
@@ -126,26 +130,24 @@ class LinearPattern(BasePattern):
         mean_x = self.mean_x.get_weights()[0]
         mean_y = self.mean_y.get_weights()[0]
         mean_xy = self.mean_xy.get_weights()[0]
-        mean_yy = self.mean_yy.get_weights()[0]
 
-        if True:
-            ExEy = mean_x * mean_y
-            EyEy = mean_y * mean_y
-            cov_xy = mean_xy - ExEy
-            sq_sigma_y = mean_yy - EyEy
-        else:
-            numerator = mean_xy - mean_x * mean_y
+        ExEy = mean_x * mean_y
+        EyEy = mean_y * mean_y
+        cov_xy = mean_xy - ExEy
 
-            denumerator = np.dot(W2D.T, numerator)
-            denumerator = np.diag(denumerator)
-            A = safe_divide(numerator, denumerator[:, None])
+        w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
+        A = safe_divide(cov_xy, w_cov_xy)
 
         # update length
-        #norm = np.diag(np.dot(W2D.T, A))[np.newaxis]
-        #A = safe_divide(A, norm)
-        #print(abs(A).sum())
+        if True:
+            norm = np.diag(np.dot(W2D.T, A))
+            A = safe_divide(A, norm)
 
         # check pattern
+        if False:
+            tmp = np.diag(np.dot(W2D.T, A))
+            print("pattern_check", W.shape, tmp.min(), tmp.max())
+
         return A.reshape(W.shape)
 
 
