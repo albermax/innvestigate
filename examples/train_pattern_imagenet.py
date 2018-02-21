@@ -165,12 +165,12 @@ if __name__ == "__main__":
     print("Compute patterns:")
     pattern_computer = innvestigate.tools.PatternComputer(
         model,
-        pattern_type="relu",
+        pattern_type="linear",
         compute_layers_in_parallel=True,
         gpus=gpu_count)
     patterns = pattern_computer.compute_generator(
         train_generator,
-        steps=steps,
+        steps_per_epoch=steps,
         max_queue_size=max_queue_size,
         workers=workers,
         use_multiprocessing=use_multiprocessing,
