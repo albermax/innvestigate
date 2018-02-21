@@ -111,7 +111,7 @@ class LinearPattern(BasePattern):
         _, b = self.mean_xy([mean_xy, count])
 
         # ... along all neurons.
-        mean_y = norm(ilayers.Sum(axis=0)(Y_masked), count_all)
+        mean_y = norm(ilayers.Sum(axis=0)(Y), count_all)
         _, c = self.mean_y([mean_y, count_all])
 
         # Create a dummy output to have a connected graph.
@@ -132,14 +132,13 @@ class LinearPattern(BasePattern):
         mean_xy = self.mean_xy.get_weights()[0]
 
         ExEy = mean_x * mean_y
-        EyEy = mean_y * mean_y
         cov_xy = mean_xy - ExEy
 
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = safe_divide(cov_xy, w_cov_xy)
+        A = safe_divide(cov_xy, w_cov_xy[None, :])
 
         # update length
-        if True:
+        if False:
             norm = np.diag(np.dot(W2D.T, A))
             A = safe_divide(A, norm)
 
