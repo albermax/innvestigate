@@ -67,12 +67,14 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            lambda layer: not kgraph.is_convnet_layer(layer),
+            (lambda layer: not kgraph.is_convnet_layer(layer),
+             "LRP-Z only collapses to gradient times input for "
+             "(convolutional) relu neural networks."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
-        self._model_checks_msg = (
-            "LRP-Z only collapses to gradient times input for "
-            "(convluational) relu neural networks."
-            )
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
@@ -384,12 +386,14 @@ class LRP(base.ReverseAnalyzerBase):
                  input_layer_rule=None,
                  **kwargs):
         self._model_checks = [
-            lambda layer: not kgraph.is_convnet_layer(layer),
+            (lambda layer: not kgraph.is_convnet_layer(layer),
+             "LRP is only tested for "
+             "convolutional neural networks."),
+            # todo: Check for non-linear output in general.
+            (lambda layer: kgraph.contains_activation(layer,
+                                                      activation="softmax"),
+             "Model should not contain a softmax.")
         ]
-        self._model_checks_msg = (
-            "LRP is only tested for "
-            "convolutional neural networks."
-            )
 
         if rule is None:
             raise ValueError("Need LRP rule(s).")
@@ -492,7 +496,16 @@ class LRP(base.ReverseAnalyzerBase):
 ###############################################################################
 
 
-class LRPZ(LRP):
+class _LRPFixedParams(LRP):
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        kwargs = super(_LRPFixedParams, clazz)._state_to_kwargs(state)
+        del kwargs["rule"]
+        return kwargs
+
+
+class LRPZ(_LRPFixedParams):
 
     properties = {
         "name": "LRP-Z",
@@ -504,7 +517,7 @@ class LRPZ(LRP):
         return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
-class LRPZWithBias(LRP):
+class LRPZWithBias(_LRPFixedParams):
 
     properties = {
         "name": "LRP-ZWithBias",
@@ -517,7 +530,7 @@ class LRPZWithBias(LRP):
                                                   rule="ZWithBias", **kwargs)
 
 
-class LRPZPlus(LRP):
+class LRPZPlus(_LRPFixedParams):
 
     properties = {
         "name": "LRP-ZPlus",
@@ -530,7 +543,7 @@ class LRPZPlus(LRP):
                                               rule="ZPlus", **kwargs)
 
 
-class LRPEpsilon(LRP):
+class LRPEpsilon(_LRPFixedParams):
 
     properties = {
         "name": "LRP-Epsilon",
@@ -543,7 +556,7 @@ class LRPEpsilon(LRP):
                                                 rule="Epsilon", **kwargs)
 
 
-class LRPEpsilonWithBias(LRP):
+class LRPEpsilonWithBias(_LRPFixedParams):
 
     properties = {
         "name": "LRP-EpsilonWithBias",
@@ -557,7 +570,7 @@ class LRPEpsilonWithBias(LRP):
                                                         **kwargs)
 
 
-class LRPWSquare(LRP):
+class LRPWSquare(_LRPFixedParams):
 
     properties = {
         "name": "LRP-WSquare",
@@ -570,7 +583,7 @@ class LRPWSquare(LRP):
                                                 rule="WSquare", **kwargs)
 
 
-class LRPFlat(LRP):
+class LRPFlat(_LRPFixedParams):
 
     properties = {
         "name": "LRP-Flat",
@@ -592,6 +605,9 @@ class LRPAlphaBeta(LRP):
     }
 
     def __init__(self, model, alpha=1, beta=1, bias=False, *args, **kwargs):
+        self._alpha = alpha
+        self._beta = beta
+        self._bias = bias
 
         class CustomizedAlphaBetaRule(AlphaBetaRule):
             def __init__(self, *args, **kwargs):
@@ -606,8 +622,40 @@ class LRPAlphaBeta(LRP):
                                                   rule=CustomizedAlphaBetaRule,
                                                   **kwargs)
 
+    def _get_state(self):
+        state = super(LRPAlphaBeta, self)._get_state()
+        del state["rule"]
+        state.update({"alpha": self._alpha})
+        state.update({"beta": self._beta})
+        state.update({"bias": self._bias})
+        return state
 
-class LRPAlpha1Beta1(LRPAlphaBeta):
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        alpha = state.pop("alpha")
+        beta = state.pop("beta")
+        bias = state.pop("bias")
+        state["rule"] = None
+        kwargs = super(LRPAlphaBeta, clazz)._state_to_kwargs(state)
+        del kwargs["rule"]
+        kwargs.update({"alpha": alpha,
+                       "beta": beta,
+                       "bias": bias})
+        return kwargs
+
+
+class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        kwargs = super(_LRPAlphaBetaFixedParams, clazz)._state_to_kwargs(state)
+        del kwargs["alpha"]
+        del kwargs["beta"]
+        del kwargs["bias"]
+        return kwargs
+
+
+class LRPAlpha1Beta1(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha1Beta1",
@@ -623,7 +671,7 @@ class LRPAlpha1Beta1(LRPAlphaBeta):
                                                     **kwargs)
 
 
-class LRPAlpha1Beta1WithBias(LRPAlphaBeta):
+class LRPAlpha1Beta1WithBias(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha1Beta1WithBias",
@@ -639,7 +687,7 @@ class LRPAlpha1Beta1WithBias(LRPAlphaBeta):
                                                             **kwargs)
 
 
-class LRPAlpha2Beta1(LRPAlphaBeta):
+class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha2Beta1",
@@ -655,7 +703,7 @@ class LRPAlpha2Beta1(LRPAlphaBeta):
                                                     **kwargs)
 
 
-class LRPAlpha2Beta1WithBias(LRPAlphaBeta):
+class LRPAlpha2Beta1WithBias(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha2Beta1WithBias",
@@ -671,7 +719,7 @@ class LRPAlpha2Beta1WithBias(LRPAlphaBeta):
                                                             **kwargs)
 
 
-class LRPAlpha1Beta0(LRPAlphaBeta):
+class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha1Beta0",
@@ -687,7 +735,7 @@ class LRPAlpha1Beta0(LRPAlphaBeta):
                                                     **kwargs)
 
 
-class LRPAlpha1Beta0WithBias(LRPAlphaBeta):
+class LRPAlpha1Beta0WithBias(_LRPAlphaBetaFixedParams):
 
     properties = {
         "name": "LRP-Alpha1Beta0WithBias",
