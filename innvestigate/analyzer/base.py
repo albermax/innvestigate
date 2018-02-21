@@ -49,7 +49,6 @@ class AnalyzerBase(object):
 
     # Should be specified by the base class.
     _model_checks = []
-    _model_checks_msg = "Model does not fit the method's assumptions."
 
     properties = {
         "name": "undefined",
@@ -60,13 +59,16 @@ class AnalyzerBase(object):
         self._model_checks_raise_exception = model_checks_raise_exception
 
         if len(self._model_checks) > 0:
-            checks = kgraph.model_contains(self._model, self._model_checks,
-                                           return_only_counts=True)
-            if sum(iutils.listify(checks)) > 0:
-                if self._model_checks_raise_exception is True:
-                    raise Exception(self._model_checks_msg)
-                else:
-                    warnings.warn(self._model_checks_msg)
+            checks = [x[0] for x in self._model_checks]
+            messages = [x[1] for x in self._model_checks]
+            checked = kgraph.model_contains(self._model, checks,
+                                            return_only_counts=True)
+            for check_count, message in zip(iutils.listify(checked), messages):
+                if check_count > 0:
+                    if self._model_checks_raise_exception is True:
+                        raise Exception(message)
+                    else:
+                        warnings.warn(message)
         pass
 
     def fit(self, *args, disable_no_training_warning=False, **kwargs):
