@@ -17,6 +17,7 @@ import six
 
 import keras.backend as K
 import keras.models
+import keras.optimizers
 import keras.utils
 import numpy as np
 
@@ -43,14 +44,6 @@ class BasePattern(object):
     def __init__(self, model, layer):
         self.model = model
         self.layer = layer
-        self._stats = None
-
-    def _stats_to_dict(self, stats):
-        return {k: stats[idx]
-                for idx, k in enumerate(self._stats_keys)}
-
-    def _stats_to_list(self, stats):
-        return [stats[k] for k in self._stats_keys]
 
     def has_pattern(self):
         return kgraph.contains_kernel(self.layer)
@@ -58,49 +51,31 @@ class BasePattern(object):
     def stats_from_batch(self):
         raise NotImplementedError()
 
-    def _update_stats(self, stats, batch_stats):
-        raise NotImplementedError()
-
-    def update_stats(self, batch_stats):
-        batch_stats = self._stats_to_dict(batch_stats)
-        if self._stats is None:
-            self._stats = batch_stats
-        else:
-            # force in place updates
-            self._update_stats(self._stats, batch_stats)
-        pass
-
     def compute_pattern(self):
         raise NotImplementedError()
 
 
 class DummyPattern(BasePattern):
 
-    _stats_keys = ["sum"]
-
     def get_stats_from_batch(self):
         # code is not ready for shared layers
         assert kgraph.get_layer_inbound_count(self.layer) == 1
         Xs, Ys = kgraph.get_layer_neuronwise_io(self.layer)
-        return ilayers.Sum()(Xs)
+        self.mean_x = ilayers.RunningMeans()
 
-    def _update_stats(self, stats, batch_stats):
-        stats["sum"] += batch_stats["sum"]
-        pass
+        count = ilayers.CountNonZero(axis=0)(Ys[0])
+        sum_x = ilayers.Dot()([ilayers.Transpose()(Xs[0]), Ys[0]])
+
+        mean_x, count_x = self.mean_x([sum_x, count])
+
+        # Return dummy output to have connected graph!
+        return ilayers.Sum(axis=None)(count_x)
 
     def compute_pattern(self):
-        return self._stats_to_list(self._stats)
+        return self.mean_x.get_weights()[0]
 
 
 class LinearPattern(BasePattern):
-
-    _stats_keys = [
-        "count",
-        "mean_x",
-        "mean_y",
-        "mean_xy",
-        "mean_yy",
-    ]
 
     def _get_neuron_mask(self):
         layer = kgraph.get_layer_wo_activation(self.layer, keep_bias=True)
@@ -124,42 +99,38 @@ class LinearPattern(BasePattern):
         mean_y = norm(ilayers.Sum(axis=0)(Y_masked))
         mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]))
         mean_yy = norm(ilayers.Sum(axis=0)(ilayers.Square()(Y_masked)))
-        return [count, mean_x, mean_y, mean_xy, mean_yy]
 
-    def _update_stats(self, stats, batch_stats):
-        """
-        Updating stats neuronwise with a running average.
-        """
-        old_count, new_count = stats["count"], batch_stats["count"]
-        total_count = old_count+new_count
+        self.mean_x = ilayers.RunningMeans()
+        self.mean_y = ilayers.RunningMeans()
+        self.mean_xy = ilayers.RunningMeans()
+        self.mean_yy = ilayers.RunningMeans()
 
-        def safe_divide(a, b):
-            return K.cast_to_floatx(a) / np.maximum(b, 1)
-        factor_old = safe_divide(old_count, total_count)
-        factor_new = safe_divide(new_count, total_count)
+        _, a = self.mean_x([mean_x, count])
+        _, b = self.mean_y([mean_y, count])
+        _, c = self.mean_xy([mean_xy, count])
+        _, d = self.mean_yy([mean_yy, count])
 
-        def update(old, new):
-            # old_count/total_count * old_val + new_count/total_count * new_val
-            old *= factor_old
-            new *= factor_new
-            old += new
-            pass
-
-        stats["count"] = total_count
-        for k in self._stats_keys[1:]:
-            update(stats[k], batch_stats[k])
-        pass
+        # Create a dummy output to have a connected graph.
+        # Needs to have the shape (mb_size, 1)
+        count = keras.layers.Average()([a, b, c, d])
+        return ilayers.Sum(axis=None)(count)
 
     def compute_pattern(self):
-        W = kgraph.get_kernel(self.layer)
-        # todo: 0 if cnt is 0
+
         def safe_divide(a, b):
             return a / (b + (b == 0))
 
-        ExEy = self._stats["mean_x"] * self._stats["mean_y"]
-        EyEy = self._stats["mean_y"] * self._stats["mean_y"]
-        cov_xy = self._stats["mean_xy"] - ExEy
-        sq_sigma_y = self._stats["mean_yy"] - EyEy
+        W = kgraph.get_kernel(self.layer)
+
+        mean_x = self.mean_x.get_weights()[0]
+        mean_y = self.mean_y.get_weights()[0]
+        mean_xy = self.mean_xy.get_weights()[0]
+        mean_yy = self.mean_yy.get_weights()[0]
+
+        ExEy = mean_x * mean_y
+        EyEy = mean_y * mean_y
+        cov_xy = mean_xy - ExEy
+        sq_sigma_y = mean_yy - EyEy
 
         A = safe_divide(cov_xy, sq_sigma_y)
 
@@ -219,6 +190,15 @@ class PatternComputer(object):
         self._work_sequence = []
         self._pattern_instances = {k: [] for k in self.pattern_types}
         computer_outputs = []
+        # Broadcaster has shape (mb, 1)
+        # Todod: does not work for tensors
+        reduce_axes = list(range(len(K.int_shape(model.inputs[0]))))[1:]
+        dummy_broadcaster = ilayers.Sum(axis=reduce_axes,
+                                        keepdims=True)(model.inputs[0])
+
+        def broadcast(x):
+            return ilayers.Broadcast()([dummy_broadcaster, x])
+
         # todo: this does not work with more nodes or containers!
         for layer_id, layer in enumerate(model.layers):
             if kgraph.is_container(layer):
@@ -228,13 +208,12 @@ class PatternComputer(object):
                 if pinstance.has_pattern() is False:
                     continue
                 self._pattern_instances[pattern_type].append(pinstance)
-                batch_stats = iutils.listify(pinstance.get_stats_from_batch())
-
-                n = len(computer_outputs)
-                self._work_sequence.append((n, n+len(batch_stats), pinstance))
-                computer_outputs += iutils.listify(batch_stats)
+                dummy_output = pinstance.get_stats_from_batch()
+                # Broadcast dummy_output to right shape.
+                computer_outputs += iutils.listify(broadcast(dummy_output))
 
         # initialize the keras outputs
+        self._n_computer_outputs = len(computer_outputs)
         if self.compute_layers_in_parallel is True:
             self._computers = [
                 keras.models.Model(inputs=model.inputs,
@@ -243,12 +222,13 @@ class PatternComputer(object):
         else:
             self._computers = [
                 keras.models.Model(inputs=model.inputs,
-                                   outputs=computer_outputs[i:j])
-                for i, j, _ in self._work_sequence
+                                   outputs=computer_output)
+                for computer_output in computer_outputs
             ]
 
         # distribute computation on more gpus
         if self.gpus is not None and self.gpus > 1:
+            raise NotImplementedError("Not supported yet.")
             self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
                                for tmp in self._computers]
         pass
@@ -257,81 +237,52 @@ class PatternComputer(object):
         generator = iutils.BatchSequence(X, batch_size)
         return self.compute_generator(generator, verbose=verbose)
 
-    def compute_generator(self,
-                          generator,
-                          steps=None,
-                          max_queue_size=10,
-                          workers=1,
-                          use_multiprocessing=False,
-                          verbose=0):
+    def compute_generator(self, generator, **kwargs):
         if not hasattr(self, "_computers"):
             raise Exception("One shot computer. Already used.")
 
-        if steps is None:
-            steps = len(generator)
+        # We don't do gradient updates.
+        class NoOptimizer(keras.optimizers.Optimizer):
+            def get_updates(self, *args, **kwargs):
+                return []
+        optimizer = NoOptimizer()
+        # We only go over the training data once.
+        if "epochs" in kwargs and kwargs["epochs"] != 1:
+            raise ValueError("Pattern are computed with "
+                             "a closed form solution. "
+                             "Only need to do one epoch.")
+        kwargs["epochs"] = 1
 
-        # the next part of the code is copied and modified from
-        # from keras model.predict_generator
-        steps_done = 0
-        wait_time = 0.01
-        is_sequence = isinstance(generator, keras.utils.Sequence)
-        if not is_sequence and use_multiprocessing and workers > 1:
-            warnings.warn(
-                UserWarning('Using a generator with `use_multiprocessing=True`'
-                            ' and multiple workers may duplicate your data.'
-                            ' Please consider using the`keras.utils.Sequence'
-                            ' class.'))
-        enqueuer = None
+        if self.compute_layers_in_parallel is True:
+            n_dummy_outputs = self._n_computer_outputs
+        else:
+            n_dummy_outputs = 1
 
-        try:
-            if is_sequence:
-                enqueuer = keras.utils.OrderedEnqueuer(
-                    generator,
-                    use_multiprocessing=use_multiprocessing)
-            else:
-                enqueuer = keras.utils.GeneratorEnqueuer(
-                    generator,
-                    use_multiprocessing=use_multiprocessing,
-                    wait_time=wait_time)
-            enqueuer.start(workers=workers, max_queue_size=max_queue_size)
-            output_generator = enqueuer.get()
+        # Augment the input with dummy targets.
+        def get_dummy_targets(Xs):
+            n, dtype = Xs[0].shape[0], Xs[0].dtype
+            dummy = np.ones(shape=(n, 1), dtype=dtype)
+            return [dummy for _ in range(n_dummy_outputs)]
 
-            if verbose == 1:
-                progbar = keras.utils.Progbar(target=steps)
+        if isinstance(generator, keras.utils.Sequence):
+            generator = iutils.TargetAugmentedSequence(generator,
+                                                       get_dummy_targets)
+        else:
+            base_generator = generator
 
-            while steps_done < steps:
-                generator_output = next(output_generator)
-                if isinstance(generator_output, tuple):
-                    # Compatibility with the generators
-                    # used for training.
-                    if len(generator_output) == 2:
-                        x, _ = generator_output
-                    elif len(generator_output) == 3:
-                        x, _, _ = generator_output
-                    else:
-                        raise ValueError('Output of generator should be '
-                                         'a tuple `(x, y, sample_weight)` '
-                                         'or `(x, y)`. Found: ' +
-                                         str(generator_output))
-                else:
-                    # Assumes a generator that only
-                    # yields inputs (not targets and sample weights).
-                    x = generator_output
+            def generator(*args, **kwargs):
+                for Xs in base_generator(*args, **kwargs):
+                    Xs = iutils.listify(Xs)
+                    yield Xs, get_dummy_targets(Xs)
 
-                batch_state = []
-                for computer in self._computers:
-                    batch_state += iutils.listify(computer.predict_on_batch(x))
+        # Compile models.
+        for computer in self._computers:
+            computer.compile(optimizer=optimizer, loss=lambda x, y: x)
 
-                for i, j, pinstance in self._work_sequence:
-                    pinstance.update_stats(batch_state[i:j])
+        # Compute pattern statistics.
+        for computer in self._computers:
 
-                steps_done += 1
-                if verbose == 1:
-                    progbar.update(steps_done)
-
-        finally:
-            if enqueuer is not None:
-                enqueuer.stop()
+            computer.fit_generator(generator, **kwargs)
 
         # retrieve the actual patterns
         pis = self._pattern_instances
