@@ -122,7 +122,7 @@ class AugmentReduceBase(WrapperBase):
                             "with this wrapper.")
 
         new_inputs = iutils.listify(self._keras_based_augment(inputs))
-        tmp = iutils.listify(kutils.easy_apply(model, new_inputs))
+        tmp = iutils.listify(model(new_inputs))
         new_outputs = iutils.listify(self._keras_based_reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
