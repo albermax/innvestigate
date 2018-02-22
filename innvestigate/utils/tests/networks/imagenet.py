@@ -28,10 +28,10 @@ from ...keras import graph as kgraph
 
 __all__ = [
     "vgg16",
-    "vgg19",
-    "resnet50",
-    "inception_v3",
-    "inception_resnet_v2",
+    #"vgg19",
+    #"resnet50",
+    #"inception_v3",
+    #"inception_resnet_v2",
 ]
 
 

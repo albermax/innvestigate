@@ -22,7 +22,9 @@ from . import base
 
 __all__ = [
     "dot",
-    "skip_connection",
+
+    # todo: check why this makes problems to wrapper implementation.
+    # "skip_connection",
 ]
 
 
