@@ -98,10 +98,15 @@ class ZRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
 
+        # Get activations.
         Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+        # Propagate the relevance to input neurons
+        # using the gradient.
         tmp = utils.listify(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
 
@@ -112,9 +117,12 @@ class ZWithBiasRule(ZRule):
                                                    bias=True, **kwargs)
 
 
+# todo: make subclass of ZRule
 class ZPlusRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
+        # The z-plus rule only works with positive weights and
+        # no biases.
         self._layer_wo_act_b_positive = kgraph.get_layer_wo_activation(
             layer, keep_bias=False,
             name_template="reversed_kernel_positive_%s")
@@ -125,10 +133,15 @@ class ZPlusRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
 
+        # Get activations.
         Zs = kutils.easy_apply(self._layer_wo_act_b_positive, Xs)
+        # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+        # Propagate the relevance to input neurons
+        # using the gradient.
         tmp = utils.listify(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
 
@@ -141,12 +154,18 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
+        # The epsilon rule aligns epsilon with the sign.
         prepare_div = keras.layers.Lambda(lambda x: x + K.sign(x)*K.epsilon())
 
+        # Get activations.
         Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        # Divide incoming relevance by the activations.
         tmp = [ilayers.Divide()([a, prepare_div(b)])
                for a, b in zip(Rs, Zs)]
+        # Propagate the relevance to input neurons
+        # using the gradient.
         tmp = utils.listify(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
 
@@ -160,6 +179,7 @@ class EpsilonWithBiasRule(EpsilonRule):
 class WSquareRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
+        # W-square rule works with squared weights and no biases.
         self._layer_wo_act_b = kgraph.get_layer_wo_activation(
             layer, keep_bias=False, name_template="reversed_kernel_%s")
         tmp = [x**2 for x in self._layer_wo_act_b.get_weights()]
@@ -167,20 +187,26 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
-        ones_like = keras.layers.Lambda(lambda x: x * 0 + 1)
+        # Create dummy forward path to take the derivative below.
         Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
-        ones = [ones_like(x) for x in Xs]
+        # Compute the sum of the squared weights.
+        ones = ilayers.OnesLike(Xs)
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
+        # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+        # Redistribute the relevances along the gradient.
         tmp = utils.listify(grad(Xs+Ys+Rs))
         return tmp
 
 
+# todo: Make sublcass of WSquare rule
 class FlatRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
+        # The flat rule works with weights equal to one and
+        # no biases.
         self._layer_wo_act_b = kgraph.get_layer_wo_activation(
             layer, keep_bias=False, name_template="reversed_kernel_%s")
         tmp = [np.ones_like(x) for x in self._layer_wo_act_b.get_weights()]
@@ -188,23 +214,30 @@ class FlatRule(kgraph.ReverseMappingBase):
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
-        ones_like = keras.layers.Lambda(lambda x: x * 0 + 1)
+        # Create dummy forward path to take the derivative below.
         Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
-        ones = [ones_like(x) for x in Xs]
+        # Compute the sum of the one-weights.
+        ones = iutils.OnesLike(Xs)
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
+        # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+        # Redistribute the relevances along the gradient.
         tmp = utils.listify(grad(Xs+Ys+tmp))
         return tmp
 
 
+# todo: could potentially inherit from and use ZRule.
 class AlphaBetaRule(kgraph.ReverseMappingBase):
     # todo: this only works for relu networks, needs to be extended.
     def __init__(self, layer, state, alpha=1, beta=1, bias=False):
         self._alpha = alpha
         self._beta = beta
 
+        # Positive part works with layer with only positive
+        # weights and biases.
+        # The negative part does accordingly.
         self._layer_wo_act_positive = kgraph.get_layer_wo_activation(
             layer,
             keep_bias=bias,
@@ -226,16 +259,24 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         times_beta = keras.layers.Lambda(lambda x: x * self._beta)
 
         def f(layer):
+            # Get activations.
             Zs = kutils.easy_apply(layer, Xs)
+            # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
                    for a, b in zip(Rs, Zs)]
+            # Propagate the relevance to input neurons
+            # using the gradient.
             tmp = utils.listify(grad(Xs+Zs+tmp))
+            # Re-weight relevance with the input values.
             return [keras.layers.Multiply()([a, b])
                     for a, b in zip(Xs, tmp)]
 
+        # Compute positive and negative relevance.'
+        positive_part = f(self._layer_wo_act_positive)
+        negative_part = f(self._layer_wo_act_negative)
+        # Join weighted positive and negative relevance again.
         return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-                for a, b in zip(f(self._layer_wo_act_positive),
-                                f(self._layer_wo_act_negative))]
+                for a, b in zip(positive_part, negative_part)]
 
 
 class AlphaBetaWithBiasRule(AlphaBetaRule):
@@ -305,6 +346,9 @@ class BoundedRule(kgraph.ReverseMappingBase):
         self._low = low
         self._high = high
 
+        # This rule works with three variants of the layer, all without biases.
+        # One is the original form and two with only the positive or
+        # negative weights.
         self._layer_wo_act = kgraph.get_layer_wo_activation(
             layer,
             keep_bias=False,
@@ -324,6 +368,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_positive.set_weights(positive_weights)
         self._layer_wo_act_negative.set_weights(negative_weights)
 
+    # todo: check if this is a correct implementation.
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         to_low = keras.layers.Lambda(lambda x: x * 0 + self._low)
@@ -339,11 +384,15 @@ class BoundedRule(kgraph.ReverseMappingBase):
             return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
                     for a, b, c in zip(A, B, C)]
 
+        # Get values for the division.
         Zs = f(Xs)
+        # Divide relevances with the value.    
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+        # Distribute along the gradient.
         tmp = utils.listify(grad(Xs+Zs+tmp))
         return tmp
+
 
 #        alpha-beta all networks
 #        bias+- for some other rules
@@ -466,6 +515,7 @@ class LRP(base.ReverseAnalyzerBase):
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         if(len(Xs) == len(Ys) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
+            # Todo: this is not necessarily true. Do explicit layer check.
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
