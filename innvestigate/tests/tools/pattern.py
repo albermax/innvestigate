@@ -301,7 +301,7 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 
-class MnistPatternExample_conv_linear(unittest.TestCase):
+class __disabled__MnistPatternExample_conv_linear(unittest.TestCase):
 
     def test(self):
         np.random.seed(234354346)
