@@ -191,7 +191,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
         Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the squared weights.
-        ones = ilayers.OnesLike(Xs)
+        ones = ilayers.OnesLike()(Xs)
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
@@ -218,7 +218,7 @@ class FlatRule(kgraph.ReverseMappingBase):
         Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the one-weights.
-        ones = iutils.OnesLike(Xs)
+        ones = iutils.OnesLike()(Xs)
         Zs = kutils.easy_apply(self._layer_wo_act_b, ones)
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
