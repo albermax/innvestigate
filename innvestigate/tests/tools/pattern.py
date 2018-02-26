@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 from keras.datasets import mnist
 import keras.layers
 import keras.models
@@ -129,10 +130,8 @@ def fetch_data():
     x_test = (x_test.reshape(10000, 1, 28, 28) - 127.5) / 127.5
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
 
-    return x_train[:6000], y_train[:6000], x_test, y_test
+    return x_train[:100], y_train[:100], x_test[:10], y_test[:10]
 
 
 def create_model(clazz):
@@ -165,10 +164,61 @@ def train_model(model, data, epochs=20):
                         batch_size=batch_size,
                         epochs=epochs,
                         verbose=0)
-    score = model.evaluate(x_test, y_test, verbose=0)
-    print('Test loss:', score[0])
-    print('Test accuracy:', score[1])
+    score = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
+    #print('Test loss:', score[0])
+    #print('Test accuracy:', score[1])
     pass
+
+
+def extract_2d_patches(X, conv_layer):
+
+    X_in = X
+    kernel_shape = conv_layer.kernel_size
+    strides = conv_layer.strides
+    rates = conv_layer.dilation_rate
+    padding = conv_layer.padding
+
+    assert all([x == 1 for x in rates])
+    assert all([x == 3 for x in kernel_shape])
+    assert all([x == 1 for x in strides])
+
+    if padding.lower() == "same":
+        tmp = np.ones(list(X.shape[:2])+[x+3 for x in X.shape[2:]],
+                      dtype=X.dtype)
+        tmp[:, :, 1:-2, 1:-2] = X
+        X = tmp
+
+    out_shape = [int(np.ceil((x-k)/s))
+                 for x, k, s in zip(X.shape[2:], kernel_shape, strides)]
+    n_patches = np.prod(list(X.shape[:2])+out_shape)
+    dimensions = X.shape[1]*kernel_shape[0]*kernel_shape[1]
+    ret = np.empty((n_patches, dimensions), dtype=X.dtype)
+
+    i_ret = 0
+    for j in range(X.shape[2]-kernel_shape[0]):
+        for k in range(X.shape[3]-kernel_shape[1]):
+            patches = X[:, :, j:j+kernel_shape[0], k:k+kernel_shape[1]]
+            patches = patches.reshape((-1, dimensions))
+            ret[i_ret:i_ret+X.shape[0]] = patches
+            i_ret += X.shape[0]
+
+    if True:
+        import tensorflow as tf
+        with tf.Session() as sess:
+            tf_ret = tf.extract_image_patches(
+                images=X_in.transpose((0, 2, 3, 1)),
+                ksizes=[1, kernel_shape[0], kernel_shape[1], 1],
+                strides=[1, strides[0], strides[1], 1],
+                rates=[1, rates[0], rates[1], 1],
+                padding=padding.upper()).eval()
+
+        tf_ret = tf_ret.reshape((-1, tf_ret.shape[-1]))
+        #print(tf_ret.shape, ret.shape)
+        assert tf_ret.shape == ret.shape
+        #print(tf_ret.mean(), ret.mean())
+        assert tf_ret.mean() == ret.mean()
+    assert i_ret == n_patches
+    return ret
 
 
 class MnistPatternExample_dense_linear(unittest.TestCase):
@@ -179,12 +229,12 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
 
         data = fetch_data()
         model, modelp = create_model(model_class)
-        train_model(modelp, data, epochs=1)
+        train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
         analyzer = innvestigate.create_analyzer("pattern.net", model)
         analyzer.fit(data[0], pattern_type="linear",
-                     batch_size=256, verbose=1)
+                     batch_size=256, verbose=0)
 
         patterns = analyzer._patterns
         W = model.get_weights()[0]
@@ -217,12 +267,12 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
 
         data = fetch_data()
         model, modelp = create_model(model_class)
-        train_model(modelp, data, epochs=1)
+        train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
         analyzer = innvestigate.create_analyzer("pattern.net", model)
         analyzer.fit(data[0], pattern_type="relu",
-                     batch_size=256, verbose=1)
+                     batch_size=256, verbose=0)
         patterns = analyzer._patterns
         W, b = model.get_weights()[:2]
         W2D = W.reshape((-1, W.shape[-1]))
@@ -248,4 +298,42 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
         #print(A.sum(), patterns[0].sum())
+        self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
+
+
+class MnistPatternExample_conv_linear(unittest.TestCase):
+
+    def test(self):
+        np.random.seed(234354346)
+        K.set_image_data_format("channels_first")
+        model_class = innvestigate.utils.tests.networks.base.cnn_2convb_2dense
+        data = fetch_data()
+        model, modelp = create_model(model_class)
+        train_model(modelp, data, epochs=1)
+        model.set_weights(modelp.get_weights())
+        analyzer = innvestigate.create_analyzer("pattern.net", model)
+        analyzer.fit(data[0], pattern_type="linear",
+                     batch_size=256, verbose=0)
+
+        patterns = analyzer._patterns
+        W = model.get_weights()[0]
+        W2D = W.reshape((-1, W.shape[-1]))
+        X = extract_2d_patches(data[0], model.layers[1])
+        Y = np.dot(X, W2D)
+
+        def safe_divide(a, b):
+            return a / (b + (b == 0))
+
+        mean_x = X.mean(axis=0)
+        mean_y = Y.mean(axis=0)
+        mean_xy = np.dot(X.T, Y) / Y.shape[0]
+
+        ExEy = mean_x[:, None] * mean_y[None, :]
+        cov_xy = mean_xy - ExEy
+        w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
+        A = safe_divide(cov_xy, w_cov_xy[None, :])
+
+        def allclose(a, b):
+            return np.allclose(a, b, rtol=0.05, atol=0.05)
+
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
