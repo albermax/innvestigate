@@ -15,9 +15,6 @@ import six
 ###############################################################################
 
 
-# todo:fix relative imports:
-#from ...utils.tests import dryrun
-
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import *

@@ -14,8 +14,7 @@ import six
 ###############################################################################
 ###############################################################################
 
-# Todo: fix:
-#from ...utils.tests import dryrun
+
 from innvestigate.utils.tests import dryrun
 
 

@@ -15,12 +15,6 @@ import six
 ###############################################################################
 
 
-# todo:fix relative imports:
-#from ...utils.tests import dryrun
-
-#from ...explainer import InputExplainer
-#from ...explainer import RandomExplainer
-
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import PatternNet
