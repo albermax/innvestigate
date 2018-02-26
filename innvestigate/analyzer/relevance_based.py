@@ -60,11 +60,6 @@ __all__ = [
 
 class BaselineLRPZ(base.AnalyzerNetworkBase):
 
-    properties = {
-        "name": "BaselineLRP-Z",
-        "show_as": "rgb",
-    }
-
     def __init__(self, *args, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_convnet_layer(layer),
@@ -423,12 +418,6 @@ LRP_RULES = {
 
 class LRP(base.ReverseAnalyzerBase):
 
-    properties = {
-        "name": "LRP",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self,
                  model, *args,
                  rule=None,
@@ -557,23 +546,11 @@ class _LRPFixedParams(LRP):
 
 class LRPZ(_LRPFixedParams):
 
-    properties = {
-        "name": "LRP-Z",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
 class LRPZWithBias(_LRPFixedParams):
-
-    properties = {
-        "name": "LRP-ZWithBias",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPZWithBias, self).__init__(model, *args,
@@ -582,12 +559,6 @@ class LRPZWithBias(_LRPFixedParams):
 
 class LRPZPlus(_LRPFixedParams):
 
-    properties = {
-        "name": "LRP-ZPlus",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPZPlus, self).__init__(model, *args,
                                               rule="ZPlus", **kwargs)
@@ -595,24 +566,12 @@ class LRPZPlus(_LRPFixedParams):
 
 class LRPEpsilon(_LRPFixedParams):
 
-    properties = {
-        "name": "LRP-Epsilon",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPEpsilon, self).__init__(model, *args,
                                                 rule="Epsilon", **kwargs)
 
 
 class LRPEpsilonWithBias(_LRPFixedParams):
-
-    properties = {
-        "name": "LRP-EpsilonWithBias",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPEpsilonWithBias, self).__init__(model, *args,
@@ -622,12 +581,6 @@ class LRPEpsilonWithBias(_LRPFixedParams):
 
 class LRPWSquare(_LRPFixedParams):
 
-    properties = {
-        "name": "LRP-WSquare",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPWSquare, self).__init__(model, *args,
                                                 rule="WSquare", **kwargs)
@@ -635,24 +588,12 @@ class LRPWSquare(_LRPFixedParams):
 
 class LRPFlat(_LRPFixedParams):
 
-    properties = {
-        "name": "LRP-Flat",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPFlat, self).__init__(model, *args,
                                              rule="Flat", **kwargs)
 
 
 class LRPAlphaBeta(LRP):
-
-    properties = {
-        "name": "LRP-AlphaBeta",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, alpha=1, beta=1, bias=False, *args, **kwargs):
         self._alpha = alpha
@@ -707,12 +648,6 @@ class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
 
 class LRPAlpha1Beta1(_LRPAlphaBetaFixedParams):
 
-    properties = {
-        "name": "LRP-Alpha1Beta1",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha1Beta1, self).__init__(model, *args,
                                                     alpha=1,
@@ -722,12 +657,6 @@ class LRPAlpha1Beta1(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha1Beta1WithBias(_LRPAlphaBetaFixedParams):
-
-    properties = {
-        "name": "LRP-Alpha1Beta1WithBias",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha1Beta1WithBias, self).__init__(model, *args,
@@ -739,12 +668,6 @@ class LRPAlpha1Beta1WithBias(_LRPAlphaBetaFixedParams):
 
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
-    properties = {
-        "name": "LRP-Alpha2Beta1",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha2Beta1, self).__init__(model, *args,
                                                     alpha=2,
@@ -754,12 +677,6 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha2Beta1WithBias(_LRPAlphaBetaFixedParams):
-
-    properties = {
-        "name": "LRP-Alpha2Beta1WithBias",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha2Beta1WithBias, self).__init__(model, *args,
@@ -771,12 +688,6 @@ class LRPAlpha2Beta1WithBias(_LRPAlphaBetaFixedParams):
 
 class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 
-    properties = {
-        "name": "LRP-Alpha1Beta0",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha1Beta0, self).__init__(model, *args,
                                                     alpha=1,
@@ -786,12 +697,6 @@ class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha1Beta0WithBias(_LRPAlphaBetaFixedParams):
-
-    properties = {
-        "name": "LRP-Alpha1Beta0WithBias",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha1Beta0WithBias, self).__init__(model, *args,

@@ -42,12 +42,6 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    properties = {
-        "name": "PatternNet",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, *args, patterns=None, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
@@ -190,12 +184,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
 
 class PatternAttribution(PatternNet):
-
-    properties = {
-        "name": "PatternAttribution",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def _prepare_pattern(self, layer, state, pattern):
         weights = layer.get_weights()

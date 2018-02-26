@@ -48,21 +48,11 @@ __all__ = [
 
 class BaselineGradient(base.AnalyzerNetworkBase):
 
-    properties = {
-        "name": "BaselineGradient",
-        "show_as": "rgb",
-    }
-
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
 class Gradient(base.ReverseAnalyzerBase):
-
-    properties = {
-        "name": "Gradient",
-        "show_as": "rgb",
-    }
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
@@ -74,12 +64,6 @@ class Gradient(base.ReverseAnalyzerBase):
 
 
 class Deconvnet(base.ReverseAnalyzerBase):
-
-    properties = {
-        "name": "Deconvnet",
-        # todo: set right value
-        "show_as": "rgb",
-    }
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
@@ -119,12 +103,6 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
 
-    properties = {
-        "name": "GuidedBackprop",
-        # todo: set right value
-        "show_as": "rgb",
-    }
-
     def __init__(self, *args, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
@@ -157,20 +135,12 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 class IntegratedGradients(wrapper.PathIntegrator):
 
-    properties = {
-        "name": "Integrated-Gradients",
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, steps=64, **kwargs):
         subanalyzer = Gradient(model)
-        ret = super(IntegratedGradients, self).__init__(subanalyzer,
-                                                        *args,
-                                                        steps=steps,
-                                                        **kwargs)
-        # Was overwritten by base class.
-        self.properties["name"] = "Integrated-Gradients"
-        return ret
+        return super(IntegratedGradients, self).__init__(subanalyzer,
+                                                         *args,
+                                                         steps=steps,
+                                                         **kwargs)
 
 
 ###############################################################################
@@ -180,18 +150,10 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 class SmoothGrad(wrapper.GaussianSmoother):
 
-    properties = {
-        "name": "SmoothGrad",
-        "show_as": "rgb",
-    }
-
     def __init__(self, model, *args, augment_by_n=64, **kwargs):
         subanalyzer = Gradient(model)
-        ret = super(SmoothGrad, self).__init__(
+        return super(SmoothGrad, self).__init__(
             subanalyzer,
             *args,
             augment_by_n=augment_by_n,
             **kwargs)
-        # Was overwritten by base class.
-        self.properties["name"] = "SmoothGrad"
-        return ret

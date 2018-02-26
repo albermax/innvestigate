@@ -30,21 +30,11 @@ __all__ = ["Random", "Input"]
 
 class Input(AnalyzerBase):
 
-    properties = {
-        "name": "Input",
-        "show_as": "rgb",
-    }
-
     def analyze(self, X):
         return X
 
 
 class Random(AnalyzerBase):
-
-    properties = {
-        "name": "Random",
-        "show_as": "rgb",
-    }
 
     def analyze(self, X):
         return np.random.randn(*X.shape)
