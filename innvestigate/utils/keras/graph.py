@@ -40,8 +40,10 @@ __all__ = [
     "get_layer_inbound_count",
     "get_layer_outbound_count",
     "get_layer_neuronwise_io",
-    "get_layer_wo_activation",
+    "copy_layer_wo_activation",
     "copy_layer",
+    "pre_softmax_tensors",
+    "model_wo_softmax",
 
     "model_contains",
 
@@ -255,16 +257,14 @@ def get_layer_from_config(old_layer, new_config, weights=None):
     return new_layer
 
 
-# todo: rename to copy layer
-def get_layer_wo_activation(layer,
+def copy_layer_wo_activation(layer,
                             keep_bias=True,
                             name_template=None,
                             weights=None):
     config = layer.get_config()
     if name_template is None:
-        config["name"] = None
-    else:
-        config["name"] = name_template % config["name"]
+        name_template = "copied_wo_activation_%s"
+    config["name"] = name_template % config["name"]
     if contains_activation(layer):
         config["activation"] = None
     if keep_bias is False and config.get("use_bias", False):
@@ -290,7 +290,9 @@ def copy_layer(layer,
     return get_layer_from_config(layer, config, weights=weights)
 
 
-def pre_softmax_tensors(Xs):
+def pre_softmax_tensors(Xs, should_find_softmax=True):
+    found_softmax = False
+
     Xs = iutils.listify(Xs)
     ret = []
     for x in Xs:
@@ -299,12 +301,16 @@ def pre_softmax_tensors(Xs):
             if isinstance(layer, keras.layers.Activation):
                 ret.append(layer.get_input_at(node_index)[0])
             else:
-                layer_wo_act = get_layer_wo_activation(layer)
+                layer_wo_act = copy_layer_wo_activation(layer)
                 ret.append(layer_wo_act(layer.get_input_at(node_index)))
+
+    if should_find_softmax and not found_softmax:
+        raise Exception("No softmax found.")
+
     return ret
 
 
-def model_without_softmax(model):
+def model_wo_softmax(model):
     return keras.model.Model(inputs=model.inputs,
                              outputs=pre_softmax_tensor(model.outputs),
                              name=model.name)

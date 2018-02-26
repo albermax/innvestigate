@@ -80,7 +80,7 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
             def __init__(self, layer, state):
                 self._activation = keras.layers.Activation("relu")
-                self._layer_wo_relu = kgraph.get_layer_wo_activation(
+                self._layer_wo_relu = kgraph.copy_layer_wo_activation(
                     layer,
                     name_template="reversed_%s",
                 )
