@@ -96,7 +96,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     activation,
                     name="reversed_act_%s" % config["name"])
 
-                self._kernel_layer = kgraph.get_layer_wo_activation(
+                self._kernel_layer = kgraph.copy_layer_wo_activation(
                     layer, name_template="reversed_kernel_%s")
 
                 # replace kernel weights with pattern weights
@@ -107,7 +107,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                 if np.sum(tmp) != 1:
                     raise Exception("Cannot match pattern to kernel.")
                 pattern_weights[np.argmax(tmp)] = pattern
-                self._pattern_layer = kgraph.get_layer_wo_activation(
+                self._pattern_layer = kgraph.copy_layer_wo_activation(
                     layer,
                     name_template="reversed_pattern_%s",
                     weights=pattern_weights)
