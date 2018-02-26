@@ -27,21 +27,33 @@ from innvestigate.analyzer import PatternNet
 from innvestigate.analyzer import PatternAttribution
 
 
+# todo: add again a traint/test case for mnist
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestPatternNet(dryrun.AnalyzerTrainTestCase):
+class TestPatternNet(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return PatternNet(model)
+        # enough for test purposes, only pattern application is tested here
+        # pattern computation is tested separately.
+        # assume that one dim weights are biases, drop them.
+        patterns = [x for x in model.get_weights()
+                    if len(x.shape) > 1]
+        return PatternNet(model, patterns=patterns)
 
 
-class TestPatternAttribution(dryrun.AnalyzerTrainTestCase):
+class TestPatternAttribution(dryrun.AnalyzerTestCase):
 
     def _method(self, model):
-        return PatternAttribution(model)
+        # enough for test purposes, only pattern application is tested here
+        # pattern computation is tested separately.
+        # assume that one dim weights are biases, drop them.
+        patterns = [x for x in model.get_weights()
+                    if len(x.shape) > 1]
+        return PatternAttribution(model, patterns=patterns)
 
 
 ###############################################################################
