@@ -37,14 +37,14 @@ from innvestigate.tools import PatternComputer
 ###############################################################################
 
 
-class TestPatterComputer_dummy_parallel(dryrun.PatternComputerTestCase):
+class TestPatternComputer_dummy_parallel(dryrun.PatternComputerTestCase):
 
     def _method(self, model):
         return PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=True)
 
 
-class TestPatterComputer_dummy_sequential(dryrun.PatternComputerTestCase):
+class TestPatternComputer_dummy_sequential(dryrun.PatternComputerTestCase):
 
     def _method(self, model):
         return PatternComputer(model, pattern_type="dummy",
@@ -56,19 +56,19 @@ class TestPatterComputer_dummy_sequential(dryrun.PatternComputerTestCase):
 ###############################################################################
 
 
-class TestPatterComputer_linear(dryrun.PatternComputerTestCase):
+class TestPatternComputer_linear(dryrun.PatternComputerTestCase):
 
     def _method(self, model):
         return PatternComputer(model, pattern_type="linear")
 
 
-class TestPatterComputer_relupositive(dryrun.PatternComputerTestCase):
+class TestPatternComputer_relupositive(dryrun.PatternComputerTestCase):
 
     def _method(self, model):
         return PatternComputer(model, pattern_type="relu.positive")
 
 
-class TestPatterComputer_relunegative(dryrun.PatternComputerTestCase):
+class TestPatternComputer_relunegative(dryrun.PatternComputerTestCase):
 
     def _method(self, model):
         return PatternComputer(model, pattern_type="relu.negative")
