@@ -102,6 +102,7 @@ class AnalyzerTestCase(BaseTestCase):
         analysis = analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape),
                          (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 
@@ -125,6 +126,7 @@ class AnalyzerTrainTestCase(BaseTestCase):
         analysis = analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape),
                          (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 
@@ -152,9 +154,11 @@ class EqualAnalyzerTestCase(BaseTestCase):
 
         self.assertEqual(tuple(analysis1.shape),
                          (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isinf(analysis1.ravel())))
         self.assertFalse(np.any(np.isnan(analysis1.ravel())))
         self.assertEqual(tuple(analysis2.shape),
                          (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isinf(analysis2.ravel())))
         self.assertFalse(np.any(np.isnan(analysis2.ravel())))
 
         all_close_kwargs = {}
@@ -190,6 +194,7 @@ class SerializeAnalyzerTestCase(BaseTestCase):
         analysis = new_analyzer.analyze(x)
         self.assertEqual(tuple(analysis.shape),
                          (1,)+tuple(network["input_shape"][1:]))
+        self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         pass
 
