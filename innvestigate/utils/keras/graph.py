@@ -45,7 +45,10 @@ __all__ = [
     "pre_softmax_tensors",
     "model_wo_softmax",
 
+    "get_model_layers",
     "model_contains",
+
+    "trace_model_execution",
 
     "ReverseMappingBase",
     "reverse_model",
@@ -258,13 +261,14 @@ def get_layer_from_config(old_layer, new_config, weights=None):
 
 
 def copy_layer_wo_activation(layer,
-                            keep_bias=True,
-                            name_template=None,
-                            weights=None):
+                             keep_bias=True,
+                             name_template=None,
+                             weights=None):
     config = layer.get_config()
     if name_template is None:
-        name_template = "copied_wo_activation_%s"
-    config["name"] = name_template % config["name"]
+        config["name"] = None
+    else:
+        config["name"] = name_template % config["name"]
     if contains_activation(layer):
         config["activation"] = None
     if keep_bias is False and config.get("use_bias", False):
@@ -281,8 +285,9 @@ def copy_layer(layer,
 
     config = layer.get_config()
     if name_template is None:
-        name_template = "copied_%s"
-    config["name"] = name_template % config["name"]
+        config["name"] = None
+    else:
+        config["name"] = name_template % config["name"]
     if keep_bias is False and config.get("use_bias", False):
         config["use_bias"] = False
         if weights is None:
@@ -362,6 +367,119 @@ def model_contains(model, layer_condition, return_only_counts=False):
 ###############################################################################
 
 
+def trace_model_execution(model, reapply_on_copied_layers=False):
+
+    # Get all layers in model.
+    layers = get_model_layers(model)
+
+    # Check if some layers are containers.
+    # Ignoring the outermost container, i.e. the passed model.
+    contains_container = any([((l is not model) and is_container(l))
+                              for l in layers])
+
+    # If so rebuild the graph, otherwise recycle computations,
+    # and create executed node list. (Keep track of paths?)
+    if contains_container is True:
+        # When containers/models are used as layers, then layers
+        # inside the container/model do not keep track of nodes.
+        # This makes it impossible to iterate of the nodes list and
+        # recover the input output tensors. (see else clause)
+        #
+        # To recover the computational graph we need to re-apply it.
+        # This implies that the tensors-object we use for the forward
+        # pass are different to the passed model. This it not the case
+        # for the else clause.
+        #
+        # Note that reapplying the model does only change the inbound
+        # and outbound nodes of the model itself. We copy the model
+        # so the passed model should not be affected from the
+        # reapplication.
+        exectued_list = []
+
+        # Monkeypatch the call function in all the used layer classes.
+        monkey_patches = [(layer, getattr(layer, "call")) for layer in layers]
+        try:
+            def patch(self, method):
+                if hasattr(method, "__patched__") is True:
+                    raise Exception("Should not happen as we patch "
+                                    "objects not classes.")
+
+                def f(*args, **kwargs):
+                    input_tensors = args[0]
+                    output_tensors = method(*args, **kwargs)
+                    exectued_list.append((self,
+                                          input_tensors,
+                                          output_tensors))
+                    return output_tensors
+                f.__patched__ = True
+                return f
+
+            # Apply the patches.
+            for layer in layers:
+                setattr(layer, "call", patch(layer, getattr(layer, "call")))
+
+            # Trigger reapplication of model.
+            model_copy = keras.models.Model(inputs=model.inputs,
+                                            outputs=model.outputs)
+            outputs = iutils.listify(model_copy(model.inputs))
+        finally:
+            # Revert the monkey patches
+            for layer, old_method in monkey_patches:
+                setattr(layer, "call", old_method)
+
+        # Now we have the problem that all the tensors
+        # do not have a keras_history attribute as they are not part
+        # of any node. Apply the flat model to get it.
+        from . import easy_apply
+        new_exectued_list = []
+        tensor_mapping = {tmp: tmp for tmp in model.inputs}
+        if reapply_on_copied_layers is True:
+            layer_mapping = {layer: copy_layer(layer) for layer in layers}
+        else:
+            layer_mapping = {layer: layer for layer in layers}
+
+        for layer, Xs, Ys in exectued_list:
+            layer = layer_mapping[layer]
+            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
+
+            if isinstance(layer, keras.layers.InputLayer):
+                # Special case. Do nothing.
+                new_Xs, new_Ys = Xs, Ys
+            else:
+                new_Xs = [tensor_mapping[x] for x in Xs]
+                new_Ys = iutils.listify(easy_apply(layer, new_Xs))
+
+            tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
+            new_exectued_list.append((layer, new_Xs, new_Ys))
+
+        layers = [layer_mapping[layer] for layer in layers]
+        outputs = [tensor_mapping[x] for x in outputs]
+    else:
+        # Easy and safe way.
+        reverse_exectued_list = [
+            (node.outbound_layer, node.input_tensors, node.output_tensors)
+            for depth in sorted(model._nodes_by_depth.keys())
+            for node in model._nodes_by_depth[depth]
+        ]
+        outputs = model.outputs
+
+        exectued_list = reversed(reverse_exectued_list)
+        pass
+
+    # This list contains potentially nodes that are not part
+    # final execution graph.
+    # E.g., a layer was also applied outside of the model. Then its
+    # node list contains nodes that do not contribute to the model's output.
+    # Those nodes are filtered here.
+
+    return layers, list(exectued_list), outputs
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 class ReverseMappingBase(object):
 
     def __init__(self, layer, state):
@@ -434,102 +552,11 @@ def reverse_model(model, reverse_mappings,
     # Reverse the model #######################################################
     _print("Reverse model: {}".format(model))
 
-    # Get all layers in model.
-    layers = get_model_layers(model)
-
-    # Check if some layers are containers.
-    # Ignoring the outermost container, i.e. the passed model.
-    contains_container = any([((l is not model) and is_container(l))
-                              for l in layers])
-
-    # If so rebuild the graph, otherwise recycle computations,
-    # and create node execution list. (Keep track of paths?)
-    if contains_container is True:
-        # When containers/models are used as layers, then layers
-        # inside the container/model do not keep track of nodes.
-        # This makes it impossible to iterate of the nodes list and
-        # recover the input output tensors. (see else clause)
-        #
-        # To recover the computational graph we need to re-apply it.
-        # This implies that the tensors-object we use for the forward
-        # pass are different to the passed model. This it not the case
-        # for the else clause.
-        #
-        # Note that reapplying the model does only change the inbound
-        # and outbound nodes of the model itself. We copy the model
-        # so the passed model should not be affected from the
-        # reapplication.
-        execution_list = []
-
-        # Monkeypatch the call function in all the used layer classes.
-        monkey_patches = [(layer, getattr(layer, "call")) for layer in layers]
-        try:
-            def patch(self, method):
-                if hasattr(method, "__patched__") is True:
-                    raise Exception("Should not happen as we patch "
-                                    "objects not classes.")
-
-                def f(*args, **kwargs):
-                    input_tensors = args[0]
-                    output_tensors = method(*args, **kwargs)
-                    execution_list.append((self,
-                                           input_tensors,
-                                           output_tensors))
-                    return output_tensors
-                f.__patched__ = True
-                return f
-
-            # Apply the patches.
-            for layer in layers:
-                setattr(layer, "call", patch(layer, getattr(layer, "call")))
-
-            # Trigger reapplication of model.
-            model_copy = keras.models.Model(inputs=model.inputs,
-                                            outputs=model.outputs)
-            outputs = iutils.listify(model_copy(model.inputs))
-        finally:
-            # Revert the monkey patches
-            for layer, old_method in monkey_patches:
-                setattr(layer, "call", old_method)
-
-        # Now we have the problem that all the tensors
-        # do not have a keras_history attribute as they are not part
-        # of any node. Apply the flat model to get it.
-        from . import easy_apply
-        new_execution_list = []
-        tensor_mapping = {tmp: tmp for tmp in model.inputs}
-        if reapply_on_copied_layers is True:
-            layer_mapping = {layer: copy_layer(layer) for layer in layers}
-        else:
-            layer_mapping = {layer: layer for layer in layers}
-
-        for layer, Xs, Ys in execution_list:
-            layer = layer_mapping[layer]
-            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
-
-            if isinstance(layer, keras.layers.InputLayer):
-                # Special case. Do nothing.
-                new_Xs, new_Ys = Xs, Ys
-            else:
-                new_Xs = [tensor_mapping[x] for x in Xs]
-                new_Ys = iutils.listify(easy_apply(layer, new_Xs))
-
-            tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
-            new_execution_list.append((layer, new_Xs, new_Ys))
-
-        layers = [layer_mapping[layer] for layer in layers]
-        outputs = [tensor_mapping[x] for x in outputs]
-
-        reverse_execution_list = reversed(new_execution_list)
-    else:
-        # Easy and safe way.
-        reverse_execution_list = [
-            (node.outbound_layer, node.input_tensors, node.output_tensors)
-            for depth in sorted(model._nodes_by_depth.keys())
-            for node in model._nodes_by_depth[depth]
-        ]
-        outputs = model.outputs
-        pass
+    # Create a list with nodes in reverse execution order.
+    layers, execution_list, outputs = trace_model_execution(
+        model,
+        reapply_on_copied_layers=reapply_on_copied_layers)
+    reverse_execution_list = reversed(execution_list)
 
     # Initialize the reverse mapping functions.
     initialized_reverse_mappings = {}
@@ -560,7 +587,7 @@ def reverse_model(model, reverse_mappings,
                          outputs,
                          [head_mapping(tmp) for tmp in outputs])
 
-    # Follow the list in reverse order and revert the graph.
+    # Follow the list and revert the graph.
     for reverse_id, (layer, Xs, Ys) in enumerate(reverse_execution_list):
         if isinstance(layer, keras.layers.InputLayer):
             # Special case. Do nothing.
