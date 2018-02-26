@@ -394,7 +394,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         # and outbound nodes of the model itself. We copy the model
         # so the passed model should not be affected from the
         # reapplication.
-        exectued_list = []
+        executed_nodes = []
 
         # Monkeypatch the call function in all the used layer classes.
         monkey_patches = [(layer, getattr(layer, "call")) for layer in layers]
@@ -407,9 +407,9 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 def f(*args, **kwargs):
                     input_tensors = args[0]
                     output_tensors = method(*args, **kwargs)
-                    exectued_list.append((self,
-                                          input_tensors,
-                                          output_tensors))
+                    executed_nodes.append((self,
+                                           input_tensors,
+                                           output_tensors))
                     return output_tensors
                 f.__patched__ = True
                 return f
@@ -431,14 +431,14 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         # do not have a keras_history attribute as they are not part
         # of any node. Apply the flat model to get it.
         from . import easy_apply
-        new_exectued_list = []
+        new_executed_nodes = []
         tensor_mapping = {tmp: tmp for tmp in model.inputs}
         if reapply_on_copied_layers is True:
             layer_mapping = {layer: copy_layer(layer) for layer in layers}
         else:
             layer_mapping = {layer: layer for layer in layers}
 
-        for layer, Xs, Ys in exectued_list:
+        for layer, Xs, Ys in executed_nodes:
             layer = layer_mapping[layer]
             Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
 
@@ -450,20 +450,20 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 new_Ys = iutils.listify(easy_apply(layer, new_Xs))
 
             tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
-            new_exectued_list.append((layer, new_Xs, new_Ys))
+            new_executed_nodes.append((layer, new_Xs, new_Ys))
 
         layers = [layer_mapping[layer] for layer in layers]
         outputs = [tensor_mapping[x] for x in outputs]
     else:
         # Easy and safe way.
-        reverse_exectued_list = [
+        reverse_executed_nodes = [
             (node.outbound_layer, node.input_tensors, node.output_tensors)
             for depth in sorted(model._nodes_by_depth.keys())
             for node in model._nodes_by_depth[depth]
         ]
         outputs = model.outputs
 
-        exectued_list = reversed(reverse_exectued_list)
+        executed_nodes = reversed(reverse_executed_nodes)
         pass
 
     # This list contains potentially nodes that are not part
@@ -471,8 +471,15 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
     # E.g., a layer was also applied outside of the model. Then its
     # node list contains nodes that do not contribute to the model's output.
     # Those nodes are filtered here.
+    used_as_input = [x for x in outputs]
+    tmp = []
+    for l, Xs, Ys in reversed(list(executed_nodes)):
+        if all([y in used_as_input for y in Ys]):
+            used_as_input += Xs
+            tmp.append((l, Xs, Ys))
+    executed_nodes = list(reversed(tmp))
 
-    return layers, list(exectued_list), outputs
+    return layers, executed_nodes, outputs
 
 
 ###############################################################################
