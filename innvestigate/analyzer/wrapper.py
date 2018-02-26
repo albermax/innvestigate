@@ -41,17 +41,10 @@ __all__ = [
 
 class WrapperBase(base.AnalyzerBase):
 
-    properties = {
-        "name": "WrapperBase",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args, **kwargs):
         self._subanalyzer = subanalyzer
         model = None
 
-        self.properties["name"] = "%s_%s" % (
-            self.properties["name"], self._subanalyzer.properties["name"])
         return super(WrapperBase, self).__init__(model,
                                                  *args, **kwargs)
 
@@ -83,11 +76,6 @@ class WrapperBase(base.AnalyzerBase):
 
 
 class AugmentReduceBase(WrapperBase):
-
-    properties = {
-        "name": "AugmentReduceBase",
-        "show_as": "rgb",
-    }
 
     def __init__(self, subanalyzer, *args, augment_by_n=2, **kwargs):
         self._augment_by_n = augment_by_n
@@ -193,11 +181,6 @@ class AugmentReduceBase(WrapperBase):
 
 class GaussianSmoother(AugmentReduceBase):
 
-    properties = {
-        "name": "GaussianSmoother",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args, noise_scale=1, **kwargs):
         self._noise_scale = noise_scale
         return super(GaussianSmoother, self).__init__(subanalyzer,
@@ -233,11 +216,6 @@ class GaussianSmoother(AugmentReduceBase):
 
 
 class PathIntegrator(AugmentReduceBase):
-
-    properties = {
-        "name": "Path-Integrator",
-        "show_as": "rgb",
-    }
 
     def __init__(self, subanalyzer, *args,
                  reference_inputs=0, steps=16, **kwargs):

@@ -50,10 +50,6 @@ class AnalyzerBase(object):
     # Should be specified by the base class.
     _model_checks = []
 
-    properties = {
-        "name": "undefined",
-    }
-
     def __init__(self, model, model_checks_raise_exception=True):
         self._model = model
         self._model_checks_raise_exception = model_checks_raise_exception
