@@ -102,6 +102,7 @@ class AugmentReduceBase(WrapperBase):
         model = self._subanalyzer._analyzer_model
         inputs = model.inputs[:self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
+        # todo: check this, index seems not right.
         outputs = model.outputs[:self._subanalyzer._n_data_input]
         extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
 
