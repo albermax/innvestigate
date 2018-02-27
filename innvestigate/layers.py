@@ -135,10 +135,50 @@ class GradientWRT(keras.layers.Layer):
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
-        return iK.gradients(Xs, Ys, known_Ys)
+        ret = iK.gradients(Xs, Ys, known_Ys)
+        self.__workaround__len_ret = len(ret)
+        return ret
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[:self.n_inputs]
+
+    # todo: remove once keras is fixed.
+    # this is a workaround for cases when
+    # wrapper and skip connections are used together.
+    # bring the fix into keras and remove once
+    # keras is patched.
+    def compute_mask(self, inputs, mask=None):
+        """Computes an output mask tensor.
+
+        # Arguments
+            inputs: Tensor or list of tensors.
+            mask: Tensor or list of tensors.
+
+        # Returns
+            None or a tensor (or list of tensors,
+                one per output tensor of the layer).
+        """
+        if not self.supports_masking:
+            if mask is not None:
+                if isinstance(mask, list):
+                    if any(m is not None for m in mask):
+                        raise TypeError('Layer ' + self.name +
+                                        ' does not support masking, '
+                                        'but was passed an input_mask: ' +
+                                        str(mask))
+                else:
+                    raise TypeError('Layer ' + self.name +
+                                    ' does not support masking, '
+                                    'but was passed an input_mask: ' +
+                                    str(mask))
+            # masking not explicitly supported: return None as mask
+
+            # this is the workaround for model.run_internal_graph.
+            # it is required that there as many masks as outputs:
+            return [None for _ in range(self.__workaround__len_ret)]
+        # if masking is explicitly supported, by default
+        # carry over the input mask
+        return mask
 
 
 ###############################################################################
