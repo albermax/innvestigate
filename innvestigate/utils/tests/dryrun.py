@@ -64,12 +64,8 @@ class BaseTestCase(unittest.TestCase):
         raise NotImplementedError("Set in subclass.")
 
     def test_dryrun(self):
-        # test shapes have channels first.
-        # todo: check why import above fails
-        import keras.backend as K
         np.random.seed(2349784365)
         K.clear_session()
-        K.set_image_data_format("channels_first")
 
         for network in networks.iterator():
             if six.PY2:

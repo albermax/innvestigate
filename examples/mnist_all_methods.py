@@ -42,20 +42,21 @@ base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
 
-keras.backend.set_image_data_format("channels_first")
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-def fetch_data():
+def fetch_data(channels_first):
     # the data, shuffled and split between train and test sets
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-    x_train = x_train.reshape(60000, 1, 28, 28)
-    x_test = x_test.reshape(10000, 1, 28, 28)
+    if channels_first:
+        x_train = x_train.reshape(60000, 1, 28, 28)
+        x_test = x_test.reshape(10000, 1, 28, 28)
+    else:
+        x_train = x_train.reshape(60000, 28, 28, 1)
+        x_test = x_test.reshape(10000, 28, 28, 1)
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
     print(x_train.shape[0], 'train samples')
@@ -64,11 +65,16 @@ def fetch_data():
     return x_train, y_train, x_test, y_test
 
 
-def create_model():
+def create_model(channels_first):
     num_classes = 10
 
+    if channels_first:
+        input_shape = (None, 1, 28, 28)
+    else:
+        input_shape = (None, 28, 28, 1)
+
     network = innvestigate.utils.tests.networks.base.mlp_2dense(
-        (None, 1, 28, 28),
+        input_shape,
         num_classes,
         dense_units=1024,
         dropout_rate=0.25)
@@ -109,7 +115,8 @@ if __name__ == "__main__":
     zero_mean = False
     pattern_type = "linear"
     #pattern_type = "relu"
-    data = fetch_data()
+    channels_first = keras.backend.image_data_format == "channels_first"
+    data = fetch_data(channels_first)
     images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
     label_to_class_name = [str(i) for i in range(10)]
 
@@ -127,13 +134,13 @@ if __name__ == "__main__":
     def postprocess(X):
         X = X.copy()
         X = ivis.postprocess_images(X,
-                                    channels_first=False)
+                                    channels_first=channels_first)
         return X
 
     def image(X):
         X = X.copy()
         X = ivis.postprocess_images(X,
-                                    channels_first=False)
+                                    channels_first=channels_first)
         return ivis.graymap(X,
                             input_is_postive_only=True)
 
@@ -151,7 +158,7 @@ if __name__ == "__main__":
     ###########################################################################
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
-    model, modelp = create_model()
+    model, modelp = create_model(channels_first)
     train_model(modelp, data_preprocessed)
     model.set_weights(modelp.get_weights())
 

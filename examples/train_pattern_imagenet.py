@@ -34,9 +34,6 @@ import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
 
 
-keras.backend.set_image_data_format("channels_first")
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -101,6 +98,8 @@ if __name__ == "__main__":
     # Get some example test set images.
     images, label_to_class_name = eutils.get_imagenet_data()
 
+    channels_first = keras.backend.image_data_format == "channels_first"
+
     steps = None
     gpu_count = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
     max_queue_size = 100
@@ -111,7 +110,7 @@ if __name__ == "__main__":
     def preprocess(X):
         X = X.copy()[None, :, :, :]
         X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
+        X = innvestigate.utils.tests.networks.imagenet.vgg16_custom_preprocess(X)
         return X[0]
 
     train_data_generator = keras.preprocessing.image.ImageDataGenerator(
@@ -135,7 +134,7 @@ if __name__ == "__main__":
     # Build model.
     ###########################################################################
     parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
-    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16()
+    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16_custom()
     print("Compile model1.")
     model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
@@ -192,7 +191,7 @@ if __name__ == "__main__":
         X = X.copy()
         X = ivis.postprocess_images(X,
                                     color_coding="BGRtoRGB",
-                                    channels_first=False)
+                                    channels_first=channels_first)
         return X
 
     def image(X):
