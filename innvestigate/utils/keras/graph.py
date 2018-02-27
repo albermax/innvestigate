@@ -457,6 +457,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 
         layers = [layer_mapping[layer] for layer in layers]
         outputs = [tensor_mapping[x] for x in outputs]
+        executed_nodes = new_executed_nodes
     else:
         # Easy and safe way.
         reverse_executed_nodes = [
