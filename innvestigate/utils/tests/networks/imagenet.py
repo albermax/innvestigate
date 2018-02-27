@@ -52,8 +52,10 @@ __all__ = [
 ###############################################################################
 
 
-def _prepare_keras_net(clazz, input_shape, output_n, weights=None):
-    model = clazz(weights=None)
+def _prepare_keras_net(clazz, input_shape, output_n,
+                       preprocess_f,
+                       color_coding="RGB", weights=None):
+    model = clazz(weights=weights)
     net = {}
     net["in"] = model.inputs
     net["sm_out"] = model.outputs
@@ -62,6 +64,8 @@ def _prepare_keras_net(clazz, input_shape, output_n, weights=None):
         net["input_shape"] = [None, 3]+input_shape
     else:
         net["input_shape"] = [None]+input_shape+[3]
+    net["color_coding"] = color_coding
+    net["preprocess_f"] = preprocess_f
     net["output_n"] = output_n
     return net
 
@@ -75,6 +79,9 @@ VGG16_OFFSET = np.array([103.939, 116.779, 123.68])
 
 
 def vgg16_custom_preprocess(X):
+    import innvestigate.utils.visualizations as ivis
+    X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
+
     if X.shape[1] == 3:
         shape = [1, 3, 1, 1]
     else:
@@ -135,7 +142,7 @@ def vgg16_custom(activation=None):
 
     net.update({
         "input_shape": input_shape,
-
+        "preprocess_f": vgg16_custom_preprocess,
         "output_n": output_n,
     })
     return net
@@ -146,20 +153,14 @@ def vgg16_custom(activation=None):
 ###############################################################################
 
 
-def vgg16_preprocess(X):
-    return keras.applications.vgg16.preprocess_input(X)
-
-
 def vgg16(weights=None):
     return _prepare_keras_net(
         keras.applications.vgg16.VGG16,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.vgg16.preprocess_input,
+        color_coding="BGR",
         weights=weights)
-
-
-def vgg19_preprocess(X):
-    return keras.applications.vgg19.preprocess_input(X)
 
 
 def vgg19(weights=None):
@@ -167,16 +168,14 @@ def vgg19(weights=None):
         keras.applications.vgg19.VGG19,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.vgg19.preprocess_input,
+        color_coding="BGR",
         weights=weights)
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-def resnet50_preprocess(X):
-    return keras.applications.resnet50.preprocess_input(X)
 
 
 def resnet50(weights=None):
@@ -184,16 +183,14 @@ def resnet50(weights=None):
         keras.applications.resnet50.ResNet50,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.resnet50.preprocess_input,
+        color_coding="BGR",
         weights=weights)
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-def inception_v3_preprocess(X):
-    return keras.applications.inception_v3.preprocess_input(X)
 
 
 def inception_v3(weights=None):
@@ -201,16 +198,13 @@ def inception_v3(weights=None):
         keras.applications.inception_v3.InceptionV3,
         [299, 299],
         1000,
+        preprocess_f=keras.applications.inception_v3.preprocess_input,
         weights=weights)
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-def inception_resnet_v2_preprocess(X):
-    return keras.applications.inception_resnet_v2.preprocess_input(X)
 
 
 def inception_resnet_v2(weights=None):
@@ -218,16 +212,13 @@ def inception_resnet_v2(weights=None):
         keras.applications.inception_resnet_v2.InceptionResNetV2,
         [299, 299],
         1000,
+        preprocess_f=keras.applications.inception_resnet_v2.preprocess_input,
         weights=weights)
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-def densenet121_preprocess(X):
-    return keras.applications.densenet.preprocess_input(X)
 
 
 def densenet121(weights=None):
@@ -235,11 +226,8 @@ def densenet121(weights=None):
         keras.applications.densenet.DenseNet121,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.densenet.preprocess_input,
         weights=weights)
-
-
-def densenet169_preprocess(X):
-    return keras.applications.densenet.preprocess_input(X)
 
 
 def densenet169(weights=None):
@@ -247,11 +235,8 @@ def densenet169(weights=None):
         keras.applications.densenet.DenseNet169,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.densenet.preprocess_input,
         weights=weights)
-
-
-def densenet201_preprocess(X):
-    return keras.applications.densenet.preprocess_input(X)
 
 
 def densenet201(weights=None):
@@ -259,16 +244,13 @@ def densenet201(weights=None):
         keras.applications.densenet.DenseNet201,
         [224, 224],
         1000,
+        preprocess_f=keras.applications.densenet.preprocess_input,
         weights=weights)
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-def nasnet_large_preprocess(X):
-    return keras.applications.nasnet.preprocess_input(X)
 
 
 def nasnet_large(weights=None):
@@ -281,11 +263,9 @@ def nasnet_large(weights=None):
         keras.applications.nasnet.NASNetLarge,
         [331, 331],
         1000,
+        color_coding="BGR",
+        preprocess_f=keras.applications.nasnet.preprocess_input,
         weights=weights)
-
-
-def nasnet_mobile_preprocess(X):
-    return keras.applications.nasnet.preprocess_input(X)
 
 
 def nasnet_mobile(weights=None):
@@ -298,4 +278,6 @@ def nasnet_mobile(weights=None):
         keras.applications.nasnet.NASNetMobile,
         [224, 224],
         1000,
+        color_coding="BGR",
+        preprocess_f=keras.applications.nasnet.preprocess_input,
         weights=weights)

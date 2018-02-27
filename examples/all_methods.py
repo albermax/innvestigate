@@ -74,11 +74,6 @@ def lasagne_weights_to_keras_weights(weights):
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
-param_file = "./imagenet_224_vgg_16.npz"
-# Note those weights are CC 4.0:
-# See http://www.robots.ox.ac.uk/~vgg/research/very_deep/
-param_url = "https://www.dropbox.com/s/cvjj8x19hzya9oe/imagenet_224_vgg_16.npz?dl=1"
-
 pattern_file = "./imagenet_224_vgg_16.pattern_file.A_only.npz"
 pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.patterns.A_only.npz?dl=1"
 
@@ -89,9 +84,7 @@ pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.pat
 
 if __name__ == "__main__":
     # Download the necessary parameters for VGG16 and the according patterns.
-    eutils.download(param_url, param_file)
     eutils.download(pattern_url, pattern_file)
-    channels_first = keras.backend.image_data_format == "channels_first"
 
     # Get some example test set images.
     images, label_to_class_name = eutils.get_imagenet_data()[:2]
@@ -100,14 +93,11 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
-    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16_custom()
-    model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
+    net = innvestigate.utils.tests.networks.imagenet.vgg16(weights="imagenet")
+    model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
-    model.set_weights(parameters)
-    modelp = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["sm_out"])
+    modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
-    modelp.set_weights(parameters)
 
     patterns = lasagne_weights_to_keras_weights(
         load_patterns(pattern_file)["A"])
@@ -115,17 +105,18 @@ if __name__ == "__main__":
     ###########################################################################
     # Utility functions.
     ###########################################################################
+    color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
+    channels_first = keras.backend.image_data_format == "channels_first"
 
     def preprocess(X):
         X = X.copy()
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_custom_preprocess(X)
+        X = net["preprocess_f"](X)
         return X
 
     def postprocess(X):
         X = X.copy()
         X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
+                                    color_coding=color_conversion,
                                     channels_first=channels_first)
         return X
 
