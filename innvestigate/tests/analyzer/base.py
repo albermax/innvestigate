@@ -46,6 +46,13 @@ class TestBaseReverseNetwork_reverse_debug(dryrun.AnalyzerTestCase):
         return Gradient(model, reverse_verbose=True)
 
 
+class TestBaseReverseNetwork_reverse_check_minmax(dryrun.AnalyzerTestCase):
+
+    def _method(self, model):
+        return Gradient(model, reverse_verbose=True,
+                        reverse_check_min_max_values=True)
+
+
 class TestBaseReverseNetwork_reverse_check_finite(dryrun.AnalyzerTestCase):
 
     def _method(self, model):

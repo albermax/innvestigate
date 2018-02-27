@@ -233,7 +233,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._analyzer_model = keras.models.Model(
             inputs=model_inputs+neuron_selection_inputs+constant_inputs,
             outputs=analysis_outputs+debug_outputs)
-        self._analyzer_model.compile(optimizer="sgd", loss="mse")
+        #self._analyzer_model.compile(optimizer="sgd", loss="mse")
         pass
 
     def _create_analysis(self, model):
@@ -287,10 +287,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def __init__(self,
                  *args,
                  reverse_verbose=False,
+                 reverse_check_min_max_values=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
+        self._reverse_check_min_max_values = reverse_check_min_max_values
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
             reverse_reapply_on_copied_layers)
@@ -310,31 +312,77 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return X
 
     def _create_analysis(self, model):
+        return_all_reversed_tensors = (
+            self._reverse_check_min_max_values or
+            self._reverse_check_finite
+        )
         ret = kgraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
             head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,
-            return_all_reversed_tensors=self._reverse_check_finite)
+            return_all_reversed_tensors=return_all_reversed_tensors)
 
-        if self._reverse_check_finite is True:
+        if return_all_reversed_tensors:
+            debug_tensors = []
+            self._debug_tensors_indices = {}
+
             values = list(six.itervalues(ret[1]))
             mapping = {i: v["id"] for i, v in enumerate(values)}
             tensors = [v["tensor"] for v in values]
-            ret = (ret[0], iutils.listify(ilayers.FiniteCheck()(tensors)))
             self._reverse_tensors_mapping = mapping
 
+            if self._reverse_check_min_max_values:
+                tmp = [ilayers.Min(None)(x) for x in tensors]
+                self._debug_tensors_indices["min"] = (
+                    len(debug_tensors),
+                    len(debug_tensors)+len(tmp))
+                debug_tensors += tmp
+
+                tmp = [ilayers.Max(None)(x) for x in tensors]
+                self._debug_tensors_indices["max"] = (
+                    len(debug_tensors),
+                    len(debug_tensors)+len(tmp))
+                debug_tensors += tmp
+
+            if self._reverse_check_finite:
+                tmp = iutils.listify(ilayers.FiniteCheck()(tensors))
+                self._debug_tensors_indices["finite"] = (
+                    len(debug_tensors),
+                    len(debug_tensors)+len(tmp))
+                debug_tensors += tmp
+
+            ret = (ret[0], debug_tensors)
         return ret
 
     def _handle_debug_output(self, debug_values):
-        nfinite_tensors = np.flatnonzero(np.asarray(debug_values) > 0)
 
-        if len(nfinite_tensors) > 0:
-            nfinite_tensors = [self._reverse_tensors_mapping[i]
-                               for i in nfinite_tensors]
-            print("Not finite values found in following nodes: "
-                  "(ReverseID, TensorID) - {}".format(nfinite_tensors))
+        if self._reverse_check_min_max_values:
+            indices = self._debug_tensors_indices["min"]
+            tmp = debug_values[indices[0]:indices[1]]
+            tmp = sorted([(self._reverse_tensors_mapping[i], v)
+                          for i, v in enumerate(tmp)])
+            print("Minimum values in tensors: "
+                  "((ReverseID, TensorID), Value) - {}".format(tmp))
+
+            indices = self._debug_tensors_indices["max"]
+            tmp = debug_values[indices[0]:indices[1]]
+            tmp = sorted([(self._reverse_tensors_mapping[i], v)
+                          for i, v in enumerate(tmp)])
+            print("Maximum values in tensors: "
+                  "((ReverseID, TensorID), Value) - {}".format(tmp))
+
+        if self._reverse_check_finite:
+            indices = self._debug_tensors_indices["finite"]
+            tmp = debug_values[indices[0]:indices[1]]
+            nfinite_tensors = np.flatnonzero(np.asarray(tmp) > 0)
+
+            if len(nfinite_tensors) > 0:
+                nfinite_tensors = sorted([self._reverse_tensors_mapping[i]
+                                          for i in nfinite_tensors])
+                print("Not finite values found in following nodes: "
+                      "(ReverseID, TensorID) - {}".format(nfinite_tensors))
         pass
 
     def _get_state(self):
