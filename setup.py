@@ -6,7 +6,8 @@ import setuptools
 requirements = [
     "numpy",
     "scipy",
-    "keras"
+    "keras",
+    "future"
 ]
 
 
