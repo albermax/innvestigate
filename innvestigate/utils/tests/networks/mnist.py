@@ -15,6 +15,8 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
+
 from . import base
 
 
@@ -36,7 +38,10 @@ __all__ = [
 ###############################################################################
 
 
-__input_shape__ = [None, 1, 28, 28]
+if K.image_data_format() == "channels_first":
+    __input_shape__ = [None, 1, 28, 28]
+else:
+    __input_shape__ = [None, 28, 28, 1]
 __output_n__ = 10
 
 
