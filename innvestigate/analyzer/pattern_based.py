@@ -42,7 +42,7 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, *args, patterns=None, **kwargs):
+    def __init__(self, patterns=None, *args, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
              "PatternNet is only well defined for "
@@ -134,9 +134,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         ]
 
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
-        if len(tmp_pattern_idx_stack) == 0:
-            del tmp_pattern_idx_stack
-        else:
+        if len(tmp_pattern_idx_stack) != 0:
             raise Exception("Not all patterns consumed. Something is wrong.")
 
         return ret
