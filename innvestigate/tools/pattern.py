@@ -16,6 +16,7 @@ import six
 
 
 import keras.backend as K
+import keras.layers
 import keras.models
 import keras.optimizers
 import keras.utils
@@ -39,11 +40,55 @@ __all__ = [
 ###############################################################################
 
 
+def _get_active_neuron_io(layer, active_node_indices,
+                          return_i=True, return_o=True):
+    tmp = [kgraph.get_layer_neuronwise_io(layer, node_index=i,
+                                          return_i=return_i, return_o=return_o)
+           for i in active_node_indices]
+
+    if len(tmp) == 1:
+        return tmp[0]
+    else:
+        # Layer is applied several times in model.
+        # Concatenate the io of the applications.
+        concatenate = keras.layers.Concatenate(axis=0)
+
+        if return_i and return_o:
+            return (concatenate([x[0] for x in tmp]),
+                    concatenate([x[1] for x in tmp]))
+        else:
+            return concatenate([x[0] for x in tmp])
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 class BasePattern(object):
 
-    def __init__(self, model, layer):
+    def __init__(self, model, layer, model_tensors=None):
         self.model = model
         self.layer = layer
+        # All the tensors used by the model.
+        # Allows to filter nodes in layers that do not
+        # belong to this model.
+        self.model_tensors = model_tensors
+        self._active_node_indices = self._get_active_node_indices()
+
+    def _get_active_node_indices(self):
+        n_nodes = kgraph.get_layer_inbound_count(self.layer)
+        if self.model_tensors is None:
+            return list(range(n_nodes))
+        else:
+            ret = []
+            for i in range(n_nodes):
+                output_tensors = iutils.listify(self.layer.get_output_at(i))
+                # Check if output is used in the model.
+                if all([tmp in self.model_tensors
+                        for tmp in output_tensors]):
+                    ret.append(i)
+            return ret
 
     def has_pattern(self):
         return kgraph.contains_kernel(self.layer)
@@ -58,9 +103,8 @@ class BasePattern(object):
 class DummyPattern(BasePattern):
 
     def get_stats_from_batch(self):
-        # code is not ready for shared layers
-        assert kgraph.get_layer_inbound_count(self.layer) == 1
-        Xs, Ys = kgraph.get_layer_neuronwise_io(self.layer)
+        Xs, Ys = _get_active_neuron_io(self.layer,
+                                       self._active_node_indices)
         self.mean_x = ilayers.RunningMeans()
 
         count = ilayers.CountNonZero(axis=0)(Ys[0])
@@ -79,14 +123,16 @@ class LinearPattern(BasePattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Y = kgraph.get_layer_neuronwise_io(layer,
-                                           return_i=False, return_o=True)
-        return ilayers.OnesLike()(Y)
+        Ys = _get_active_neuron_io(layer,
+                                   self._active_node_indices,
+                                   return_i=False, return_o=True)
+
+        return ilayers.OnesLike()(Ys[0])
 
     def get_stats_from_batch(self):
         layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=False)
-        X, Y = kgraph.get_layer_neuronwise_io(layer)
-        X, Y = X[0], Y[0]
+        Xs, Ys = _get_active_neuron_io(layer, self._active_node_indices)
+        X, Y = Xs[0], Ys[0]
 
         self.mean_x = ilayers.RunningMeans()
         self.mean_y = ilayers.RunningMeans()
@@ -154,18 +200,20 @@ class ReluPositivePattern(LinearPattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Y = kgraph.get_layer_neuronwise_io(layer,
-                                           return_i=False, return_o=True)
-        return ilayers.GreaterThanZero()(Y[0])
+        Ys = _get_active_neuron_io(layer,
+                                   self._active_node_indices,
+                                   return_i=False, return_o=True)
+        return ilayers.GreaterThanZero()(Ys[0])
 
 
 class ReluNegativePattern(LinearPattern):
 
     def _get_neuron_mask(self):
         layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Y = kgraph.get_layer_neuronwise_io(layer,
-                                           return_i=False, return_o=True)
-        return ilayers.LessThanZero()(Y[0])
+        Ys = _get_active_neuron_io(layer,
+                                   self._active_node_indices,
+                                   return_i=False, return_o=True)
+        return ilayers.LessThanZero()(Ys[0])
 
 
 def get_pattern_class(pattern_type):
@@ -213,11 +261,17 @@ class PatternComputer(object):
             return ilayers.Broadcast()([dummy_broadcaster, x])
 
         # todo: this does not work with more nodes or containers!
-        for layer_id, layer in enumerate(model.layers):
+        layers, execution_list, _ = kgraph.trace_model_execution(model)
+        model_tensors = set()
+        for _, input_tensors, output_tensors in execution_list:
+            for t in input_tensors+output_tensors:
+                model_tensors.add(t)
+
+        for layer_id, layer in enumerate(layers):
             if kgraph.is_container(layer):
                 raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
-                pinstance = clazz(model, layer)
+                pinstance = clazz(model, layer, model_tensors=model_tensors)
                 if pinstance.has_pattern() is False:
                     continue
                 self._pattern_instances[pattern_type].append(pinstance)
