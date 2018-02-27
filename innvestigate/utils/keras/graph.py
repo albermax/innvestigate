@@ -254,7 +254,9 @@ def get_layer_from_config(old_layer, new_config, weights=None):
 
     if len(weights) > 0:
         # init weights
-        new_layer(old_layer.get_input_at(0))
+        n_nodes = get_layer_inbound_count(old_layer)
+        for i in range(n_nodes):
+            new_layer(old_layer.get_input_at(i))
         new_layer.set_weights(weights)
 
     return new_layer
@@ -296,20 +298,21 @@ def copy_layer(layer,
 
 
 def pre_softmax_tensors(Xs, should_find_softmax=True):
-    found_softmax = False
+    softmax_found = False
 
     Xs = iutils.listify(Xs)
     ret = []
     for x in Xs:
         layer, node_index, tensor_index = x._keras_history
         if contains_activation(layer, activation="softmax"):
+            softmax_found = True
             if isinstance(layer, keras.layers.Activation):
                 ret.append(layer.get_input_at(node_index)[0])
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
                 ret.append(layer_wo_act(layer.get_input_at(node_index)))
 
-    if should_find_softmax and not found_softmax:
+    if should_find_softmax and not softmax_found:
         raise Exception("No softmax found.")
 
     return ret
