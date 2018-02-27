@@ -419,10 +419,10 @@ LRP_RULES = {
 class LRP(base.ReverseAnalyzerBase):
 
     def __init__(self,
-                 model, *args,
+                 model, 
                  rule=None,
                  input_layer_rule=None,
-                 **kwargs):
+                 *args, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_convnet_layer(layer),
              "LRP is only tested for "

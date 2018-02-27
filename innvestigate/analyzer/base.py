@@ -67,7 +67,7 @@ class AnalyzerBase(object):
                         warnings.warn(message)
         pass
 
-    def fit(self, *args, disable_no_training_warning=False, **kwargs):
+    def fit(self, disable_no_training_warning=False, *args, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -75,8 +75,8 @@ class AnalyzerBase(object):
                           " Still fit() is called.", RuntimeWarning)
         pass
 
-    def fit_generator(self, *args,
-                      disable_no_training_warning=False, **kwargs):
+    def fit_generator(self, 
+                      disable_no_training_warning=False, *args, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -168,7 +168,7 @@ class OneEpochTrainerMixin(TrainerMixin):
     def fit(self, *args, **kwargs):
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, *args, steps=None, **kwargs):
+    def fit_generator(self, steps=None, *args, **kwargs):
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
@@ -285,10 +285,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     _conditional_mappings = []
 
     def __init__(self,
-                 *args,
                  reverse_verbose=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
+				 *args,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_check_finite = reverse_check_finite
