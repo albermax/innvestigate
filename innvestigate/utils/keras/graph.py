@@ -228,7 +228,7 @@ def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
             else:
                 # Ys shape is [samples, out_row, out_col, channels]
                 def reshape(x):
-                    x = ilayers.Reshape((-1, n_channels))
+                    x = ilayers.Reshape((-1, n_channels))(x)
                     return x
             ret_Ys = [reshape(x) for x in Ys]
 
