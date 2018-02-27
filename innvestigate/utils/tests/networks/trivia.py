@@ -24,7 +24,7 @@ __all__ = [
     "dot",
 
     # todo: check why this makes problems to wrapper implementation.
-    # "skip_connection",
+    "skip_connection",
 ]
 
 
