@@ -505,6 +505,7 @@ def reverse_model(model, reverse_mappings,
                   head_mapping=None,
                   verbose=False,
                   return_all_reversed_tensors=False,
+                  clip_all_reversed_tensors=False,
                   reapply_on_copied_layers=False):
 
     # Set default values ######################################################
@@ -537,6 +538,10 @@ def reverse_model(model, reverse_mappings,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, xs, reversed_xs):
+            if clip_all_reversed_tensors is not False:
+                clip = ilayers.Clip(*clip_all_reversed_tensors)
+                reversed_xs = clip(reversed_xs)
+
             if xs not in reversed_tensors:
                 reversed_tensors[xs] = {"id": (reverse_id, i),
                                         "tensor": reversed_xs}
