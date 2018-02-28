@@ -287,11 +287,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def __init__(self,
                  *args,
                  reverse_verbose=False,
+                 reverse_clip_values=False,
                  reverse_check_min_max_values=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
+        self._reverse_clip_values = reverse_clip_values
         self._reverse_check_min_max_values = reverse_check_min_max_values
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
@@ -322,6 +324,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             default_reverse_mapping=self._default_reverse_mapping,
             head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,
+            clip_all_reversed_tensors=self._reverse_clip_values,
             return_all_reversed_tensors=return_all_reversed_tensors)
 
         if return_all_reversed_tensors:

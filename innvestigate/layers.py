@@ -267,6 +267,17 @@ class Square(_Map):
         return K.square(x)
 
 
+class Clip(_Map):
+
+    def __init__(self, min_value, max_value):
+        self._min_value = min_value
+        self._max_value = max_value
+        return super(Clip, self).__init__()
+
+    def _apply_map(self, x):
+        return K.clip(x, self._min_value, self._max_value)
+
+
 class Print(_Map):
     def _apply_map(self, x):
         return K.print_tensor(x)
