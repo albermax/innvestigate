@@ -24,6 +24,7 @@ import keras.backend
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 import os
 
 import innvestigate
@@ -36,46 +37,8 @@ import innvestigate.utils.visualizations as ivis
 ###############################################################################
 
 
-# todo: make nicer!
-
-
-def load_parameters(filename):
-    f = np.load(filename)
-    ret = [f["arr_%i" % i] for i in range(len(f.keys()))]
-    return ret
-
-
-def load_patterns(filename):
-    f = np.load(filename)
-
-    ret = {}
-    for prefix in ["A", "r", "mu"]:
-        l = sum([x.startswith(prefix) for x in f.keys()])
-        ret.update({prefix: [f["%s_%i" % (prefix, i)] for i in range(l)]})
-
-    return ret
-
-
-def lasagne_weights_to_keras_weights(weights):
-    ret = []
-    for w in weights:
-        if len(w.shape) < 4:
-            ret.append(w)
-        else:
-            ret.append(w.transpose(2, 3, 1, 0))
-    return ret
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
-
-pattern_file = "./imagenet_224_vgg_16.pattern_file.A_only.npz"
-pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.patterns.A_only.npz?dl=1"
 
 
 ###############################################################################
@@ -83,8 +46,9 @@ pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.pat
 ###############################################################################
 
 if __name__ == "__main__":
-    # Download the necessary parameters for VGG16 and the according patterns.
-    eutils.download(pattern_url, pattern_file)
+
+    netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
+    pattern_type = "relu"
 
     # Get some example test set images.
     images, label_to_class_name = eutils.get_imagenet_data()[:2]
@@ -93,15 +57,20 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    net = innvestigate.utils.tests.networks.imagenet.vgg16(weights="imagenet")
+    tmp = getattr(innvestigate.utils.tests.networks.imagenet, netname)
+    net = tmp(weights="imagenet")
     model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
     modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
 
-    patterns = lasagne_weights_to_keras_weights(
-        load_patterns(pattern_file)["A"])
+    patterns_file = np.load(
+        "%s_patterns_type_%s_tf_dim_ordering_tf_kernels.npz" %
+        (pattern_type, netname))
+    patterns = [patterns_file["arr_%i" % i]
+                for i in range(len((patterns_file.keys())))]
 
+    print("\n".join([str((x.min(), x.mean(), x.max())) for x in patterns]))
     ###########################################################################
     # Utility functions.
     ###########################################################################
@@ -125,6 +94,7 @@ if __name__ == "__main__":
         return ivis.project(X, absmax=255.0, input_is_postive_only=True)
 
     def bk_proj(X):
+        X = ivis.clip_quantile(X, 1)
         return ivis.project(X)
 
     def heatmap(X):
@@ -185,6 +155,10 @@ if __name__ == "__main__":
             # Analyze.
             a = analyzer.analyze(image if is_input_analyzer else x)
             # Postprocess.
+            if not np.all(np.isfinite(a)):
+                print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                      (i, methods[aidx][3],
+                       np.any(np.isnan(a)), np.any(np.isinf(a))))
             if not is_input_analyzer:
                 a = postprocess(a)
             a = methods[aidx][2](a)
