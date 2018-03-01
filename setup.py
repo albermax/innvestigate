@@ -7,8 +7,9 @@ requirements = [
     "scipy",
     "keras",
     "future",
-	"h5py",
-	"pillow"
+    "h5py",
+    "pillow",
+    "matplotlib"
 ]
 
 
