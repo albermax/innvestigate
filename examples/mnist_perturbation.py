@@ -183,10 +183,9 @@ if __name__ == "__main__":
     y_test = keras.utils.to_categorical(y_test, num_classes)
     generator = iutils.BatchSequence([x_test, y_test], batch_size=batch_size)
 
-    x_test_perturbated = x_test  # TODO inplace?
     current_index = 0
     perturbation = Perturbation(analyzer, perturbation_function, ratio=0.01)
-    perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess)
+    perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess, steps=3)
     scores = perturbation_analysis.compute_perturbation_analysis()
     print(scores)
     keras.backend.clear_session()
