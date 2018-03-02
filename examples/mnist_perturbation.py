@@ -184,7 +184,7 @@ if __name__ == "__main__":
     generator = iutils.BatchSequence([x_test, y_test], batch_size=batch_size)
 
     current_index = 0
-    perturbation = Perturbation(analyzer, perturbation_function, ratio=0.01)
+    perturbation = Perturbation(perturbation_function, ratio=0.01)
     perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess, steps=3)
     scores = perturbation_analysis.compute_perturbation_analysis()
     scores = np.array(scores)

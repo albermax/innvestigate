@@ -21,8 +21,17 @@ from innvestigate.utils.visualizations import batch_flatten
 
 
 class Perturbation:
-    def __init__(self, analyzer, perturbation_function, ratio=0.05, reduce_function=np.mean):
-        self.analyzer = analyzer
+    """Perturbation of pixels based on analysis result."""
+
+    def __init__(self, perturbation_function, ratio=0.05, reduce_function=np.mean):
+        """
+        :param perturbation_function: Defines the function with which the samples are perturbated. Can be a callable or a string that defines a predefined perturbation function.
+        :type perturbation_function: callable or str
+        :param ratio: Ratio of pixels to be perturbed.
+        :type ratio: float
+        :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
+        :type reduce_function: callable
+        """
 
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
@@ -42,6 +51,16 @@ class Perturbation:
         self.reduce_function = reduce_function
 
     def calculate_thresholds_on_batch(self, a, num_perturbated_pixels):
+        """
+        Sorts pixels according to analysis result and returns the value of the num_perturbated_pixels highest pixel.
+
+        :param a: Analysis result.
+        :type a: numpy.ndarray
+        :param num_perturbated_pixels: The value of the num_perturbated_pixels highest pixel is taken as threshold.
+        :type num_perturbated_pixels: int
+        :return: Thresholds, one per sample in batch.
+        :rtype: numpy.ndarray
+        """
         # TODO do not compute threshold but directly the indices (thresholds has advantages, though)
         # Sort the values and take the num_perturbated_pixels'th entry as threshold
         thresholds = np.array([heapq.nlargest(num_perturbated_pixels, sample)[-1] for sample in batch_flatten(a)])
@@ -84,7 +103,27 @@ class Perturbation:
 
 
 class PerturbationAnalysis:
+    """
+    Performs the perturbation analysis.
+    """
     def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=True):
+        """
+        :param analyzer: Analyzer.
+        :type analyzer: innvestigate.analyzer.base.AnalyzerBase
+        :param model: Trained Keras model.
+        :type model: keras.engine.training.Model
+        :param generator: Data generator.
+        :type generator: innvestigate.utils.BatchSequence
+        :param perturbation: Instance of Perturbation class that performs the perturbation.
+        :type perturbation: innvestigate.tools.Perturbation
+        :param preprocess: Preprocessing function.
+        :type preprocess: callable
+        :param steps: Number of perturbation steps.
+        :type steps: int
+        :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
+        :type recompute_analysis: bool
+        """
+
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
@@ -100,6 +139,16 @@ class PerturbationAnalysis:
                 "Not recomputing the analysis is not supported yet.")
 
     def evaluate_on_batch(self, x, y, sample_weight=None):
+        """
+        :param x: Samples.
+        :type x: numpy.ndarray
+        :param y: Labels.
+        :type y: numpy.ndarray
+        :param sample_weight: Sample weights.
+        :type sample_weight: None
+        :return: Test score.
+        :rtype: list
+        """
         if sample_weight is not None:
             raise NotImplementedError("Sample weighting is not supported yet.")  # TODO
 
