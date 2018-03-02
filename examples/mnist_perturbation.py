@@ -165,7 +165,7 @@ if __name__ == "__main__":
     ###########################################################################
     # Analysis.
     ###########################################################################
-    perturbation_function = np.zeros_like  # TODO
+    perturbation_function = "zeros"
 
     # Create analyzers.
     method = ("lrp.z_baseline", {}, heatmap, "LRP-Z")
@@ -189,3 +189,4 @@ if __name__ == "__main__":
     perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess)
     scores = perturbation_analysis.compute_perturbation_analysis()
     print(scores)
+    keras.backend.clear_session()

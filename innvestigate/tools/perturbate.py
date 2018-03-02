@@ -24,7 +24,21 @@ class Perturbation:
     def __init__(self, analyzer, perturbation_function, ratio=0.05, reduce_function=np.mean,
                  recompute_analysis=False):
         self.analyzer = analyzer
-        self.perturbation_function = perturbation_function
+
+        if isinstance(perturbation_function, str):
+            if perturbation_function == "zeros":
+                # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
+                self.perturbation_function = np.zeros_like
+            elif perturbation_function == "gaussian":
+                self.perturbation_function = lambda x: x + np.random.normal(loc=0.0, scale=1.0,
+                                                                            size=x.shape)  # TODO scale?
+            else:
+                raise ValueError("Perturbation function type '{}' not known.".format(perturbation_function))
+        elif callable(perturbation_function):
+            self.perturbation_function = perturbation_function
+        else:
+            raise TypeError("Cannot handle perturbation function of type {}.".format(type(perturbation_function)))
+
         self.ratio = ratio  # How many of the pixels should be perturbated
         self.reduce_function = reduce_function
         self.recompute_analysis = recompute_analysis
