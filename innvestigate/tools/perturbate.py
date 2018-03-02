@@ -41,7 +41,6 @@ class Perturbation:
         self.ratio = ratio  # How many of the pixels should be perturbated
         self.reduce_function = reduce_function
 
-
     def calculate_thresholds_on_batch(self, a, num_perturbated_pixels):
         # TODO do not compute threshold but directly the indices (thresholds has advantages, though)
         # Sort the values and take the num_perturbated_pixels'th entry as threshold
@@ -85,7 +84,7 @@ class Perturbation:
 
 
 class PerturbationAnalysis:
-    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=False):
+    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=True):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
@@ -96,9 +95,9 @@ class PerturbationAnalysis:
         self.steps = steps
         self.recompute_analysis = recompute_analysis
 
-        if self.recompute_analysis:
+        if not self.recompute_analysis:
             raise NotImplementedError(
-                "Recomputation of analysis is not implemented yet.")  # TODO this should be in PerturbationAnalysis
+                "Not recomputing the analysis is not supported yet.")
 
     def evaluate_on_batch(self, x, y, sample_weight=None):
         if sample_weight is not None:
@@ -153,8 +152,6 @@ class PerturbationAnalysis:
             ValueError: In case the generator yields
                 data in an invalid format.
         """
-
-        # self._make_test_function()  # TODO
 
         steps_done = 0
         wait_time = 0.01
