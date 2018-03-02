@@ -21,8 +21,7 @@ from innvestigate.utils.visualizations import batch_flatten
 
 
 class Perturbation:
-    def __init__(self, analyzer, perturbation_function, ratio=0.05, reduce_function=np.mean,
-                 recompute_analysis=False):
+    def __init__(self, analyzer, perturbation_function, ratio=0.05, reduce_function=np.mean):
         self.analyzer = analyzer
 
         if isinstance(perturbation_function, str):
@@ -41,11 +40,7 @@ class Perturbation:
 
         self.ratio = ratio  # How many of the pixels should be perturbated
         self.reduce_function = reduce_function
-        self.recompute_analysis = recompute_analysis
 
-        if self.recompute_analysis:
-            raise NotImplementedError(
-                "Recomputation of analysis is not implemented yet.")  # TODO this should be in PerturbationAnalysis
 
     def calculate_thresholds_on_batch(self, a, num_perturbated_pixels):
         # TODO do not compute threshold but directly the indices (thresholds has advantages, though)
@@ -53,12 +48,14 @@ class Perturbation:
         thresholds = np.array([heapq.nlargest(num_perturbated_pixels, sample)[-1] for sample in batch_flatten(a)])
         return thresholds.reshape(a.shape[0], 1, 1, 1)
 
-    def perturbate_on_batch(self, x, a):
+    def perturbate_on_batch(self, x, a, in_place=True):
         """
         :param x: Batch of images.
         :type x: numpy.ndarray
         :param a: Analysis of this batch.
         :type a: numpy.ndarray
+        :param in_place: If true, samples are perturbated in place.
+        :type in_place: bool
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
@@ -81,23 +78,27 @@ class Perturbation:
             pass  # TODO
 
         # Perturbate
-        x_perturbated = np.copy(x)  # TODO optionally do it in place
+        x_perturbated = x if in_place else np.copy(x)
         x_perturbated[perturbation_mask] = self.perturbation_function(x_perturbated[perturbation_mask])
 
         return x_perturbated
 
 
 class PerturbationAnalysis:
-    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1):
+    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=False):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
         self.perturbation = perturbation
+        if not isinstance(perturbation, Perturbation):
+            raise TypeError(type(perturbation))
         self.preprocess = preprocess
         self.steps = steps
+        self.recompute_analysis = recompute_analysis
 
-        if self.steps > 1:
-            raise NotImplementedError  # TODO
+        if self.recompute_analysis:
+            raise NotImplementedError(
+                "Recomputation of analysis is not implemented yet.")  # TODO this should be in PerturbationAnalysis
 
     def evaluate_on_batch(self, x, y, sample_weight=None):
         if sample_weight is not None:
