@@ -24,9 +24,9 @@ import shutil
 def download(url, filename):
     if not os.path.exists(filename):
         print("Download: %s ---> %s" % (url, filename))
-        with six.moves.urllib.request.urlopen(url) as response:
-            with open(filename, 'wb') as out_file:
-                shutil.copyfileobj(response, out_file)
+        response = six.moves.urllib.request.urlopen(url)
+        with open(filename, 'wb') as out_file:
+        	shutil.copyfileobj(response, out_file)
 
 ###############################################################################
 # Plot utility
