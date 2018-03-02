@@ -39,8 +39,7 @@ def setup():
         author="Maxmilian Alber,Pieter-Jan Kindermans",
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
-        packages=[''],
-		package_data={"innvestigate":"examples"},  #TODO:also include images
+        packages=setuptools.find_packages(),
         install_requires=requirements,
         include_package_data=True,
         zip_safe=False,
