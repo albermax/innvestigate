@@ -11,36 +11,35 @@ import six
 
 import numpy as np
 import heapq
+import warnings
+
+import keras
+from keras.utils import Sequence
+from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
 from innvestigate.utils.visualizations import batch_flatten
 
+
 class Perturbation:
-    def __init__(self, analyzer, perturbation_function, ratio=0.05, steps=1, reduce_function=np.mean,
+    def __init__(self, analyzer, perturbation_function, ratio=0.05, reduce_function=np.mean,
                  recompute_analysis=False):
         self.analyzer = analyzer
         self.perturbation_function = perturbation_function
         self.ratio = ratio  # How many of the pixels should be perturbated
-        self.steps = steps
         self.reduce_function = reduce_function
         self.recompute_analysis = recompute_analysis
 
-        if self.steps != 1:
-            raise NotImplementedError("Only 1 perturbation step is supported.")  # TODO
         if self.recompute_analysis:
-            raise NotImplementedError("Recomputation of analysis is not implemented yet.")  # TODO
+            raise NotImplementedError(
+                "Recomputation of analysis is not implemented yet.")  # TODO this should be in PerturbationAnalysis
 
     def calculate_thresholds_on_batch(self, a, num_perturbated_pixels):
         # TODO do not compute threshold but directly the indices (thresholds has advantages, though)
-        # Sort the values and take the num_perturbated_pixels'th entry as threshol
+        # Sort the values and take the num_perturbated_pixels'th entry as threshold
         thresholds = np.array([heapq.nlargest(num_perturbated_pixels, sample)[-1] for sample in batch_flatten(a)])
         return thresholds.reshape(a.shape[0], 1, 1, 1)
 
-    def perturbate_on_batch(self, x, perturbation_mask):
-        x_perturbated = np.copy(x)  # TODO optionally do it in place
-        x_perturbated[perturbation_mask] = self.perturbation_function(x_perturbated[perturbation_mask])
-        return x_perturbated
-
-    def compute_on_batch(self, x, a):
+    def perturbate_on_batch(self, x, a):
         """
         :param x: Batch of images.
         :type x: numpy.ndarray
@@ -66,5 +65,169 @@ class Perturbation:
                 num_perturbated_pixels, np.sum(perturbation_mask, axis=(1, 2, 3)))
         except AssertionError as error:
             pass  # TODO
-        x_perturbated = self.perturbate_on_batch(x, perturbation_mask)
+
+        # Perturbate
+        x_perturbated = np.copy(x)  # TODO optionally do it in place
+        x_perturbated[perturbation_mask] = self.perturbation_function(x_perturbated[perturbation_mask])
+
         return x_perturbated
+
+
+class PerturbationAnalysis:
+    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1):
+        self.analyzer = analyzer
+        self.model = model
+        self.generator = generator
+        self.perturbation = perturbation
+        self.preprocess = preprocess
+        self.steps = steps
+
+        if self.steps > 1:
+            raise NotImplementedError  # TODO
+
+    def evaluate_on_batch(self, x, y, sample_weight=None):
+        if sample_weight is not None:
+            raise NotImplementedError("Sample weighting is not supported yet.")  # TODO
+
+        x = self.preprocess(x)
+        a = self.analyzer.analyze(x)
+        x_perturbated = self.perturbation.perturbate_on_batch(x, a)
+        score = self.model.test_on_batch(x_perturbated, y)
+        return score
+
+    # copied from keras.engine.training
+    def evaluate_generator(self, generator, steps=None,
+                           max_queue_size=10,
+                           workers=1,
+                           use_multiprocessing=False):
+        """Evaluates the model on a data generator.
+
+        The generator should return the same kind of data
+        as accepted by `test_on_batch`.
+
+        # Arguments
+            generator: Generator yielding tuples (inputs, targets)
+                or (inputs, targets, sample_weights)
+                or an instance of Sequence (keras.utils.Sequence)
+                object in order to avoid duplicate data
+                when using multiprocessing.
+            steps: Total number of steps (batches of samples)
+                to yield from `generator` before stopping.
+                Optional for `Sequence`: if unspecified, will use
+                the `len(generator)` as a number of steps.
+            max_queue_size: maximum size for the generator queue
+            workers: Integer. Maximum number of processes to spin up
+                when using process based threading.
+                If unspecified, `workers` will default to 1. If 0, will
+                execute the generator on the main thread.
+            use_multiprocessing: if True, use process based threading.
+                Note that because
+                this implementation relies on multiprocessing,
+                you should not pass
+                non picklable arguments to the generator
+                as they can't be passed
+                easily to children processes.
+
+        # Returns
+            Scalar test loss (if the model has a single output and no metrics)
+            or list of scalars (if the model has multiple outputs
+            and/or metrics). The attribute `model.metrics_names` will give you
+            the display labels for the scalar outputs.
+
+        # Raises
+            ValueError: In case the generator yields
+                data in an invalid format.
+        """
+
+        # self._make_test_function()  # TODO
+
+        steps_done = 0
+        wait_time = 0.01
+        all_outs = []
+        batch_sizes = []
+        is_sequence = isinstance(generator, Sequence)
+        if not is_sequence and use_multiprocessing and workers > 1:
+            warnings.warn(
+                UserWarning('Using a generator with `use_multiprocessing=True`'
+                            ' and multiple workers may duplicate your data.'
+                            ' Please consider using the`keras.utils.Sequence'
+                            ' class.'))
+        if steps is None:
+            if is_sequence:
+                steps = len(generator)
+            else:
+                raise ValueError('`steps=None` is only valid for a generator'
+                                 ' based on the `keras.utils.Sequence` class.'
+                                 ' Please specify `steps` or use the'
+                                 ' `keras.utils.Sequence` class.')
+        enqueuer = None
+
+        try:
+            if workers > 0:
+                if is_sequence:
+                    enqueuer = OrderedEnqueuer(generator,
+                                               use_multiprocessing=use_multiprocessing)
+                else:
+                    enqueuer = GeneratorEnqueuer(generator,
+                                                 use_multiprocessing=use_multiprocessing,
+                                                 wait_time=wait_time)
+                enqueuer.start(workers=workers, max_queue_size=max_queue_size)
+                output_generator = enqueuer.get()
+            else:
+                output_generator = generator
+
+            while steps_done < steps:
+                generator_output = next(output_generator)
+                if not hasattr(generator_output, '__len__'):
+                    raise ValueError('Output of generator should be a tuple '
+                                     '(x, y, sample_weight) '
+                                     'or (x, y). Found: ' +
+                                     str(generator_output))
+                if len(generator_output) == 2:
+                    x, y = generator_output
+                    sample_weight = None
+                elif len(generator_output) == 3:
+                    x, y, sample_weight = generator_output
+                else:
+                    raise ValueError('Output of generator should be a tuple '
+                                     '(x, y, sample_weight) '
+                                     'or (x, y). Found: ' +
+                                     str(generator_output))
+                outs = self.evaluate_on_batch(x, y, sample_weight=sample_weight)
+
+                if isinstance(x, list):
+                    batch_size = x[0].shape[0]
+                elif isinstance(x, dict):
+                    batch_size = list(x.values())[0].shape[0]
+                else:
+                    batch_size = x.shape[0]
+                if batch_size == 0:
+                    raise ValueError('Received an empty batch. '
+                                     'Batches should at least contain one item.')
+                all_outs.append(outs)
+
+                steps_done += 1
+                batch_sizes.append(batch_size)
+
+        finally:
+            if enqueuer is not None:
+                enqueuer.stop()
+
+        if not isinstance(outs, list):
+            return np.average(np.asarray(all_outs),
+                              weights=batch_sizes)
+        else:
+            averages = []
+            for i in range(len(outs)):
+                averages.append(np.average([out[i] for out in all_outs],
+                                           weights=batch_sizes))
+            return averages
+
+    def compute_perturbation_analysis(self):
+        scores = list()
+        # Evaluate first on original data
+        scores.append(self.model.evaluate_generator(self.generator))
+        for step in range(self.steps):
+            scores.append(self.evaluate_generator(self.generator))
+        assert len(scores) == self.steps + 1
+        return scores
