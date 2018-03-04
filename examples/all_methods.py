@@ -58,8 +58,8 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    tmp = getattr(innvestigate.utils.tests.networks.imagenet, netname)
-    net = tmp(weights="imagenet")
+    tmp = getattr(innvestigate.applications.imagenet, netname)()
+    net = tmp(load_weights=True)
     model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
     modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
