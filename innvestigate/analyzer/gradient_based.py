@@ -67,13 +67,20 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "Deconvnet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("Deconvnet is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         class ReverseLayer(kgraph.ReverseMappingBase):
@@ -87,10 +94,10 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
                 # apply relus conditioned on backpropagated values.
-                reversed_Ys = kutils.easy_apply(self._activation, reversed_Ys)
+                reversed_Ys = kutils.apply(self._activation, reversed_Ys)
 
                 # apply gradient of forward without relus
-                Ys_wo_relu = kutils.easy_apply(self._layer_wo_relu, Xs)
+                Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
 
         # todo: add check for other non-linearities.
@@ -105,18 +112,25 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "GuidedBackprop is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("Guided Backprop is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
-            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+            reversed_Ys = kutils.apply(activation, reversed_Ys)
 
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
@@ -135,7 +149,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 class IntegratedGradients(wrapper.PathIntegrator):
 
-    def __init__(self, model, *args, steps=64, **kwargs):
+    def __init__(self, model, steps=64, *args, **kwargs):
         subanalyzer = Gradient(model)
         return super(IntegratedGradients, self).__init__(subanalyzer,
                                                          *args,
@@ -150,7 +164,7 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 class SmoothGrad(wrapper.GaussianSmoother):
 
-    def __init__(self, model, *args, augment_by_n=64, **kwargs):
+    def __init__(self, model, augment_by_n=64, *args, **kwargs):
         subanalyzer = Gradient(model)
         return super(SmoothGrad, self).__init__(
             subanalyzer,

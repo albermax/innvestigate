@@ -62,18 +62,26 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_convnet_layer(layer),
-             "LRP-Z only collapses to gradient times input for "
-             "(convolutional) relu neural networks."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            # todo: check for max pooling too!
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("BaselineLRPZ is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
-        gradients = iutils.listify(ilayers.Gradient()(
+        gradients = iutils.to_list(ilayers.Gradient()(
             model.inputs+[model.outputs[0], ]))
         return [keras.layers.Multiply()([i, g])
                 for i, g in zip(model.inputs, gradients)]
@@ -94,13 +102,13 @@ class ZRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        Zs = kutils.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -129,13 +137,13 @@ class ZPlusRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act_b_positive, Xs)
+        Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -153,13 +161,13 @@ class EpsilonRule(kgraph.ReverseMappingBase):
         prepare_div = keras.layers.Lambda(lambda x: x + K.sign(x)*K.epsilon())
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        Zs = kutils.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.Divide()([a, prepare_div(b)])
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -183,16 +191,16 @@ class WSquareRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
-        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
+        Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the squared weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.listify(self._layer_wo_act_b(ones))
+        Zs = iutils.to_list(self._layer_wo_act_b(ones))
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.listify(grad(Xs+Ys+Rs))
+        tmp = iutils.to_list(grad(Xs+Ys+Rs))
         return tmp
 
 
@@ -210,16 +218,16 @@ class FlatRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
-        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
+        Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the one-weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.listify(self._layer_wo_act_b(ones))
+        Zs = iutils.to_list(self._layer_wo_act_b(ones))
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.listify(grad(Xs+Ys+tmp))
+        tmp = iutils.to_list(grad(Xs+Ys+tmp))
         return tmp
 
 
@@ -255,13 +263,13 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
         def f(layer):
             # Get activations.
-            Zs = kutils.easy_apply(layer, Xs)
+            Zs = kutils.apply(layer, Xs)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
                    for a, b in zip(Rs, Zs)]
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp = iutils.listify(grad(Xs+Zs+tmp))
+            tmp = iutils.to_list(grad(Xs+Zs+tmp))
             # Re-weight relevance with the input values.
             return [keras.layers.Multiply()([a, b])
                     for a, b in zip(Xs, tmp)]
@@ -373,9 +381,9 @@ class BoundedRule(kgraph.ReverseMappingBase):
             low = [to_low(x) for x in Xs]
             high = [to_high(x) for x in Xs]
 
-            A = kutils.easy_apply(self._layer_wo_act, Xs)
-            B = kutils.easy_apply(self._layer_wo_act_positive, low)
-            C = kutils.easy_apply(self._layer_wo_act_negative, high)
+            A = kutils.apply(self._layer_wo_act, Xs)
+            B = kutils.apply(self._layer_wo_act_positive, low)
+            C = kutils.apply(self._layer_wo_act_negative, high)
             return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
                     for a, b, c in zip(A, B, C)]
 
@@ -385,7 +393,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         return tmp
 
 
@@ -419,18 +427,24 @@ LRP_RULES = {
 class LRP(base.ReverseAnalyzerBase):
 
     def __init__(self,
-                 model, *args,
+                 model, 
                  rule=None,
                  input_layer_rule=None,
-                 **kwargs):
+                 *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_convnet_layer(layer),
-             "LRP is only tested for "
-             "convolutional neural networks."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("LRP is only tested for "
+                           "convolutional neural networks."),
+            },
         ]
 
         if rule is None:

@@ -83,7 +83,7 @@ class BasePattern(object):
         else:
             ret = []
             for i in range(n_nodes):
-                output_tensors = iutils.listify(self.layer.get_output_at(i))
+                output_tensors = iutils.to_list(self.layer.get_output_at(i))
                 # Check if output is used in the model.
                 if all([tmp in self.model_tensors
                         for tmp in output_tensors]):
@@ -241,7 +241,7 @@ class PatternComputer(object):
                  compute_layers_in_parallel=True,
                  gpus=None):
         self.model = model
-        pattern_types = iutils.listify(pattern_type)
+        pattern_types = iutils.to_list(pattern_type)
         self.pattern_types = {k: get_pattern_class(k)
                               for k in pattern_types}
         self.compute_layers_in_parallel = compute_layers_in_parallel
@@ -277,7 +277,7 @@ class PatternComputer(object):
                 self._pattern_instances[pattern_type].append(pinstance)
                 dummy_output = pinstance.get_stats_from_batch()
                 # Broadcast dummy_output to right shape.
-                computer_outputs += iutils.listify(broadcast(dummy_output))
+                computer_outputs += iutils.to_list(broadcast(dummy_output))
 
         # initialize the keras outputs
         self._n_computer_outputs = len(computer_outputs)
@@ -340,7 +340,7 @@ class PatternComputer(object):
 
             def generator(*args, **kwargs):
                 for Xs in base_generator(*args, **kwargs):
-                    Xs = iutils.listify(Xs)
+                    Xs = iutils.to_list(Xs)
                     yield Xs, get_dummy_targets(Xs)
 
         # Compile models.

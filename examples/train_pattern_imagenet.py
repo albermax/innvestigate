@@ -31,6 +31,7 @@ import os
 
 import innvestigate
 import innvestigate.tools
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
 

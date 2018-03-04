@@ -29,6 +29,7 @@ from .relevance_based import *
 ###############################################################################
 
 
+# todo: update lrp; it is confusing as is.
 def create_analyzer(name, model, **kwargs):
     return {
         # Utility.

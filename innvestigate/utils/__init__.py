@@ -15,14 +15,19 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 import keras.utils
 import math
 
 
 __all__ = [
-    "listify",
+    "to_list",
+
     "BatchSequence",
     "TargetAugmentedSequence",
+
+    "preprocess_images",
+    "postprocess_images",
 ]
 
 
@@ -31,7 +36,7 @@ __all__ = [
 ###############################################################################
 
 
-def listify(l):
+def to_list(l):
     if not isinstance(l, list):
         return [l, ]
     else:
@@ -46,7 +51,7 @@ def listify(l):
 class BatchSequence(keras.utils.Sequence):
 
     def __init__(self, Xs, batch_size=32):
-        self.Xs = listify(Xs)
+        self.Xs = to_list(Xs)
         self.single_tensor = len(Xs) == 1
         self.batch_size = batch_size
 
@@ -68,11 +73,6 @@ class BatchSequence(keras.utils.Sequence):
             return tuple(ret)
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 class TargetAugmentedSequence(keras.utils.Sequence):
 
     def __init__(self, sequence, augment_f):
@@ -90,5 +90,50 @@ class TargetAugmentedSequence(keras.utils.Sequence):
             assert len(inputs) == 1
             inputs = inputs[0]
 
-        targets = self.augment_f(listify(inputs))
+        targets = self.augment_f(to_list(inputs))
         return inputs, targets
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def preprocess_images(images, color_coding=None):
+
+    ret = images
+    image_data_format = K.image_data_format()
+    # todo: not very general:
+    channels_first = images.shape[1] in [1, 3]
+    if image_data_format == "channels_first" and not channels_first:
+        ret = ret.transpose(0, 3, 1, 2)
+    if image_data_format == "channels_last" and channels_first:
+        ret = ret.transpose(0, 2, 3, 1)
+
+    assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
+    if color_coding in ["RGBtoBGR", "BGRtoRGB"]:
+        if image_data_format == "channels_first":
+            ret = ret[:, ::-1, :, :]
+        if image_data_format == "channels_last":
+            ret = ret[:, :, :, ::-1]
+
+    return ret
+
+
+def postprocess_images(images, color_coding=None, channels_first=None):
+
+    ret = images
+    image_data_format = K.image_data_format()
+    assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
+    if color_coding in ["RGBtoBGR", "BGRtoRGB"]:
+        if image_data_format == "channels_first":
+            ret = ret[:, ::-1, :, :]
+        if image_data_format == "channels_last":
+            ret = ret[:, :, :, ::-1]
+
+    if image_data_format == "channels_first" and not channels_first:
+        ret = ret.transpose(0, 2, 3, 1)
+    if image_data_format == "channels_last" and channels_first:
+        ret = ret.transpose(0, 3, 1, 2)
+
+    return ret

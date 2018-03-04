@@ -133,14 +133,14 @@ if __name__ == "__main__":
 
     def postprocess(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=channels_first)
+        X = iutils.postprocess_images(X,
+                                      channels_first=channels_first)
         return X
 
     def image(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=channels_first)
+        X = iutils.postprocess_images(X,
+                                      channels_first=channels_first)
         return ivis.graymap(X,
                             input_is_postive_only=True)
 

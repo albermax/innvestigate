@@ -50,24 +50,30 @@ class AnalyzerBase(object):
     # Should be specified by the base class.
     _model_checks = []
 
-    def __init__(self, model, model_checks_raise_exception=True):
+    def __init__(self, model, disable_model_checks=False):
         self._model = model
-        self._model_checks_raise_exception = model_checks_raise_exception
+        self._disable_model_checks = disable_model_checks
 
-        if len(self._model_checks) > 0:
-            checks = [x[0] for x in self._model_checks]
-            messages = [x[1] for x in self._model_checks]
+        if not self._disable_model_checks and len(self._model_checks) > 0:
+            checks = [x["check"] for x in self._model_checks]
+            types = [x.get("types", "exception") for x in self._model_checks]
+            messages = [x["message"] for x in self._model_checks]
+
             checked = kgraph.model_contains(self._model, checks,
                                             return_only_counts=True)
-            for check_count, message in zip(iutils.listify(checked), messages):
+            for check_count, message, check_type in zip(iutils.to_list(checked),
+                                                        messages,
+                                                        types):
                 if check_count > 0:
-                    if self._model_checks_raise_exception is True:
+                    if check_type == "exception":
                         raise Exception(message)
-                    else:
+                    elif check_type == "warning":
                         warnings.warn(message)
+                    else:
+                        raise NotImplementedError()
         pass
 
-    def fit(self, *args, disable_no_training_warning=False, **kwargs):
+    def fit(self, disable_no_training_warning=False, *args, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -75,8 +81,8 @@ class AnalyzerBase(object):
                           " Still fit() is called.", RuntimeWarning)
         pass
 
-    def fit_generator(self, *args,
-                      disable_no_training_warning=False, **kwargs):
+    def fit_generator(self, 
+                      disable_no_training_warning=False, *args, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -88,9 +94,12 @@ class AnalyzerBase(object):
         raise NotImplementedError()
 
     def _get_state(self):
-        model_json = self._model.to_json()
-        model_weights = self._model.get_weights()
-        return {"model_json": model_json, "model_weights": model_weights}
+        state = {
+            "model_json": self._model.to_json(),
+            "model_weights": self._model.get_weights(),
+            "disable_model_checks": self._disable_model_checks,
+        }
+        return state
 
     def save(self):
         state = self._get_state()
@@ -107,11 +116,13 @@ class AnalyzerBase(object):
     def _state_to_kwargs(clazz, state):
         model_json = state.pop("model_json")
         model_weights = state.pop("model_weights")
+        disable_model_checks = state.pop("disable_model_checks")
         assert len(state) == 0
 
         model = keras.models.model_from_json(model_json)
         model.set_weights(model_weights)
-        return {"model": model}
+        return {"model": model,
+                "disable_model_checks": disable_model_checks}
 
     @staticmethod
     def load(class_name, state):
@@ -168,7 +179,7 @@ class OneEpochTrainerMixin(TrainerMixin):
     def fit(self, *args, **kwargs):
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, *args, steps=None, **kwargs):
+    def fit_generator(self, steps=None, *args, **kwargs):
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
@@ -223,7 +234,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 analysis_outputs, debug_outputs = tmp
                 constant_inputs = list()
             except (TypeError, ValueError):
-                analysis_outputs = iutils.listify(tmp)
+                analysis_outputs = iutils.to_list(tmp)
                 constant_inputs, debug_outputs = list(), list()
 
         self._n_data_input = len(model_inputs)
@@ -285,12 +296,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     _conditional_mappings = []
 
     def __init__(self,
-                 *args,
                  reverse_verbose=False,
                  reverse_clip_values=False,
                  reverse_check_min_max_values=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
+				 *args,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_clip_values = reverse_clip_values
@@ -350,7 +361,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 debug_tensors += tmp
 
             if self._reverse_check_finite:
-                tmp = iutils.listify(ilayers.FiniteCheck()(tensors))
+                tmp = iutils.to_list(ilayers.FiniteCheck()(tensors))
                 self._debug_tensors_indices["finite"] = (
                     len(debug_tensors),
                     len(debug_tensors)+len(tmp))
