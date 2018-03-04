@@ -94,7 +94,7 @@ class ZRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        Zs = kutils.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
@@ -129,7 +129,7 @@ class ZPlusRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act_b_positive, Xs)
+        Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
@@ -153,7 +153,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
         prepare_div = keras.layers.Lambda(lambda x: x + K.sign(x)*K.epsilon())
 
         # Get activations.
-        Zs = kutils.easy_apply(self._layer_wo_act, Xs)
+        Zs = kutils.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ilayers.Divide()([a, prepare_div(b)])
                for a, b in zip(Rs, Zs)]
@@ -183,7 +183,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
-        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
+        Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the squared weights.
         ones = ilayers.OnesLike()(Xs)
@@ -210,7 +210,7 @@ class FlatRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
-        Ys = kutils.easy_apply(self._layer_wo_act_b, Xs)
+        Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the one-weights.
         ones = ilayers.OnesLike()(Xs)
@@ -255,7 +255,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
         def f(layer):
             # Get activations.
-            Zs = kutils.easy_apply(layer, Xs)
+            Zs = kutils.apply(layer, Xs)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
                    for a, b in zip(Rs, Zs)]
@@ -373,9 +373,9 @@ class BoundedRule(kgraph.ReverseMappingBase):
             low = [to_low(x) for x in Xs]
             high = [to_high(x) for x in Xs]
 
-            A = kutils.easy_apply(self._layer_wo_act, Xs)
-            B = kutils.easy_apply(self._layer_wo_act_positive, low)
-            C = kutils.easy_apply(self._layer_wo_act_negative, high)
+            A = kutils.apply(self._layer_wo_act, Xs)
+            B = kutils.apply(self._layer_wo_act_positive, low)
+            C = kutils.apply(self._layer_wo_act_negative, high)
             return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
                     for a, b, c in zip(A, B, C)]
 

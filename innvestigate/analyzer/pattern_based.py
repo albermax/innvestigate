@@ -113,9 +113,9 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     weights=pattern_weights)
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
-                act_Xs = kutils.easy_apply(self._kernel_layer, Xs)
-                act_Ys = kutils.easy_apply(self._act_layer, act_Xs)
-                pattern_Ys = kutils.easy_apply(self._pattern_layer, Xs)
+                act_Xs = kutils.apply(self._kernel_layer, Xs)
+                act_Ys = kutils.apply(self._act_layer, act_Xs)
+                pattern_Ys = kutils.apply(self._pattern_layer, Xs)
 
                 grad_act = ilayers.GradientWRT(len(act_Xs))
                 grad_pattern = ilayers.GradientWRT(len(Xs))

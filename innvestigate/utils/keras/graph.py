@@ -433,7 +433,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         # Now we have the problem that all the tensors
         # do not have a keras_history attribute as they are not part
         # of any node. Apply the flat model to get it.
-        from . import easy_apply
+        from . import apply as kapply
         new_executed_nodes = []
         tensor_mapping = {tmp: tmp for tmp in model.inputs}
         if reapply_on_copied_layers is True:
@@ -450,7 +450,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 new_Xs, new_Ys = Xs, Ys
             else:
                 new_Xs = [tensor_mapping[x] for x in Xs]
-                new_Ys = iutils.listify(easy_apply(layer, new_Xs))
+                new_Ys = iutils.listify(kapply(layer, new_Xs))
 
             tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
             new_executed_nodes.append((layer, new_Xs, new_Ys))

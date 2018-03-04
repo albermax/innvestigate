@@ -87,10 +87,10 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
                 # apply relus conditioned on backpropagated values.
-                reversed_Ys = kutils.easy_apply(self._activation, reversed_Ys)
+                reversed_Ys = kutils.apply(self._activation, reversed_Ys)
 
                 # apply gradient of forward without relus
-                Ys_wo_relu = kutils.easy_apply(self._layer_wo_relu, Xs)
+                Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
 
         # todo: add check for other non-linearities.
@@ -116,7 +116,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
-            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+            reversed_Ys = kutils.apply(activation, reversed_Ys)
 
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
