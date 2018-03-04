@@ -50,4 +50,4 @@ def applyy(layer, inputs):
     else:
         ret = layer(inputs[0])
 
-    return iutils.listify(ret)
+    return iutils.to_list(ret)

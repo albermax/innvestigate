@@ -45,7 +45,7 @@ class Random(AnalyzerNetworkBase):
 
     def _create_analysis(self, model):
         noise = ilayers.TestPhaseGaussianNoise(stddev=1)
-        return [noise(x) for x in iutils.listify(model.inputs)]
+        return [noise(x) for x in iutils.to_list(model.inputs)]
 
     def _get_state(self):
         state = super(Random, self)._get_state()

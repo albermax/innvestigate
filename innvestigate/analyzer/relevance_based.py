@@ -73,7 +73,7 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
     def _create_analysis(self, model):
-        gradients = iutils.listify(ilayers.Gradient()(
+        gradients = iutils.to_list(ilayers.Gradient()(
             model.inputs+[model.outputs[0], ]))
         return [keras.layers.Multiply()([i, g])
                 for i, g in zip(model.inputs, gradients)]
@@ -100,7 +100,7 @@ class ZRule(kgraph.ReverseMappingBase):
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -135,7 +135,7 @@ class ZPlusRule(kgraph.ReverseMappingBase):
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -159,7 +159,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
                for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
         return [keras.layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
@@ -187,12 +187,12 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
         # Compute the sum of the squared weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.listify(self._layer_wo_act_b(ones))
+        Zs = iutils.to_list(self._layer_wo_act_b(ones))
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.listify(grad(Xs+Ys+Rs))
+        tmp = iutils.to_list(grad(Xs+Ys+Rs))
         return tmp
 
 
@@ -214,12 +214,12 @@ class FlatRule(kgraph.ReverseMappingBase):
 
         # Compute the sum of the one-weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.listify(self._layer_wo_act_b(ones))
+        Zs = iutils.to_list(self._layer_wo_act_b(ones))
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.listify(grad(Xs+Ys+tmp))
+        tmp = iutils.to_list(grad(Xs+Ys+tmp))
         return tmp
 
 
@@ -261,7 +261,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                    for a, b in zip(Rs, Zs)]
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp = iutils.listify(grad(Xs+Zs+tmp))
+            tmp = iutils.to_list(grad(Xs+Zs+tmp))
             # Re-weight relevance with the input values.
             return [keras.layers.Multiply()([a, b])
                     for a, b in zip(Xs, tmp)]
@@ -385,7 +385,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
-        tmp = iutils.listify(grad(Xs+Zs+tmp))
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
         return tmp
 
 

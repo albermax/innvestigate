@@ -21,7 +21,7 @@ import math
 
 
 __all__ = [
-    "listify",
+    "to_list",
 
     "BatchSequence",
     "TargetAugmentedSequence",
@@ -36,7 +36,7 @@ __all__ = [
 ###############################################################################
 
 
-def listify(l):
+def to_list(l):
     if not isinstance(l, list):
         return [l, ]
     else:
@@ -51,7 +51,7 @@ def listify(l):
 class BatchSequence(keras.utils.Sequence):
 
     def __init__(self, Xs, batch_size=32):
-        self.Xs = listify(Xs)
+        self.Xs = to_list(Xs)
         self.single_tensor = len(Xs) == 1
         self.batch_size = batch_size
 
@@ -90,7 +90,7 @@ class TargetAugmentedSequence(keras.utils.Sequence):
             assert len(inputs) == 1
             inputs = inputs[0]
 
-        targets = self.augment_f(listify(inputs))
+        targets = self.augment_f(to_list(inputs))
         return inputs, targets
 
 

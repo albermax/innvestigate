@@ -110,9 +110,9 @@ class AugmentReduceBase(WrapperBase):
             raise Exception("No extra output is allowed "
                             "with this wrapper.")
 
-        new_inputs = iutils.listify(self._keras_based_augment(inputs))
-        tmp = iutils.listify(model(new_inputs))
-        new_outputs = iutils.listify(self._keras_based_reduce(tmp))
+        new_inputs = iutils.to_list(self._keras_based_augment(inputs))
+        tmp = iutils.to_list(model(new_inputs))
+        new_outputs = iutils.to_list(self._keras_based_reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
         new_model = keras.models.Model(
@@ -130,7 +130,7 @@ class AugmentReduceBase(WrapperBase):
         else:
             return_list = isinstance(X, list)
 
-            X = self._python_based_augment(iutils.listify(X))
+            X = self._python_based_augment(iutils.to_list(X))
             ret = self._subanalyzer.analyze(X, *args, **kwargs)
             ret = self._python_based_reduce(ret)
 
@@ -152,10 +152,10 @@ class AugmentReduceBase(WrapperBase):
 
     def _keras_based_augment(self, X):
         repeat = ilayers.Repeat(self._augment_by_n, axis=0)
-        return [repeat(x) for x in iutils.listify(X)]
+        return [repeat(x) for x in iutils.to_list(X)]
 
     def _keras_based_reduce(self, X):
-        X_shape = [K.int_shape(x) for x in iutils.listify(X)]
+        X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
         reshape = [ilayers.Reshape((-1, self._augment_by_n)+shape[1:])
                    for shape in X_shape]
         mean = ilayers.Mean(axis=1)
@@ -229,7 +229,7 @@ class PathIntegrator(AugmentReduceBase):
 
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:
-            reference_inputs = iutils.listify(self._reference_inputs)
+            reference_inputs = iutils.to_list(self._reference_inputs)
             difference = [ri-x for ri, x in zip(reference_inputs, X)]
             self._difference = difference
         return self._difference
