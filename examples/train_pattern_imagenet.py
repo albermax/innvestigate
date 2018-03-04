@@ -30,6 +30,7 @@ import os
 
 import innvestigate
 import innvestigate.tools
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
 
@@ -109,7 +110,7 @@ if __name__ == "__main__":
 
     def preprocess(X):
         X = X.copy()[None, :, :, :]
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
+        X = iutils.preprocess_images(X, color_coding="RGBtoBGR")
         X = innvestigate.utils.tests.networks.imagenet.vgg16_custom_preprocess(X)
         return X[0]
 
@@ -183,15 +184,15 @@ if __name__ == "__main__":
 
     def preprocess(X):
         X = X.copy()
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
+        X = iutils.preprocess_images(X, color_coding="RGBtoBGR")
         X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
         return X
 
     def postprocess(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=channels_first)
+        X = iutils.postprocess_images(X,
+                                      color_coding="BGRtoRGB",
+                                      channels_first=channels_first)
         return X
 
     def image(X):
