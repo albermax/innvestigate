@@ -59,7 +59,7 @@ class AnalyzerBase(object):
             messages = [x[1] for x in self._model_checks]
             checked = kgraph.model_contains(self._model, checks,
                                             return_only_counts=True)
-            for check_count, message in zip(iutils.listify(checked), messages):
+            for check_count, message in zip(iutils.to_list(checked), messages):
                 if check_count > 0:
                     if self._model_checks_raise_exception is True:
                         raise Exception(message)
@@ -223,7 +223,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 analysis_outputs, debug_outputs = tmp
                 constant_inputs = list()
             except (TypeError, ValueError):
-                analysis_outputs = iutils.listify(tmp)
+                analysis_outputs = iutils.to_list(tmp)
                 constant_inputs, debug_outputs = list(), list()
 
         self._n_data_input = len(model_inputs)
@@ -350,7 +350,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 debug_tensors += tmp
 
             if self._reverse_check_finite:
-                tmp = iutils.listify(ilayers.FiniteCheck()(tensors))
+                tmp = iutils.to_list(ilayers.FiniteCheck()(tensors))
                 self._debug_tensors_indices["finite"] = (
                     len(debug_tensors),
                     len(debug_tensors)+len(tmp))

@@ -125,7 +125,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     tmp = reversed_Ys
                 else:
                     # if linear activation this behaves strange
-                    tmp = utils.listify(grad_act(act_Xs+act_Ys+reversed_Ys))
+                    tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
 
                 return grad_pattern(Xs+pattern_Ys+tmp)
 
