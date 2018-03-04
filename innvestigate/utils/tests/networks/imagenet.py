@@ -15,13 +15,6 @@ import six
 ###############################################################################
 
 
-import keras.applications.resnet50
-import keras.applications.vgg16
-import keras.applications.vgg19
-import keras.applications.inception_v3
-import keras.applications.inception_resnet_v2
-import keras.applications.densenet
-import keras.applications.nasnet
 import keras.backend as K
 import keras.layers
 import numpy as np
@@ -30,7 +23,7 @@ import warnings
 from . import base
 from . import mnist
 from ...keras import graph as kgraph
-
+from ....applications import imagenet
 
 __all__ = [
     "vgg16_custom",
@@ -45,29 +38,6 @@ __all__ = [
     "nasnet_large",
     "nasnet_mobile",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def _prepare_keras_net(clazz, input_shape, output_n,
-                       preprocess_f,
-                       color_coding="RGB", weights=None):
-    model = clazz(weights=weights)
-    net = {}
-    net["in"] = model.inputs
-    net["sm_out"] = model.outputs
-    net["out"] = kgraph.pre_softmax_tensors(model.outputs)
-    if K.image_data_format() == "channels_first":
-        net["input_shape"] = [None, 3]+input_shape
-    else:
-        net["input_shape"] = [None]+input_shape+[3]
-    net["color_coding"] = color_coding
-    net["preprocess_f"] = preprocess_f
-    net["output_n"] = output_n
-    return net
 
 
 ###############################################################################
@@ -153,24 +123,16 @@ def vgg16_custom(activation=None):
 ###############################################################################
 
 
-def vgg16(weights=None):
-    return _prepare_keras_net(
-        keras.applications.vgg16.VGG16,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.vgg16.preprocess_input,
-        color_coding="BGR",
-        weights=weights)
+def vgg16():
+    ret = imagenet.vgg16()
+    ret["output_n"] = 1000
+    return ret
 
 
-def vgg19(weights=None):
-    return _prepare_keras_net(
-        keras.applications.vgg19.VGG19,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.vgg19.preprocess_input,
-        color_coding="BGR",
-        weights=weights)
+def vgg19():
+    ret = imagenet.vgg19()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -178,14 +140,10 @@ def vgg19(weights=None):
 ###############################################################################
 
 
-def resnet50(weights=None):
-    return _prepare_keras_net(
-        keras.applications.resnet50.ResNet50,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.resnet50.preprocess_input,
-        color_coding="BGR",
-        weights=weights)
+def resnet50():
+    ret = imagenet.resnet50()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -193,13 +151,10 @@ def resnet50(weights=None):
 ###############################################################################
 
 
-def inception_v3(weights=None):
-    return _prepare_keras_net(
-        keras.applications.inception_v3.InceptionV3,
-        [299, 299],
-        1000,
-        preprocess_f=keras.applications.inception_v3.preprocess_input,
-        weights=weights)
+def inception_v3():
+    ret = imagenet.inception_v3()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -207,13 +162,10 @@ def inception_v3(weights=None):
 ###############################################################################
 
 
-def inception_resnet_v2(weights=None):
-    return _prepare_keras_net(
-        keras.applications.inception_resnet_v2.InceptionResNetV2,
-        [299, 299],
-        1000,
-        preprocess_f=keras.applications.inception_resnet_v2.preprocess_input,
-        weights=weights)
+def inception_resnet_v2():
+    ret = imagenet.inception_resnet_v2()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -221,31 +173,22 @@ def inception_resnet_v2(weights=None):
 ###############################################################################
 
 
-def densenet121(weights=None):
-    return _prepare_keras_net(
-        keras.applications.densenet.DenseNet121,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.densenet.preprocess_input,
-        weights=weights)
+def densenet121():
+    ret = imagenet.densenet121()
+    ret["output_n"] = 1000
+    return ret
 
 
-def densenet169(weights=None):
-    return _prepare_keras_net(
-        keras.applications.densenet.DenseNet169,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.densenet.preprocess_input,
-        weights=weights)
+def densenet169():
+    ret = imagenet.densenet169()
+    ret["output_n"] = 1000
+    return ret
 
 
-def densenet201(weights=None):
-    return _prepare_keras_net(
-        keras.applications.densenet.DenseNet201,
-        [224, 224],
-        1000,
-        preprocess_f=keras.applications.densenet.preprocess_input,
-        weights=weights)
+def densenet201():
+    ret = imagenet.densenet201()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -253,31 +196,23 @@ def densenet201(weights=None):
 ###############################################################################
 
 
-def nasnet_large(weights=None):
+def nasnet_large():
     if K.image_data_format() == "channels_first":
         warnings.warn("NASNet is not available for channels first. "
                       "Return dummy net.")
         return mnist.log_reg()
 
-    return _prepare_keras_net(
-        keras.applications.nasnet.NASNetLarge,
-        [331, 331],
-        1000,
-        color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
-        weights=weights)
+    ret = imagenet.nasnet_large()
+    ret["output_n"] = 1000
+    return ret
 
 
-def nasnet_mobile(weights=None):
+def nasnet_mobile():
     if K.image_data_format() == "channels_first":
         warnings.warn("NASNet is not available for channels first. "
                       "Return dummy net.")
         return mnist.log_reg()
 
-    return _prepare_keras_net(
-        keras.applications.nasnet.NASNetMobile,
-        [224, 224],
-        1000,
-        color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
-        weights=weights)
+    ret = imagenet.nasnet_mobile()
+    ret["output_n"] = 1000
+    return ret
