@@ -62,13 +62,21 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_convnet_layer(layer),
-             "LRP-Z only collapses to gradient times input for "
-             "(convolutional) relu neural networks."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            # todo: check for max pooling too!
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("BaselineLRPZ is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
 
@@ -424,13 +432,19 @@ class LRP(base.ReverseAnalyzerBase):
                  input_layer_rule=None,
                  *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_convnet_layer(layer),
-             "LRP is only tested for "
-             "convolutional neural networks."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("LRP is only tested for "
+                           "convolutional neural networks."),
+            },
         ]
 
         if rule is None:

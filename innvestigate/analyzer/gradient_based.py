@@ -67,13 +67,20 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "Deconvnet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("Deconvnet is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         class ReverseLayer(kgraph.ReverseMappingBase):
@@ -105,13 +112,20 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
     def __init__(self, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "GuidedBackprop is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("Guided Backprop is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
