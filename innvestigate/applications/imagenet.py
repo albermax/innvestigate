@@ -56,7 +56,7 @@ def _prepare_keras_net(clazz, image_shape, output_n,
                        load_patterns=False):
     weights = None
     if load_weights is True:
-        weights = ¨imagenet¨
+        weights = "imagenet"
 
     model = clazz(weights=weights)
 
