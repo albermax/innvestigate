@@ -2,12 +2,13 @@ import os
 import setuptools
 
 
-# TODO: update
 requirements = [
     "numpy",
     "scipy",
     "keras",
-    "future"
+    "future",
+	"h5py",
+	"pillow"
 ]
 
 
@@ -37,7 +38,8 @@ def setup():
         author="Maxmilian Alber,Pieter-Jan Kindermans",
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
-        packages=["innvestigate"],
+        packages=[''],
+		package_data={"innvestigate":"examples"},  #TODO:also include images
         install_requires=requirements,
         include_package_data=True,
         zip_safe=False,

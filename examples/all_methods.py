@@ -28,6 +28,7 @@ import sys
 import os
 
 import innvestigate
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
 
@@ -84,9 +85,9 @@ if __name__ == "__main__":
 
     def postprocess(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    color_coding=color_conversion,
-                                    channels_first=channels_first)
+        X = iutils.postprocess_images(X,
+                                      color_coding=color_conversion,
+                                      channels_first=channels_first)
         return X
 
     def image(X):

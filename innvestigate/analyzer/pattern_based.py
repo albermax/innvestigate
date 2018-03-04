@@ -42,15 +42,23 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, *args, patterns=None, **kwargs):
+    def __init__(self, patterns=None, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "PatternNet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            # todo: be more specific here:
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("PatternNet is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         self._patterns = patterns
@@ -113,9 +121,9 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     weights=pattern_weights)
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
-                act_Xs = kutils.easy_apply(self._kernel_layer, Xs)
-                act_Ys = kutils.easy_apply(self._act_layer, act_Xs)
-                pattern_Ys = kutils.easy_apply(self._pattern_layer, Xs)
+                act_Xs = kutils.apply(self._kernel_layer, Xs)
+                act_Ys = kutils.apply(self._act_layer, act_Xs)
+                pattern_Ys = kutils.apply(self._pattern_layer, Xs)
 
                 grad_act = ilayers.GradientWRT(len(act_Xs))
                 grad_pattern = ilayers.GradientWRT(len(Xs))
@@ -125,7 +133,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     tmp = reversed_Ys
                 else:
                     # if linear activation this behaves strange
-                    tmp = utils.listify(grad_act(act_Xs+act_Ys+reversed_Ys))
+                    tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
 
                 return grad_pattern(Xs+pattern_Ys+tmp)
 
@@ -134,9 +142,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         ]
 
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
-        if len(tmp_pattern_idx_stack) == 0:
-            del tmp_pattern_idx_stack
-        else:
+        if len(tmp_pattern_idx_stack) != 0:
             raise Exception("Not all patterns consumed. Something is wrong.")
 
         return ret

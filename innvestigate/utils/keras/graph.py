@@ -171,7 +171,7 @@ def get_input_layers(layer):
     ret = set()
 
     for node_index in range(len(layer._inbound_nodes)):
-        Xs = iutils.listify(layer.get_input_at(node_index))
+        Xs = iutils.to_list(layer.get_input_at(node_index))
         for X in Xs:
             ret.add(X._keras_history[0])
 
@@ -195,8 +195,8 @@ def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
     if not contains_kernel(layer):
         raise NotImplementedError()
 
-    Xs = iutils.listify(layer.get_input_at(node_index))
-    Ys = iutils.listify(layer.get_output_at(node_index))
+    Xs = iutils.to_list(layer.get_input_at(node_index))
+    Ys = iutils.to_list(layer.get_output_at(node_index))
 
     if isinstance(layer, keras.layers.Dense):
         # Xs and Ys are already in shape.
@@ -300,7 +300,7 @@ def copy_layer(layer,
 def pre_softmax_tensors(Xs, should_find_softmax=True):
     softmax_found = False
 
-    Xs = iutils.listify(Xs)
+    Xs = iutils.to_list(Xs)
     ret = []
     for x in Xs:
         layer, node_index, tensor_index = x._keras_history
@@ -424,7 +424,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
             # Trigger reapplication of model.
             model_copy = keras.models.Model(inputs=model.inputs,
                                             outputs=model.outputs)
-            outputs = iutils.listify(model_copy(model.inputs))
+            outputs = iutils.to_list(model_copy(model.inputs))
         finally:
             # Revert the monkey patches
             for layer, old_method in monkey_patches:
@@ -433,7 +433,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         # Now we have the problem that all the tensors
         # do not have a keras_history attribute as they are not part
         # of any node. Apply the flat model to get it.
-        from . import easy_apply
+        from . import apply as kapply
         new_executed_nodes = []
         tensor_mapping = {tmp: tmp for tmp in model.inputs}
         if reapply_on_copied_layers is True:
@@ -443,14 +443,14 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 
         for layer, Xs, Ys in executed_nodes:
             layer = layer_mapping[layer]
-            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
+            Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
 
             if isinstance(layer, keras.layers.InputLayer):
                 # Special case. Do nothing.
                 new_Xs, new_Ys = Xs, Ys
             else:
                 new_Xs = [tensor_mapping[x] for x in Xs]
-                new_Ys = iutils.listify(easy_apply(layer, new_Xs))
+                new_Ys = iutils.to_list(kapply(layer, new_Xs))
 
             tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
             new_executed_nodes.append((layer, new_Xs, new_Ys))
@@ -611,7 +611,7 @@ def reverse_model(model, reverse_mappings,
         elif is_container(layer):
             raise Exception("This is not supposed to happen!")
         else:
-            Xs, Ys = iutils.listify(Xs), iutils.listify(Ys)
+            Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
             if not all([ys in reversed_tensors for ys in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
@@ -628,7 +628,7 @@ def reverse_model(model, reverse_mappings,
                     "model": model,
                     "layer": layer,
                 })
-            reversed_Xs = iutils.listify(reversed_Xs)
+            reversed_Xs = iutils.to_list(reversed_Xs)
             add_reversed_tensors(reverse_id, Xs, reversed_Xs)
 
     # Return requested values #################################################

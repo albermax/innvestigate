@@ -86,23 +86,23 @@ def One(reference=None):
 
 class ZerosLike(keras.layers.Layer):
     def call(self, x):
-        return [K.zeros_like(tmp) for tmp in iutils.listify(x)]
+        return [K.zeros_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class OnesLike(keras.layers.Layer):
     def call(self, x):
-        return [K.ones_like(tmp) for tmp in iutils.listify(x)]
+        return [K.ones_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class AsFloatX(keras.layers.Layer):
     def call(self, x):
-        return [iK.to_floatx(tmp) for tmp in iutils.listify(x)]
+        return [iK.to_floatx(tmp) for tmp in iutils.to_list(x)]
 
 
 class FiniteCheck(keras.layers.Layer):
     def call(self, x):
         return [K.sum(iK.to_floatx(iK.is_not_finite(tmp)))
-                for tmp in iutils.listify(x)]
+                for tmp in iutils.to_list(x)]
 
 
 ###############################################################################
@@ -205,10 +205,10 @@ class _Reduce(keras.layers.Layer):
         else:
             axes = np.arange(len(input_shape))
             if self.keepdims is False:
-                for i in iutils.listify(self.axis):
+                for i in iutils.to_list(self.axis):
                     axes = np.delete(axes, i, 0)
             else:
-                for i in iutils.listify(self.axis):
+                for i in iutils.to_list(self.axis):
                     axes[i] = 1
             return tuple([idx
                           for i, idx in enumerate(input_shape)
@@ -351,7 +351,7 @@ class Divide(keras.layers.Layer):
 
 class SafeDivide(keras.layers.Layer):
 
-    def __init__(self, *args, factor=None, **kwargs):
+    def __init__(self, factor=None, *args, **kwargs):
         if factor is None:
             factor = K.epsilon()
         self._factor = factor
