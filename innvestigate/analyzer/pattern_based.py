@@ -44,13 +44,21 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
     def __init__(self, patterns=None, *args, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "PatternNet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kgraph.contains_activation(
+                    layer, activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            # todo: be more specific here:
+            {
+                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "type": "warning",
+                "mesage": ("PatternNet is only well defined for "
+                           "convolutional neural networks with "
+                           "relu activations."),
+            },
         ]
 
         self._patterns = patterns
