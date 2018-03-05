@@ -427,10 +427,10 @@ LRP_RULES = {
 class LRP(base.ReverseAnalyzerBase):
 
     def __init__(self,
-                 model, 
+                 model, *args,
                  rule=None,
                  input_layer_rule=None,
-                 *args, **kwargs):
+                 **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
