@@ -506,6 +506,7 @@ def reverse_model(model, reverse_mappings,
                   verbose=False,
                   return_all_reversed_tensors=False,
                   clip_all_reversed_tensors=False,
+                  project_bottleneck_tensors=False,
                   reapply_on_copied_layers=False):
 
     # Set default values ######################################################
@@ -537,27 +538,33 @@ def reverse_model(model, reverse_mappings,
                              tensors_list,
                              reversed_tensors_list):
 
-        def add_reversed_tensor(i, xs, reversed_xs):
+        def add_reversed_tensor(i, X, reversed_X):
+            if project_bottleneck_tensors is not False:
+                # todo: add check if is bottleneck tensor.
+                if True:
+                    project = ilayers.Project(*project_bottleneck_tensors)
+                    reversed_X = project(X)
+
             if clip_all_reversed_tensors is not False:
                 clip = ilayers.Clip(*clip_all_reversed_tensors)
-                reversed_xs = clip(reversed_xs)
+                reversed_X = clip(reversed_X)
 
-            if xs not in reversed_tensors:
-                reversed_tensors[xs] = {"id": (reverse_id, i),
-                                        "tensor": reversed_xs}
+            if X not in reversed_tensors:
+                reversed_tensors[X] = {"id": (reverse_id, i),
+                                        "tensor": reversed_X}
             else:
-                tmp = reversed_tensors[xs]
+                tmp = reversed_tensors[X]
                 if "tensor" in tmp and "tensors" in tmp:
                     raise Exception("Wrong order, tensors already aggregated!")
                 if "tensor" in tmp:
-                    tmp["tensors"] = [tmp["tensor"], reversed_xs]
+                    tmp["tensors"] = [tmp["tensor"], reversed_X]
                     del tmp["tensor"]
                 else:
-                    tmp["tensors"].append(reversed_xs)
+                    tmp["tensors"].append(reversed_X)
 
         tmp = zip(tensors_list, reversed_tensors_list)
-        for i, (xs, reversed_xs) in enumerate(tmp):
-            add_reversed_tensor(i, xs, reversed_xs)
+        for i, (X, reversed_X) in enumerate(tmp):
+            add_reversed_tensor(i, X, reversed_X)
 
     def get_reversed_tensor(tensor):
         tmp = reversed_tensors[tensor]
