@@ -42,7 +42,7 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, patterns=None, *args, **kwargs):
+    def __init__(self, *args, patterns=None, **kwargs):
         self._model_checks = [
             (lambda layer: not kgraph.is_relu_convnet_layer(layer),
              "PatternNet is only well defined for "
