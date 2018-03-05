@@ -278,6 +278,27 @@ class Clip(_Map):
         return K.clip(x, self._min_value, self._max_value)
 
 
+class Project(_Map):
+
+    def __init__(self, output_range):
+        self._output_range = output_range
+        return super(Project, self).__init__()
+
+    def _apply_map(self, x):
+        def safe_divide(a, b):
+            return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
+
+        absmax = K.max(K.abs(x),
+                        axis=tuple(range(1, len(x.shape))))
+
+        x = safe_divide(x, absmax)
+        x = K.clip(x, 0, 1)
+
+        output_range = self._output_range
+        x = output_range[0] + (x * (output_range[1]-output_range[0]))
+        return x
+
+
 class Print(_Map):
     def _apply_map(self, x):
         return K.print_tensor(x)
