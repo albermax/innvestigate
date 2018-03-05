@@ -197,8 +197,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
     Analyzer itself is defined as keras graph.
     """
 
-    def __init__(self, model, neuron_selection_mode="max_activation"):
-        super(AnalyzerNetworkBase, self).__init__(model)
+    def __init__(self, model,
+                 neuron_selection_mode="max_activation",
+                 **kwargs):
+        super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
@@ -295,7 +297,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     # Should be specified by the base class.
     _conditional_mappings = []
 
-    def __init__(self, *args,
+    def __init__(self,
+                 model,
                  reverse_verbose=False,
                  reverse_clip_values=False,
                  reverse_check_min_max_values=False,
@@ -308,7 +311,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
             reverse_reapply_on_copied_layers)
-        return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
+        return super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
     def _reverse_mapping(self, layer):
         for condition, reverse_f in self._conditional_mappings:

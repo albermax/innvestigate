@@ -77,9 +77,9 @@ class Deconvnet(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("Deconvnet is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("Deconvnet is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
 
@@ -122,9 +122,9 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("Guided Backprop is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("Guided Backprop is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
 
