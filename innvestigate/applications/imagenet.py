@@ -22,6 +22,7 @@ import keras.applications.inception_v3
 import keras.applications.inception_resnet_v2
 import keras.applications.densenet
 import keras.applications.nasnet
+import keras.backend as K
 import keras.utils.data_utils
 
 from ..utils.keras import graph as kgraph
@@ -49,7 +50,7 @@ __all__ = [
 PATTERN_BASE_URL="to be set"
 
 
-def _prepare_keras_net(clazz, image_shape, output_n,
+def _prepare_keras_net(clazz, image_shape,
                        preprocess_f,
                        color_coding="RGB",
                        load_weights=False,
