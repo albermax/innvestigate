@@ -9,7 +9,7 @@ requirements = [
     "future",
     "h5py",
     "pillow",
-    "matplotlib"
+    "matplotlib"  #TODO: should matplotlib be in the requirements or listed somewhere as "good-to-have"?
 ]
 
 
@@ -36,10 +36,10 @@ def setup():
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber,Pieter-Jan Kindermans",
+        author="Maxmilian Alber,Pieter-Jan Kindermans",  #TODO:Extend author list
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
-        packages=setuptools.find_packages(),
+        packages=setuptools.find_packages(),  #TODO: example folder incl images
         install_requires=requirements,
         include_package_data=True,
         zip_safe=False,

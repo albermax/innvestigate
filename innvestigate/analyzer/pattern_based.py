@@ -42,7 +42,7 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, patterns=None, *args, **kwargs):
+    def __init__(self, *args, patterns=None, **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
