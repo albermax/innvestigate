@@ -58,20 +58,14 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    tmp = getattr(innvestigate.applications.imagenet, netname)()
-    net = tmp(load_weights=True)
+    tmp = getattr(innvestigate.applications.imagenet, netname)
+    # todo: specify type of patterns:
+    net = tmp(load_weights=True, load_patterns=pattern_type)
     model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
     modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
 
-    patterns_file = np.load(
-        "%s_patterns_type_%s_tf_dim_ordering_tf_kernels.npz" %
-        (pattern_type, netname))
-    patterns = [patterns_file["arr_%i" % i]
-                for i in range(len((patterns_file.keys())))]
-
-    print("\n".join([str((x.min(), x.mean(), x.max())) for x in patterns]))
     ###########################################################################
     # Utility functions.
     ###########################################################################
@@ -108,6 +102,7 @@ if __name__ == "__main__":
     # Analysis.
     ###########################################################################
 
+    patterns = net["patterns"]
     # Methods we use and some properties.
     methods = [
         # NAME             POSTPROCESSING     TITLE
