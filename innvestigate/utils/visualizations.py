@@ -93,3 +93,10 @@ def clip_quantile(X, quantile=1):
     X[X > high] = high
 
     return X
+
+
+def batch_flatten(x):
+    # Flattens all but the first dimensions of a numpy array, i.e. flatten each sample in a batch
+    if not isinstance(x, np.ndarray):
+        raise TypeError("Only applicable to Numpy arrays.")
+    return x.reshape(x.shape[0], -1)
