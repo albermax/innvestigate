@@ -73,9 +73,9 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("BaselineLRPZ is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("BaselineLRPZ is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
         super(BaselineLRPZ, self).__init__(*args, **kwargs)
@@ -427,10 +427,10 @@ LRP_RULES = {
 class LRP(base.ReverseAnalyzerBase):
 
     def __init__(self,
-                 model, 
+                 model, *args,
                  rule=None,
                  input_layer_rule=None,
-                 *args, **kwargs):
+                 **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
@@ -442,8 +442,8 @@ class LRP(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("LRP is only tested for "
-                           "convolutional neural networks."),
+                "message": ("LRP is only tested for "
+                            "convolutional neural networks."),
             },
         ]
 

@@ -42,7 +42,7 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, patterns=None, *args, **kwargs):
+    def __init__(self, model, patterns=None, **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
@@ -55,9 +55,9 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("PatternNet is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("PatternNet is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
 
@@ -66,7 +66,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             # copy pattern references
             self._patterns = list(patterns)
 
-        return super(PatternNet, self).__init__(*args, **kwargs)
+        return super(PatternNet, self).__init__(model, **kwargs)
 
     def _prepare_pattern(self, layer, state, pattern):
         return pattern
