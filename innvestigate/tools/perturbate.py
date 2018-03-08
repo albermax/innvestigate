@@ -10,20 +10,19 @@ import six
 # End: Python 2/3 compatability header small
 
 import numpy as np
-import heapq
+import math
 import warnings
 
 import keras
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
-from innvestigate.utils.visualizations import batch_flatten
-
 
 class Perturbation:
     """Perturbation of pixels based on analysis result."""
 
-    def __init__(self, perturbation_function, ratio=0.05, reduce_function=np.mean):
+    def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
+                 aggregation_function=np.max, pad_mode="reflect"):
         """
         :param perturbation_function: Defines the function with which the samples are perturbated. Can be a callable or a string that defines a predefined perturbation function.
         :type perturbation_function: callable or str
@@ -47,53 +46,70 @@ class Perturbation:
         else:
             raise TypeError("Cannot handle perturbation function of type {}.".format(type(perturbation_function)))
 
-        self.ratio = ratio  # How many of the pixels should be perturbated
+        self.ratio = ratio
+        self.region_shape = region_shape
         self.reduce_function = reduce_function
+        self.aggregation_function = aggregation_function
 
-    def calculate_thresholds_on_batch(self, a, num_perturbated_pixels):
-        """
-        Sorts pixels according to analysis result and returns the value of the num_perturbated_pixels highest pixel.
+        self.pad_mode = pad_mode  # numpy.pad
 
-        :param a: Analysis result.
-        :type a: numpy.ndarray
-        :param num_perturbated_pixels: The value of the num_perturbated_pixels highest pixel is taken as threshold.
-        :type num_perturbated_pixels: int
-        :return: Thresholds, one per sample in batch.
-        :rtype: numpy.ndarray
-        """
-        # TODO do not compute threshold but directly the indices (thresholds has advantages, though)
-        # Sort the values and take the num_perturbated_pixels'th entry as threshold
-        thresholds = np.array([heapq.nlargest(num_perturbated_pixels, sample)[-1] for sample in batch_flatten(a)])
-        return thresholds.reshape(a.shape[0], 1, 1, 1)
+    def compute_perturbation_mask(self, aggregated_regions, ratio):
+        # Get indices and values
+        thresholds = np.percentile(aggregated_regions, math.ceil(100 * (1 - ratio)), axis=(1, 2, 3), keepdims=True)
+        perturbation_mask_regions = aggregated_regions >= thresholds
 
-    def perturbate_on_batch(self, x, a, in_place=True):
+        return perturbation_mask_regions
+
+    def reshape_regions_to_pixels(self, regions, target_shape):
+        # Resize to pixels (repeat values). (n, c, hr, wr) -> (n, c,
+        regions_reshaped = np.expand_dims(np.expand_dims(regions, axis=3), axis=5)
+        pixels = np.repeat(regions_reshaped, self.region_shape[0], axis=3)
+        pixels = np.repeat(pixels, self.region_shape[1], axis=5)
+        pixels = pixels.reshape(target_shape)
+        assert regions.shape[0] == pixels.shape[0] and regions.shape[1] == pixels.shape[1]
+        return pixels
+
+    def perturbate_on_batch(self, x, analysis, in_place=True):
         """
         :param x: Batch of images.
         :type x: numpy.ndarray
-        :param a: Analysis of this batch.
-        :type a: numpy.ndarray
+        :param analysis: Analysis of this batch.
+        :type analysis: numpy.ndarray
         :param in_place: If true, samples are perturbated in place.
         :type in_place: bool
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
-        assert a.shape == x.shape, a.shape
+        assert analysis.shape == x.shape, analysis.shape
         # reduce the analysis along channel axis -> n x 1 x h x w
-        a = self.reduce_function(a, axis=1, keepdims=True)
-        assert a.shape == (x.shape[0], 1, x.shape[2], x.shape[3]), a.shape
+        analysis = self.reduce_function(analysis, axis=1, keepdims=True)
+        assert analysis.shape == (x.shape[0], 1, x.shape[2], x.shape[3]), analysis.shape
 
-        num_perturbated_pixels = int(self.ratio * x.shape[2] * x.shape[3])
-        # Calculate one threshold per sample. If a value is higher than the threshold, it should be perturbated.
-        thresholds = self.calculate_thresholds_on_batch(a, num_perturbated_pixels)
-        assert thresholds.shape == (x.shape[0], 1, 1, 1), thresholds.shape
+        # Padding
+        if not np.all(np.array(analysis.shape[2:]) % self.region_shape == 0):
+            pad_shape = self.region_shape - np.array(analysis.shape[2:]) % self.region_shape
+            assert np.all(pad_shape < self.region_shape)
 
-        perturbation_mask = a >= thresholds  # mask with ones where the input should be perturbated, zeros otherwise
-        try:
-            assert np.all(np.sum(perturbation_mask, axis=(1, 2,
-                                                          3)) == num_perturbated_pixels), "Discrepancy between desired number of perturbations ({}) and actual number of perturbations ({}).".format(
-                num_perturbated_pixels, np.sum(perturbation_mask, axis=(1, 2, 3)))
-        except AssertionError as error:
-            pass  # TODO
+            # Pad half the window before and half after (on h and w axes)
+            pad_shape_before = (pad_shape / 2).astype(int)
+            pad_shape_after = pad_shape - pad_shape_before
+            pad_shape = (
+                (0, 0), (0, 0), (pad_shape_before[0], pad_shape_after[0]), (pad_shape_before[1], pad_shape_after[1]))
+            analysis = np.pad(analysis, pad_shape, self.pad_mode)
+            assert np.all(np.array(analysis.shape[2:]) % self.region_shape == 0), analysis.shape[2:]
+        aggregated_shape = tuple((np.array(analysis.shape[2:]) / self.region_shape).astype(int))
+        regions = analysis.reshape(
+            (analysis.shape[0], analysis.shape[1], aggregated_shape[0], self.region_shape[0], aggregated_shape[1],
+             self.region_shape[1]))
+        aggregated_regions = self.aggregation_function(regions, axis=(3, 5))
+
+        # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
+        perturbation_mask_regions = self.compute_perturbation_mask(aggregated_regions, self.ratio)
+        perturbation_mask = self.reshape_regions_to_pixels(perturbation_mask_regions, analysis.shape)
+        assert np.all(np.sum(perturbation_mask, axis=(1, 2, 3)) / (perturbation_mask.shape[2] * perturbation_mask.shape[
+            3]) >= self.ratio), "Too little perturbed pixels ({}).".format(np.sum(perturbation_mask, axis=(1, 2, 3)))
+        # Crop the original image region to remove the padding
+        perturbation_mask = perturbation_mask[:x.shape[0], :x.shape[1], :x.shape[2], :x.shape[3]]
 
         # Perturbate
         x_perturbated = x if in_place else np.copy(x)
@@ -106,6 +122,7 @@ class PerturbationAnalysis:
     """
     Performs the perturbation analysis.
     """
+
     def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=True):
         """
         :param analyzer: Analyzer.
