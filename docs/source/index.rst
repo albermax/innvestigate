@@ -10,6 +10,20 @@ Welcome to iNNvestigate's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+Explain here what this is.
+
+
+API reference
+=============
+
+.. toctree::
+  :maxdepth: 2
+
+  modules/innvestigate
+  modules/analyzer
+  modules/applications
+  modules/tools
+  modules/utils
 
 
 Indices and tables
@@ -18,3 +32,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
