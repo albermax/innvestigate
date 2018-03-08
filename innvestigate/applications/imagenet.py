@@ -25,6 +25,7 @@ import keras.applications.densenet
 import keras.applications.nasnet
 import keras.backend as K
 import keras.utils.data_utils
+import numpy as np
 
 from ..utils.keras import graph as kgraph
 
@@ -48,8 +49,48 @@ __all__ = [
 ###############################################################################
 
 
-PATTERN_BASE_URL = "to be set"
-PATTERN_HASHES = {}
+PATTERNS = {
+    "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "resnet50_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/57jekbe8peer46i/resnet50_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "inception_v3_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "inception_resnet_v2_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "densenet121_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "densenet169_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/v6lkmvck0hrc1he/densenet169_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": "d1c82edf2e473d43739664605bb777e",
+    },
+    "densenet201_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "nasnet_large_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "nasnet_mobile_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+}
 
 
 def _get_patterns_info(netname, pattern_type):
@@ -60,7 +101,8 @@ def _get_patterns_info(netname, pattern_type):
                  (netname, pattern_type))
 
     return {"file_name": file_name,
-            "hash": PATTERN_HASHES.get(file_name, None)}
+            "url": PATTERNS[file_name]["url"],
+            "hash": PATTERNS[file_name]["hash"]}
 
 
 ###############################################################################
@@ -95,53 +137,15 @@ def _prepare_keras_net(clazz, image_shape,
 
     net["patterns"] = None
     if load_patterns is not False:
-        # Temporary workaround to keep the examples going:
-        pattern_file = "./imagenet_224_vgg_16.pattern_file.A_only.npz"
-        pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.patterns.A_only.npz?dl=1"
-
-        import os
-        import shutil
-        import numpy as np
-
-        def download(url, filename):
-            if not os.path.exists(filename):
-                print("Download: %s ---> %s" % (url, filename))
-                response = six.moves.urllib.request.urlopen(url)
-                with open(filename, 'wb') as out_file:
-                    shutil.copyfileobj(response, out_file)
-
-        def load_patterns(filename):
-            f = np.load(filename)
-
-            ret = {}
-            for prefix in ["A", "r", "mu"]:
-                l = sum([x.startswith(prefix) for x in f.keys()])
-                ret.update({prefix: [f["%s_%i" % (prefix, i)] for i in range(l)]})
-
-            return ret["A"]
-
-        def lasagne_weights_to_keras_weights(weights):
-            ret = []
-            for w in weights:
-                if len(w.shape) < 4:
-                    ret.append(w)
-                else:
-                    ret.append(w.transpose(2, 3, 1, 0))
-            return ret
-
-        # Download the necessary parameters for VGG16 and the according patterns.
-        download(pattern_url, pattern_file)
-        patterns = lasagne_weights_to_keras_weights(load_patterns(pattern_file))
-        net["patterns"] = patterns
-
-        # Code that should be used in the future:
-        if False:
-            weights_path = keras.utils.data_utils.get_file(
-                load_patterns["file_name"],
-                PATTERN_BASE_URL % load_patterns["file_name"],
-                cache_subdir="innvestigate_patterns",
-                file_hash=load_patterns["hash"])
-            # todo: add loading too.
+        patterns_path = keras.utils.data_utils.get_file(
+            load_patterns["file_name"],
+            load_patterns["url"],
+            cache_subdir="innvestigate_patterns",
+            file_hash=None,#load_patterns["hash"],
+            hash_algorithm="md5")
+        patterns_file = np.load(patterns_path)
+        patterns = [patterns_file["arr_%i" % i]
+                    for i in range(len(patterns_file.keys()))]
     return net
 
 
