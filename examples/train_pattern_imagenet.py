@@ -140,8 +140,8 @@ if __name__ == "__main__":
         use_multiprocessing=use_multiprocessing,
         verbose=1)
 
-    np.savez("%s_patterns_type_%s_tf_dim_ordering_tf_kernels.npz" %
-             (pattern_type, netname),
+    np.savez("%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" %
+             (netname, pattern_type),
              *patterns)
 
     ###########################################################################
