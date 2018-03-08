@@ -31,6 +31,13 @@ from .relevance_based import *
 
 # todo: update lrp; it is confusing as is.
 def create_analyzer(name, model, **kwargs):
+    '''
+
+    :param name:
+    :param model:
+    :param kwargs:
+    :return:
+    '''
     return {
         # Utility.
         "input": Input,
