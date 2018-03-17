@@ -30,7 +30,7 @@ __all__ = [
 ###############################################################################
 
 
-def applyy(layer, inputs):
+def apply(layer, inputs):
     """
     Apply a layer to input[s].
 
