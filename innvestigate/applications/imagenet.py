@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 import keras.applications.resnet50
 import keras.applications.vgg16
 import keras.applications.vgg19
@@ -24,6 +25,7 @@ import keras.applications.densenet
 import keras.applications.nasnet
 import keras.backend as K
 import keras.utils.data_utils
+import numpy as np
 
 from ..utils.keras import graph as kgraph
 
@@ -47,7 +49,65 @@ __all__ = [
 ###############################################################################
 
 
-PATTERN_BASE_URL="to be set"
+PATTERNS = {
+    "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "resnet50_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/57jekbe8peer46i/resnet50_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": ""
+    },
+    "inception_v3_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "inception_resnet_v2_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "densenet121_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "densenet169_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "https://www.dropbox.com/s/v6lkmvck0hrc1he/densenet169_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "hash": "d1c82edf2e473d43739664605bb777e",
+    },
+    "densenet201_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "nasnet_large_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+    "nasnet_mobile_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
+        "url": "",
+        "hash": ""
+    },
+}
+
+
+def _get_patterns_info(netname, pattern_type):
+    if pattern_type is True:
+        pattern_type = "relu"
+
+    file_name = ("%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" %
+                 (netname, pattern_type))
+
+    return {"file_name": file_name,
+            "url": PATTERNS[file_name]["url"],
+            "hash": PATTERNS[file_name]["hash"]}
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 def _prepare_keras_net(clazz, image_shape,
@@ -77,12 +137,15 @@ def _prepare_keras_net(clazz, image_shape,
 
     net["patterns"] = None
     if load_patterns is not False:
-        weights_path = keras.utils.data_utils.get_file(
+        patterns_path = keras.utils.data_utils.get_file(
             load_patterns["file_name"],
-            PATTERN_BASE_URL % load_patterns["file_name"],
+            load_patterns["url"],
             cache_subdir="innvestigate_patterns",
-            file_hash=load_patterns["hash"])
-
+            file_hash=None,#load_patterns["hash"],
+            hash_algorithm="md5")
+        patterns_file = np.load(patterns_path)
+        patterns = [patterns_file["arr_%i" % i]
+                    for i in range(len(patterns_file.keys()))]
     return net
 
 
@@ -92,11 +155,8 @@ def _prepare_keras_net(clazz, image_shape,
 
 
 def vgg16(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("vgg16", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.vgg16.VGG16,
@@ -108,11 +168,8 @@ def vgg16(load_weights=False, load_patterns=False):
 
 
 def vgg19(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("vgg19", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.vgg19.VGG19,
@@ -129,11 +186,8 @@ def vgg19(load_weights=False, load_patterns=False):
 
 
 def resnet50(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "resnet50_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("resnet50", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.resnet50.ResNet50,
@@ -150,11 +204,8 @@ def resnet50(load_weights=False, load_patterns=False):
 
 
 def inception_v3(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "inception_v3_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("inception_v3", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.inception_v3.InceptionV3,
@@ -170,11 +221,9 @@ def inception_v3(load_weights=False, load_patterns=False):
 
 
 def inception_resnet_v2(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "inception_resnet_v2_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("inception_resnet_v2",
+                                           load_patterns)
 
     return _prepare_keras_net(
         keras.applications.inception_resnet_v2.InceptionResNetV2,
@@ -190,11 +239,8 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
 
 
 def densenet121(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "densenet_121_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("densenet121", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.densenet.DenseNet121,
@@ -205,11 +251,8 @@ def densenet121(load_weights=False, load_patterns=False):
 
 
 def densenet169(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "densenet169_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("densenet169", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.densenet.DenseNet169,
@@ -220,11 +263,8 @@ def densenet169(load_weights=False, load_patterns=False):
 
 
 def densenet201(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "densene201_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("densenet201", load_patterns)
 
     return _prepare_keras_net(
         keras.applications.densenet.DenseNet201,
@@ -240,11 +280,8 @@ def densenet201(load_weights=False, load_patterns=False):
 
 
 def nasnet_large(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "nasnet_large_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("nasnet_large", load_patterns)
 
     if K.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
@@ -259,11 +296,8 @@ def nasnet_large(load_weights=False, load_patterns=False):
 
 
 def nasnet_mobile(load_weights=False, load_patterns=False):
-    if load_patterns is True:
-        load_patterns = {
-            "file_name": "nasnet_mobile_pattern_type_relu_tf_dim_ordering_tf_kernels.npz",
-            "hash": "",
-        }
+    if load_patterns is not False:
+        load_patterns = _get_patterns_info("nasnet_mobile", load_patterns)
 
     if K.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")

@@ -77,9 +77,9 @@ class Deconvnet(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("Deconvnet is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("Deconvnet is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
 
@@ -122,9 +122,9 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
                 "type": "warning",
-                "mesage": ("Guided Backprop is only well defined for "
-                           "convolutional neural networks with "
-                           "relu activations."),
+                "message": ("Guided Backprop is only well defined for "
+                            "convolutional neural networks with "
+                            "relu activations."),
             },
         ]
 
@@ -149,7 +149,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 class IntegratedGradients(wrapper.PathIntegrator):
 
-    def __init__(self, model, steps=64, *args, **kwargs):
+    def __init__(self, model, *args, steps=64, **kwargs):
         subanalyzer = Gradient(model)
         return super(IntegratedGradients, self).__init__(subanalyzer,
                                                          *args,
@@ -164,7 +164,7 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 class SmoothGrad(wrapper.GaussianSmoother):
 
-    def __init__(self, model, augment_by_n=64, *args, **kwargs):
+    def __init__(self, model, *args, augment_by_n=64, **kwargs):
         subanalyzer = Gradient(model)
         return super(SmoothGrad, self).__init__(
             subanalyzer,

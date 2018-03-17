@@ -73,7 +73,7 @@ class AnalyzerBase(object):
                         raise NotImplementedError()
         pass
 
-    def fit(self, disable_no_training_warning=False, *args, **kwargs):
+    def fit(self, *args, disable_no_training_warning=False, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -81,8 +81,8 @@ class AnalyzerBase(object):
                           " Still fit() is called.", RuntimeWarning)
         pass
 
-    def fit_generator(self, 
-                      disable_no_training_warning=False, *args, **kwargs):
+    def fit_generator(self, *args,
+                      disable_no_training_warning=False, **kwargs):
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -179,7 +179,7 @@ class OneEpochTrainerMixin(TrainerMixin):
     def fit(self, *args, **kwargs):
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, steps=None, *args, **kwargs):
+    def fit_generator(self, *args, steps=None, **kwargs):
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
@@ -197,8 +197,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
     Analyzer itself is defined as keras graph.
     """
 
-    def __init__(self, model, neuron_selection_mode="max_activation"):
-        super(AnalyzerNetworkBase, self).__init__(model)
+    def __init__(self, model,
+                 neuron_selection_mode="max_activation",
+                 **kwargs):
+        super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
@@ -296,12 +298,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     _conditional_mappings = []
 
     def __init__(self,
+                 model,
                  reverse_verbose=False,
                  reverse_clip_values=False,
                  reverse_check_min_max_values=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
-				 *args,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_clip_values = reverse_clip_values
@@ -309,7 +311,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
             reverse_reapply_on_copied_layers)
-        return super(ReverseAnalyzerBase, self).__init__(*args, **kwargs)
+        return super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
     def _reverse_mapping(self, layer):
         for condition, reverse_f in self._conditional_mappings:
