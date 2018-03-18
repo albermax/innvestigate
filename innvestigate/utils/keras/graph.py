@@ -1,3 +1,4 @@
+
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
 from __future__ import\
@@ -542,7 +543,7 @@ def reverse_model(model, reverse_mappings,
             if project_bottleneck_tensors is not False:
                 # todo: add check if is bottleneck tensor.
                 if True:
-                    project = ilayers.Project(*project_bottleneck_tensors)
+                    project = ilayers.Project(project_bottleneck_tensors)
                     reversed_X = project(X)
 
             if clip_all_reversed_tensors is not False:
