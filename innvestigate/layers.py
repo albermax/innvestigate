@@ -280,8 +280,9 @@ class Clip(_Map):
 
 class Project(_Map):
 
-    def __init__(self, output_range):
+    def __init__(self, output_range=False, input_is_postive_only=False):
         self._output_range = output_range
+        self._input_is_positive_only = input_is_postive_only
         return super(Project, self).__init__()
 
     def _apply_map(self, x):
@@ -290,12 +291,19 @@ class Project(_Map):
 
         absmax = K.max(K.abs(x),
                        axis=tuple(range(1, len(x.shape))))
-
         x = safe_divide(x, absmax)
-        x = K.clip(x, 0, 1)
 
-        output_range = self._output_range
-        x = output_range[0] + (x * (output_range[1]-output_range[0]))
+        if self._output_range is not False:
+            output_range = self._output_range
+
+            if not self._input_is_positive_only:
+                x = (x+1) / 2
+            x = K.clip(x, 0, 1)
+
+            x = output_range[0] + (x * (output_range[1]-output_range[0]))
+        else:
+            x = K.clip(x, -1, 1)
+
         return x
 
 
