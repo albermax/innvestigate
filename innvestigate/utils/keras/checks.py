@@ -19,6 +19,20 @@ import inspect
 import keras.backend as K
 import keras.engine.topology
 import keras.layers
+import keras.layers.advanced_activations
+import keras.layers.convolutional
+import keras.layers.convolutional_recurrent
+import keras.layers.core
+import keras.layers.cudnn_recurrent
+import keras.layers.embeddings
+import keras.layers.local
+import keras.layers.merge
+import keras.layers.noise
+import keras.layers.normalization
+import keras.layers.pooling
+import keras.layers.recurrent
+import keras.layers.wrappers
+import keras.legacy.layers
 
 
 __all__ = [
@@ -27,6 +41,7 @@ __all__ = [
 
     "contains_activation",
     "contains_kernel",
+    "only_relu_activation",
     "is_container",
     "is_convnet_layer",
     "is_relu_convnet_layer",
@@ -40,7 +55,7 @@ __all__ = [
 
 def get_known_layers():
     """
-    Returns a list of keras layer we are aware of and we should support.
+    Returns a list of keras layer we are aware of.
     """
 
     # Inside function to not break import if Keras changes.
@@ -135,12 +150,12 @@ def get_current_layers():
     """
     Returns a list of currently available layers in Keras.
     """
-    class_set = set([getattr(keras.layers, name)
+    class_set = set([(getattr(keras.layers, name), name)
                      for name in dir(keras.layers)
                      if (inspect.isclass(getattr(keras.layers, name)) and
                          issubclass(getattr(keras.layers, name),
                                     keras.engine.topology.Layer))])
-    return list(class_set)
+    return [x[1] for x in sorted((str(x[0]), x[1]) for x in class_set)]
 
 
 ###############################################################################
@@ -191,6 +206,13 @@ def contains_bias(layer):
         return False
 
 
+def only_relu_activation(layer):
+    return (not contains_activation(layer) or
+            contains_activation(layer, None) or
+            contains_activation(layer, "linear") or
+            contains_activation(layer, "relu"))
+
+
 def is_container(layer):
     return isinstance(layer, keras.engine.topology.Container)
 
@@ -201,11 +223,7 @@ def is_convnet_layer(layer):
 
 
 def is_relu_convnet_layer(layer):
-    return (is_convnet_layer(layer) and
-            (not contains_activation(layer) or
-             contains_activation(layer, None) or
-             contains_activation(layer, "linear") or
-             contains_activation(layer, "relu")))
+    return (is_convnet_layer(layer) and only_relu_activation(layer))
 
 
 def is_input_layer(layer):
