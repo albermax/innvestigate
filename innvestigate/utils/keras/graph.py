@@ -544,7 +544,7 @@ def reverse_model(model, reverse_mappings,
                 # todo: add check if is bottleneck tensor.
                 if True:
                     project = ilayers.Project(project_bottleneck_tensors)
-                    reversed_X = project(X)
+                    reversed_X = project(reversed_X)
 
             if clip_all_reversed_tensors is not False:
                 clip = ilayers.Clip(*clip_all_reversed_tensors)
