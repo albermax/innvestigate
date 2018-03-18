@@ -24,17 +24,12 @@ import numpy as np
 
 
 from .. import keras as kutils
+from . import checks as kchecks
 from ... import layers as ilayers
 from ... import utils as iutils
 
 
 __all__ = [
-    "contains_activation",
-    "contains_kernel",
-    "is_container",
-    "is_convnet_layer",
-    "is_relu_convnet_layer",
-
     "get_kernel",
 
     "get_layer_inbound_count",
@@ -53,107 +48,6 @@ __all__ = [
     "ReverseMappingBase",
     "reverse_model",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def contains_activation(layer, activation=None):
-    """
-    Check whether the layer contains an activation function.
-    activation is None then we only check if layer can contain an activation.
-    """
-
-    # todo: add test and check this more throughroughly.
-    # rely on Keras convention.
-    if hasattr(layer, "activation"):
-        if activation is not None:
-            return layer.activation == keras.activations.get(activation)
-        else:
-            return True
-    else:
-        return False
-
-
-def contains_kernel(layer):
-    """
-    Check whether the layer contains a kernel.
-    """
-
-    # todo: add test and check this more throughroughly.
-    # rely on Keras convention.
-    if hasattr(layer, "kernel"):
-        return True
-    else:
-        return False
-
-
-def contains_bias(layer):
-    """
-    Check whether the layer contains a bias.
-    """
-
-    # todo: add test and check this more throughroughly.
-    # rely on Keras convention.
-    if hasattr(layer, "bias"):
-        return True
-    else:
-        return False
-
-
-def is_container(layer):
-    return isinstance(layer, keras.engine.topology.Container)
-
-
-def is_convnet_layer(layer):
-    # todo: add checks, e.g., no recurrent layers
-    return True
-
-
-def is_relu_convnet_layer(layer):
-    return (is_convnet_layer(layer) and
-            (not contains_activation(layer) or
-             contains_activation(layer, None) or
-             contains_activation(layer, "linear") or
-             contains_activation(layer, "relu")))
-
-
-def is_input_layer(layer):
-    # Triggers if ALL inputs of layer are connected
-    # to a Keras input layer object or
-    # the layer itself is the first layer.
-
-    layer_inputs = get_input_layers(layer)
-    # We ignore certain layers, that do not modify
-    # the data content.
-    # todo: update this list!
-    IGNORED_LAYERS = (
-        keras.layers.Flatten,
-        keras.layers.Permute,
-        keras.layers.Reshape,
-    )
-    while any([isinstance(x, IGNORED_LAYERS) for x in layer_inputs]):
-        tmp = set()
-        for l in layer_inputs:
-            if isinstance(l, IGNORED_LAYERS):
-                tmp.update(get_input_layers(l))
-            else:
-                tmp.add(l)
-        layer_inputs = tmp
-
-    if all([isinstance(x, keras.layers.InputLayer)
-            for x in layer_inputs]):
-        return True
-    elif getattr(layer, "input_shape", None) is not None:
-        # relies on Keras convention
-        return True
-    elif getattr(layer, "batch_input_shape", None) is not None:
-        # relies on Keras convention
-        return True
-    else:
-        return False
 
 
 ###############################################################################
@@ -192,7 +86,7 @@ def get_layer_outbound_count(layer):
 
 
 def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
-    if not contains_kernel(layer):
+    if not kchecks.contains_kernel(layer):
         raise NotImplementedError()
 
     Xs = iutils.to_list(layer.get_input_at(node_index))
@@ -271,7 +165,7 @@ def copy_layer_wo_activation(layer,
         config["name"] = None
     else:
         config["name"] = name_template % config["name"]
-    if contains_activation(layer):
+    if kchecks.contains_activation(layer):
         config["activation"] = None
     if keep_bias is False and config.get("use_bias", False):
         config["use_bias"] = False
@@ -304,7 +198,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
     ret = []
     for x in Xs:
         layer, node_index, tensor_index = x._keras_history
-        if contains_activation(layer, activation="softmax"):
+        if kchecks.contains_activation(layer, activation="softmax"):
             softmax_found = True
             if isinstance(layer, keras.layers.Activation):
                 ret.append(layer.get_input_at(node_index)[0])
@@ -336,7 +230,7 @@ def get_model_layers(model):
         for layer in container.layers:
             assert layer not in ret
             ret.append(layer)
-            if is_container(layer):
+            if kchecks.is_container(layer):
                 collect_layers(layer)
     collect_layers(model)
 
@@ -377,7 +271,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 
     # Check if some layers are containers.
     # Ignoring the outermost container, i.e. the passed model.
-    contains_container = any([((l is not model) and is_container(l))
+    contains_container = any([((l is not model) and kchecks.is_container(l))
                               for l in layers])
 
     # If so rebuild the graph, otherwise recycle computations,
@@ -608,7 +502,7 @@ def reverse_model(model, reverse_mappings,
         if isinstance(layer, keras.layers.InputLayer):
             # Special case. Do nothing.
             pass
-        elif is_container(layer):
+        elif kchecks.is_container(layer):
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)

@@ -26,6 +26,7 @@ from . import base
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -64,14 +65,15 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
             # todo: check for max pooling too!
             {
-                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "check":
+                lambda layer: not kchecks.is_relu_convnet_layer(layer),
                 "type": "warning",
                 "message": ("BaselineLRPZ is only well defined for "
                             "convolutional neural networks with "
@@ -434,13 +436,13 @@ class LRP(base.ReverseAnalyzerBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
             {
-                "check": lambda layer: not kgraph.is_convnet_layer(layer),
+                "check": lambda layer: not kchecks.is_convnet_layer(layer),
                 "type": "warning",
                 "message": ("LRP is only tested for "
                             "convolutional neural networks."),
@@ -511,7 +513,7 @@ class LRP(base.ReverseAnalyzerBase):
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
         self._conditional_mappings = [
-            (kgraph.contains_kernel, ReverseLayer),
+            (kchecks.contains_kernel, ReverseLayer),
         ]
         return super(LRP, self).__init__(model, *args, **kwargs)
 
