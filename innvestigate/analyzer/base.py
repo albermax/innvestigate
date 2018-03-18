@@ -61,9 +61,8 @@ class AnalyzerBase(object):
 
             checked = kgraph.model_contains(self._model, checks,
                                             return_only_counts=True)
-            for check_count, message, check_type in zip(iutils.to_list(checked),
-                                                        messages,
-                                                        types):
+            tmp = zip(iutils.to_list(checked), messages, types)
+            for check_count, message, check_type in tmp:
                 if check_count > 0:
                     if check_type == "exception":
                         raise Exception(message)
