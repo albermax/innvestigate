@@ -26,6 +26,7 @@ from .. import layers as ilayers
 from .. import utils
 from .. import tools as itools
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -46,14 +47,15 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
             # todo: be more specific here:
             {
-                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "check":
+                lambda layer: not kchecks.is_relu_convnet_layer(layer),
                 "type": "warning",
                 "message": ("PatternNet is only well defined for "
                             "convolutional neural networks with "
@@ -138,7 +140,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                 return grad_pattern(Xs+pattern_Ys+tmp)
 
         self._conditional_mappings = [
-            (kgraph.contains_kernel, ReverseLayer),
+            (kchecks.contains_kernel, ReverseLayer),
         ]
 
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
