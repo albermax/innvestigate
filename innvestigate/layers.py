@@ -293,7 +293,7 @@ class Project(_Map):
                        axis=tuple(range(1, len(x.shape))))
         x = safe_divide(x, absmax)
 
-        if self._output_range is not False:
+        if self._output_range not in (False, True):  # True = (-1, +1)
             output_range = self._output_range
 
             if not self._input_is_positive_only:
