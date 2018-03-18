@@ -172,4 +172,5 @@ if __name__ == "__main__":
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,
                            col_label_offset=-50,
-                           usetex=True, file_name="all_methods.pdf")
+                           usetex=True,
+                           file_name="all_methods_%s.pdf" % netname)
