@@ -146,6 +146,7 @@ def _prepare_keras_net(clazz, image_shape,
         patterns_file = np.load(patterns_path)
         patterns = [patterns_file["arr_%i" % i]
                     for i in range(len(patterns_file.keys()))]
+        net["patterns"] = patterns
     return net
 
 
