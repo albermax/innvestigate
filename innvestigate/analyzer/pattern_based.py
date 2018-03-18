@@ -75,7 +75,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                           "'reverse_project_bottleneck_layers' "
                           "is overwritten.")
         else:
-            kwargs["reverse_project_bottleneck_layers"] = False
+            kwargs["reverse_project_bottleneck_layers"] = True
 
         return super(PatternNet, self).__init__(model, **kwargs)
 
@@ -146,9 +146,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     # if linear activation this behaves strange
                     tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
 
-                ret = grad_pattern(Xs+pattern_Ys+tmp)
-                ret = ilayers.Project()(ret)
-                return ret
+                return grad_pattern(Xs+pattern_Ys+tmp)
 
         self._conditional_mappings = [
             (kgraph.contains_kernel, ReverseLayer),
