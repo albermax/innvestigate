@@ -50,6 +50,7 @@ def _get_active_neuron_io(layer, active_node_indices,
     if len(tmp) == 1:
         return tmp[0]
     else:
+        raise NotImplementedError("This code seems not to handle several Ys.")
         # Layer is applied several times in model.
         # Concatenate the io of the applications.
         concatenate = keras.layers.Concatenate(axis=0)
