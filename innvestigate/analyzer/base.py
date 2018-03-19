@@ -56,7 +56,7 @@ class AnalyzerBase(object):
 
         if not self._disable_model_checks and len(self._model_checks) > 0:
             checks = [x["check"] for x in self._model_checks]
-            types = [x.get("types", "exception") for x in self._model_checks]
+            types = [x.get("type", "exception") for x in self._model_checks]
             messages = [x["message"] for x in self._model_checks]
 
             checked = kgraph.model_contains(self._model, checks,
@@ -67,6 +67,8 @@ class AnalyzerBase(object):
                     if check_type == "exception":
                         raise Exception(message)
                     elif check_type == "warning":
+                        # TODO: fix only first warning is showed.
+                        # but all should be.
                         warnings.warn(message)
                     else:
                         raise NotImplementedError()

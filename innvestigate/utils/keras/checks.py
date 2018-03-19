@@ -26,7 +26,6 @@ import keras.layers.core
 import keras.layers.cudnn_recurrent
 import keras.layers.embeddings
 import keras.layers.local
-import keras.layers.merge
 import keras.layers.noise
 import keras.layers.normalization
 import keras.layers.pooling
@@ -45,6 +44,8 @@ __all__ = [
     "is_container",
     "is_convnet_layer",
     "is_relu_convnet_layer",
+    "is_average_pooling",
+    "is_input_layer",
 ]
 
 
@@ -59,9 +60,8 @@ def get_known_layers():
     """
 
     # Inside function to not break import if Keras changes.
-    KNOWN_LAYERS = [
+    KNOWN_LAYERS = (
         keras.engine.topology.InputLayer,
-        keras.engine.topology.Layer,
         keras.layers.advanced_activations.ELU,
         keras.layers.advanced_activations.LeakyReLU,
         keras.layers.advanced_activations.PReLU,
@@ -103,14 +103,14 @@ def get_known_layers():
         keras.layers.embeddings.Embedding,
         keras.layers.local.LocallyConnected1D,
         keras.layers.local.LocallyConnected2D,
-        keras.layers.merge.Add,
-        keras.layers.merge.Average,
-        keras.layers.merge.Concatenate,
-        keras.layers.merge.Dot,
-        keras.layers.merge.Maximum,
-        keras.layers.merge.Minimum,
-        keras.layers.merge.Multiply,
-        keras.layers.merge.Subtract,
+        keras.layers.Add,
+        keras.layers.Average,
+        keras.layers.Concatenate,
+        keras.layers.Dot,
+        keras.layers.Maximum,
+        keras.layers.Minimum,
+        keras.layers.Multiply,
+        keras.layers.Subtract,
         keras.layers.noise.AlphaDropout,
         keras.layers.noise.GaussianDropout,
         keras.layers.noise.GaussianNoise,
@@ -142,7 +142,7 @@ def get_known_layers():
         keras.legacy.layers.MaxoutDense,
         keras.legacy.layers.Merge,
         keras.legacy.layers.Recurrent,
-    ]
+    )
     return KNOWN_LAYERS
 
 
@@ -218,12 +218,88 @@ def is_container(layer):
 
 
 def is_convnet_layer(layer):
-    # todo: add checks, e.g., no recurrent layers
-    return True
+    # Inside function to not break import if Keras changes.
+    CONVNET_LAYERS = (
+        keras.engine.topology.InputLayer,
+        keras.layers.advanced_activations.ELU,
+        keras.layers.advanced_activations.LeakyReLU,
+        keras.layers.advanced_activations.PReLU,
+        keras.layers.advanced_activations.Softmax,
+        keras.layers.advanced_activations.ThresholdedReLU,
+        keras.layers.convolutional.Conv1D,
+        keras.layers.convolutional.Conv2D,
+        keras.layers.convolutional.Conv2DTranspose,
+        keras.layers.convolutional.Conv3D,
+        keras.layers.convolutional.Conv3DTranspose,
+        keras.layers.convolutional.Cropping1D,
+        keras.layers.convolutional.Cropping2D,
+        keras.layers.convolutional.Cropping3D,
+        keras.layers.convolutional.SeparableConv1D,
+        keras.layers.convolutional.SeparableConv2D,
+        keras.layers.convolutional.UpSampling1D,
+        keras.layers.convolutional.UpSampling2D,
+        keras.layers.convolutional.UpSampling3D,
+        keras.layers.convolutional.ZeroPadding1D,
+        keras.layers.convolutional.ZeroPadding2D,
+        keras.layers.convolutional.ZeroPadding3D,
+        keras.layers.core.Activation,
+        keras.layers.core.ActivityRegularization,
+        keras.layers.core.Dense,
+        keras.layers.core.Dropout,
+        keras.layers.core.Flatten,
+        keras.layers.core.Lambda,
+        keras.layers.core.Masking,
+        keras.layers.core.Permute,
+        keras.layers.core.RepeatVector,
+        keras.layers.core.Reshape,
+        keras.layers.core.SpatialDropout1D,
+        keras.layers.core.SpatialDropout2D,
+        keras.layers.core.SpatialDropout3D,
+        keras.layers.embeddings.Embedding,
+        keras.layers.local.LocallyConnected1D,
+        keras.layers.local.LocallyConnected2D,
+        keras.layers.Add,
+        keras.layers.Average,
+        keras.layers.Concatenate,
+        keras.layers.Dot,
+        keras.layers.Maximum,
+        keras.layers.Minimum,
+        keras.layers.Multiply,
+        keras.layers.Subtract,
+        keras.layers.noise.AlphaDropout,
+        keras.layers.noise.GaussianDropout,
+        keras.layers.noise.GaussianNoise,
+        keras.layers.normalization.BatchNormalization,
+        keras.layers.pooling.AveragePooling1D,
+        keras.layers.pooling.AveragePooling2D,
+        keras.layers.pooling.AveragePooling3D,
+        keras.layers.pooling.GlobalAveragePooling1D,
+        keras.layers.pooling.GlobalAveragePooling2D,
+        keras.layers.pooling.GlobalAveragePooling3D,
+        keras.layers.pooling.GlobalMaxPooling1D,
+        keras.layers.pooling.GlobalMaxPooling2D,
+        keras.layers.pooling.GlobalMaxPooling3D,
+        keras.layers.pooling.MaxPooling1D,
+        keras.layers.pooling.MaxPooling2D,
+        keras.layers.pooling.MaxPooling3D,
+    )
+    return isinstance(layer, CONVNET_LAYERS)
 
 
 def is_relu_convnet_layer(layer):
     return (is_convnet_layer(layer) and only_relu_activation(layer))
+
+
+def is_average_pooling(layer):
+    AVERAGEPOOLING_LAYERS = (
+        keras.layers.pooling.AveragePooling1D,
+        keras.layers.pooling.AveragePooling2D,
+        keras.layers.pooling.AveragePooling3D,
+        keras.layers.pooling.GlobalAveragePooling1D,
+        keras.layers.pooling.GlobalAveragePooling2D,
+        keras.layers.pooling.GlobalAveragePooling3D,
+    )
+    return isinstance(layer, AVERAGEPOOLING_LAYERS)
 
 
 def is_input_layer(layer):
