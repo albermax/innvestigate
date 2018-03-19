@@ -1,6 +1,13 @@
 innvestigate.analyzer
 =====================
 
+Interface and base code
+-----------------------
+
+.. automodule:: innvestigate.analyzer.base
+   :members:
+   :undoc-members:
+
 Gradient methods
 ----------------
 

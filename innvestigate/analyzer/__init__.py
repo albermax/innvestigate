@@ -31,13 +31,16 @@ from .relevance_based import *
 
 # todo: update lrp; it is confusing as is.
 def create_analyzer(name, model, **kwargs):
-    '''
+    """ Convenience interface to create analyzers.
 
-    :param name:
-    :param model:
-    :param kwargs:
-    :return:
-    '''
+    This function is a convenient interface to create analyzer.
+    It allows to address analyzers via names instead of classes.
+
+    :param name: Name of the analyzer.
+    :param model: The model to analyze.
+    :param kwargs: Parameters for the analyzer's init function.
+    :return: An instance of the chosen analyzer.
+    """
     return {
         # Utility.
         "input": Input,
