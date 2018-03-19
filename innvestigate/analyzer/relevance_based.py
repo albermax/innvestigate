@@ -16,9 +16,17 @@ import six
 
 
 import inspect
-import keras.backend as K
-import keras.models
 import keras
+import keras.backend as K
+import keras.engine.topology
+import keras.models
+import keras.layers
+import keras.layers.convolutional
+import keras.layers.core
+import keras.layers.local
+import keras.layers.noise
+import keras.layers.normalization
+import keras.layers.pooling
 import numpy as np
 
 
@@ -26,6 +34,7 @@ from . import base
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -60,31 +69,112 @@ __all__ = [
 
 class BaselineLRPZ(base.AnalyzerNetworkBase):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, model, allow_lambda_layers=False, **kwargs):
+        # Inside function to not break import if Keras changes.
+        BASELINELRPZ_LAYERS = (
+            keras.engine.topology.InputLayer,
+            keras.layers.convolutional.Conv1D,
+            keras.layers.convolutional.Conv2D,
+            keras.layers.convolutional.Conv2DTranspose,
+            keras.layers.convolutional.Conv3D,
+            keras.layers.convolutional.Conv3DTranspose,
+            keras.layers.convolutional.Cropping1D,
+            keras.layers.convolutional.Cropping2D,
+            keras.layers.convolutional.Cropping3D,
+            keras.layers.convolutional.SeparableConv1D,
+            keras.layers.convolutional.SeparableConv2D,
+            keras.layers.convolutional.UpSampling1D,
+            keras.layers.convolutional.UpSampling2D,
+            keras.layers.convolutional.UpSampling3D,
+            keras.layers.convolutional.ZeroPadding1D,
+            keras.layers.convolutional.ZeroPadding2D,
+            keras.layers.convolutional.ZeroPadding3D,
+            keras.layers.core.Activation,
+            keras.layers.core.ActivityRegularization,
+            keras.layers.core.Dense,
+            keras.layers.core.Dropout,
+            keras.layers.core.Flatten,
+            keras.layers.core.Lambda,
+            keras.layers.core.Masking,
+            keras.layers.core.Permute,
+            keras.layers.core.RepeatVector,
+            keras.layers.core.Reshape,
+            keras.layers.core.SpatialDropout1D,
+            keras.layers.core.SpatialDropout2D,
+            keras.layers.core.SpatialDropout3D,
+            keras.layers.local.LocallyConnected1D,
+            keras.layers.local.LocallyConnected2D,
+            keras.layers.Add,
+            keras.layers.Concatenate,
+            keras.layers.Dot,
+            keras.layers.Maximum,
+            keras.layers.Minimum,
+            keras.layers.Subtract,
+            keras.layers.noise.AlphaDropout,
+            keras.layers.noise.GaussianDropout,
+            keras.layers.noise.GaussianNoise,
+            keras.layers.normalization.BatchNormalization,
+            keras.layers.pooling.GlobalMaxPooling1D,
+            keras.layers.pooling.GlobalMaxPooling2D,
+            keras.layers.pooling.GlobalMaxPooling3D,
+            keras.layers.pooling.MaxPooling1D,
+            keras.layers.pooling.MaxPooling2D,
+            keras.layers.pooling.MaxPooling3D,
+        )
+
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
-            # todo: check for max pooling too!
             {
-                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
-                "type": "warning",
-                "message": ("BaselineLRPZ is only well defined for "
-                            "convolutional neural networks with "
-                            "relu activations."),
+                "check":
+                lambda layer: not kchecks.only_relu_activation(layer),
+                "type": "exception",
+                "message": ("BaselineLRPZ is not working for "
+                            "networks with non-ReLU activations."),
+            },
+            {
+                "check":
+                lambda layer: not isinstance(layer, BASELINELRPZ_LAYERS),
+                "type": "exception",
+                "message": ("BaselineLRPZ is only defined for "
+                            "certain layers."),
+            },
+            {
+                "check":
+                lambda layer: (not allow_lambda_layers and
+                               isinstance(layer, keras.layers.core.Lambda)),
+                "type": "exception",
+                "message": ("Lamda layers are not allowed. "
+                            "To allow use allow_lambda_layers kw."),
             },
         ]
-        super(BaselineLRPZ, self).__init__(*args, **kwargs)
+
+        self._allow_lambda_layers = allow_lambda_layers
+
+        super(BaselineLRPZ, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model):
         gradients = iutils.to_list(ilayers.Gradient()(
             model.inputs+[model.outputs[0], ]))
         return [keras.layers.Multiply()([i, g])
                 for i, g in zip(model.inputs, gradients)]
+
+    def _get_state(self):
+        state = super(BaselineLRPZ, self)._get_state()
+        state.update({"allow_lambda_layers": self._allow_lambda_layers})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        allow_lambda_layers = state.pop("allow_lambda_layers")
+        kwargs = super(BaselineLRPZ, clazz)._state_to_kwargs(state)
+        kwargs.update({"allow_lambda_layers": allow_lambda_layers})
+        return kwargs
 
 
 ###############################################################################
@@ -434,13 +524,13 @@ class LRP(base.ReverseAnalyzerBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
             {
-                "check": lambda layer: not kgraph.is_convnet_layer(layer),
+                "check": lambda layer: not kchecks.is_convnet_layer(layer),
                 "type": "warning",
                 "message": ("LRP is only tested for "
                             "convolutional neural networks."),
@@ -511,7 +601,7 @@ class LRP(base.ReverseAnalyzerBase):
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
         self._conditional_mappings = [
-            (kgraph.contains_kernel, ReverseLayer),
+            (kchecks.contains_kernel, ReverseLayer),
         ]
         return super(LRP, self).__init__(model, *args, **kwargs)
 
