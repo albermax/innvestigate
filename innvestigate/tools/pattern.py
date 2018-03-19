@@ -134,6 +134,8 @@ class LinearPattern(BasePattern):
     def get_stats_from_batch(self):
         layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=False)
         Xs, Ys = _get_active_neuron_io(layer, self._active_node_indices)
+        if len(Ys) != 1:
+            raise ValueError("Assume that kernel layer have only one output.")
         X, Y = Xs[0], Ys[0]
 
         self.mean_x = ilayers.RunningMeans()
@@ -262,7 +264,6 @@ class PatternComputer(object):
         def broadcast(x):
             return ilayers.Broadcast()([dummy_broadcaster, x])
 
-        # todo: this does not work with more nodes or containers!
         layers, execution_list, _ = kgraph.trace_model_execution(model)
         model_tensors = set()
         for _, input_tensors, output_tensors in execution_list:
@@ -270,6 +271,8 @@ class PatternComputer(object):
                 model_tensors.add(t)
 
         for layer_id, layer in enumerate(layers):
+            # This does not work with containers!
+            # They should be replaced by trace_model_execution.
             if kchecks.is_container(layer):
                 raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
