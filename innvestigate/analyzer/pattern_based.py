@@ -19,6 +19,7 @@ import keras.backend as K
 import keras.models
 import keras
 import numpy as np
+import warnings
 
 
 from . import base
@@ -65,6 +66,16 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         if self._patterns is not None:
             # copy pattern references
             self._patterns = list(patterns)
+
+        # Pattern projections can lead to +-inf value with long networks.
+        # We are only interested in the direction, therefore it is save to
+        # Prevent this by projecting the values in bottleneck layers to +-1.
+        if "reverse_project_bottleneck_layers" in kwargs:
+            warnings.warn("The standard setting for "
+                          "'reverse_project_bottleneck_layers' "
+                          "is overwritten.")
+        else:
+            kwargs["reverse_project_bottleneck_layers"] = True
 
         return super(PatternNet, self).__init__(model, **kwargs)
 

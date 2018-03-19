@@ -301,12 +301,15 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                  model,
                  reverse_verbose=False,
                  reverse_clip_values=False,
+                 reverse_project_bottleneck_layers=False,
                  reverse_check_min_max_values=False,
                  reverse_check_finite=False,
                  reverse_reapply_on_copied_layers=False,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
         self._reverse_clip_values = reverse_clip_values
+        self._reverse_project_bottleneck_layers = (
+            reverse_project_bottleneck_layers)
         self._reverse_check_min_max_values = reverse_check_min_max_values
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
@@ -338,6 +341,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             head_mapping=self._head_mapping,
             verbose=self._reverse_verbose,
             clip_all_reversed_tensors=self._reverse_clip_values,
+            project_bottleneck_tensors=self._reverse_project_bottleneck_layers,
             return_all_reversed_tensors=return_all_reversed_tensors)
 
         if return_all_reversed_tensors:
@@ -404,6 +408,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _get_state(self):
         state = super(ReverseAnalyzerBase, self)._get_state()
         state.update({"reverse_verbose": self._reverse_verbose})
+        state.update({"reverse_clip_values": self._reverse_clip_values})
+        state.update({"reverse_project_bottleneck_layers":
+                      self._reverse_project_bottleneck_layers})
+        state.update({"reverse_check_min_max_values":
+                      self._reverse_check_min_max_values})
         state.update({"reverse_check_finite": self._reverse_check_finite})
         state.update({"reverse_reapply_on_copied_layers":
                       self._reverse_reapply_on_copied_layers})
@@ -412,11 +421,21 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     @classmethod
     def _state_to_kwargs(clazz, state):
         reverse_verbose = state.pop("reverse_verbose")
+        reverse_clip_values = state.pop("reverse_clip_values")
+        reverse_project_bottleneck_layers = (
+            state.pop("reverse_project_bottleneck_layers"))
+        reverse_check_min_max_values = (
+            state.pop("reverse_check_min_max_values"))
         reverse_check_finite = state.pop("reverse_check_finite")
         reverse_reapply_on_copied_layers = (
             state.pop("reverse_reapply_on_copied_layers"))
         kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
         kwargs.update({"reverse_verbose": reverse_verbose,
+                       "reverse_clip_values": reverse_clip_values,
+                       "reverse_project_bottleneck_layers":
+                       reverse_project_bottleneck_layers,
+                       "reverse_check_min_max_values":
+                       reverse_check_min_max_values,
                        "reverse_check_finite": reverse_check_finite,
                        "reverse_reapply_on_copied_layers":
                        reverse_reapply_on_copied_layers})
