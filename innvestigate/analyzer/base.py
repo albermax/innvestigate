@@ -43,8 +43,25 @@ __all__ = [
 
 
 class AnalyzerBase(object):
-    """
-    The basic interface of an Innvestigate analyzer.
+    """ The basic interface of an iNNvestigate analyzer.
+
+    This class defines the basic interface for analyzers:
+
+    >>> model = create_keras_model()
+    >>> a = Analyzer(model)
+    >>> a.fit(X_train)  # If analyzer needs training.
+    >>> analysis = a.analyze(X_test)
+    >>> 
+    >>> state = a.save()
+    >>> a_new = A.load(*state)
+    >>> analysis = a_new.analyze(X_test)
+    
+    :param model: A Keras model.
+    :param disable_model_checks: Do not execute model checks that enforce
+      compatibility of analyzer and model.
+
+    .. note:: To develop a new analyzer derive from
+      :class:`AnalyzerNetworkBase`.
     """
 
     # Should be specified by the base class.
@@ -75,6 +92,13 @@ class AnalyzerBase(object):
         pass
 
     def fit(self, *args, disable_no_training_warning=False, **kwargs):
+        """
+        Stub that eats arguments. If an analyzer needs training
+        include :class:`TrainerMixin`.
+
+        :param disable_no_training_warning: Do not warn if this function is
+          called despite no training is needed.
+        """
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -84,6 +108,13 @@ class AnalyzerBase(object):
 
     def fit_generator(self, *args,
                       disable_no_training_warning=False, **kwargs):
+        """
+        Stub that eats arguments. If an analyzer needs training
+        include :class:`TrainerMixin`.
+
+        :param disable_no_training_warning: Do not warn if this function is
+          called despite no training is needed.
+        """
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -92,6 +123,11 @@ class AnalyzerBase(object):
         pass
 
     def analyze(self, X):
+        """
+        Analyze the behavior of model on input `X`.
+
+        :param X: Input as expected by model.
+        """
         raise NotImplementedError()
 
     def _get_state(self):
@@ -103,11 +139,23 @@ class AnalyzerBase(object):
         return state
 
     def save(self):
+        """
+        Save state of analyzer, can be passed to :func:`Analyzer.load`
+        to resemble the analyzer.
+
+        :return: The class name and the state.
+        """
         state = self._get_state()
         class_name = self.__class__.__name__
         return class_name, state
 
     def save_npz(self, fname):
+        """
+        Save state of analyzer, can be passed to :func:`Analyzer.load_npz`
+        to resemble the analyzer.        
+
+        :param fname: The file's name.
+        """
         class_name, state = self.save()
         np.savez(fname, **{"class_name": class_name,
                            "state": state})
@@ -127,6 +175,13 @@ class AnalyzerBase(object):
 
     @staticmethod
     def load(class_name, state):
+        """
+        Resembles an analyzer from the state created by
+        :func:`analyzer.save()`.
+
+        :param class_name: The analyzer's class name.
+        :param state: The analyzer's state.
+        """
         # Todo:do in a smarter way!
         import innvestigate.analyzer
         clazz = getattr(innvestigate.analyzer, class_name)
@@ -136,6 +191,12 @@ class AnalyzerBase(object):
 
     @staticmethod
     def load_npz(fname):
+        """
+        Resembles an analyzer from the file created by
+        :func:`analyzer.save_npz()`.
+
+        :param fname: The file's name.
+        """
         f = np.load(fname)
 
         class_name = f["class_name"].item()
@@ -149,17 +210,29 @@ class AnalyzerBase(object):
 
 
 class TrainerMixin(object):
+    """Mixin for analyzer that adapt to data.
+
+    This convenience interface exposes a Keras like training routing
+    to the user.
+    """
 
     # todo: extend with Y
     def fit(self,
             X=None,
             batch_size=32,
             **kwargs):
+        """
+        Takes the same parameters as Keras's :func:`model.fit` function.
+        """
         generator = iutils.BatchSequence(X, batch_size)
         return self._fit_generator(generator,
                                   **kwargs)
 
     def fit_generator(self, *args, **kwargs):
+        """
+        Takes the same parameters as Keras's :func:`model.fit_generator`
+        function.
+        """
         return self._fit_generator(*args, **kwargs)
 
     def _fit_generator(self,
@@ -176,11 +249,22 @@ class TrainerMixin(object):
 
 
 class OneEpochTrainerMixin(TrainerMixin):
+    """Exposes the same interface and functionality as :class:`TrainerMixin`
+    except that the training is limited to one epoch.
+    """
 
     def fit(self, *args, **kwargs):
+        """
+        Same interface as :func:`fit` of :class:`TrainerMixin` except that
+        the parameter epoch is fixed to 1.
+        """
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
     def fit_generator(self, *args, steps=None, **kwargs):
+        """
+        Same interface as :func:`fit_generator` of :class:`TrainerMixin` except that
+        the parameter epoch is fixed to 1.
+        """
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
@@ -194,8 +278,22 @@ class OneEpochTrainerMixin(TrainerMixin):
 
 
 class AnalyzerNetworkBase(AnalyzerBase):
-    """
-    Analyzer itself is defined as keras graph.
+    """Convenience interface for analyzers.
+
+    This class provides helpful functionality to create analyzer's.
+    Basically it:
+    
+    * takes the input model and adds a layer that selects
+      the desired output neuron to analyze.
+    * passes the new model to :func:`_create_analysis` which should
+      return the analysis as Keras tensors.
+    * compiles the function and serves the output to :func:`analyze` calls.
+    * allows :func:`_create_analysis` to return tensors
+      that are intercept for debugging purposes.
+
+    :param neuron_selection_mode: How to select the neuron to analyze.
+      Possible values are 'max_activation', 'index' for the neuron
+      (expects indices at :func:`analyze` calls), 'all' take all neurons.
     """
 
     def __init__(self, model,
@@ -209,6 +307,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
         pass
 
     def compile_analyzer(self):
+        """
+        Compiles the analyze functionality. If not called beforehand
+        it will be called by :func:`analyze`.
+        """
         model = self._model
         neuron_selection_mode = self._neuron_selection_mode
 
@@ -219,13 +321,17 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max()(model_output)
-        if neuron_selection_mode == "index":
+        elif neuron_selection_mode == "index":
             # todo: implement index mode
             raise NotImplementedError("Only a stub present so far.")
             neuron_indexing = keras.layers.Input(shape=[None, None])
             neuron_selection_inputs += neuron_indexing
 
             model_output = keras.layers.Index()([model_output, neuron_indexing])
+        elif neuron_selection_mode == "all":
+            pass
+        else:
+            raise NotImplementedError()
 
         model = keras.models.Model(inputs=model_inputs+neuron_selection_inputs,
                                    outputs=model_output)
@@ -253,7 +359,16 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _create_analysis(self, model):
         raise NotImplementedError()
 
+    def _handle_debug_output(self, debug_values):
+        raise NotImplementedError()
+
     def analyze(self, X, neuron_selection=None):
+        """
+        Same interface as :class:`Analyzer` besides
+
+        :param neuron_selection: If neuron_selection_mode is 'index' this
+          should be the indices for the chosen neuron(s).
+        """
         if not hasattr(self, "_analyzer_model"):
             self.compile_analyzer()
 
@@ -294,6 +409,42 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
+    """Convenience class for analyzers that revert the model's structure.
+
+    This class contains many helper functions around the graph
+    reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
+    
+    The deriving classes should specify how the graph should be reverted
+    by implementing the following functions:
+
+    * :func:`_reverse_mapping(layer)` given a layer this function
+      returns a reverse mapping for the layer as specified in
+      :func:`innvestigate.utils.keras.graph.reverse_model` or None.
+    * :func:`_default_reverse_mapping` defines the default
+      reverse mapping.
+    * :func:`_head_mapping` defines how the outputs of the model
+      should be instantiated before the are passed to the reversed
+      network.
+
+    Furthermore other parameters of the function 
+    :func:`innvestigate.utils.keras.graph.reverse_model` can
+    be changed by setting the according parameters of the
+    init function:
+
+    :param reverse_verbose: Be print information on the reverse process.
+    :param reverse_clip_values: Clip the values that are passed along
+      the reverted network. Expects tuple (min, max).
+    :param reverse_project_bottleneck_layers: Project the value range
+      of bottleneck tensors in the reverse network into another range.
+    :param reverse_check_min_max_values: Print the min/max values
+      observed in each tensor along the reverse network whenever
+      :func:`analyze` is called.
+    :param reverse_check_finite: Check if values passed along the
+      reverse network are finite.
+    :param reverse_reapply_on_copied_layers: See
+      :func:`innvestigate.utils.keras.graph.reverse_model`.
+    """
+    
 
     # Should be specified by the base class.
     _conditional_mappings = []
