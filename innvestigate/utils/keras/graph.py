@@ -487,6 +487,56 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
     return layers, executed_nodes, outputs
 
 
+def get_bottleneck_tensors(inputs, outputs, execution_list):
+    """
+    Given an execution list this function returns all tensors that
+    are a bottleneck in the network, i.e., "all information" must pass
+    through this tensor.
+    """
+
+    forward_connections = {}
+    for l, Xs, Ys in execution_list:
+        if isinstance(l, keras.layers.InputLayer):
+            # Special case, do nothing.
+            continue
+
+        for x in Xs:
+            if x in forward_connections:
+                forward_connections[x] += Ys
+            else:
+                forward_connections[x] = list(Ys)
+
+    open_connections = {}
+    for x in inputs:
+        for fw_c in forward_connections[x]:
+            open_connections[fw_c] = True
+
+    ret = set()
+    for l, Xs, Ys in execution_list:
+        if isinstance(l, keras.layers.InputLayer):
+            # Special case, do nothing.
+            # Note: if a single input branches
+            # this is not detected.
+            continue
+
+        for y in Ys:
+            assert y in open_connections
+            del open_connections[y]
+
+        if len(open_connections) == 0:
+            if len(Xs) == 1:
+                ret.add(Xs[0])
+            if len(Xs) == 1:
+                ret.add(Ys[0])
+
+        for y in Ys:
+            if y not in outputs:
+                for fw_c in forward_connections[y]:
+                    open_connections[fw_c] = True
+
+    return ret
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -534,25 +584,16 @@ def reverse_model(model, reverse_mappings,
     # Initialize structure that keeps track of reversed tensors ###############
 
     reversed_tensors = {}
+    bottleneck_tensors = set()
 
     def add_reversed_tensors(reverse_id,
                              tensors_list,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, X, reversed_X):
-            if project_bottleneck_tensors is not False:
-                # todo: add check if is bottleneck tensor.
-                if True:
-                    project = ilayers.Project(project_bottleneck_tensors)
-                    reversed_X = project(reversed_X)
-
-            if clip_all_reversed_tensors is not False:
-                clip = ilayers.Clip(*clip_all_reversed_tensors)
-                reversed_X = clip(reversed_X)
-
             if X not in reversed_tensors:
                 reversed_tensors[X] = {"id": (reverse_id, i),
-                                        "tensor": reversed_X}
+                                       "tensor": reversed_X}
             else:
                 tmp = reversed_tensors[X]
                 if "tensor" in tmp and "tensors" in tmp:
@@ -569,9 +610,25 @@ def reverse_model(model, reverse_mappings,
 
     def get_reversed_tensor(tensor):
         tmp = reversed_tensors[tensor]
-        if "tensor" not in tmp:
-            tmp["tensor"] = keras.layers.Add()(tmp["tensors"])
-        return tmp["tensor"]
+
+        if "final_tensor" not in tmp:
+            if "tensor" not in tmp:
+                final_tensor = keras.layers.Add()(tmp["tensors"])
+            else:
+                final_tensor = tmp["tensor"]
+
+            if project_bottleneck_tensors is not False:
+                if tensor in bottleneck_tensors:
+                    project = ilayers.Project(project_bottleneck_tensors)
+                    final_tensor = project(final_tensor)
+
+            if clip_all_reversed_tensors is not False:
+                clip = ilayers.Clip(*clip_all_reversed_tensors)
+                final_tensor = clip(final_tensor)
+
+            tmp["final_tensor"] = final_tensor
+
+        return tmp["final_tensor"]
 
     # Reverse the model #######################################################
     _print("Reverse model: {}".format(model))
@@ -605,6 +662,13 @@ def reverse_model(model, reverse_mappings,
             reverse_mapping = reverse_mapping_obj.apply
 
         initialized_reverse_mappings[layer] = reverse_mapping
+
+    if project_bottleneck_tensors:
+        bottleneck_tensors.update(
+            get_bottleneck_tensors(
+                model.inputs,
+                outputs,
+                execution_list))
 
     # Initialize the reverse tensor mappings.
     add_reversed_tensors(-1,
