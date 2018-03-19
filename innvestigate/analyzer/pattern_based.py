@@ -43,23 +43,48 @@ __all__ = [
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
-    def __init__(self, model, patterns=None, **kwargs):
+    def __init__(self,
+                 model,
+                 patterns=None,
+                 allow_lambda_layers=False,
+                 **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kchecks.contains_activation(
-                    layer, activation="softmax"),
+                "check":
+                lambda layer: kchecks.contains_activation(
+                    layer,
+                    activation="softmax"),
                 "type": "exception",
                 "message": "Model should not contain a softmax.",
             },
-            # todo: be more specific here:
+            {
+                "check": lambda layer: not kchecks.only_relu_activation(layer),
+                "type": "warning",
+                "message": ("PatternNet is not well defined for "
+                            "networks with non-ReLU activations."),
+            },
             {
                 "check":
-                lambda layer: not kchecks.is_relu_convnet_layer(layer),
+                lambda layer: not kchecks.is_convnet_layer(layer),
                 "type": "warning",
                 "message": ("PatternNet is only well defined for "
-                            "convolutional neural networks with "
-                            "relu activations."),
+                            "convolutional neural networks."),
+            },
+            {
+                "check":
+                lambda layer: kchecks.is_average_pooling(layer),
+                "type": "warning",
+                "message": ("PatternNet is only well defined for "
+                            "max-pooling pooling layers."),
+            },
+            {
+                "check":
+                lambda layer: (not allow_lambda_layers and
+                               isinstance(layer, keras.layers.core.Lambda)),
+                "type": "exception",
+                "message": ("Lamda layers are not allowed. "
+                            "To allow use allow_lambda_layers kw."),
             },
         ]
 
@@ -67,6 +92,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         if self._patterns is not None:
             # copy pattern references
             self._patterns = list(patterns)
+        self._allow_lambda_layers = allow_lambda_layers
 
         return super(PatternNet, self).__init__(model, **kwargs)
 
@@ -181,13 +207,16 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
         state.update({"patterns": self._patterns})
+        state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         patterns = state.pop("patterns")
+        allow_lambda_layers = state.pop("allow_lambda_layers")
         kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
-        kwargs.update({"patterns": patterns})
+        kwargs.update({"patterns": patterns,
+                       "allow_lambda_layers": allow_lambda_layers})
         return kwargs
 
 

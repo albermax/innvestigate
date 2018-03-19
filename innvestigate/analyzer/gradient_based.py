@@ -49,11 +49,39 @@ __all__ = [
 
 class BaselineGradient(base.AnalyzerNetworkBase):
 
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        return super(BaselineGradient, self).__init__(model, **kwargs)
+
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
 class Gradient(base.ReverseAnalyzerBase):
+
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        return super(Gradient, self).__init__(model, **kwargs)
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
@@ -72,8 +100,9 @@ class Deconvnet(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
             },
             {
                 "check":
@@ -118,8 +147,9 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
             {
                 "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
             },
             {
                 "check":
