@@ -26,6 +26,7 @@ import numpy as np
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -91,7 +92,7 @@ class BasePattern(object):
             return ret
 
     def has_pattern(self):
-        return kgraph.contains_kernel(self.layer)
+        return kchecks.contains_kernel(self.layer)
 
     def stats_from_batch(self):
         raise NotImplementedError()
@@ -268,7 +269,7 @@ class PatternComputer(object):
                 model_tensors.add(t)
 
         for layer_id, layer in enumerate(layers):
-            if kgraph.is_container(layer):
+            if kchecks.is_container(layer):
                 raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
                 pinstance = clazz(model, layer, model_tensors=model_tensors)

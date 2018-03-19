@@ -26,6 +26,7 @@ from . import wrapper
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 __all__ = [
@@ -48,11 +49,39 @@ __all__ = [
 
 class BaselineGradient(base.AnalyzerNetworkBase):
 
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        return super(BaselineGradient, self).__init__(model, **kwargs)
+
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
 class Gradient(base.ReverseAnalyzerBase):
+
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        return super(Gradient, self).__init__(model, **kwargs)
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
@@ -69,16 +98,18 @@ class Deconvnet(base.ReverseAnalyzerBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
             },
             {
-                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "check":
+                lambda layer: not kchecks.only_relu_activation(layer),
                 "type": "warning",
                 "message": ("Deconvnet is only well defined for "
-                            "convolutional neural networks with "
+                            "neural networks with "
                             "relu activations."),
             },
         ]
@@ -102,7 +133,7 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"),
+            (lambda layer: kchecks.contains_activation(layer, "relu"),
              ReverseLayer),
         ]
         return super(Deconvnet, self).__init__(*args, **kwargs)
@@ -114,16 +145,18 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
-                "check": lambda layer: kgraph.contains_activation(
+                "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
             },
             {
-                "check": lambda layer: not kgraph.is_relu_convnet_layer(layer),
+                "check":
+                lambda layer: not kchecks.only_relu_activation(layer),
                 "type": "warning",
                 "message": ("Guided Backprop is only well defined for "
-                            "convolutional neural networks with "
+                            "neural networks with "
                             "relu activations."),
             },
         ]
@@ -136,7 +169,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"),
+            (lambda layer: kchecks.contains_activation(layer, "relu"),
              reverse_layer_instance),
         ]
         return super(GuidedBackprop, self).__init__(*args, **kwargs)
