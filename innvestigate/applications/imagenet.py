@@ -1,3 +1,20 @@
+"""Example applications for image classifcation.
+
+Each function returns a pretrained ImageNet model.
+The models are based on keras.applications models and
+contain additionally pretrained patterns.
+
+The returned dictionary contains the following
+keys\: model, in, sm_out, out, image_shape, color_coding,
+preprocess_f, patterns.
+
+Function parameters\:
+
+:param load_weights: Download or access cached weights.
+:param load_patterns: Download or access cached patterns.
+"""
+# todo: rename in, sm_out, out to input_tensors, output_tensors,
+# todo: softmax_output_tenors
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
 from __future__ import\

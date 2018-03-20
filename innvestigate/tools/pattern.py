@@ -237,6 +237,18 @@ def get_pattern_class(pattern_type):
 
 
 class PatternComputer(object):
+    """Pattern computer.
+
+    Computes a pattern for each layer with a kernel of a given model.
+
+    :param model: A Keras model.
+    :param pattern_type: A string or a tuple of strings. Valid types are
+      'linear', 'relu', 'relu.positive', 'relu.negative'.
+    :param compute_layers_in_parallel: Not supported yet.
+      Compute all patterns at once.
+      Otherwise computer layer after layer.
+    :param gpus: Not supported yet. Gpus to use.
+    """
 
     def __init__(self, model,
                  pattern_type="linear",
@@ -250,6 +262,12 @@ class PatternComputer(object):
                               for k in pattern_types}
         self.compute_layers_in_parallel = compute_layers_in_parallel
         self.gpus = gpus
+
+        if self.compute_layers_in_parallel is False:
+            raise NotImplementedError("Not supported.")
+
+        if self.gpus is not None:
+            raise NotImplementedError("Not supported.")
 
         # create pattern instances and collect keras outputs
         self._work_sequence = []
@@ -307,10 +325,23 @@ class PatternComputer(object):
         pass
 
     def compute(self, X, batch_size=32, verbose=0):
+        """
+        Compute and return the patterns for the model and the data `X`.
+
+        :param X: Data to compute patterns.
+        :param batch_size: Batch size to use.
+        :param verbose: As for keras model.fit.
+        """
         generator = iutils.BatchSequence(X, batch_size)
         return self.compute_generator(generator, verbose=verbose)
 
     def compute_generator(self, generator, **kwargs):
+        """
+        Compute and return the patterns for the model and the data `X`.
+
+        :param generator: Data to compute patterns.
+        :param kwargs: Same as for keras model.fit_generator.
+        """
         if not hasattr(self, "_computers"):
             raise Exception("One shot computer. Already used.")
 

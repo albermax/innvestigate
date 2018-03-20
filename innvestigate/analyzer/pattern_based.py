@@ -43,6 +43,16 @@ __all__ = [
 
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
+    """PatternNet analyzer.
+
+    Applies the "PatternNet" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    :param patterns: Pattern computed by
+      :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
+      to be called.
+    :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    """
 
     def __init__(self,
                  model,
@@ -232,6 +242,16 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
 
 class PatternAttribution(PatternNet):
+    """PatternAttribution analyzer.
+
+    Applies the "PatternAttribution" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    :param patterns: Pattern computed by
+      :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
+      to be called.
+    :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    """
 
     def _prepare_pattern(self, layer, state, pattern):
         weights = layer.get_weights()

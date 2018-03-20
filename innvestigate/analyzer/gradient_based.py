@@ -48,6 +48,14 @@ __all__ = [
 
 
 class BaselineGradient(base.AnalyzerNetworkBase):
+    """Gradient analyzer based on build-in gradient.
+
+    Returns as analysis the function value with respect to the input.
+    The gradient is computed via the build in function.
+    Is mainly used for debugging purposes.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, **kwargs):
         self._model_checks = [
@@ -68,6 +76,13 @@ class BaselineGradient(base.AnalyzerNetworkBase):
 
 
 class Gradient(base.ReverseAnalyzerBase):
+    """Gradient analyzer.
+
+    Returns as analysis the function value with respect to the input.
+    The gradient is computed via the librarie's network reverting.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, **kwargs):
         self._model_checks = [
@@ -93,8 +108,14 @@ class Gradient(base.ReverseAnalyzerBase):
 
 
 class Deconvnet(base.ReverseAnalyzerBase):
+    """Deconvnet analyzer.
 
-    def __init__(self, *args, **kwargs):
+    Applies the "deconvnet" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
@@ -136,12 +157,18 @@ class Deconvnet(base.ReverseAnalyzerBase):
             (lambda layer: kchecks.contains_activation(layer, "relu"),
              ReverseLayer),
         ]
-        return super(Deconvnet, self).__init__(*args, **kwargs)
+        return super(Deconvnet, self).__init__(model, **kwargs)
 
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
+    """Guided backprop analyzer.
 
-    def __init__(self, *args, **kwargs):
+    Applies the "guided backprop" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
         self._model_checks = [
             # todo: Check for non-linear output in general.
             {
@@ -172,7 +199,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
             (lambda layer: kchecks.contains_activation(layer, "relu"),
              reverse_layer_instance),
         ]
-        return super(GuidedBackprop, self).__init__(*args, **kwargs)
+        return super(GuidedBackprop, self).__init__(model, **kwargs)
 
 
 ###############################################################################
@@ -181,6 +208,13 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 
 class IntegratedGradients(wrapper.PathIntegrator):
+    """Integrated gradient analyzer.
+
+    Applies the "integrated gradient" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    :param steps: Number of steps to use average along integration path.
+    """
 
     def __init__(self, model, *args, steps=64, **kwargs):
         subanalyzer = Gradient(model)
@@ -196,8 +230,15 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 
 class SmoothGrad(wrapper.GaussianSmoother):
+    """Smooth grad analyzer.
 
-    def __init__(self, model, *args, augment_by_n=64, **kwargs):
+    Applies the "smooth grad" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    :param augment_by_n: Number of distortions to average for smoothing.
+    """
+
+    def __init__(self, model, augment_by_n=64, **kwargs):
         subanalyzer = Gradient(model)
         return super(SmoothGrad, self).__init__(
             subanalyzer,
