@@ -68,6 +68,17 @@ __all__ = [
 
 
 class BaselineLRPZ(base.AnalyzerNetworkBase):
+    """LRPZ analyzer.
+
+    Applies the "LRP-Z" algorithm to analyze the model.
+    Based on the gradient times the input formula.
+    This formula holds only for ReLU/MaxPooling networks, for which
+    LRP-Z collapses into the stated formula.
+
+    :param model: A Keras model.
+    :param allow_lambda_layers: Approximate lambda layers with the
+      gradient.
+    """
 
     def __init__(self, model, allow_lambda_layers=False, **kwargs):
         # Inside function to not break import if Keras changes.

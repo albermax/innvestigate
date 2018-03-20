@@ -23,7 +23,6 @@ API reference
   modules/analyzer
   modules/applications
   modules/tools
-  modules/utils
 
 
 Indices and tables

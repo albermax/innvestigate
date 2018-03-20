@@ -266,6 +266,17 @@ def model_contains(model, layer_condition, return_only_counts=False):
 
 
 def trace_model_execution(model, reapply_on_copied_layers=False):
+    """
+    Trace and linearize excecution of a model and it's possible containers.
+    Return a triple with all layers, a list with a linearized execution
+    with (layer, input_tensors, output_tensors), and, possible regenerated,
+    outputs of the exectution.
+
+    :param model: A kera model.
+    :param reapply_on_copied_layers: If the execution needs to be linearized,
+      reapply with copied layers. Might be slow. Prevents changes of the
+      original layer's node lists.
+    """
 
     # Get all layers in model.
     layers = get_model_layers(model)
@@ -453,6 +464,30 @@ def reverse_model(model, reverse_mappings,
                   clip_all_reversed_tensors=False,
                   project_bottleneck_tensors=False,
                   reapply_on_copied_layers=False):
+    """
+    Reverses a Keras model based on the given reverse functions.
+    It returns the reverted tensors for the according model inputs.
+
+    :param model: A Keras model.
+    :param reverse_mappings: Either a callable that matches layers to
+      mappings or a dictionary with layers as keys and mappings as values.
+      Allowed as mappings are function or ReverseMappingBase subclasses.
+    :param default_reverse_mapping: A function that reverses layers for
+      which no mapping was given by param "reverse_mappings".
+    :param head_mapping: Map output tensors to new values before passing
+      them into the reverted nework.
+    :param verbose: Print what's going on.
+    :param return_all_reversed_tensors: Return all reverted tensors in addition
+      to reverted model input tensors.
+    :param clip_all_reversed_tensors: Clip each reverted tensor. False or tuple
+      with min/max value.
+    :param project_bottleneck_tensors: Project bottleneck layers in the
+      reverting process into a given value range. False, True or (a, b) for
+      projection range.
+    :param reapply_on_copied_layers: When a model execution needs to
+      linearized and copy layers before reapplying them. See
+      :func:`trace_model_execution`.
+    """
 
     # Set default values ######################################################
 
