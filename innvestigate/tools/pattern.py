@@ -42,8 +42,56 @@ __all__ = [
 
 
 def _get_active_neuron_io(layer, active_node_indices,
-                          return_i=True, return_o=True):
-    tmp = [kgraph.get_layer_neuronwise_io(layer, node_index=i,
+                          return_i=True, return_o=True,
+                          do_activation_search=False):
+
+    def contains_activation(layer):
+        return (kchecks.contains_activation(layer) and
+                not kchecks.contains_activation(layer, "linear"))
+
+    def get_Xs(node_index):
+        return iutils.to_list(layer.get_input_at(node_index))
+
+    def get_Ys(node_index):
+        ret = iutils.to_list(layer.get_output_at(node_index))
+
+        if(do_activation_search is not False and
+           not contains_activation(layer)):
+            # walk along execution graph until we find an activation function
+            # if current layer has not.
+            execution_list = do_activation_search
+
+            # First find current node.
+            layer_i = None
+            for i, node in enumerate(execution_list):
+                if layer is node[0]:
+                    layer_i = i
+                    break
+
+            assert layer_i is not None
+            assert len(ret) == 1
+            input_to_next_layer = ret[0]
+
+            found = False
+            for i in range(layer_i+1, len(execution_list)):
+                l, Xs, Ys = execution_list[i]
+                if input_to_next_layer in Xs:
+                    if not isinstance(
+                            l,
+                            kchecks.get_activation_search_safe_layers()):
+                        break
+                    if contains_activation(l):
+                        found = Ys
+                        break
+                    assert len(Ys) == 1
+                    input_to_next_layer = Ys[0]
+
+            if found is not False:
+                ret = Ys
+
+        return ret
+
+    tmp = [kgraph.get_layer_neuronwise_io(layer, Xs=get_Xs(i), Ys=get_Ys(i),
                                           return_i=return_i, return_o=return_o)
            for i in active_node_indices]
 
@@ -69,13 +117,18 @@ def _get_active_neuron_io(layer, active_node_indices,
 
 class BasePattern(object):
 
-    def __init__(self, model, layer, model_tensors=None):
+    def __init__(self,
+                 model,
+                 layer,
+                 model_tensors=None,
+                 execution_list=None):
         self.model = model
         self.layer = layer
         # All the tensors used by the model.
         # Allows to filter nodes in layers that do not
         # belong to this model.
         self.model_tensors = model_tensors
+        self.execution_list = execution_list
         self._active_node_indices = self._get_active_node_indices()
 
     def _get_active_node_indices(self):
@@ -124,8 +177,7 @@ class DummyPattern(BasePattern):
 class LinearPattern(BasePattern):
 
     def _get_neuron_mask(self):
-        layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Ys = _get_active_neuron_io(layer,
+        Ys = _get_active_neuron_io(self.layer,
                                    self._active_node_indices,
                                    return_i=False, return_o=True)
 
@@ -203,20 +255,20 @@ class LinearPattern(BasePattern):
 class ReluPositivePattern(LinearPattern):
 
     def _get_neuron_mask(self):
-        layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Ys = _get_active_neuron_io(layer,
+        Ys = _get_active_neuron_io(self.layer,
                                    self._active_node_indices,
-                                   return_i=False, return_o=True)
+                                   return_i=False, return_o=True,
+                                   do_activation_search=self.execution_list)
         return ilayers.GreaterThanZero()(Ys[0])
 
 
 class ReluNegativePattern(LinearPattern):
 
     def _get_neuron_mask(self):
-        layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=True)
-        Ys = _get_active_neuron_io(layer,
+        Ys = _get_active_neuron_io(self.layer,
                                    self._active_node_indices,
-                                   return_i=False, return_o=True)
+                                   return_i=False, return_o=True,
+                                   do_activation_search=self.execution_list)
         return ilayers.LessThanZero()(Ys[0])
 
 
@@ -266,9 +318,6 @@ class PatternComputer(object):
         if self.compute_layers_in_parallel is False:
             raise NotImplementedError("Not supported.")
 
-        if self.gpus is not None:
-            raise NotImplementedError("Not supported.")
-
         # create pattern instances and collect keras outputs
         self._work_sequence = []
         self._pattern_instances = {k: [] for k in self.pattern_types}
@@ -294,7 +343,9 @@ class PatternComputer(object):
             if kchecks.is_container(layer):
                 raise Exception("Container in container is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
-                pinstance = clazz(model, layer, model_tensors=model_tensors)
+                pinstance = clazz(model, layer,
+                                  model_tensors=model_tensors,
+                                  execution_list=execution_list)
                 if pinstance.has_pattern() is False:
                     continue
                 self._pattern_instances[pattern_type].append(pinstance)
