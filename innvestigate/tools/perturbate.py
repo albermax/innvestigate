@@ -175,7 +175,7 @@ class PerturbationAnalysis:
         score = self.model.test_on_batch(x_perturbated, y)
         return score
 
-    # copied from keras.engine.training
+
     def evaluate_generator(self, generator, steps=None,
                            max_queue_size=10,
                            workers=1,
@@ -184,39 +184,7 @@ class PerturbationAnalysis:
 
         The generator should return the same kind of data
         as accepted by `test_on_batch`.
-
-        # Arguments
-            generator: Generator yielding tuples (inputs, targets)
-                or (inputs, targets, sample_weights)
-                or an instance of Sequence (keras.utils.Sequence)
-                object in order to avoid duplicate data
-                when using multiprocessing.
-            steps: Total number of steps (batches of samples)
-                to yield from `generator` before stopping.
-                Optional for `Sequence`: if unspecified, will use
-                the `len(generator)` as a number of steps.
-            max_queue_size: maximum size for the generator queue
-            workers: Integer. Maximum number of processes to spin up
-                when using process based threading.
-                If unspecified, `workers` will default to 1. If 0, will
-                execute the generator on the main thread.
-            use_multiprocessing: if True, use process based threading.
-                Note that because
-                this implementation relies on multiprocessing,
-                you should not pass
-                non picklable arguments to the generator
-                as they can't be passed
-                easily to children processes.
-
-        # Returns
-            Scalar test loss (if the model has a single output and no metrics)
-            or list of scalars (if the model has multiple outputs
-            and/or metrics). The attribute `model.metrics_names` will give you
-            the display labels for the scalar outputs.
-
-        # Raises
-            ValueError: In case the generator yields
-                data in an invalid format.
+        For documentation, refer to keras.engine.training.evaluate_generator (https://keras.io/models/model/)
         """
 
         steps_done = 0
