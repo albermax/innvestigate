@@ -15,10 +15,6 @@ import six
 ###############################################################################
 
 
-import matplotlib
-
-matplotlib.use('Agg')
-
 import imp
 import keras.backend
 import keras.models
