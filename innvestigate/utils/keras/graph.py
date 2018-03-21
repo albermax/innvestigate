@@ -86,12 +86,19 @@ def get_layer_outbound_count(layer):
     return len(layer.outbound_nodes)
 
 
-def get_layer_neuronwise_io(layer, node_index=0, return_i=True, return_o=True):
+def get_layer_neuronwise_io(layer,
+                            node_index=0,
+                            Xs=None,
+                            Ys=None,
+                            return_i=True,
+                            return_o=True):
     if not kchecks.contains_kernel(layer):
         raise NotImplementedError()
 
-    Xs = iutils.to_list(layer.get_input_at(node_index))
-    Ys = iutils.to_list(layer.get_output_at(node_index))
+    if Xs is None:
+        Xs = iutils.to_list(layer.get_input_at(node_index))
+    if Ys is None:
+        Ys = iutils.to_list(layer.get_output_at(node_index))
 
     if isinstance(layer, keras.layers.Dense):
         # Xs and Ys are already in shape.
@@ -250,7 +257,6 @@ def model_contains(model, layer_condition, return_only_counts=False):
     for condition in layer_condition:
         tmp = [layer for layer in layers if condition(layer)]
         collected_layers.append(tmp)
-
     if return_only_counts is True:
         collected_layers = [len(v) for v in collected_layers]
 

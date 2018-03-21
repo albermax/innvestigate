@@ -216,10 +216,9 @@ class IntegratedGradients(wrapper.PathIntegrator):
     :param steps: Number of steps to use average along integration path.
     """
 
-    def __init__(self, model, *args, steps=64, **kwargs):
+    def __init__(self, model, steps=64, **kwargs):
         subanalyzer = Gradient(model)
         return super(IntegratedGradients, self).__init__(subanalyzer,
-                                                         *args,
                                                          steps=steps,
                                                          **kwargs)
 
@@ -242,6 +241,5 @@ class SmoothGrad(wrapper.GaussianSmoother):
         subanalyzer = Gradient(model)
         return super(SmoothGrad, self).__init__(
             subanalyzer,
-            *args,
             augment_by_n=augment_by_n,
             **kwargs)
