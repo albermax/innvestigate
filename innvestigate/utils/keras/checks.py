@@ -35,8 +35,9 @@ import keras.legacy.layers
 
 
 __all__ = [
-    "get_known_layers",
     "get_current_layers",
+    "get_known_layers",
+    "get_activation_search_safe_layers",
 
     "contains_activation",
     "contains_kernel",
@@ -52,6 +53,18 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
+def get_current_layers():
+    """
+    Returns a list of currently available layers in Keras.
+    """
+    class_set = set([(getattr(keras.layers, name), name)
+                     for name in dir(keras.layers)
+                     if (inspect.isclass(getattr(keras.layers, name)) and
+                         issubclass(getattr(keras.layers, name),
+                                    keras.engine.topology.Layer))])
+    return [x[1] for x in sorted((str(x[0]), x[1]) for x in class_set)]
 
 
 def get_known_layers():
@@ -146,16 +159,29 @@ def get_known_layers():
     return KNOWN_LAYERS
 
 
-def get_current_layers():
+def get_activation_search_safe_layers():
     """
-    Returns a list of currently available layers in Keras.
+    Returns a list of keras layer that we can walk along
+    in an activation search.
     """
-    class_set = set([(getattr(keras.layers, name), name)
-                     for name in dir(keras.layers)
-                     if (inspect.isclass(getattr(keras.layers, name)) and
-                         issubclass(getattr(keras.layers, name),
-                                    keras.engine.topology.Layer))])
-    return [x[1] for x in sorted((str(x[0]), x[1]) for x in class_set)]
+
+    # Inside function to not break import if Keras changes.
+    ACTIVATION_SEARCH_SAFE_LAYERS = (
+        keras.layers.advanced_activations.ELU,
+        keras.layers.advanced_activations.LeakyReLU,
+        keras.layers.advanced_activations.PReLU,
+        keras.layers.advanced_activations.Softmax,
+        keras.layers.advanced_activations.ThresholdedReLU,
+        keras.layers.core.Activation,
+        keras.layers.core.ActivityRegularization,
+        keras.layers.core.Dropout,
+        keras.layers.core.Flatten,
+        keras.layers.core.Reshape,
+        keras.layers.Add,
+        keras.layers.noise.GaussianNoise,
+        keras.layers.normalization.BatchNormalization,
+    )
+    return ACTIVATION_SEARCH_SAFE_LAYERS
 
 
 ###############################################################################
