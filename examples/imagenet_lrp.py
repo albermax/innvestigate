@@ -24,46 +24,13 @@ import keras.backend
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 import os
 
 import innvestigate
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-# todo: make nicer!
-
-
-def load_parameters(filename):
-    f = np.load(filename)
-    ret = [f["arr_%i" % i] for i in range(len(f.keys()))]
-    return ret
-
-
-def load_patterns(filename):
-    f = np.load(filename)
-
-    ret = {}
-    for prefix in ["A", "r", "mu"]:
-        l = sum([x.startswith(prefix) for x in f.keys()])
-        ret.update({prefix: [f["%s_%i" % (prefix, i)] for i in range(l)]})
-
-    return ret
-
-
-def lasagne_weights_to_keras_weights(weights):
-    ret = []
-    for w in weights:
-        if len(w.shape) < 4:
-            ret.append(w)
-        else:
-            ret.append(w.transpose(2, 3, 1, 0))
-    return ret
 
 
 ###############################################################################
@@ -74,72 +41,68 @@ def lasagne_weights_to_keras_weights(weights):
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
-param_file = "./imagenet_224_vgg_16.npz"
-# Note those weights are CC 4.0:
-# See http://www.robots.ox.ac.uk/~vgg/research/very_deep/
-param_url = "https://www.dropbox.com/s/cvjj8x19hzya9oe/imagenet_224_vgg_16.npz?dl=1"
-
-pattern_file = "./imagenet_224_vgg_16.pattern_file.A_only.npz"
-pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.patterns.A_only.npz?dl=1"
-
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-    # Download the necessary parameters for VGG16 and the according patterns.
-    eutils.download(param_url, param_file)
-    eutils.download(pattern_url, pattern_file)
+
+    netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
+    pattern_type = "relu"
 
     # Get some example test set images.
     images, label_to_class_name = eutils.get_imagenet_data()[:2]
 
-    keras.backend.set_image_data_format("channels_first")
 
     ###########################################################################
     # Build model.
     ###########################################################################
-    parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
-    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16_custom()
-    model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
+    tmp = getattr(innvestigate.applications.imagenet, netname)
+    # todo: specify type of patterns:
+    net = tmp(load_weights=True, load_patterns=pattern_type)
+    model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
-    model.set_weights(parameters)
-    modelp = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["sm_out"])
+    modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
-    modelp.set_weights(parameters)
-
-    patterns = lasagne_weights_to_keras_weights(
-        load_patterns(pattern_file)["A"])
 
     ###########################################################################
     # Utility functions.
     ###########################################################################
+    color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
+    channels_first = keras.backend.image_data_format == "channels_first"
 
     def preprocess(X):
         X = X.copy()
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_custom_preprocess(X)
+        X = net["preprocess_f"](X)
         return X
 
     def postprocess(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=channels_first)
+        X = iutils.postprocess_images(X,
+                                      color_coding=color_conversion,
+                                      channels_first=channels_first)
         return X
 
     def image(X):
         X = X.copy()
         return ivis.project(X, absmax=255.0, input_is_postive_only=True)
 
+    def bk_proj(X):
+        X = ivis.clip_quantile(X, 1)
+        return ivis.project(X)
+
     def heatmap(X):
         return ivis.heatmap(X)
+
+    def graymap(X):
+        return ivis.graymap(np.abs(X), input_is_postive_only=True)
 
     ###########################################################################
     # Analysis.
     ###########################################################################
 
+    patterns = net["patterns"]
     # Methods we use and some properties.
     methods = [
         # NAME             POSTPROCESSING     TITLE
@@ -147,8 +110,12 @@ if __name__ == "__main__":
         # Show input.
         ("input",                 {},                       image,   "Input"),
 
+        # Function
+        # Show input.
+        ("input",                 {},                       image,   "Input"),
+
         # Interaction
-        ("lrp.z_baseline",        {},                       heatmap, "LRP-Z Baseline"),
+        ("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
         ("lrp.z",                 {},                       heatmap, "LRP-Z"),
         ("lrp.z_WB",              {},                       heatmap, "LRP-Z-WB"),
         ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
@@ -190,6 +157,10 @@ if __name__ == "__main__":
             # Analyze.
             a = analyzer.analyze(image if is_input_analyzer else x)
             # Postprocess.
+            if not np.all(np.isfinite(a)):
+                print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                      (i, methods[aidx][3],
+                       np.any(np.isnan(a)), np.any(np.isinf(a))))
             if not is_input_analyzer:
                 a = postprocess(a)
             a = methods[aidx][2](a)
@@ -207,4 +178,5 @@ if __name__ == "__main__":
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,
                            col_label_offset=-50,
-                           usetex=True, file_name="all_methods_lrp.pdf")
+                           usetex=True,
+                           file_name="imagenet_lrp_%s.pdf" % netname)
