@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
+import time
 
 import innvestigate
 import innvestigate.utils as iutils
@@ -138,20 +139,29 @@ if __name__ == "__main__":
     analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
     text = []
     for i, (image, y) in enumerate(images):
+        print ('Image {}: '.format(i), end='')
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
-        text.append((r"\textbf{%s}" % label_to_class_name[y],
-                     r"\textit{(%.2f)}" % prob.max(),
-                     r"\textit{%s}" % label_to_class_name[y_hat]))
+        text.append((r"%s" % label_to_class_name[y],
+                     r"(%.4f)" % prob.max(),
+                     r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
+            #measure execution time
+            t_start = time.time()
+            print('{} '.format(methods[aidx][-1]), end='')
+
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
             a = analyzer.analyze(image if is_input_analyzer else x)
+
+            t_elapsed = time.time() - t_start
+            print('({:.2f}s) '.format(t_elapsed), end='')
+
             # Postprocess.
             if not np.all(np.isfinite(a)):
                 print("Image %i, analysis of %s not finite: nan %s inf %s" %
@@ -161,6 +171,7 @@ if __name__ == "__main__":
                 a = postprocess(a)
             a = methods[aidx][2](a)
             analysis[i, aidx] = a[0]
+        print('')
 
     ###########################################################################
     # Plot the analysis.
@@ -174,5 +185,6 @@ if __name__ == "__main__":
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,
                            col_label_offset=-50,
-                           usetex=True,
+                           usetex=False,
+                           is_fontsize_adaptive=False,
                            file_name="imagenet_lrp_%s.pdf" % netname)
