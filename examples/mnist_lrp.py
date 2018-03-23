@@ -28,6 +28,7 @@ import os
 import time
 
 import keras
+import keras.backend as K
 from keras.datasets import mnist
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Input
@@ -248,3 +249,7 @@ if __name__ == "__main__":
                            usetex=False,
                            is_fontsize_adaptive=False,
                            file_name="mnist_lrp_{}epochs.pdf".format(n_epochs))
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()
