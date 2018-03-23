@@ -13,4 +13,5 @@ Fix alpha-beta-rules to not rely on inputs being positive:
 Fix Zplus rule to not rely on positive inputs:
     + either fix directly
     + in intherit alphaBeta and set alpha1 beta0
+For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
 
