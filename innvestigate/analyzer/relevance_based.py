@@ -251,6 +251,15 @@ class ZPlusRule(kgraph.ReverseMappingBase):
 
 
 class EpsilonRule(kgraph.ReverseMappingBase):
+    #TODO make epsilon settable parameter
+    """
+    >>> from keras import backend as K
+    >>> K.epsilon()
+    1e-07
+    >>> K.set_epsilon(1e-05)
+    >>> K.epsilon()
+    1e-05
+    """
 
     def __init__(self, layer, state, bias=False):
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
@@ -258,8 +267,8 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
-        # The epsilon rule aligns epsilon with the sign.
-        prepare_div = keras.layers.Lambda(lambda x: x + K.sign(x)*K.epsilon())
+        # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
+        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
 
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
@@ -636,7 +645,7 @@ class LRP(base.ReverseAnalyzerBase):
                 self._rule = rule_class(layer, state) #TODO. add def call() to Rule base class, which is a setter for layer, state, to avoid above ad-hoc-input rule class gen.
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
+                #print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
 
@@ -652,7 +661,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer kicking in', end=':')
+        #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer kicking in', end=':')
         if(len(Xs) == len(Ys) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
         #if isinstance(reverse_state['layer'], keras.layers.Activation): # TODO: complete this. Activation should not be everything.
@@ -660,14 +669,14 @@ class LRP(base.ReverseAnalyzerBase):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            print(' just return') #TODO:DEBUG
+            #print(' just return') #TODO:DEBUG
             return reversed_Ys
         else:
             # TODO: make this more clear, here we assume to have reshape layers
             # TODO: add assert
             # TODO: BatchNorm layer should end up here (?): Implements an affine transformation.
             # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
-            print(' ilayers.GradientWRT') #TODO:DEBUG
+            #print(' ilayers.GradientWRT') #TODO:DEBUG
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
