@@ -47,11 +47,13 @@ __all__ = [
 
     "LRPZ",
     "LRPZIgnoreBias",
-    "LRPZPlus",
+
     "LRPEpsilon",
     "LRPEpsilonWithBias",
+
     "LRPWSquare",
     "LRPFlat",
+
     "LRPAlphaBeta",
     "LRPAlpha1Beta1",
     "LRPAlpha1Beta1WithBias",
@@ -59,6 +61,7 @@ __all__ = [
     "LRPAlpha2Beta1WithBias",
     "LRPAlpha1Beta0",
     "LRPAlpha1Beta0WithBias",
+    "LRPZPlus",
 ]
 
 
@@ -521,11 +524,13 @@ class BoundedRule(kgraph.ReverseMappingBase):
 LRP_RULES = {
     "Z": ZRule,
     "ZIgnoreBias": ZRuleIgnoreBias,
-    "ZPlus": ZPlusRule,
+
     "Epsilon": EpsilonRule,
     "EpsilonWithBias": EpsilonWithBiasRule,
+
     "WSquare": WSquareRule,
     "Flat": FlatRule,
+
     "AlphaBeta": AlphaBetaRule,
     "AlphaWithBiasBeta": AlphaBetaWithBiasRule,
     "Alpha1Beta1": Alpha1Beta1Rule,
@@ -534,6 +539,8 @@ LRP_RULES = {
     "Alpha2Beta1WithBias": Alpha2Beta1WithBiasRule,
     "Alpha1Beta0": Alpha1Beta0Rule,
     "Alpha1Beta0WithBias": Alpha1Beta0WithBiasRule,
+    "ZPlus": ZPlusRule,
+
     "Bounded": BoundedRule,
 }
 
