@@ -83,7 +83,7 @@ def plot_image_grid(grid,
     plt.tick_params(axis="y", which="both",
                     bottom="off", top="off", labelbottom="off")
     plt.axis("off")
-    plt.rc("text", usetex=usetex)
+    #plt.rc("text", usetex=usetex) # TODO: TEX causes problems sometimes. FIX broken pdf output
     plt.rc("font", family="sans-serif")
 
     # Plot grid.
