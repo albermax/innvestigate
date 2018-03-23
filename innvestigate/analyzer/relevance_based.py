@@ -490,7 +490,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
 
         # Get values for the division.
         Zs = f(Xs)
-        # Divide relevances with the value.    
+        # Divide relevances with the value.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
@@ -526,6 +526,17 @@ LRP_RULES = {
 
 
 class LRP(base.ReverseAnalyzerBase):
+    """
+    Base class for LRP-based model analyzers
+
+
+    :param model: A Keras model.
+
+    :param rule: A rule can be a  string or a Rule object, lists thereof or a list of conditions [(Condition, Rule), ... ]
+      gradient.
+
+    :param input_layer_rule: either a Rule object, atuple of (low, high) the min/max pixel values of the inputs
+    """
 
     def __init__(self,
                  model, *args,
@@ -533,7 +544,7 @@ class LRP(base.ReverseAnalyzerBase):
                  input_layer_rule=None,
                  **kwargs):
         self._model_checks = [
-            # todo: Check for non-linear output in general.
+            # TODO: Check for non-linear output in general.
             {
                 "check": lambda layer: kchecks.contains_activation(
                     layer, activation="softmax"),
@@ -548,8 +559,15 @@ class LRP(base.ReverseAnalyzerBase):
             },
         ]
 
+
+        # check if rule was given explicitly.
+        # TODO: make LRP-Z the default behaviour / rule
+        # TODO: create PRESETs for LRP, e.g. alphabeta for conv, eps/z für linear layers
+        # rule can be a string, a list (of strings) or a list of conditions [(Condition, Rule), ... ] for each layer.
         if rule is None:
             raise ValueError("Need LRP rule(s).")
+
+
 
         if isinstance(rule, list):
             # copy refrences
@@ -558,31 +576,37 @@ class LRP(base.ReverseAnalyzerBase):
             self._rule = rule
         self._input_layer_rule = input_layer_rule
 
+
         if(
-                isinstance(rule, six.string_types) or
-                (
-                    inspect.isclass(rule) and
-                    issubclass(rule, kgraph.ReverseMappingBase)
-                )
+           isinstance(rule, six.string_types) or
+           (inspect.isclass(rule) and issubclass(rule, kgraph.ReverseMappingBase)) # NOTE: All LRP rules inherit from kgraph.ReverseMappingBase
         ):
+            # the given rule is a single strig or single rule implementing class
             use_conditions = True
             rules = [(lambda a, b: True, rule)]
+
         elif not isinstance(rule[0], tuple):
+            # rule list of rule strings or classes
             use_conditions = False
             rules = list(rule)
         else:
+            # rule is list of conditioned rules
             use_conditions = True
             rules = rule
 
+
+        #TODO: find out: what are the assumptions here?
         if self._input_layer_rule is not None:
             input_layer_rule = self._input_layer_rule
             if isinstance(input_layer_rule, tuple):
                 low, high = input_layer_rule
 
+                # TODO avoid ad-hoc class definition here. Try to use Bounded Rule.
                 class input_layer_rule(BoundedRule):
                     def __init__(self, *args, **kwars):
                         return super(input_layer_rule, self).__init__(
                             *args, low=low, high=high, **kwargs)
+
 
             if use_conditions is True:
                 rules.insert(0,
@@ -591,7 +615,9 @@ class LRP(base.ReverseAnalyzerBase):
             else:
                 rules.insert(0, input_layer_rule)
 
+
         def select_rule(layer, reverse_state):
+            # TODO: check if use_conditions functions properly. should be class variable.
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
@@ -600,34 +626,50 @@ class LRP(base.ReverseAnalyzerBase):
             else:
                 return rules.pop()
 
-        class ReverseLayer(kgraph.ReverseMappingBase):
 
+        class ReverseLayer(kgraph.ReverseMappingBase):
+            # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state)
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule]
-                self._rule = rule_class(layer, state)
+                self._rule = rule_class(layer, state) #TODO. add def call() to Rule base class, which is a setter for layer, state, to avoid above ad-hoc-input rule class gen.
 
             def apply(self, Xs, Ys, Rs, reverse_state):
+                print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
+
+        # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
         ]
+
+        # finalize constructor.
         return super(LRP, self).__init__(model, *args, **kwargs)
 
+
+
+
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer kicking in', end=':')
         if(len(Xs) == len(Ys) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
-            # Todo: this is not necessarily true. Do explicit layer check.
+        #if isinstance(reverse_state['layer'], keras.layers.Activation): # TODO: complete this. Activation should not be everything.
+            # TODO: this is not necessarily true. Do explicit layer check.
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
+            print(' just return') #TODO:DEBUG
             return reversed_Ys
         else:
-            # todo: make this more clear, here we assume to have rehape layers
-            # todo: add assert
+            # TODO: make this more clear, here we assume to have reshape layers
+            # TODO: add assert
+            # TODO: BatchNorm layer should end up here (?): Implements an affine transformation.
+            # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
+            print(' ilayers.GradientWRT') #TODO:DEBUG
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+
 
     def _get_state(self):
         state = super(LRP, self)._get_state()
@@ -646,7 +688,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
 ###############################################################################
-###############################################################################
+# RULE CLASSES ################################################################
 ###############################################################################
 
 
@@ -707,6 +749,10 @@ class LRPFlat(_LRPFixedParams):
         return super(LRPFlat, self).__init__(model, *args,
                                              rule="Flat", **kwargs)
 
+
+###############################################################################
+# LRP PARAM PRESETS CLASSES ###################################################
+###############################################################################
 
 class LRPAlphaBeta(LRP):
 

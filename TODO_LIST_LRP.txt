@@ -1,0 +1,7 @@
+- Add and Test fully connected models from LRP Toolbox (data normalized to [-1 1], relu and tanh activations. get code from laptop.)
+- ReverseLayer as independent class
+    + Merge type layers
+    + Batch norm layer
+    + nonlinearities and activations. handle non-zero-centered activation fxns. they break things
+    + add-layer
+
