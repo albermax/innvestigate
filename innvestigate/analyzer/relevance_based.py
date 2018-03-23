@@ -46,7 +46,7 @@ __all__ = [
     "LRP",
 
     "LRPZ",
-    "LRPZWithBias",
+    "LRPZIgnoreBias",
     "LRPZPlus",
     "LRPEpsilon",
     "LRPEpsilonWithBias",
@@ -68,6 +68,7 @@ __all__ = [
 
 
 class BaselineLRPZ(base.AnalyzerNetworkBase):
+    # TODO: Inherit from LRP, specialize from there.
     """LRPZ analyzer.
 
     Applies the "LRP-Z" algorithm to analyze the model.
@@ -194,10 +195,14 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
 
 class ZRule(kgraph.ReverseMappingBase):
+    """
+    Basic LRP decomposition rule, which considers the bias a constant input neuron.
+    """
 
-    def __init__(self, layer, state, bias=False):
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=bias, name_template="reversed_kernel_%s")
+    def __init__(self, layer, state, bias=True):
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             keep_bias=bias,
+                                                             name_template="reversed_kernel_%s")
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
@@ -215,10 +220,14 @@ class ZRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 
-class ZWithBiasRule(ZRule):
+class ZRuleIgnoreBias(ZRule):
+    """
+    Basic LRP decomposition rule, ignoring the bias neuron
+    """
     def __init__(self, *args, **kwargs):
-        return super(ZWithBiasRule, self).__init__(*args,
-                                                   bias=True, **kwargs)
+        return super(ZRuleIgnoreBias, self).__init__(*args,
+                                                   bias=False,
+                                                   **kwargs)
 
 
 # todo: make subclass of ZRule
@@ -511,7 +520,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
 #        bias+- for some other rules
 LRP_RULES = {
     "Z": ZRule,
-    "ZWithBias": ZWithBiasRule,
+    "ZIgnoreBias": ZRuleIgnoreBias,
     "ZPlus": ZPlusRule,
     "Epsilon": EpsilonRule,
     "EpsilonWithBias": EpsilonWithBiasRule,
@@ -716,11 +725,11 @@ class LRPZ(_LRPFixedParams):
         return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
-class LRPZWithBias(_LRPFixedParams):
+class LRPZIgnoreBias(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZWithBias, self).__init__(model, *args,
-                                                  rule="ZWithBias", **kwargs)
+        return super(LRPZIgnoreBias, self).__init__(model, *args,
+                                                  rule="ZIgnoreBias", **kwargs)
 
 
 class LRPZPlus(_LRPFixedParams):

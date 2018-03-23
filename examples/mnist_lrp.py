@@ -160,7 +160,7 @@ if __name__ == "__main__":
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
     model, modelp = create_model(channels_first)
-    n_epochs = 1
+    n_epochs = 2
     train_model(modelp, data_preprocessed, n_epochs=n_epochs)
     model.set_weights(modelp.get_weights())
 
@@ -177,18 +177,18 @@ if __name__ == "__main__":
 
         ("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
         ("lrp.z",                 {},                       heatmap, "LRP-Z"),
-        ("lrp.z_WB",              {},                       heatmap, "LRP-Z-WB"),
-        ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
-        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
-        ("lrp.epsilon_WB",        {},                       heatmap, "LRP-Epsilon-WB"),
-        ("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
-        ("lrp.flat",              {},                       heatmap, "LRP-Flat"),
-        ("lrp.alpha_1_beta_1",    {},                       heatmap, "LRP-A1B1"),
-        ("lrp.alpha_1_beta_1_WB", {},                       heatmap, "LRP-A1B1-WB"),
-        ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-        ("lrp.alpha_2_beta_1_WB", {},                       heatmap, "LRP-A2B1-WB"),
-        ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-        ("lrp.alpha_1_beta_0_WB", {},                       heatmap, "LRP-A1B0-WB"),
+        ("lrp.z_IB",              {},                       heatmap, "LRP-Z-IB"),
+        #("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
+        #("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
+        #("lrp.epsilon_WB",        {},                       heatmap, "LRP-Epsilon-WB"),
+        #("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
+        #("lrp.flat",              {},                       heatmap, "LRP-Flat"),
+        #("lrp.alpha_1_beta_1",    {},                       heatmap, "LRP-A1B1"),
+        #("lrp.alpha_1_beta_1_WB", {},                       heatmap, "LRP-A1B1-WB"),
+        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+        #("lrp.alpha_2_beta_1_WB", {},                       heatmap, "LRP-A2B1-WB"),
+        #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+        #("lrp.alpha_1_beta_0_WB", {},                       heatmap, "LRP-A1B0-WB"),
     ]
 
     # Create analyzers.
