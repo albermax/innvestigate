@@ -163,4 +163,5 @@ def plot_image_grid(grid,
     if file_name is None:
         plt.show()
     else:
+        print ('saving figure to {}'.format(file_name))
         plt.savefig(file_name, orientation='landscape', dpi=dpi)
