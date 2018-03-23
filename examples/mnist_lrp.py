@@ -160,7 +160,7 @@ if __name__ == "__main__":
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
     model, modelp = create_model(channels_first)
-    n_epochs = 2
+    n_epochs = 1
     train_model(modelp, data_preprocessed, n_epochs=n_epochs)
     model.set_weights(modelp.get_weights())
 
@@ -213,7 +213,7 @@ if __name__ == "__main__":
         y_hat = prob.argmax()
 
         text.append((r"%s" % label_to_class_name[y],
-                     r"(%.4f)" % prob.max(),
+                     r"(%.2f)" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             a = analyzer.analyze(image if is_input_analyzer else x)
 
             t_elapsed = time.time() - t_start
-            print('({:.2f}s) '.format(t_elapsed), end='')
+            print('({:.4f}s) '.format(t_elapsed), end='')
 
             # Postprocess.
             if not is_input_analyzer:
