@@ -159,7 +159,7 @@ if __name__ == "__main__":
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
     model, modelp = create_model(channels_first)
-    n_epochs = 20
+    n_epochs = 2
     train_model(modelp, data_preprocessed, n_epochs=n_epochs)
     model.set_weights(modelp.get_weights())
 
