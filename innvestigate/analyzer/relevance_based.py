@@ -864,7 +864,7 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha2Beta1WithBias, self).__init__(model, *args,
+        return super(LRPAlpha2Beta1IgnoreBias, self).__init__(model, *args,
                                                             alpha=2,
                                                             beta=1,
                                                             bias=False,
@@ -884,7 +884,7 @@ class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha1Beta0WithBias, self).__init__(model, *args,
+        return super(LRPAlpha1Beta0IgnoreBias, self).__init__(model, *args,
                                                             alpha=1,
                                                             beta=0,
                                                             bias=False,
