@@ -110,10 +110,6 @@ if __name__ == "__main__":
         # Show input.
         ("input",                 {},                       image,   "Input"),
 
-        # Function
-        # Show input.
-        ("input",                 {},                       image,   "Input"),
-
         # Interaction
         ("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
         ("lrp.z",                 {},                       heatmap, "LRP-Z"),
