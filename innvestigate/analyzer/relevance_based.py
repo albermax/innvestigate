@@ -49,18 +49,17 @@ __all__ = [
     "LRPZIgnoreBias",
 
     "LRPEpsilon",
-    "LRPEpsilonWithBias",
+    "LRPEpsilonIgnoreBias",
 
     "LRPWSquare",
     "LRPFlat",
 
     "LRPAlphaBeta",
-    "LRPAlpha1Beta1",
-    "LRPAlpha1Beta1WithBias",
+
     "LRPAlpha2Beta1",
-    "LRPAlpha2Beta1WithBias",
+    "LRPAlpha2Beta1IgnoreBias",
     "LRPAlpha1Beta0",
-    "LRPAlpha1Beta0WithBias",
+    "LRPAlpha1Beta0IgnoreBias",
     "LRPZPlus",
 ]
 
@@ -199,7 +198,8 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
 class ZRule(kgraph.ReverseMappingBase):
     """
-    Basic LRP decomposition rule, which considers the bias a constant input neuron.
+    Basic LRP decomposition rule (for layers with weight kernels),
+    which considers the bias a constant input neuron.
     """
 
     def __init__(self, layer, state, bias=True):
@@ -223,17 +223,18 @@ class ZRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 
-class ZRuleIgnoreBias(ZRule):
+class ZIgnoreBiasRule(ZRule):
     """
     Basic LRP decomposition rule, ignoring the bias neuron
     """
     def __init__(self, *args, **kwargs):
-        return super(ZRuleIgnoreBias, self).__init__(*args,
+        return super(ZIgnoreBiasRule, self).__init__(*args,
                                                    bias=False,
                                                    **kwargs)
 
 
-# todo: make subclass of ZRule
+# TODO: make subclass of ZRule
+#TODO: fix computation of z+ to not depend on positive inputs, but positive preactivations
 class ZPlusRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
@@ -263,19 +264,27 @@ class ZPlusRule(kgraph.ReverseMappingBase):
 
 
 class EpsilonRule(kgraph.ReverseMappingBase):
-    #TODO make epsilon settable parameter
     """
-    >>> from keras import backend as K
-    >>> K.epsilon()
-    1e-07
-    >>> K.set_epsilon(1e-05)
-    >>> K.epsilon()
-    1e-05
+    Similar to ZRule.
+    The only difference is the addition of a numerical stabilizer term
+    epsilon to the decomposition function's denominator.
+    the sign of epsilon depends on the sign of the output activation
+    0 is considered to be positive, ie sign(0) = 1
     """
 
-    def __init__(self, layer, state, bias=False):
+    #TODO make epsilon settable parameter
+    #>>> from keras import backend as K
+    #>>> K.epsilon()
+    #1e-07
+    #>>> K.set_epsilon(1e-05)
+    #>>> K.epsilon()
+    #1e-05
+
+
+    def __init__(self, layer, state, bias=True):
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s")
+
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
@@ -295,10 +304,11 @@ class EpsilonRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 
-class EpsilonWithBiasRule(EpsilonRule):
+
+class EpsilonIgnoreBiasRule(EpsilonRule):
     def __init__(self, *args, **kwargs):
-        return super(EpsilonWithBiasRule, self).__init__(*args,
-                                                         bias=True, **kwargs)
+        return super(EpsilonIgnoreBiasRule, self).__init__(*args,
+                                                         bias=False, **kwargs)
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
@@ -326,7 +336,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
         return tmp
 
 
-# todo: Make sublcass of WSquare rule
+# TODO: Make sublcass of WSquare rule
 class FlatRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
@@ -353,10 +363,30 @@ class FlatRule(kgraph.ReverseMappingBase):
         return tmp
 
 
-# todo: could potentially inherit from and use ZRule.
+# TODO: could potentially inherit from and use ZRule.
 class AlphaBetaRule(kgraph.ReverseMappingBase):
-    # todo: this only works for relu networks, needs to be extended.
-    def __init__(self, layer, state, alpha=1, beta=1, bias=False):
+    """
+    This decomposition rule handles the positive forward
+    activations (x*w > 0) and negative forward activations
+    (w * x < 0) independently, reducing the risk of zero
+    divisions considerably. In fact, the only case where
+    divisions by zero can happen is if there are either
+    no positive or no negative parts to the activation
+    at all.
+    Corresponding parameterization of this rule implement
+    methods such as Excitation Backpropagation with
+    alpha=1, beta=0
+    s.t.
+    alpha - beta = 1 (after current param. scheme.)
+    and
+    alpha > 1
+    beta > 0
+    """
+    #TODO assert alpha beta conditions
+    #TODO extend: either give alpha, or beta, or both. if one is given, infer the others.
+
+    # TODO: this only works for relu networks, needs to be extended.
+    def __init__(self, layer, state, alpha=2, beta=1, bias=True):
         self._alpha = alpha
         self._beta = beta
 
@@ -371,12 +401,15 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             layer,
             keep_bias=bias,
             name_template="reversed_kernel_negative_%s")
+
+        #TODO: make decomposition not rely on positive or negative weights, but positive and negative preactivations.
         positive_weights = [x * (x > 0)
                             for x in self._layer_wo_act_positive.get_weights()]
         negative_weights = [x * (x < 0)
                             for x in self._layer_wo_act_negative.get_weights()]
         self._layer_wo_act_positive.set_weights(positive_weights)
         self._layer_wo_act_negative.set_weights(negative_weights)
+
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
@@ -404,29 +437,13 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                 for a, b in zip(positive_part, negative_part)]
 
 
-class AlphaBetaWithBiasRule(AlphaBetaRule):
+
+class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(AlphaBetaWithBiasRule, self).__init__(*args,
-                                                           bias=True,
+        return super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
+                                                           bias=False,
                                                            **kwargs)
 
-
-class Alpha1Beta1Rule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        return super(Alpha1Beta1Rule, self).__init__(*args,
-                                                     alpha=1,
-                                                     beta=1,
-                                                     bias=False,
-                                                     **kwargs)
-
-
-class Alpha1Beta1WithBiasRule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        return super(Alpha1Beta1WithBiasRule, self).__init__(*args,
-                                                             alpha=1,
-                                                             beta=1,
-                                                             bias=True,
-                                                             **kwargs)
 
 
 class Alpha2Beta1Rule(AlphaBetaRule):
@@ -434,16 +451,16 @@ class Alpha2Beta1Rule(AlphaBetaRule):
         return super(Alpha2Beta1Rule, self).__init__(*args,
                                                      alpha=2,
                                                      beta=1,
-                                                     bias=False,
+                                                     bias=True,
                                                      **kwargs)
 
 
-class Alpha2Beta1WithBiasRule(AlphaBetaRule):
+class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha2Beta1WithBiasRule, self).__init__(*args,
+        return super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
                                                              alpha=2,
                                                              beta=1,
-                                                             bias=True,
+                                                             bias=False,
                                                              **kwargs)
 
 
@@ -452,21 +469,22 @@ class Alpha1Beta0Rule(AlphaBetaRule):
         return super(Alpha1Beta0Rule, self).__init__(*args,
                                                      alpha=1,
                                                      beta=0,
-                                                     bias=False,
+                                                     bias=True,
                                                      **kwargs)
 
 
-class Alpha1Beta0WithBiasRule(AlphaBetaRule):
+class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha1Beta0WithBiasRule, self).__init__(*args,
+        return super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
                                                              alpha=1,
                                                              beta=0,
-                                                             bias=True,
+                                                             bias=False,
                                                              **kwargs)
 
 
 class BoundedRule(kgraph.ReverseMappingBase):
-    # todo: this only works for relu networks, needs to be extended.
+    # TODO: this only works for relu networks, needs to be extended.
+    # TODO: check
     def __init__(self, layer, state, low=-1, high=1):
         self._low = low
         self._high = high
@@ -523,24 +541,23 @@ class BoundedRule(kgraph.ReverseMappingBase):
 #        bias+- for some other rules
 LRP_RULES = {
     "Z": ZRule,
-    "ZIgnoreBias": ZRuleIgnoreBias,
+    "ZIgnoreBias": ZIgnoreBiasRule,
 
     "Epsilon": EpsilonRule,
-    "EpsilonWithBias": EpsilonWithBiasRule,
+    "EpsilonIgnoreBias": EpsilonIgnoreBiasRule,
 
     "WSquare": WSquareRule,
     "Flat": FlatRule,
 
     "AlphaBeta": AlphaBetaRule,
-    "AlphaWithBiasBeta": AlphaBetaWithBiasRule,
-    "Alpha1Beta1": Alpha1Beta1Rule,
-    "Alpha1Beta1WithBias": Alpha1Beta1WithBiasRule,
-    "Alpha2Beta1": Alpha2Beta1Rule,
-    "Alpha2Beta1WithBias": Alpha2Beta1WithBiasRule,
-    "Alpha1Beta0": Alpha1Beta0Rule,
-    "Alpha1Beta0WithBias": Alpha1Beta0WithBiasRule,
-    "ZPlus": ZPlusRule,
+    "AlphaBetaIgnoreBias": AlphaBetaIgnoreBiasRule,
 
+    "Alpha2Beta1": Alpha2Beta1Rule,
+    "Alpha2Beta1IgnoreBias": Alpha2Beta1IgnoreBiasRule,
+    "Alpha1Beta0": Alpha1Beta0Rule,
+    "Alpha1Beta0IgnoreBias": Alpha1Beta0IgnoreBiasRule,
+
+    "ZPlus": ZPlusRule,
     "Bounded": BoundedRule,
 }
 
@@ -713,7 +730,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
 ###############################################################################
-# RULE CLASSES ################################################################
+# ANALYZER CLASSES ################################################################
 ###############################################################################
 
 
@@ -753,11 +770,11 @@ class LRPEpsilon(_LRPFixedParams):
                                                 rule="Epsilon", **kwargs)
 
 
-class LRPEpsilonWithBias(_LRPFixedParams):
+class LRPEpsilonIgnoreBias(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPEpsilonWithBias, self).__init__(model, *args,
-                                                        rule="EpsilonWithBias",
+        return super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
+                                                        rule="EpsilonIgnoreBias",
                                                         **kwargs)
 
 
@@ -775,17 +792,14 @@ class LRPFlat(_LRPFixedParams):
                                              rule="Flat", **kwargs)
 
 
-###############################################################################
-# LRP PARAM PRESETS CLASSES ###################################################
-###############################################################################
-
 class LRPAlphaBeta(LRP):
 
-    def __init__(self, model, alpha=1, beta=1, bias=False, *args, **kwargs):
+    def __init__(self, model, alpha=1, beta=1, bias=True, *args, **kwargs):
         self._alpha = alpha
         self._beta = beta
         self._bias = bias
 
+        #TODO: why does this class exist? A a class dummy again?
         class CustomizedAlphaBetaRule(AlphaBetaRule):
             def __init__(self, *args, **kwargs):
 
@@ -821,6 +835,7 @@ class LRPAlphaBeta(LRP):
         return kwargs
 
 
+
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
 
     @classmethod
@@ -832,25 +847,9 @@ class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
         return kwargs
 
 
-class LRPAlpha1Beta1(_LRPAlphaBetaFixedParams):
-
-    def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha1Beta1, self).__init__(model, *args,
-                                                    alpha=1,
-                                                    beta=1,
-                                                    bias=False,
-                                                    **kwargs)
-
-
-class LRPAlpha1Beta1WithBias(_LRPAlphaBetaFixedParams):
-
-    def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha1Beta1WithBias, self).__init__(model, *args,
-                                                            alpha=1,
-                                                            beta=1,
-                                                            bias=True,
-                                                            **kwargs)
-
+###############################################################################
+# LRP PARAM PRESETS CLASSES ###################################################
+###############################################################################
 
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
@@ -858,17 +857,17 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
         return super(LRPAlpha2Beta1, self).__init__(model, *args,
                                                     alpha=2,
                                                     beta=1,
-                                                    bias=False,
+                                                    bias=True,
                                                     **kwargs)
 
 
-class LRPAlpha2Beta1WithBias(_LRPAlphaBetaFixedParams):
+class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha2Beta1WithBias, self).__init__(model, *args,
                                                             alpha=2,
                                                             beta=1,
-                                                            bias=True,
+                                                            bias=False,
                                                             **kwargs)
 
 
@@ -878,15 +877,15 @@ class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
         return super(LRPAlpha1Beta0, self).__init__(model, *args,
                                                     alpha=1,
                                                     beta=0,
-                                                    bias=False,
+                                                    bias=True,
                                                     **kwargs)
 
 
-class LRPAlpha1Beta0WithBias(_LRPAlphaBetaFixedParams):
+class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
         return super(LRPAlpha1Beta0WithBias, self).__init__(model, *args,
                                                             alpha=1,
                                                             beta=0,
-                                                            bias=True,
+                                                            bias=False,
                                                             **kwargs)
