@@ -83,10 +83,10 @@ def create_model(channels_first):
     return model_wo_sm, model_w_sm
 
 
-def train_model(model, data):
+def train_model(model, data, n_epochs=20):
     batch_size = 128
     num_classes = 10
-    epochs = 20
+    epochs = n_epochs
 
     x_train, y_train, x_test, y_test = data
     # convert class vectors to binary class matrices
@@ -159,7 +159,8 @@ if __name__ == "__main__":
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
     model, modelp = create_model(channels_first)
-    train_model(modelp, data_preprocessed)
+    n_epochs = 20
+    train_model(modelp, data_preprocessed, n_epochs=n_epochs)
     model.set_weights(modelp.get_weights())
 
     ###########################################################################
@@ -173,19 +174,20 @@ if __name__ == "__main__":
         # Show input.
         ("input",                 {},                       image,   "Input"),
 
-        # Function
-        #("gradient",              {},                       graymap, "Gradient"),
-        #("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        #("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
-
-        # Signal
-        #("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        #("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
-        #("pattern.net",           {},                       bk_proj, "PatterNet"),
-
-        # Interaction
-        #("pattern.attribution",   {},                       heatmap, "PatternAttribution"),
         ("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
+        ("lrp.z",                 {},                       heatmap, "LRP-Z"),
+        ("lrp.z_WB",              {},                       heatmap, "LRP-Z-WB"),
+        ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
+        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
+        ("lrp.epsilon_WB",        {},                       heatmap, "LRP-Epsilon-WB"),
+        ("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
+        ("lrp.flat",              {},                       heatmap, "LRP-Flat"),
+        ("lrp.alpha_1_beta_1",    {},                       heatmap, "LRP-A1B1"),
+        ("lrp.alpha_1_beta_1_WB", {},                       heatmap, "LRP-A1B1-WB"),
+        ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+        ("lrp.alpha_2_beta_1_WB", {},                       heatmap, "LRP-A2B1-WB"),
+        ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+        ("lrp.alpha_1_beta_0_WB", {},                       heatmap, "LRP-A1B0-WB"),
     ]
 
     # Create analyzers.
@@ -234,4 +236,4 @@ if __name__ == "__main__":
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=5,
                            col_label_offset=15,
-                           usetex=True, file_name="mnist_lrp.pdf")
+                           usetex=True, file_name="mnist_lrp_{}epochs.pdf".format(n_epochs))
