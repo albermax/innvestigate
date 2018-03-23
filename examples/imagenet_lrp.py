@@ -20,7 +20,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import imp
-import keras.backend
+import keras.backend as K
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # Utility functions.
     ###########################################################################
     color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
-    channels_first = keras.backend.image_data_format == "channels_first"
+    channels_first = K.image_data_format == "channels_first"
 
     def preprocess(X):
         X = X.copy()
@@ -115,17 +115,16 @@ if __name__ == "__main__":
         ("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
         ("lrp.z",                 {},                       heatmap, "LRP-Z"),
         ("lrp.z_IB",              {},                       heatmap, "LRP-Z-IB"),
-        #("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
-        #("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
-        #("lrp.epsilon_WB",        {},                       heatmap, "LRP-Epsilon-WB"),
-        #("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
-        #("lrp.flat",              {},                       heatmap, "LRP-Flat"),
-        #("lrp.alpha_1_beta_1",    {},                       heatmap, "LRP-A1B1"),
-        #("lrp.alpha_1_beta_1_WB", {},                       heatmap, "LRP-A1B1-WB"),
-        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-        #("lrp.alpha_2_beta_1_WB", {},                       heatmap, "LRP-A2B1-WB"),
-        #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-        #("lrp.alpha_1_beta_0_WB", {},                       heatmap, "LRP-A1B0-WB"),
+        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
+        ("lrp.epsilon_IB",        {},                       heatmap, "LRP-Epsilon-IB"),
+        ("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
+        ("lrp.flat",              {},                       heatmap, "LRP-Flat"),
+
+        ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+        ("lrp.alpha_2_beta_1_IB", {},                       heatmap, "LRP-A2B1-IB"),
+        ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+        ("lrp.alpha_1_beta_0_IB", {},                       heatmap, "LRP-A1B0-IB"),
+        ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
     ]
 
     # Create analyzers.
@@ -188,3 +187,7 @@ if __name__ == "__main__":
                            usetex=False,
                            is_fontsize_adaptive=False,
                            file_name="imagenet_lrp_%s.pdf" % netname)
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()
