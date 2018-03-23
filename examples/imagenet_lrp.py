@@ -147,7 +147,7 @@ if __name__ == "__main__":
         y_hat = prob.argmax()
 
         text.append((r"%s" % label_to_class_name[y],
-                     r"(%.4f)" % prob.max(),
+                     r"(%.2f)" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
             a = analyzer.analyze(image if is_input_analyzer else x)
 
             t_elapsed = time.time() - t_start
-            print('({:.2f}s) '.format(t_elapsed), end='')
+            print('({:.4f}s) '.format(t_elapsed), end='')
 
             # Postprocess.
             if not np.all(np.isfinite(a)):
