@@ -59,7 +59,7 @@ def create_analyzer(name, model, **kwargs):
         "lrp.z_baseline": BaselineLRPZ,
         "lrp.z": LRPZ,
         "lrp.z_IB": LRPZIgnoreBias,
-        "lrp.z_plus": LRPZPlus,
+
         "lrp.epsilon": LRPEpsilon,
         "lrp.epsilon_WB": LRPEpsilonWithBias,
         "lrp.w_square": LRPWSquare,
@@ -71,6 +71,7 @@ def create_analyzer(name, model, **kwargs):
         "lrp.alpha_2_beta_1_WB": LRPAlpha2Beta1WithBias,
         "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
         "lrp.alpha_1_beta_0_WB": LRPAlpha1Beta0WithBias,
+        "lrp.z_plus": LRPZPlus,
 
         # Pattern based
         "pattern.net": PatternNet,
