@@ -58,7 +58,7 @@ def create_analyzer(name, model, **kwargs):
         "lrp": LRP,
         "lrp.z_baseline": BaselineLRPZ,
         "lrp.z": LRPZ,
-        "lrp.z_WB": LRPZWithBias,
+        "lrp.z_IB": LRPZIgnoreBias,
         "lrp.z_plus": LRPZPlus,
         "lrp.epsilon": LRPEpsilon,
         "lrp.epsilon_WB": LRPEpsilonWithBias,
