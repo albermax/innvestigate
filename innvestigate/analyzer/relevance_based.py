@@ -501,13 +501,6 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                     for a, b in zip(X, tmp)]
 
 
-        # Old code, depending on X >= 0
-        # positive_part = f(self._layer_wo_act_positive, Xs)
-        # negative_part = f(self._layer_wo_act_negative, Xs)
-        # return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-        #            for a, b in zip(positive_part, negative_part)]
-
-
         # Distinguish postive and negative inputs.
         Xs_pos = kutils.apply(keras.layers.Activation('relu'), Xs)
         Xs_neg = kutils.apply(keras.layers.Activation('relu'), kutils.apply(times_minus_one, Xs))
@@ -516,14 +509,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
         positive_part = [keras.layers.Add()(positive_part)] #add and put back in a list
 
-        #code which does not need execution if beta is zero
-        #negative_part = f(self._layer_wo_act_negative, Xs_pos) + f(self._layer_wo_act_positive, Xs_neg)
-        #negative_part = [keras.layers.Add()(negative_part)] #add and put back in a list
-        #return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-        #            for a, b in zip(positive_part, negative_part)]
-
         if self._beta: #only compute beta if beta is not zero.
-            print ('doing the negative business', self._beta)
             negative_part = f(self._layer_wo_act_negative, Xs_pos) + f(self._layer_wo_act_positive, Xs_neg)
             negative_part = [keras.layers.Add()(negative_part)] #add and put back in a list
             return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
