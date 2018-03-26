@@ -73,6 +73,7 @@ def create_analyzer(name, model, **kwargs):
         "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
         "lrp.alpha_1_beta_0_IB": LRPAlpha1Beta0IgnoreBias,
         "lrp.z_plus": LRPZPlus,
+        "lrp.z_plus_fast": LRPZPlusFast,
 
         # Pattern based
         "pattern.net": PatternNet,
