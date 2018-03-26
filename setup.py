@@ -8,8 +8,7 @@ requirements = [
     "keras",
     "future",
     "h5py",
-    "pillow",
-    "matplotlib"  #TODO: should matplotlib be in the requirements or listed somewhere as "good-to-have"?
+    "pillow"
 ]
 
 
@@ -36,10 +35,10 @@ def setup():
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber,Pieter-Jan Kindermans",  #TODO:Extend author list
+        author="Maxmilian Alber, Sebastian Bach, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans",
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
-        packages=setuptools.find_packages(),  #TODO: example folder incl images
+        packages=setuptools.find_packages(),
         install_requires=requirements,
         include_package_data=True,
         zip_safe=False,
