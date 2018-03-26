@@ -183,6 +183,7 @@ if __name__ == "__main__":
         ("lrp.epsilon_IB",        {},                       heatmap, "LRP-Epsilon-IB"),
         ("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
         ("lrp.flat",              {},                       heatmap, "LRP-Flat"),
+        #("lrp.alpha_beta",        {},                       heatmap, "LRP-AB"),
         ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
         ("lrp.alpha_2_beta_1_IB", {},                       heatmap, "LRP-A2B1-IB"),
         ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
