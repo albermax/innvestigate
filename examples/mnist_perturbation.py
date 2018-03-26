@@ -179,6 +179,7 @@ if __name__ == "__main__":
     y_test = keras.utils.to_categorical(y_test, num_classes)
     generator = iutils.BatchSequence([x_test, y_test], batch_size=batch_size)
 
+    # Perturbation analysis
     current_index = 0
     perturbation = Perturbation(perturbation_function, ratio=0.01)
     perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, preprocess,
@@ -193,7 +194,25 @@ if __name__ == "__main__":
     plt.xticks(np.array(range(scores.shape[0])))
     plt.savefig("perturbation_analysis.pdf")
 
-    # TODO plot perturbation steps
+    # Plot perturbation steps
+    steps = 5
+    test_sample = generator[0][0][0:1]  # Select one sample
 
+    plt.figure()
+    plt.subplot(1, steps + 1, 1)
+    plt.imshow(np.squeeze(test_sample), cmap="Greys_r")
+    plt.axis("off")
+    plt.title("Sample")
+
+    for i in range(steps):
+        test_sample = perturbation_analysis.compute_on_batch(test_sample)
+        plt.subplot(1, steps + 1, i + 2)
+        plt.imshow(np.squeeze(test_sample), cmap="Greys_r")
+        plt.title("{} Step{}".format(i + 1, "" if i == 0 else "s"))
+        plt.axis("off")
+    plt.suptitle("Perturbated Samples")
+    plt.tight_layout()  # Takes care of spaces between subfigures
+
+    plt.savefig("perturbated_sample.pdf")
 
     keras.backend.clear_session()
