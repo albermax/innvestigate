@@ -457,7 +457,8 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
         times_beta = keras.layers.Lambda(lambda x: x * self._beta)
-        times_minus_one = keras.layers.Lambda(lambda x: x * -1)
+        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
 
         def f(layer, X):
             # Get activations.
@@ -474,8 +475,9 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
 
         # Distinguish postive and negative inputs.
-        Xs_pos = kutils.apply(keras.layers.Activation('relu'), Xs)
-        Xs_neg = kutils.apply(keras.layers.Activation('relu'), kutils.apply(times_minus_one, Xs))
+        Xs_pos = kutils.apply(keep_positives, Xs)
+        Xs_neg = kutils.apply(keep_negatives, Xs)
+
 
         # Compute positive and negative relevance.
         positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
@@ -596,6 +598,8 @@ class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
     The ZPlus rule is a special case of the AlphaBetaRule
     for alpha=1, beta=0, which assumes inputs x >= 0
     and ignores the bias.
+    CAUTION! Results differ from Alpha=1, Beta=2
+    if inputs are not strictly >= 0
     """
     #TODO: assert that layer inputs are always >= 0
     def __init__(self, *args, **kwargs):
