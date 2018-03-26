@@ -22,14 +22,19 @@ class Perturbation:
     """Perturbation of pixels based on analysis result."""
 
     def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
-                 aggregation_function=np.max, pad_mode="reflect"):
+                 aggregation_function=np.max, pad_mode="reflect", in_place=False):
         """
-        :param perturbation_function: Defines the function with which the samples are perturbated. Can be a callable or a string that defines a predefined perturbation function.
-        :type perturbation_function: callable or str
+        :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
+        :type perturbation_function: function or str
         :param ratio: Ratio of pixels to be perturbed.
         :type ratio: float
         :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
-        :type reduce_function: callable
+        :type reduce_function: function
+        :param aggregation_function: Function to aggregate the analysis over subregions.
+        :type aggregation_function: function
+        :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions.
+        :type pad_mode: str or function, as in numpy.pad
+        :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified.
         """
 
         if isinstance(perturbation_function, str):
@@ -54,6 +59,10 @@ class Perturbation:
         self.aggregation_function = aggregation_function
 
         self.pad_mode = pad_mode  # numpy.pad
+
+        self.in_place = in_place
+        if in_place:
+            raise NotImplementedError("In-place perturbation is not supported yet.")  # TODO
 
     def compute_perturbation_mask(self, aggregated_regions, ratio):
         # Get indices and values
@@ -106,14 +115,13 @@ class Perturbation:
         aggregated_regions = self.aggregation_function(regions, axis=(3, 5))
         return aggregated_regions
 
-    def perturbate_regions(self, x, perturbation_mask_regions, in_place=False):
+    def perturbate_regions(self, x, perturbation_mask_regions):
         # Perturbate every region in tensor.
         # A single region (at region_x, region_y in sample) should be in mask[sample, channel, region_x, :, region_y, :]
 
-        x_reshaped = self.reshape_to_regions(x)
-        x_perturbated = x_reshaped if in_place else np.copy(x_reshaped)
+        x_perturbated = self.reshape_to_regions(x)
         for sample_idx, channel_idx, region_row, region_col in np.ndindex(perturbation_mask_regions.shape):
-            region = x_reshaped[sample_idx, channel_idx, region_row, :, region_col, :]
+            region = x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :]
             region_mask = perturbation_mask_regions[sample_idx, channel_idx, region_row, region_col]
             if region_mask:
                 x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :] = self.perturbation_function(
@@ -173,7 +181,7 @@ class PerturbationAnalysis:
         :param perturbation: Instance of Perturbation class that performs the perturbation.
         :type perturbation: innvestigate.tools.Perturbation
         :param preprocess: Preprocessing function.
-        :type preprocess: callable
+        :type preprocess: function
         :param steps: Number of perturbation steps.
         :type steps: int
         :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
