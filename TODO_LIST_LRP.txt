@@ -16,5 +16,8 @@
     + in intherit alphaBeta and set alpha1 beta0
 -For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
 -INDEX-based relevance computation(!)
+-class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
 
+
+-todo: after release: consider allowing to pass rule instances instead of rule classes, for adding parameters. the current pattern seems over-engineered.
 
