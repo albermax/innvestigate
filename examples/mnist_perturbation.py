@@ -154,9 +154,9 @@ if __name__ == "__main__":
     ###########################################################################
     data_preprocessed = (preprocess(data[0]), data[1],
                          preprocess(data[2]), data[3])
-    model, modelp = create_model()
-    train_model(modelp, data_preprocessed)
-    model.set_weights(modelp.get_weights())
+    model_without_softmax, model_with_softmax = create_model()
+    train_model(model_with_softmax, data_preprocessed)
+    model_without_softmax.set_weights(model_with_softmax.get_weights())
 
     ###########################################################################
     # Analysis.
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # Create analyzers.
     method = ("lrp.z_baseline", {}, heatmap, "LRP-Z")
     analyzer = innvestigate.create_analyzer(method[0],
-                                            model,
+                                            model_without_softmax,
                                             **method[1])
     analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
                  batch_size=256, verbose=0)
@@ -181,7 +181,8 @@ if __name__ == "__main__":
 
     current_index = 0
     perturbation = Perturbation(perturbation_function, ratio=0.01)
-    perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess, steps=3)
+    perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, preprocess,
+                                                 steps=3)
     scores = perturbation_analysis.compute_perturbation_analysis()
     scores = np.array(scores)
     print("Scores:")
@@ -191,4 +192,8 @@ if __name__ == "__main__":
     plt.ylabel("Test accuracy")
     plt.xticks(np.array(range(scores.shape[0])))
     plt.savefig("perturbation_analysis.pdf")
+
+    # TODO plot perturbation steps
+
+
     keras.backend.clear_session()

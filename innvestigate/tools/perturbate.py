@@ -194,8 +194,20 @@ class PerturbationAnalysis:
             raise NotImplementedError(
                 "Not recomputing the analysis is not supported yet.")
 
+    def compute_on_batch(self, x):
+        """
+        Computes the analysis and perturbes the input batch accordingly.
+        :param x: Samples.
+        :type x: numpy.ndarray
+        """
+        x = self.preprocess(x)
+        a = self.analyzer.analyze(x)
+        x_perturbated = self.perturbation.perturbate_on_batch(x, a)
+        return x_perturbated
+
     def evaluate_on_batch(self, x, y, sample_weight=None):
         """
+        Perturbs the input batch and scores the model on the perturbed batch.
         :param x: Samples.
         :type x: numpy.ndarray
         :param y: Labels.
@@ -207,13 +219,9 @@ class PerturbationAnalysis:
         """
         if sample_weight is not None:
             raise NotImplementedError("Sample weighting is not supported yet.")  # TODO
-
-        x = self.preprocess(x)
-        a = self.analyzer.analyze(x)
-        x_perturbated = self.perturbation.perturbate_on_batch(x, a)
-        score = self.model.test_on_batch(x_perturbated, y)
+        x_perturbated = self.compute_on_batch(x)
+        score = self.model.test_on_batch(x_perturbated, y, sample_weight=sample_weight)
         return score
-
 
     def evaluate_generator(self, generator, steps=None,
                            max_queue_size=10,
