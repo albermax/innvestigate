@@ -305,9 +305,9 @@ class ZIgnoreBiasRule(ZRule):
     Basic LRP decomposition rule, ignoring the bias neuron
     """
     def __init__(self, *args, **kwargs):
-        return super(ZIgnoreBiasRule, self).__init__(*args,
-                                                   bias=False,
-                                                   **kwargs)
+        super(ZIgnoreBiasRule, self).__init__(*args,
+                                              bias=False,
+                                              **kwargs)
 
 
 #TODO: make subclass of ZRule
@@ -376,8 +376,9 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
 class EpsilonIgnoreBiasRule(EpsilonRule):
     def __init__(self, *args, **kwargs):
-        return super(EpsilonIgnoreBiasRule, self).__init__(*args,
-                                                         bias=False, **kwargs)
+        super(EpsilonIgnoreBiasRule, self).__init__(*args,
+                                                    bias=False,
+                                                    **kwargs)
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
@@ -405,7 +406,9 @@ class WSquareRule(kgraph.ReverseMappingBase):
         return tmp
 
 
-# TODO: Make sublcass of WSquare rule
+
+
+# TODO: Make sublcass of WSquare rule, with all weights = 1
 class FlatRule(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
@@ -459,8 +462,6 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
     alpha > 1
     beta > 0
     """
-    #TODO assert alpha beta conditions
-    #TODO extend: either give alpha, or beta, or both. if one is given, infer the others.
 
     # TODO: this only works for relu networks, needs to be extended.
     def __init__(self, layer, state, alpha=None, beta=None, bias=True):
@@ -518,46 +519,46 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
 class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
-                                                           bias=False,
-                                                           **kwargs)
+        super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
+                                                      bias=False,
+                                                      **kwargs)
 
 
 
 class Alpha2Beta1Rule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha2Beta1Rule, self).__init__(*args,
-                                                     alpha=2,
-                                                     beta=1,
-                                                     bias=True,
-                                                     **kwargs)
+        super(Alpha2Beta1Rule, self).__init__(*args,
+                                              alpha=2,
+                                              beta=1,
+                                              bias=True,
+                                              **kwargs)
 
 
 class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
-                                                             alpha=2,
-                                                             beta=1,
-                                                             bias=False,
-                                                             **kwargs)
+        super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
+                                                        alpha=2,
+                                                        beta=1,
+                                                        bias=False,
+                                                        **kwargs)
 
 
 class Alpha1Beta0Rule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha1Beta0Rule, self).__init__(*args,
-                                                     alpha=1,
-                                                     beta=0,
-                                                     bias=True,
-                                                     **kwargs)
+        super(Alpha1Beta0Rule, self).__init__(*args,
+                                              alpha=1,
+                                              beta=0,
+                                              bias=True,
+                                              **kwargs)
 
 
 class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
     def __init__(self, *args, **kwargs):
-        return super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
-                                                             alpha=1,
-                                                             beta=0,
-                                                             bias=False,
-                                                             **kwargs)
+        super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
+                                                        alpha=1,
+                                                        beta=0,
+                                                        bias=False,
+                                                        **kwargs)
 
 
 class BoundedRule(kgraph.ReverseMappingBase):
@@ -589,7 +590,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_positive.set_weights(positive_weights)
         self._layer_wo_act_negative.set_weights(negative_weights)
 
-    # todo: check if this is a correct implementation.
+    # TODO: check if this is a correct implementation.
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         to_low = keras.layers.Lambda(lambda x: x * 0 + self._low)
@@ -723,7 +724,7 @@ class LRP(base.ReverseAnalyzerBase):
 
                 class input_layer_rule(BoundedRule):
                     def __init__(self, *args, **kwars):
-                        return super(input_layer_rule, self).__init__(
+                        super(input_layer_rule, self).__init__(
                             *args, low=low, high=high, **kwargs)
 
 
@@ -766,7 +767,7 @@ class LRP(base.ReverseAnalyzerBase):
         ]
 
         # finalize constructor.
-        return super(LRP, self).__init__(model, *args, **kwargs)
+        super(LRP, self).__init__(model, *args, **kwargs)
 
 
 
@@ -824,21 +825,21 @@ class _LRPFixedParams(LRP):
 class LRPZ(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
+        super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
 class LRPZIgnoreBias(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZIgnoreBias, self).__init__(model, *args,
-                                                  rule="ZIgnoreBias", **kwargs)
+        super(LRPZIgnoreBias, self).__init__(model, *args,
+                                             rule="ZIgnoreBias", **kwargs)
 
 
 class LRPZPlus(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPZPlus, self).__init__(model, *args,
-                                              rule="ZPlus", **kwargs)
+        super(LRPZPlus, self).__init__(model, *args,
+                                       rule="ZPlus", **kwargs)
 
 
 class LRPEpsilon(_LRPFixedParams):
@@ -859,31 +860,31 @@ class LRPEpsilon(_LRPFixedParams):
                                                        bias=bias,
                                                        **kwargs)
 
-        return super(LRPEpsilon, self).__init__(model, *args,
-                                                  rule=EpsilonProxyRule,
-                                                  **kwargs)
+        super(LRPEpsilon, self).__init__(model, *args,
+                                         rule=EpsilonProxyRule,
+                                         **kwargs)
 
 
 class LRPEpsilonIgnoreBias(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
-                                                        rule="EpsilonIgnoreBias",
-                                                        **kwargs)
+        super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
+                                                   rule="EpsilonIgnoreBias",
+                                                   **kwargs)
 
 
 class LRPWSquare(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPWSquare, self).__init__(model, *args,
-                                                rule="WSquare", **kwargs)
+        super(LRPWSquare, self).__init__(model, *args,
+                                         rule="WSquare", **kwargs)
 
 
 class LRPFlat(_LRPFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPFlat, self).__init__(model, *args,
-                                             rule="Flat", **kwargs)
+        super(LRPFlat, self).__init__(model, *args,
+                                      rule="Flat", **kwargs)
 
 
 #TODO: class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
@@ -911,9 +912,9 @@ class LRPAlphaBeta(LRP):
                                                               bias=bias,
                                                               **kwargs)
 
-        return super(LRPAlphaBeta, self).__init__(model, *args,
-                                                  rule=AlphaBetaProxyRule,
-                                                  **kwargs)
+        super(LRPAlphaBeta, self).__init__(model, *args,
+                                           rule=AlphaBetaProxyRule,
+                                           **kwargs)
 
     def _get_state(self):
         state = super(LRPAlphaBeta, self)._get_state()
@@ -956,38 +957,38 @@ class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha2Beta1, self).__init__(model, *args,
-                                                    alpha=2,
-                                                    beta=1,
-                                                    bias=True,
-                                                    **kwargs)
+        super(LRPAlpha2Beta1, self).__init__(model, *args,
+                                             alpha=2,
+                                             beta=1,
+                                             bias=True,
+                                             **kwargs)
 
 
 class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha2Beta1IgnoreBias, self).__init__(model, *args,
-                                                            alpha=2,
-                                                            beta=1,
-                                                            bias=False,
-                                                            **kwargs)
+        super(LRPAlpha2Beta1IgnoreBias, self).__init__(model, *args,
+                                                       alpha=2,
+                                                       beta=1,
+                                                       bias=False,
+                                                       **kwargs)
 
 
 class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha1Beta0, self).__init__(model, *args,
-                                                    alpha=1,
-                                                    beta=0,
-                                                    bias=True,
-                                                    **kwargs)
+        super(LRPAlpha1Beta0, self).__init__(model, *args,
+                                             alpha=1,
+                                             beta=0,
+                                             bias=True,
+                                             **kwargs)
 
 
 class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
 
     def __init__(self, model, *args, **kwargs):
-        return super(LRPAlpha1Beta0IgnoreBias, self).__init__(model, *args,
-                                                            alpha=1,
-                                                            beta=0,
-                                                            bias=False,
-                                                            **kwargs)
+        super(LRPAlpha1Beta0IgnoreBias, self).__init__(model, *args,
+                                                       alpha=1,
+                                                       beta=0,
+                                                       bias=False,
+                                                       **kwargs)
