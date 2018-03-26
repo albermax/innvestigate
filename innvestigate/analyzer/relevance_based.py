@@ -750,7 +750,7 @@ class LRP(base.ReverseAnalyzerBase):
         class ReverseLayer(kgraph.ReverseMappingBase):
             # TODO: refactor as independent class?
             def __init__(self, layer, state):
-                rule_class = select_rule(layer, state)
+                rule_class = select_rule(layer, state) #this avoids refactoring.
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule]
                 self._rule = rule_class(layer, state) #TODO. add def call() to Rule base class, which is a setter for layer, state, to avoid above ad-hoc-input rule class gen.
