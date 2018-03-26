@@ -61,6 +61,7 @@ __all__ = [
     "LRPAlpha1Beta0",
     "LRPAlpha1Beta0IgnoreBias",
     "LRPZPlus",
+    "LRPZPlusFast",
 ]
 
 
@@ -308,35 +309,6 @@ class ZIgnoreBiasRule(ZRule):
                                               bias=False,
                                               **kwargs)
 
-
-#TODO: make subclass of AlphaBetaRule, after fix for alphabeta
-#TODO: fix computation of z+ to not depend on positive inputs, but positive preactivations
-class ZPlusRule(kgraph.ReverseMappingBase):
-
-    def __init__(self, layer, state):
-        # The z-plus rule only works with positive weights and
-        # no biases.
-        self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False,
-            name_template="reversed_kernel_positive_%s")
-        tmp = [x * (x > 0)
-               for x in self._layer_wo_act_b_positive.get_weights()]
-        self._layer_wo_act_b_positive.set_weights(tmp)
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
 
 
 class EpsilonRule(kgraph.ReverseMappingBase):
@@ -619,6 +591,52 @@ class BoundedRule(kgraph.ReverseMappingBase):
         return tmp
 
 
+class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
+    """
+    The ZPlus rule is a special case of the AlphaBetaRule
+    for alpha=1, beta=0, which assumes inputs x >= 0
+    and ignores the bias.
+    """
+    #TODO: assert that layer inputs are always >= 0
+    def __init__(self, *args, **kwargs):
+        super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
+                                                        **kwargs)
+
+
+class ZPlusFastRule(kgraph.ReverseMappingBase):
+    """
+    The ZPlus rule is a special case of the AlphaBetaRule
+    for alpha=1, beta=0 and assumes inputs x >= 0.
+    """
+
+    def __init__(self, layer, state):
+        # The z-plus rule only works with positive weights and
+        # no biases.
+        #TODO: assert that layer inputs are always >= 0
+        self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
+            layer, keep_bias=False,
+            name_template="reversed_kernel_positive_%s")
+        tmp = [x * (x > 0)
+               for x in self._layer_wo_act_b_positive.get_weights()]
+        self._layer_wo_act_b_positive.set_weights(tmp)
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        grad = ilayers.GradientWRT(len(Xs))
+
+        # Get activations.
+        Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
+        # Divide incoming relevance by the activations.
+        tmp = [ilayers.SafeDivide()([a, b])
+               for a, b in zip(Rs, Zs)]
+        # Propagate the relevance to input neurons
+        # using the gradient.
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
+        return [keras.layers.Multiply()([a, b])
+                for a, b in zip(Xs, tmp)]
+
+
+
 #        alpha-beta all networks
 #        bias+- for some other rules
 LRP_RULES = {
@@ -640,8 +658,11 @@ LRP_RULES = {
     "Alpha1Beta0IgnoreBias": Alpha1Beta0IgnoreBiasRule,
 
     "ZPlus": ZPlusRule,
+    "ZPlusFast": ZPlusFastRule,
     "Bounded": BoundedRule,
 }
+
+
 
 
 ###############################################################################
@@ -838,12 +859,6 @@ class LRPZIgnoreBias(_LRPFixedParams):
                                              rule="ZIgnoreBias", **kwargs)
 
 
-class LRPZPlus(_LRPFixedParams):
-
-    def __init__(self, model, *args, **kwargs):
-        super(LRPZPlus, self).__init__(model, *args,
-                                       rule="ZPlus", **kwargs)
-
 
 class LRPEpsilon(_LRPFixedParams):
 
@@ -995,3 +1010,16 @@ class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
                                                        beta=0,
                                                        bias=False,
                                                        **kwargs)
+
+class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
+    #TODO: assert that layer inputs are always >= 0
+    def __init__(self, model, *args, **kwargs):
+        super(LRPZPlus, self).__init__(model, *args, **kwargs)
+
+
+#TODO: decide whether to remove or reinstate
+class LRPZPlusFast(_LRPFixedParams):
+    #TODO: assert that layer inputs are always >= 0
+    def __init__(self, model, *args, **kwargs):
+        super(LRPZPlusFast, self).__init__(model, *args,
+                                       rule="ZPlusFast", **kwargs)
