@@ -25,7 +25,6 @@ import os
 import keras
 from keras.datasets import mnist
 from keras.models import Model
-from keras.layers import Dense, Dropout, Activation, Input
 from keras.optimizers import RMSprop
 
 import innvestigate
@@ -96,91 +95,42 @@ def train_model(model, data):
     print('Test accuracy:', score[1])
 
 
+def preprocess(X, zero_mean=False):
+    X.copy()
+    X /= 255
+    if zero_mean:
+        X -= 0.5
+    return X
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-
-    zero_mean = False
-    pattern_type = "linear"
-    # pattern_type = "relu"
-    data = fetch_data()
-    images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
-    label_to_class_name = [str(i) for i in range(10)]
-
-
-    ###########################################################################
-    # Utility function.
-    ###########################################################################
-
-    def preprocess(X):
-        X.copy()
-        X /= 255
-        if zero_mean:
-            X -= 0.5
-        return X
-
-
-    def postprocess(X):
-        X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=False)
-        return X
-
-
-    def image(X):
-        X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=False)
-        return ivis.graymap(X,
-                            input_is_postive_only=True)
-
-
-    def bk_proj(X):
-        return ivis.graymap(X)
-
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
-
-
-    ###########################################################################
-    # Build model.
-    ###########################################################################
-    data_preprocessed = (preprocess(data[0]), data[1],
-                         preprocess(data[2]), data[3])
-    model_without_softmax, model_with_softmax = create_model()
-    train_model(model_with_softmax, data_preprocessed)
-    model_without_softmax.set_weights(model_with_softmax.get_weights())
-
-    ###########################################################################
-    # Analysis.
-    ###########################################################################
-    perturbation_function = "zeros"
-
-    # Create analyzers.
-    method = ("lrp.z_baseline", {}, heatmap, "LRP-Z")
-    analyzer = innvestigate.create_analyzer(method[0],
-                                            model_without_softmax,
-                                            **method[1])
-    analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
-                 batch_size=256, verbose=0)
-    # Create analysis.
+    print("This script is deprecated and has been replaced by a Jupyter Notebook version (mnist_perturbation.ipynb).")
     num_classes = 10
     batch_size = 256
-
-    # Data loading
+    data = fetch_data()
+    data_preprocessed = (preprocess(data[0]), data[1],
+                         preprocess(data[2]), data[3])
     x_test, y_test = data_preprocessed[2:]
     y_test = keras.utils.to_categorical(y_test, num_classes)
     generator = iutils.BatchSequence([x_test, y_test], batch_size=batch_size)
 
+    # Build and train model
+    model_without_softmax, model_with_softmax = create_model()
+    train_model(model_with_softmax, data_preprocessed)
+    model_without_softmax.set_weights(model_with_softmax.get_weights())
+
+    # Setup analyzer
+    perturbation_function = "zeros"
+    method = ("lrp.z_baseline", {}, ivis.heatmap, "LRP-Z")
+    analyzer = innvestigate.create_analyzer(method[0],
+                                            model_without_softmax,
+                                            **method[1])
+
     # Perturbation analysis
-    current_index = 0
     perturbation = Perturbation(perturbation_function, ratio=0.01)
     perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, preprocess,
                                                  steps=3)
