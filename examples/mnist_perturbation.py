@@ -15,10 +15,6 @@ import six
 ###############################################################################
 
 
-import matplotlib
-
-matplotlib.use('Agg')
-
 import imp
 import keras.backend
 import keras.models
@@ -29,7 +25,6 @@ import os
 import keras
 from keras.datasets import mnist
 from keras.models import Model
-from keras.layers import Dense, Dropout, Activation, Input
 from keras.optimizers import RMSprop
 
 import innvestigate
@@ -100,92 +95,45 @@ def train_model(model, data):
     print('Test accuracy:', score[1])
 
 
+def preprocess(X, zero_mean=False):
+    X.copy()
+    X /= 255
+    if zero_mean:
+        X -= 0.5
+    return X
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-
-    zero_mean = False
-    pattern_type = "linear"
-    # pattern_type = "relu"
-    data = fetch_data()
-    images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
-    label_to_class_name = [str(i) for i in range(10)]
-
-
-    ###########################################################################
-    # Utility function.
-    ###########################################################################
-
-    def preprocess(X):
-        X.copy()
-        X /= 255
-        if zero_mean:
-            X -= 0.5
-        return X
-
-
-    def postprocess(X):
-        X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=False)
-        return X
-
-
-    def image(X):
-        X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    channels_first=False)
-        return ivis.graymap(X,
-                            input_is_postive_only=True)
-
-
-    def bk_proj(X):
-        return ivis.graymap(X)
-
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
-
-
-    ###########################################################################
-    # Build model.
-    ###########################################################################
-    data_preprocessed = (preprocess(data[0]), data[1],
-                         preprocess(data[2]), data[3])
-    model, modelp = create_model()
-    train_model(modelp, data_preprocessed)
-    model.set_weights(modelp.get_weights())
-
-    ###########################################################################
-    # Analysis.
-    ###########################################################################
-    perturbation_function = "zeros"
-
-    # Create analyzers.
-    method = ("lrp.z_baseline", {}, heatmap, "LRP-Z")
-    analyzer = innvestigate.create_analyzer(method[0],
-                                            model,
-                                            **method[1])
-    analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
-                 batch_size=256, verbose=0)
-    # Create analysis.
+    print("This script is deprecated and has been replaced by a Jupyter Notebook version (mnist_perturbation.ipynb).")
     num_classes = 10
     batch_size = 256
-
-    # Data loading
+    data = fetch_data()
+    data_preprocessed = (preprocess(data[0]), data[1],
+                         preprocess(data[2]), data[3])
     x_test, y_test = data_preprocessed[2:]
     y_test = keras.utils.to_categorical(y_test, num_classes)
     generator = iutils.BatchSequence([x_test, y_test], batch_size=batch_size)
 
-    current_index = 0
+    # Build and train model
+    model_without_softmax, model_with_softmax = create_model()
+    train_model(model_with_softmax, data_preprocessed)
+    model_without_softmax.set_weights(model_with_softmax.get_weights())
+
+    # Setup analyzer
+    perturbation_function = "zeros"
+    method = ("lrp.z_baseline", {}, ivis.heatmap, "LRP-Z")
+    analyzer = innvestigate.create_analyzer(method[0],
+                                            model_without_softmax,
+                                            **method[1])
+
+    # Perturbation analysis
     perturbation = Perturbation(perturbation_function, ratio=0.01)
-    perturbation_analysis = PerturbationAnalysis(analyzer, modelp, generator, perturbation, preprocess, steps=3)
+    perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, preprocess,
+                                                 steps=3)
     scores = perturbation_analysis.compute_perturbation_analysis()
     scores = np.array(scores)
     print("Scores:")
@@ -195,4 +143,26 @@ if __name__ == "__main__":
     plt.ylabel("Test accuracy")
     plt.xticks(np.array(range(scores.shape[0])))
     plt.savefig("perturbation_analysis.pdf")
+
+    # Plot perturbation steps
+    steps = 5
+    test_sample = generator[0][0][0:1]  # Select one sample
+
+    plt.figure()
+    plt.subplot(1, steps + 1, 1)
+    plt.imshow(np.squeeze(test_sample), cmap="Greys_r")
+    plt.axis("off")
+    plt.title("Sample")
+
+    for i in range(steps):
+        test_sample = perturbation_analysis.compute_on_batch(test_sample)
+        plt.subplot(1, steps + 1, i + 2)
+        plt.imshow(np.squeeze(test_sample), cmap="Greys_r")
+        plt.title("{} Step{}".format(i + 1, "" if i == 0 else "s"))
+        plt.axis("off")
+    plt.suptitle("Perturbated Samples")
+    plt.tight_layout()  # Takes care of spaces between subfigures
+
+    plt.savefig("perturbated_sample.pdf")
+
     keras.backend.clear_session()
