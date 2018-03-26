@@ -63,20 +63,21 @@ def plot_image_grid(grid,
                     file_name=None,
                     row_label_offset=0,
                     col_label_offset=0,
+					is_fontsize_adaptive=True,
                     usetex=False,
-                    size_per_cell=3,
                     dpi=224):
     n_rows = len(grid)
     n_cols = len(grid[0])
     shape_per_image = grid[0][0].shape[:2]
     n_padding = shape_per_image[0]//5
     shape_per_image_padded = [s + 2 * n_padding for s in shape_per_image]
-    fontsize = shape_per_image[1]//2
+    if is_fontsize_adaptive:
+        fontsize = shape_per_image[1]//100   #TODO: what is the best way to scale this?
+    else:
+        fontsize = 3
 
     plt.clf()
-    plt.figure(figsize=(n_rows * size_per_cell,
-                        n_cols * size_per_cell),
-               dpi=dpi)
+    plt.figure(dpi=dpi)
     plt.tick_params(axis="x", which="both",
                     bottom="off", top="off", labelbottom="off")
     plt.tick_params(axis="y", which="both",
@@ -126,4 +127,4 @@ def plot_image_grid(grid,
     if file_name is None:
         plt.show()
     else:
-        plt.savefig(file_name)
+        plt.savefig(file_name, orientation='landscape')
