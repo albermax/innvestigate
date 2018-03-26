@@ -124,16 +124,16 @@ if __name__ == "__main__":
     model_without_softmax.set_weights(model_with_softmax.get_weights())
 
     # Setup analyzer
-    perturbation_function = "zeros"
     method = ("lrp.z_baseline", {}, ivis.heatmap, "LRP-Z")
     analyzer = innvestigate.create_analyzer(method[0],
                                             model_without_softmax,
                                             **method[1])
 
     # Perturbation analysis
-    perturbation = Perturbation(perturbation_function, ratio=0.01)
-    perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, preprocess,
-                                                 steps=3)
+    perturbation_function = "mean"
+    perturbation = Perturbation(perturbation_function, region_shape=(5, 5))
+    perturbation_analysis = PerturbationAnalysis(analyzer, model_with_softmax, generator, perturbation, steps=10,
+                                                 ratio=0.01)
     scores = perturbation_analysis.compute_perturbation_analysis()
     scores = np.array(scores)
     print("Scores:")
