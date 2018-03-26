@@ -195,6 +195,84 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 ###############################################################################
 ###############################################################################
 
+def _assert_epsilon_parameter(epsilon, caller):
+    """
+        Function for asserting epsilon parameter choice
+        passed to constructors inheriting from EpsilonRule
+        and LRPEpsilon.
+        The following conditions can not be met:
+
+        epsilon > 1
+
+        :param epsilon: the epsilon parameter.
+        :param caller: the class instance calling this assertion function
+    """
+
+    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
+    err_msg = err_head + "Parameter epsilon must be > 0"
+    assert epsilon > 0, err_msg
+    return epsilon
+
+
+def _assert_infer_alpha_beta_parameters(alpha, beta, caller):
+    """
+        Function for asserting parameter choices for alpha and beta
+        passed to constructors inheriting from AlphaBetaRule
+        and LRPAlphaBeta.
+
+        since alpha - beta are subjected to sum to 1,
+        it is sufficient for only one of the parameters to be passed
+        to a corresponding class constructor.
+        this method will cause an assertion error if both are None
+        or the following conditions can not be met
+
+        alpha >= 1
+        beta >= 0
+        alpha - beta = 1
+
+        :param alpha: the alpha parameter.
+        :param beta: the beta parameter
+        :param caller: the class instance calling this assertion function
+    """
+
+    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
+    err_msg = err_head + "Neither alpha or beta were given"
+    assert not (alpha is None and beta is None), err_msg
+
+    #assert passed parameter choices
+    if alpha is not None:
+        err_msg = err_head +"Passed parameter alpha invalid. Expecting alpha >= 1 but was {}".format(alpha)
+        assert alpha >= 1, err_msg
+
+    if beta is not None:
+        err_msg = err_head +"Passed parameter beta invalid. Expecting beta >= 0 but was {}".format(beta)
+        assert beta >= 0, err_msg
+
+    #assert inferred parameter choices
+    if alpha is None:
+        alpha = beta + 1
+        err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
+        assert alpha >= 1, err_msg
+
+    if beta is None:
+        beta = alpha - 1
+        err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
+        assert beta >= 0, err_msg
+
+    #final check: alpha - beta = 1
+    amb = alpha - beta
+    err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
+    assert amb == 1, err_msg
+
+    #return benign values for alpha and beta
+    return alpha, beta
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
 class ZRule(kgraph.ReverseMappingBase):
     """
     Basic LRP decomposition rule (for layers with weight kernels),
@@ -272,7 +350,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
     """
 
     def __init__(self, layer, state, epsilon = 1e-7, bias=True):
-        self._epsilon = epsilon
+        self._epsilon = _assert_epsilon_parameter(epsilon, self)
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s")
 
@@ -354,6 +432,14 @@ class FlatRule(kgraph.ReverseMappingBase):
         return tmp
 
 
+
+
+
+
+
+
+
+
 # TODO: could potentially inherit from and use ZRule.
 class AlphaBetaRule(kgraph.ReverseMappingBase):
     """
@@ -377,7 +463,8 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
     #TODO extend: either give alpha, or beta, or both. if one is given, infer the others.
 
     # TODO: this only works for relu networks, needs to be extended.
-    def __init__(self, layer, state, alpha=2, beta=1, bias=True):
+    def __init__(self, layer, state, alpha=None, beta=None, bias=True):
+        alpha, beta = _assert_infer_alpha_beta_parameters(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
 
@@ -756,9 +843,25 @@ class LRPZPlus(_LRPFixedParams):
 
 class LRPEpsilon(_LRPFixedParams):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, epsilon=1e-7, bias=True, *args, **kwargs):
+        epsilon = _assert_epsilon_parameter(epsilon, self)
+        self._epsilon = epsilon
+
+        class EpsilonProxyRule(EpsilonRule):
+            """
+            Dummy class inheriting from EpsilonRule
+            for passing along the chosen parameters from
+            the LRP analyzer class to the decopmosition rules.
+            """
+            def __init__(self, *args, **kwargs):
+                super(EpsilonProxyRule, self).__init__(*args,
+                                                       epsilon=epsilon,
+                                                       bias=bias,
+                                                       **kwargs)
+
         return super(LRPEpsilon, self).__init__(model, *args,
-                                                rule="Epsilon", **kwargs)
+                                                  rule=EpsilonProxyRule,
+                                                  **kwargs)
 
 
 class LRPEpsilonIgnoreBias(_LRPFixedParams):
@@ -783,25 +886,33 @@ class LRPFlat(_LRPFixedParams):
                                              rule="Flat", **kwargs)
 
 
-class LRPAlphaBeta(LRP):
+#TODO: class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
 
-    def __init__(self, model, alpha=1, beta=1, bias=True, *args, **kwargs):
+
+class LRPAlphaBeta(LRP):
+    """ Base class for LRP AlphaBeta"""
+
+    def __init__(self, model, alpha=None, beta=None, bias=True, *args, **kwargs):
+        alpha, beta = _assert_infer_alpha_beta_parameters(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
         self._bias = bias
 
-        #TODO: why does this class exist? A a class dummy again?
-        class CustomizedAlphaBetaRule(AlphaBetaRule):
+        class AlphaBetaProxyRule(AlphaBetaRule):
+            """
+            Dummy class inheriting from AlphaBetaRule
+            for the purpose of passing along the chosen parameters from
+            the LRP analyzer class to the decopmosition rules.
+            """
             def __init__(self, *args, **kwargs):
-
-                super(CustomizedAlphaBetaRule, self).__init__(*args,
+                super(AlphaBetaProxyRule, self).__init__(*args,
                                                               alpha=alpha,
                                                               beta=beta,
                                                               bias=bias,
                                                               **kwargs)
 
         return super(LRPAlphaBeta, self).__init__(model, *args,
-                                                  rule=CustomizedAlphaBetaRule,
+                                                  rule=AlphaBetaProxyRule,
                                                   **kwargs)
 
     def _get_state(self):
