@@ -34,13 +34,13 @@ class Perturbation:
     :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified."""
 
     def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
-                 aggregation_function=np.max, pad_mode="reflect", in_place=False):
+                 aggregation_function=np.mean, pad_mode="reflect", in_place=False):
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
             elif perturbation_function == "gaussian":
-                self.perturbation_function = lambda x: x + np.random.normal(loc=0.0, scale=0.001,
+                self.perturbation_function = lambda x: x + np.random.normal(loc=0.0, scale=0.3,
                                                                             size=x.shape)  # TODO scale?
             elif perturbation_function == "mean":
                 self.perturbation_function = np.mean
@@ -65,7 +65,7 @@ class Perturbation:
     @staticmethod
     def compute_perturbation_mask(aggregated_regions, ratio):
         # Get indices and values
-        thresholds = np.percentile(aggregated_regions, math.ceil(100 * (1 - ratio)), axis=(1, 2, 3), keepdims=True)
+        thresholds = np.percentile(aggregated_regions, math.ceil(100.0 * (1.0 - ratio)), axis=(1, 2, 3), keepdims=True)
         perturbation_mask_regions = aggregated_regions >= thresholds
 
         return perturbation_mask_regions
@@ -174,23 +174,23 @@ class PerturbationAnalysis:
     :type generator: innvestigate.utils.BatchSequence
     :param perturbation: Instance of Perturbation class that performs the perturbation.
     :type perturbation: innvestigate.tools.Perturbation
-    :param preprocess: Preprocessing function.
-    :type preprocess: function or callable
     :param steps: Number of perturbation steps.
     :type steps: int
+    :param ratio: Ratio of pixels to be perturbed per step.
+    :type ratio: float
     :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
     :type recompute_analysis: bool
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=True):
+    def __init__(self, analyzer, model, generator, perturbation, steps=1, ratio=0.05, recompute_analysis=True):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
         self.perturbation = perturbation
         if not isinstance(perturbation, Perturbation):
             raise TypeError(type(perturbation))
-        self.preprocess = preprocess
         self.steps = steps
+        self.ratio = ratio
         self.recompute_analysis = recompute_analysis
 
         if not self.recompute_analysis:
@@ -204,7 +204,6 @@ class PerturbationAnalysis:
         :param x: Samples.
         :type x: numpy.ndarray
         """
-        x = self.preprocess(x)
         a = self.analyzer.analyze(x)
         x_perturbated = self.perturbation.perturbate_on_batch(x, a)
         return x_perturbated
@@ -325,7 +324,13 @@ class PerturbationAnalysis:
         scores = list()
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
+        self.perturbation.ratio = 0  # Reset ratio of Perturbation
         for step in range(self.steps):
+            if self.perturbation.ratio >= 1:
+                print("Perturbed all regions after {} steps, stopping now.".format(step))
+                break
+            self.perturbation.ratio += min(self.ratio, 1.0)
             scores.append(self.evaluate_generator(self.generator))
+
         assert len(scores) == self.steps + 1
         return scores
