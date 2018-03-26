@@ -627,6 +627,10 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
 
+        #TODO: assert all inputs are positive, instead of only keeping the positives.
+        #keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        #Xs = kutils.apply(keep_positives, Xs)
+
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
         # Divide incoming relevance by the activations.
