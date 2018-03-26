@@ -715,13 +715,12 @@ class LRP(base.ReverseAnalyzerBase):
             rules = rule
 
 
-        #TODO: find out: what are the assumptions here?
+        # create a BoundedRule for input layer handling from given tuple
         if self._input_layer_rule is not None:
             input_layer_rule = self._input_layer_rule
             if isinstance(input_layer_rule, tuple):
                 low, high = input_layer_rule
 
-                # TODO avoid ad-hoc class definition here. Try to use Bounded Rule.
                 class input_layer_rule(BoundedRule):
                     def __init__(self, *args, **kwars):
                         return super(input_layer_rule, self).__init__(
@@ -732,6 +731,7 @@ class LRP(base.ReverseAnalyzerBase):
                 rules.insert(0,
                              (lambda layer, foo: kgraph.is_input_layer(layer),
                               input_layer_rule))
+
             else:
                 rules.insert(0, input_layer_rule)
 
