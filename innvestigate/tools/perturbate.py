@@ -19,24 +19,22 @@ from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
 
 class Perturbation:
-    """Perturbation of pixels based on analysis result."""
+    """Perturbation of pixels based on analysis result.
+
+    :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
+    :type perturbation_function: function or callable or str
+    :param ratio: Ratio of pixels to be perturbed.
+    :type ratio: float
+    :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
+    :type reduce_function: function or callable
+    :param aggregation_function: Function to aggregate the analysis over subregions.
+    :type aggregation_function: function or callable
+    :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions. As in numpy.pad.
+    :type pad_mode: str or function or callable
+    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified."""
 
     def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
                  aggregation_function=np.max, pad_mode="reflect", in_place=False):
-        """
-        :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
-        :type perturbation_function: function or str
-        :param ratio: Ratio of pixels to be perturbed.
-        :type ratio: float
-        :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
-        :type reduce_function: function
-        :param aggregation_function: Function to aggregate the analysis over subregions.
-        :type aggregation_function: function
-        :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions.
-        :type pad_mode: str or function, as in numpy.pad
-        :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified.
-        """
-
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
@@ -64,7 +62,8 @@ class Perturbation:
         if in_place:
             raise NotImplementedError("In-place perturbation is not supported yet.")  # TODO
 
-    def compute_perturbation_mask(self, aggregated_regions, ratio):
+    @staticmethod
+    def compute_perturbation_mask(aggregated_regions, ratio):
         # Get indices and values
         thresholds = np.percentile(aggregated_regions, math.ceil(100 * (1 - ratio)), axis=(1, 2, 3), keepdims=True)
         perturbation_mask_regions = aggregated_regions >= thresholds
@@ -135,8 +134,6 @@ class Perturbation:
         :type x: numpy.ndarray
         :param analysis: Analysis of this batch.
         :type analysis: numpy.ndarray
-        :param in_place: If true, samples are perturbated in place.
-        :type in_place: bool
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
@@ -168,26 +165,24 @@ class Perturbation:
 class PerturbationAnalysis:
     """
     Performs the perturbation analysis.
+
+    :param analyzer: Analyzer.
+    :type analyzer: innvestigate.analyzer.base.AnalyzerBase
+    :param model: Trained Keras model.
+    :type model: keras.engine.training.Model
+    :param generator: Data generator.
+    :type generator: innvestigate.utils.BatchSequence
+    :param perturbation: Instance of Perturbation class that performs the perturbation.
+    :type perturbation: innvestigate.tools.Perturbation
+    :param preprocess: Preprocessing function.
+    :type preprocess: function or callable
+    :param steps: Number of perturbation steps.
+    :type steps: int
+    :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
+    :type recompute_analysis: bool
     """
 
     def __init__(self, analyzer, model, generator, perturbation, preprocess, steps=1, recompute_analysis=True):
-        """
-        :param analyzer: Analyzer.
-        :type analyzer: innvestigate.analyzer.base.AnalyzerBase
-        :param model: Trained Keras model.
-        :type model: keras.engine.training.Model
-        :param generator: Data generator.
-        :type generator: innvestigate.utils.BatchSequence
-        :param perturbation: Instance of Perturbation class that performs the perturbation.
-        :type perturbation: innvestigate.tools.Perturbation
-        :param preprocess: Preprocessing function.
-        :type preprocess: function
-        :param steps: Number of perturbation steps.
-        :type steps: int
-        :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
-        :type recompute_analysis: bool
-        """
-
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
@@ -205,6 +200,7 @@ class PerturbationAnalysis:
     def compute_on_batch(self, x):
         """
         Computes the analysis and perturbes the input batch accordingly.
+
         :param x: Samples.
         :type x: numpy.ndarray
         """
@@ -216,13 +212,14 @@ class PerturbationAnalysis:
     def evaluate_on_batch(self, x, y, sample_weight=None):
         """
         Perturbs the input batch and scores the model on the perturbed batch.
+
         :param x: Samples.
         :type x: numpy.ndarray
         :param y: Labels.
         :type y: numpy.ndarray
         :param sample_weight: Sample weights.
         :type sample_weight: None
-        :return: Test score.
+        :return: List of test scores.
         :rtype: list
         """
         if sample_weight is not None:
