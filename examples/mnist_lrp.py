@@ -249,7 +249,7 @@ if __name__ == "__main__":
                            col_label_offset=15,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="mnist_lrp_{}epochs_debug_more.pdf".format(n_epochs))
+                           file_name="mnist_lrp_{}epochs.pdf".format(n_epochs))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
