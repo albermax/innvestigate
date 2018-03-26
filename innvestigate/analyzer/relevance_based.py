@@ -195,7 +195,6 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 ###############################################################################
 ###############################################################################
 
-
 class ZRule(kgraph.ReverseMappingBase):
     """
     Basic LRP decomposition rule (for layers with weight kernels),
@@ -233,7 +232,7 @@ class ZIgnoreBiasRule(ZRule):
                                                    **kwargs)
 
 
-# TODO: make subclass of ZRule
+#TODO: make subclass of ZRule
 #TODO: fix computation of z+ to not depend on positive inputs, but positive preactivations
 class ZPlusRule(kgraph.ReverseMappingBase):
 
@@ -272,16 +271,8 @@ class EpsilonRule(kgraph.ReverseMappingBase):
     0 is considered to be positive, ie sign(0) = 1
     """
 
-    #TODO make epsilon settable parameter
-    #>>> from keras import backend as K
-    #>>> K.epsilon()
-    #1e-07
-    #>>> K.set_epsilon(1e-05)
-    #>>> K.epsilon()
-    #1e-05
-
-
-    def __init__(self, layer, state, bias=True):
+    def __init__(self, layer, state, epsilon = 1e-7, bias=True):
+        self._epsilon = epsilon
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s")
 
@@ -289,7 +280,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
-        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*self._epsilon)
 
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
