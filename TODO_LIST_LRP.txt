@@ -4,15 +4,17 @@
     + Batch norm layer
     + nonlinearities and activations. handle non-zero-centered activation fxns. they break things
     + add-layer
-!! alpha, beta, eps as passable arguments to the class constructor
-Fix alpha-beta-rules to not rely on inputs being positive:
+-!! alpha, beta, as passable arguments to the class constructor
+- write test showcasing the impact of parameter choices for alpha, beta , eps
+-Fix alpha-beta-rules to not rely on inputs being positive:
     + currently, positive and negative weights are handled independently.
     + should be: positive and negative preactivations Zpos and Zneg.
     + this covers the case where inputs are assumed to be positive.
     + this includes the bias.
-Fix Zplus rule to not rely on positive inputs:
+-Fix Zplus rule to not rely on positive inputs:
     + either fix directly
     + in intherit alphaBeta and set alpha1 beta0
-For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
-INDEX-based relevance computation(!)
+-For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
+-INDEX-based relevance computation(!)
+
 
