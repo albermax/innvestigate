@@ -4,7 +4,6 @@
     + Batch norm layer
     + nonlinearities and activations. handle non-zero-centered activation fxns. they break things
     + add-layer
--!! alpha, beta, as passable arguments to the class constructor
 - write test showcasing the impact of parameter choices for alpha, beta , eps
 -Fix alpha-beta-rules to not rely on inputs being positive:
     + currently, positive and negative weights are handled independently.
@@ -17,7 +16,9 @@
 -For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
 -INDEX-based relevance computation(!)
 -class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
-
+-make FLAT special case of W^2.
+-ensure W^2 works with layers without kernels (e.g. pooling)
+-parameterized LRP: implement support for rule objects instead of rule classes ?
 
 -todo: after release: consider allowing to pass rule instances instead of rule classes, for adding parameters. the current pattern seems over-engineered.
 

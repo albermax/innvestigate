@@ -68,9 +68,8 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 
-
+# TODO: Inherit from LRP, specialize from there.
 class BaselineLRPZ(base.AnalyzerNetworkBase):
-    # TODO: Inherit from LRP, specialize from there.
     """LRPZ analyzer.
 
     Applies the "LRP-Z" algorithm to analyze the model.
@@ -310,7 +309,7 @@ class ZIgnoreBiasRule(ZRule):
                                               **kwargs)
 
 
-#TODO: make subclass of ZRule
+#TODO: make subclass of AlphaBetaRule, after fix for alphabeta
 #TODO: fix computation of z+ to not depend on positive inputs, but positive preactivations
 class ZPlusRule(kgraph.ReverseMappingBase):
 
@@ -436,14 +435,6 @@ class FlatRule(kgraph.ReverseMappingBase):
 
 
 
-
-
-
-
-
-
-
-# TODO: could potentially inherit from and use ZRule.
 class AlphaBetaRule(kgraph.ReverseMappingBase):
     """
     This decomposition rule handles the positive forward
@@ -463,15 +454,14 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
     beta > 0
     """
 
-    # TODO: this only works for relu networks, needs to be extended.
+
     def __init__(self, layer, state, alpha=None, beta=None, bias=True):
         alpha, beta = _assert_infer_alpha_beta_parameters(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
 
-        # Positive part works with layer with only positive
-        # weights and biases.
-        # The negative part does accordingly.
+        # prepare positive and negative weights for computing positive
+        # and negative preactivations z in apply_accordingly.
         self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=bias,
@@ -481,7 +471,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             keep_bias=bias,
             name_template="reversed_kernel_negative_%s")
 
-        #TODO: make decomposition not rely on positive or negative weights, but positive and negative preactivations.
+        # filter by thresholding at zero.
         positive_weights = [x * (x > 0)
                             for x in self._layer_wo_act_positive.get_weights()]
         negative_weights = [x * (x < 0)
@@ -490,30 +480,57 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_negative.set_weights(negative_weights)
 
 
+
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
         times_beta = keras.layers.Lambda(lambda x: x * self._beta)
+        times_minus_one = keras.layers.Lambda(lambda x: x * -1)
 
-        def f(layer):
+        def f(layer, X):
             # Get activations.
-            Zs = kutils.apply(layer, Xs)
+            Zs = kutils.apply(layer, X)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
                    for a, b in zip(Rs, Zs)]
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp = iutils.to_list(grad(Xs+Zs+tmp))
+            tmp = iutils.to_list(grad(X+Zs+tmp))
             # Re-weight relevance with the input values.
             return [keras.layers.Multiply()([a, b])
-                    for a, b in zip(Xs, tmp)]
+                    for a, b in zip(X, tmp)]
 
-        # Compute positive and negative relevance.'
-        positive_part = f(self._layer_wo_act_positive)
-        negative_part = f(self._layer_wo_act_negative)
-        # Join weighted positive and negative relevance again.
-        return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-                for a, b in zip(positive_part, negative_part)]
+
+        # Old code, depending on X >= 0
+        # positive_part = f(self._layer_wo_act_positive, Xs)
+        # negative_part = f(self._layer_wo_act_negative, Xs)
+        # return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
+        #            for a, b in zip(positive_part, negative_part)]
+
+
+        # Distinguish postive and negative inputs.
+        Xs_pos = kutils.apply(keras.layers.Activation('relu'), Xs)
+        Xs_neg = kutils.apply(keras.layers.Activation('relu'), kutils.apply(times_minus_one, Xs))
+
+        # Compute positive and negative relevance.
+        positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
+        positive_part = [keras.layers.Add()(positive_part)] #add and put back in a list
+
+        #code which does not need execution if beta is zero
+        #negative_part = f(self._layer_wo_act_negative, Xs_pos) + f(self._layer_wo_act_positive, Xs_neg)
+        #negative_part = [keras.layers.Add()(negative_part)] #add and put back in a list
+        #return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
+        #            for a, b in zip(positive_part, negative_part)]
+
+        if self._beta: #only compute beta if beta is not zero.
+            print ('doing the negative business', self._beta)
+            negative_part = f(self._layer_wo_act_negative, Xs_pos) + f(self._layer_wo_act_positive, Xs_neg)
+            negative_part = [keras.layers.Add()(negative_part)] #add and put back in a list
+            return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
+                        for a, b in zip(positive_part, negative_part)]
+        else:
+            return positive_part
+
 
 
 
@@ -737,7 +754,7 @@ class LRP(base.ReverseAnalyzerBase):
                 rules.insert(0, input_layer_rule)
 
 
-        def select_rule(layer, reverse_state):
+        def select_rule(layer, reverse_state): #TODO make module fxn.
             # TODO: check if use_conditions functions properly. should be class variable.
             if use_conditions is True:
                 for condition, rule in rules:
