@@ -363,24 +363,6 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
 
     def apply(self, Xs, Ys, Rs, reverse_state):
-        #print('this is', self.__class__.__name__)
-        """
-        grad = ilayers.GradientWRT(len(Xs))
-        # Compute the sum of the weights.
-        ones = ilayers.OnesLike()(Xs)
-        Ztmp = kutils.apply(self._layer_wo_act_b, Xs)
-        Zs = kutils.apply(self._layer_wo_act_b, ones)
-
-        # Weight the incoming relevance.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-
-        # Redistribute the relevances along the gradient.
-        tmp = iutils.to_list(grad(Xs+Ys+Rs))
-        return tmp
-        """
-
-
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
         Ys = kutils.apply(self._layer_wo_act_b, Xs)
@@ -394,6 +376,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
         # Redistribute the relevances along the gradient.
         tmp = iutils.to_list(grad(Xs+Ys+tmp))
         return tmp
+
 
 
 
