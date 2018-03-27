@@ -190,6 +190,9 @@ if __name__ == "__main__":
         ("lrp.alpha_1_beta_0_IB", {},                       heatmap, "LRP-A1B0-IB"),
         ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
         ("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
+        ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
+        #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
     ]
 
     # Create analyzers.
