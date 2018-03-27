@@ -11,6 +11,8 @@
 -make FLAT special case of W^2.
 -ensure W^2 works with layers without kernels (e.g. pooling)
 -parameterized LRP: implement support for rule objects instead of rule classes ?
+-numerical testing for models and layers.
+-ReverseLayer for MaxPooling and SumPooling
 
 -todo: after release: consider allowing to pass rule instances instead of rule classes, for adding parameters. the current pattern seems over-engineered.
 
