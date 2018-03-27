@@ -1,0 +1,21 @@
+0) handle input layers
+0.1) fix kchecks.is_input_layer
+0.2) add more preparameterized layers based on Flat for input layers
+
+1) Load PLOS2015 MNIST models which take inputs scaled to [-1,1] and evaluate lrp for relu and tanh
+
+2) Refactor ReverseLayer and all dependencies as independent classes
+2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
+2.1.1) BatchNormalization
+2.1.2) Merge type layers
+2.1.3) Add type layers
+2.1.4) Nonlinearities and activation layers (handle non-zero-centered fxns. they break things)
+2.1.5) Poolling type layers (Flat decomp might be desirable here. Need ReverseLayer subclass)
+
+3) allow conditioned rule mappings to depend on layer index, e.g. for selecting layers for FlatRule
+4) allow selection class to LRP-decompose based on class index
+5) numerical testing for supported layers
+6) ipython notebooks showing analyzer setup and influence of parameters
+
+
+

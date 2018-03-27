@@ -58,19 +58,27 @@ def create_analyzer(name, model, **kwargs):
         "lrp": LRP,
         "lrp.z_baseline": BaselineLRPZ,
         "lrp.z": LRPZ,
-        "lrp.z_WB": LRPZWithBias,
-        "lrp.z_plus": LRPZPlus,
+        "lrp.z_IB": LRPZIgnoreBias,
+
         "lrp.epsilon": LRPEpsilon,
-        "lrp.epsilon_WB": LRPEpsilonWithBias,
+        "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
+
         "lrp.w_square": LRPWSquare,
         "lrp.flat": LRPFlat,
+
         "lrp.alpha_beta": LRPAlphaBeta,
-        "lrp.alpha_1_beta_1": LRPAlpha1Beta1,
-        "lrp.alpha_1_beta_1_WB": LRPAlpha1Beta1WithBias,
+
         "lrp.alpha_2_beta_1": LRPAlpha2Beta1,
-        "lrp.alpha_2_beta_1_WB": LRPAlpha2Beta1WithBias,
+        "lrp.alpha_2_beta_1_IB": LRPAlpha2Beta1IgnoreBias,
         "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
-        "lrp.alpha_1_beta_0_WB": LRPAlpha1Beta0WithBias,
+        "lrp.alpha_1_beta_0_IB": LRPAlpha1Beta0IgnoreBias,
+        "lrp.z_plus": LRPZPlus,
+        "lrp.z_plus_fast": LRPZPlusFast,
+
+        "lrp.composite_a": LRPCompositeA,
+        "lrp.composite_b": LRPCompositeB,
+        "lrp.composite_a_flat": LRPCompositeAFlat,
+        "lrp.composite_b_flat": LRPCompositeBFlat,
 
         # Pattern based
         "pattern.net": PatternNet,
