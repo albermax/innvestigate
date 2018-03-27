@@ -94,6 +94,7 @@ if __name__ == "__main__":
         return ivis.project(X)
 
     def heatmap(X):
+        #X = ivis.gamma(X, minamp=0)
         return ivis.heatmap(X)
 
     def graymap(X):
