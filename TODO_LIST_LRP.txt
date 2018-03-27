@@ -1,18 +1,21 @@
-- Add and Test fully connected models from LRP Toolbox (data normalized to [-1 1], relu and tanh activations. get code from laptop.)
-- ReverseLayer as independent class
-    + Merge type layers
-    + Batch norm layer
-    + nonlinearities and activations. handle non-zero-centered activation fxns. they break things
-    + add-layer
-- write test showcasing the impact of parameter choices for alpha, beta , eps
--For MNIST, load in PLOS models which operate on [-1 1] data for additional heatmap info
--INDEX-based relevance computation(!)
--class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
--make FLAT special case of W^2.
--ensure W^2 works with layers without kernels (e.g. pooling)
--parameterized LRP: implement support for rule objects instead of rule classes ?
--numerical testing for models and layers.
--ReverseLayer for MaxPooling and SumPooling
+0) handle input layers
+0.1) fix kchecks.is_input_layer
+0.2) add more preparameterized layers based on Flat for input layers
 
--todo: after release: consider allowing to pass rule instances instead of rule classes, for adding parameters. the current pattern seems over-engineered.
+1) Load PLOS2015 MNIST models which take inputs scaled to [-1,1] and evaluate lrp for relu and tanh
+
+2) Refactor ReverseLayer and all dependencies as independent classes
+2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
+2.1.1) BatchNormalization
+2.1.2) Merge type layers
+2.1.3) Add type layers
+2.1.4) Nonlinearities and activation layers (handle non-zero-centered fxns. they break things)
+2.1.5) Poolling type layers (Flat decomp might be desirable here. Need ReverseLayer subclass)
+
+3) allow conditioned rule mappings to depend on layer index, e.g. for selecting layers for FlatRule
+4) allow selection class to LRP-decompose based on class index
+5) numerical testing for supported layers
+6) ipython notebooks showing analyzer setup and influence of parameters
+
+
 
