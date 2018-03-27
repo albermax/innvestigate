@@ -243,6 +243,24 @@ def is_container(layer):
     return isinstance(layer, keras.engine.topology.Container)
 
 
+def is_conv_layer(layer, *args, **kwargs):
+    #NOTE: args and kwargs are necessary due to the evaluation of the condition in select_rule in relevance_based
+    #not to be confused with is_convnet_layer below
+    CONV_LAYERS = (
+        keras.layers.convolutional.Conv1D,
+        keras.layers.convolutional.Conv2D,
+        keras.layers.convolutional.Conv2DTranspose,
+        keras.layers.convolutional.Conv3D,
+        keras.layers.convolutional.Conv3DTranspose,
+    )
+    return isinstance(layer, CONV_LAYERS)
+
+
+
+def is_dense_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.core.Dense)
+
+
 def is_convnet_layer(layer):
     # Inside function to not break import if Keras changes.
     CONVNET_LAYERS = (
@@ -310,6 +328,7 @@ def is_convnet_layer(layer):
         keras.layers.pooling.MaxPooling3D,
     )
     return isinstance(layer, CONVNET_LAYERS)
+
 
 
 def is_relu_convnet_layer(layer):
