@@ -332,5 +332,6 @@ class PerturbationAnalysis:
             self.perturbation.ratio += min(self.ratio, 1.0)
             scores.append(self.evaluate_generator(self.generator))
 
+        self.perturbation.ratio = self.ratio  # Reset to original value
         assert len(scores) == self.steps + 1
         return scores
