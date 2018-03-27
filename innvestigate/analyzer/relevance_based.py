@@ -361,41 +361,31 @@ class WSquareRule(kgraph.ReverseMappingBase):
         tmp = [x**2 for x in self._layer_wo_act_b.get_weights()]
         self._layer_wo_act_b.set_weights(tmp)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-        # Create dummy forward path to take the derivative below.
-        Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
-        # Compute the sum of the squared weights.
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        #print('this is', self.__class__.__name__)
+        """
+        grad = ilayers.GradientWRT(len(Xs))
+        # Compute the sum of the weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.to_list(self._layer_wo_act_b(ones))
+        Ztmp = kutils.apply(self._layer_wo_act_b, Xs)
+        Zs = kutils.apply(self._layer_wo_act_b, ones)
+
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
+
         # Redistribute the relevances along the gradient.
         tmp = iutils.to_list(grad(Xs+Ys+Rs))
         return tmp
+        """
 
 
-
-
-# TODO: Make sublcass of WSquare rule, with all weights = 1
-class FlatRule(kgraph.ReverseMappingBase):
-
-    def __init__(self, layer, state):
-        # The flat rule works with weights equal to one and
-        # no biases.
-        self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
-        tmp = [np.ones_like(x) for x in self._layer_wo_act_b.get_weights()]
-        self._layer_wo_act_b.set_weights(tmp)
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
         Ys = kutils.apply(self._layer_wo_act_b, Xs)
 
-        # Compute the sum of the one-weights.
+        # Compute the sum of the weights.
         ones = ilayers.OnesLike()(Xs)
         Zs = iutils.to_list(self._layer_wo_act_b(ones))
         # Weight the incoming relevance.
@@ -404,6 +394,19 @@ class FlatRule(kgraph.ReverseMappingBase):
         # Redistribute the relevances along the gradient.
         tmp = iutils.to_list(grad(Xs+Ys+tmp))
         return tmp
+
+
+
+
+class FlatRule(WSquareRule):
+    def __init__(self, layer, state):
+        # The flat rule works with weights equal to one and
+        # no biases.
+        self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
+            layer, keep_bias=False, name_template="reversed_kernel_%s")
+        tmp = [np.ones_like(x) for x in self._layer_wo_act_b.get_weights()]
+        self._layer_wo_act_b.set_weights(tmp)
+
 
 
 
@@ -805,7 +808,8 @@ class LRP(base.ReverseAnalyzerBase):
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer kicking in', end=':')
+        #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
+        default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
         #if isinstance(reverse_state['layer'], keras.layers.Activation): # TODO: complete this. Activation should not be everything.
@@ -813,14 +817,14 @@ class LRP(base.ReverseAnalyzerBase):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            #print(' just return') #TODO:DEBUG
+            #print(' return R')
             return reversed_Ys
         else:
             # TODO: make this more clear, here we assume to have reshape layers
             # TODO: add assert
             # TODO: BatchNorm layer should end up here (?): Implements an affine transformation.
             # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
-            #print(' ilayers.GradientWRT') #TODO:DEBUG
+            #print(' ilayers.GradientWRT')
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
@@ -911,9 +915,6 @@ class LRPFlat(_LRPFixedParams):
     def __init__(self, model, *args, **kwargs):
         super(LRPFlat, self).__init__(model, *args,
                                       rule="Flat", **kwargs)
-
-
-#TODO: class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
 
 
 class LRPAlphaBeta(LRP):
@@ -1031,3 +1032,13 @@ class LRPZPlusFast(_LRPFixedParams):
     def __init__(self, model, *args, **kwargs):
         super(LRPZPlusFast, self).__init__(model, *args,
                                        rule="ZPlusFast", **kwargs)
+
+
+#TODO: class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
+class LRPComposite():
+    #TODO:
+    #inherit from LRP.
+    #rules: if layer is dense: epsilon-rule
+    #if layer is conv: alpha2beta1
+    #bonus if layer is input or low index: flat
+    pass
