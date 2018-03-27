@@ -109,3 +109,8 @@ nosetests.cfg
 
 *.pdf
 *.npz
+
+
+# lapuschkin development ignores
+gamma_test.py
+.vscode

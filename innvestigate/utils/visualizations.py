@@ -24,6 +24,7 @@ __all__ = [
     "project",
     "heatmap",
     "graymap",
+    "gamma"
 ]
 
 
@@ -80,6 +81,47 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
 
 def graymap(X, **kwargs):
     return heatmap(X, cmap_type="gray", **kwargs)
+
+
+def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
+    """
+    apply gamma correction to an input array X
+    while maintaining the relative order of entries,
+    also for negative vs positive values in X.
+    the fxn firstly determines the max
+    amplitude in both positive and negative
+    direction and then applies gamma scaling
+    to the positive and negative values of the
+    array separately, according to the common amplitude.
+
+    :param gamma: the gamma parameter for gamma scaling
+    :param minamp: the smallest absolute value to consider.
+    if not given assumed to be zero (neutral value for relevance,
+        min value for saliency, ...). values above and below
+        minamp are treated separately.
+    :param maxamp: the largest absolute value to consider relative
+    to the neutral value minamp
+    if not given determined from the given data.
+    """
+
+    #prepare return array
+    Y = np.zeros_like(X)
+
+    X = X - minamp # shift to given/assumed center
+    if maxamp is None: maxamp = np.abs(X).max() #infer maxamp if not given
+    X = X / maxamp # scale linearly
+
+    #apply gamma correction for both positive and negative values.
+    i_pos = X > 0
+    i_neg = np.invert(i_pos)
+    Y[i_pos] = X[i_pos]**gamma
+    Y[i_neg] = -(-X[i_neg])**gamma
+
+    #reconstruct original scale and center
+    Y *= maxamp
+    Y += minamp
+
+    return Y
 
 
 def clip_quantile(X, quantile=1):
