@@ -75,6 +75,11 @@ def create_analyzer(name, model, **kwargs):
         "lrp.z_plus": LRPZPlus,
         "lrp.z_plus_fast": LRPZPlusFast,
 
+        "lrp.composite_a": LRPCompositeA,
+        "lrp.composite_b": LRPCompositeB,
+        "lrp.composite_a_flat": LRPCompositeAFlat,
+        "lrp.composite_b_flat": LRPCompositeBFlat,
+
         # Pattern based
         "pattern.net": PatternNet,
         "pattern.attribution": PatternAttribution,

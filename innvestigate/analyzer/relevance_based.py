@@ -62,6 +62,12 @@ __all__ = [
     "LRPAlpha1Beta0IgnoreBias",
     "LRPZPlus",
     "LRPZPlusFast",
+
+    "LRPCompositeA",
+    "LRPCompositeB",
+
+    "LRPCompositeAFlat",
+    "LRPCompositeBFlat",
 ]
 
 
@@ -209,7 +215,7 @@ def _assert_epsilon_parameter(epsilon, caller):
     """
 
     err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    err_msg = err_head + "Parameter epsilon must be > 0"
+    err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
     assert epsilon > 0, err_msg
     return epsilon
 
@@ -720,7 +726,7 @@ class LRP(base.ReverseAnalyzerBase):
            isinstance(rule, six.string_types) or
            (inspect.isclass(rule) and issubclass(rule, kgraph.ReverseMappingBase)) # NOTE: All LRP rules inherit from kgraph.ReverseMappingBase
         ):
-            # the given rule is a single strig or single rule implementing class
+            # the given rule is a single string or single rule implementing cla ss
             use_conditions = True
             rules = [(lambda a, b: True, rule)]
 
@@ -757,12 +763,15 @@ class LRP(base.ReverseAnalyzerBase):
 
         def select_rule(layer, reverse_state): #TODO make module fxn.
             # TODO: check if use_conditions functions properly. should be class variable.
+            #print(layer.__class__.__name__, end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
+                        #print(rule.__name__) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
+                #print(rules[0].__class__.__name__ + ' (pop)') #debug
                 return rules.pop()
 
 
@@ -772,7 +781,7 @@ class LRP(base.ReverseAnalyzerBase):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule]
-                self._rule = rule_class(layer, state) #TODO. add def call() to Rule base class, which is a setter for layer, state, to avoid above ad-hoc-input rule class gen.
+                self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
                 #print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
@@ -782,6 +791,7 @@ class LRP(base.ReverseAnalyzerBase):
         # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
+            #TODO: BatchNOrm, MaxPooling (ReverseLayer), SumPooling (ReverseLayer), Flatten, Reshape
         ]
 
         # finalize constructor.
@@ -1017,11 +1027,98 @@ class LRPZPlusFast(_LRPFixedParams):
                                        rule="ZPlusFast", **kwargs)
 
 
-#TODO: class for assigning LRPAlphaBeta21 to conv layers and eps to dense layers
-class LRPComposite():
-    #TODO:
-    #inherit from LRP.
-    #rules: if layer is dense: epsilon-rule
-    #if layer is conv: alpha2beta1
-    #bonus if layer is input or low index: flat
-    pass
+class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
+    def __init__(self, model, *args, **kwargs):
+        self._model_checks = [
+        # todo: Check for non-linear output in general.
+        {
+            "check": lambda layer: kchecks.contains_activation(
+                layer, activation="softmax"),
+            "type": "exception",
+            "message": "Model should not contain a softmax.",
+        },
+        {
+            "check":
+            lambda layer: not kchecks.only_relu_activation(layer),
+            "type": "warning",
+            "message": (" is not advised for "
+                        "networks with non-ReLU activations.")
+        }
+        ]
+
+        class EpsilonProxyRule(EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super(EpsilonProxyRule, self).__init__(*args,
+                                                       epsilon=1e-3,
+                                                       bias=True,
+                                                       **kwargs)
+
+
+        conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
+                             (kchecks.is_conv_layer, Alpha1Beta0Rule)
+                            ]
+
+        super(LRPCompositeA, self).__init__(model,
+                                           *args,
+                                           rule = conditional_rules,
+                                           **kwargs )
+
+
+
+
+class LRPCompositeB(_LRPFixedParams):
+    def __init__(self, model, *args, **kwargs):
+        self._model_checks = [
+        # todo: Check for non-linear output in general.
+        {
+            "check": lambda layer: kchecks.contains_activation(
+                layer, activation="softmax"),
+            "type": "exception",
+            "message": "Model should not contain a softmax.",
+        },
+        {
+            "check":
+            lambda layer: not kchecks.only_relu_activation(layer),
+            "type": "warning",
+            "message": (" is not advised for "
+                        "networks with non-ReLU activations.")
+        }
+        ]
+
+        class EpsilonProxyRule(EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super(EpsilonProxyRule, self).__init__(*args,
+                                                       epsilon=1e-3,
+                                                       bias=True,
+                                                       **kwargs)
+
+
+        conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
+                             (kchecks.is_conv_layer, Alpha2Beta1Rule)
+                            ]
+        super(LRPCompositeB, self).__init__(model,
+                                           *args,
+                                           rule = conditional_rules,
+                                           **kwargs )
+
+
+
+
+#TODO: FIX kcheck.is_input_layer !!!!
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeAFlat(LRPCompositeA):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeAFlat, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="Flat",
+                                                **kwargs)
+
+
+#TODO: FIX kcheck.is_input_layer !!!!
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeBFlat(LRPCompositeB):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeBFlat, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="Flat",
+                                                **kwargs)
