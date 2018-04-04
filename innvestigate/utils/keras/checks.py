@@ -33,6 +33,9 @@ import keras.layers.recurrent
 import keras.layers.wrappers
 import keras.legacy.layers
 
+from ..keras import graph as kgraph
+
+
 
 __all__ = [
     "get_current_layers",
@@ -352,7 +355,7 @@ def is_input_layer(layer):
     # to a Keras input layer object or
     # the layer itself is the first layer.
 
-    layer_inputs = get_input_layers(layer)
+    layer_inputs = kgraph.get_input_layers(layer)
     # We ignore certain layers, that do not modify
     # the data content.
     # todo: update this list!
@@ -365,7 +368,7 @@ def is_input_layer(layer):
         tmp = set()
         for l in layer_inputs:
             if isinstance(l, IGNORED_LAYERS):
-                tmp.update(get_input_layers(l))
+                tmp.update(kgraph.get_input_layers(l))
             else:
                 tmp.add(l)
         layer_inputs = tmp
