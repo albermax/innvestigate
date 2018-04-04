@@ -754,7 +754,7 @@ class LRP(base.ReverseAnalyzerBase):
 
             if use_conditions is True:
                 rules.insert(0,
-                             (lambda layer, foo: kgraph.is_input_layer(layer),
+                             (lambda layer, foo: kchecks.is_input_layer(layer),
                               input_layer_rule))
 
             else:
@@ -763,15 +763,15 @@ class LRP(base.ReverseAnalyzerBase):
 
         def select_rule(layer, reverse_state): #TODO make module fxn.
             # TODO: check if use_conditions functions properly. should be class variable.
-            #print(layer.__class__.__name__, end='->') #debug
+            print(layer.__class__.__name__, end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        #print(rule.__name__) #debug
+                        print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                #print(rules[0].__class__.__name__ + ' (pop)') #debug
+                print(str(rules[0]) + ' (pop)') #debug
                 return rules.pop()
 
 
@@ -779,6 +779,7 @@ class LRP(base.ReverseAnalyzerBase):
             # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
+                print(layer, rule_class)
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule]
                 self._rule = rule_class(layer, state)
@@ -1110,7 +1111,7 @@ class LRPCompositeAFlat(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule="Flat",
+                                                input_layer_rule=FlatRule,
                                                 **kwargs)
 
 
@@ -1120,5 +1121,5 @@ class LRPCompositeBFlat(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule="Flat",
+                                                input_layer_rule=FlatRule,
                                                 **kwargs)
