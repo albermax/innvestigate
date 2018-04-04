@@ -1121,5 +1121,5 @@ class LRPCompositeBFlat(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule=FlatRule,
+                                                input_layer_rule="Flat",
                                                 **kwargs)
