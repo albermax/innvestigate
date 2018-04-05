@@ -747,7 +747,7 @@ class LRP(base.ReverseAnalyzerBase):
                 low, high = input_layer_rule
 
                 class input_layer_rule(BoundedRule):
-                    def __init__(self, *args, **kwars):
+                    def __init__(self, *args, **kwargs):
                         super(input_layer_rule, self).__init__(
                             *args, low=low, high=high, **kwargs)
 
