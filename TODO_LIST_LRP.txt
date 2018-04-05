@@ -2,6 +2,7 @@
 0.1) fix kchecks.is_input_layer
 0.2) add more preparameterized layers based on Flat for input layers
 
+
 1) Load PLOS2015 MNIST models which take inputs scaled to [-1,1] and evaluate lrp for relu and tanh
 
 2) Refactor ReverseLayer and all dependencies as independent classes
@@ -13,9 +14,9 @@
 2.1.5) Poolling type layers (Flat decomp might be desirable here. Need ReverseLayer subclass)
 
 3) allow conditioned rule mappings to depend on layer index, e.g. for selecting layers for FlatRule
-4) allow selection class to LRP-decompose based on class index
-5) numerical testing for supported layers
+4) allow selection class to LRP-decompose based on class index #TODO: write issue: implement fxn go over keras graph and return a list of layers so the indexing of layers is known/correct
+5) numerical testing for supported layers # TODO: issue describing what needs to exist
 6) ipython notebooks showing analyzer setup and influence of parameters
 
-
+99) #exceptions instead of asserts!!!!
 
