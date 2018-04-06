@@ -444,20 +444,73 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_negative.set_weights(negative_weights)
 
 
-
     def apply(self, Xs, Ys, Rs, reverse_state):
+        #this method is correct, but wasteful
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
         times_beta = keras.layers.Lambda(lambda x: x * self._beta)
         keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
         keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
 
+
+        def f(layer1, layer2, X1, X2):
+            # Get activations of full positive or negative part.
+            Z1 = kutils.apply(layer1, X1)
+            Z2 = kutils.apply(layer2, X2)
+            Zs = [keras.layers.Add()([a, b])
+                    for a, b in zip(Z1, Z2)]
+            # Divide incoming relevance by the activations.
+            tmp = [ilayers.SafeDivide()([a, b])
+                    for a, b in zip(Rs, Zs)]
+            # Propagate the relevance to the input neurons
+            # using the gradient
+            tmp1 = iutils.to_list(grad(X1+Zs+tmp))
+            tmp2 = iutils.to_list(grad(X2+Zs+tmp))
+            # Re-weight relevance with the input values.
+            tmp1 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X1, tmp1)]
+            tmp2 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X2, tmp2)]
+            #combine and return
+            return [keras.layers.Add()([a, b])
+                    for a, b in zip(tmp1, tmp2)]
+
+
+        # Distinguish postive and negative inputs.
+        Xs_pos = kutils.apply(keep_positives, Xs)
+        Xs_neg = kutils.apply(keep_negatives, Xs)
+        # xpos*wpos + xneg*wneg
+        activator_relevances = f(self._layer_wo_act_positive,
+                                 self._layer_wo_act_negative,
+                                 Xs_pos, Xs_neg)
+
+        if self._beta: #only compute beta-weighted contributions of beta is not zero
+            # xpos*wneg + xneg*wpos
+            inhibitor_relevances = f(self._layer_wo_act_negative,
+                                     self._layer_wo_act_positive,
+                                     Xs_pos, Xs_neg)
+            return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
+                        for a, b in zip(activator_relevances, inhibitor_relevances)]
+        else:
+            return activator_relevances
+
+
+
+    def apply_buggy(self, Xs, Ys, Rs, reverse_state):
+        # keeping this for reference around. this method is buggy, as the name implies
+        grad = ilayers.GradientWRT(len(Xs))
+        times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
+        times_beta = keras.layers.Lambda(lambda x: x * self._beta)
+        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
+
+
         def f(layer, X):
             # Get activations.
             Zs = kutils.apply(layer, X)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
-                   for a, b in zip(Rs, Zs)]
+                   for a, b in zip(Rs, Zs)] # TODO: THIS IS BUGGY! Zs here must be computed for the FULL negative or positive part, not half of it. alpha-beta needs an additional step! see below
             # Propagate the relevance to input neurons
             # using the gradient.
             tmp = iutils.to_list(grad(X+Zs+tmp))
@@ -470,7 +523,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         Xs_pos = kutils.apply(keep_positives, Xs)
         Xs_neg = kutils.apply(keep_negatives, Xs)
 
-
+        #NOTE: this stuff below is only half-right, e.g. wrong.
         # Compute positive and negative relevance.
         positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
         positive_part = [keras.layers.Add()(positive_part)] #add and put back in a list
