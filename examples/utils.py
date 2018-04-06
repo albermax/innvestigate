@@ -94,10 +94,10 @@ def plot_image_grid(grid,
                              #horizontalalignment='left',
                              verticalalignment='bottom')
             if not c: #label + prediction info
-                lbl, prob, yhat = row_labels[r]
+                lbl, presm, prob, yhat = row_labels[r]
                 txt = 'label: {}\n'.format(lbl)
                 txt += 'pred: {}\n'.format(yhat)
-                txt += '{}'.format(prob)
+                txt += '{} {}'.format(presm, prob)
                 ax.set_ylabel(txt,
                               rotation=0,
                               verticalalignment='center',
