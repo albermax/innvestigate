@@ -243,33 +243,39 @@ def _assert_infer_alpha_beta_parameters(alpha, beta, caller):
     """
 
     err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    err_msg = err_head + "Neither alpha or beta were given"
-    assert not (alpha is None and beta is None), err_msg
+    if alpha is None and beta is None:
+        err_msg = err_head + "Neither alpha or beta were given"
+        raise ValueError(err_msg)
 
     #assert passed parameter choices
-    if alpha is not None:
+    if alpha is not None and alpha < 1:
         err_msg = err_head +"Passed parameter alpha invalid. Expecting alpha >= 1 but was {}".format(alpha)
-        assert alpha >= 1, err_msg
+        raise ValueError(err_msg)
 
-    if beta is not None:
+    if beta is not None and beta < 0:
         err_msg = err_head +"Passed parameter beta invalid. Expecting beta >= 0 but was {}".format(beta)
-        assert beta >= 0, err_msg
+        raise ValueError(err_msg)
 
     #assert inferred parameter choices
     if alpha is None:
         alpha = beta + 1
-        err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
-        assert alpha >= 1, err_msg
+        if alpha < 1:
+            err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
+            raise ValueError(err_msg)
+
 
     if beta is None:
         beta = alpha - 1
-        err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
-        assert beta >= 0, err_msg
+        if beta < 0:
+            err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
+            raise ValueError(err_msg)
+
 
     #final check: alpha - beta = 1
     amb = alpha - beta
-    err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
-    assert amb == 1, err_msg
+    if amb != 1:
+        err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
+        raise ValueError(err_msg)
 
     #return benign values for alpha and beta
     return alpha, beta
