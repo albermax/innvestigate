@@ -67,7 +67,7 @@ def fetch_data(channels_first):
     return x_train, y_train, x_test, y_test
 
 
-def create_model(channels_first):
+def create_model(channels_first, modelname): #TODO: get/create/load model
     num_classes = 10
 
     if channels_first:
@@ -75,7 +75,8 @@ def create_model(channels_first):
     else:
         input_shape = (None, 28, 28, 1)
 
-    network = innvestigate.utils.tests.networks.base.mlp_3dense(
+    #TODO: instantiate model based on model name
+    network = innvestigate.utils.tests.networks.base.mlp_2dense(
         input_shape,
         num_classes,
         dense_units=1024,
@@ -113,10 +114,28 @@ def train_model(model, data, n_epochs=20):
 ###############################################################################
 
 if __name__ == "__main__":
-    # parameters for model and data choice. TODO: make dict holding those values. zero_mean, architecture, nepochs, not that order
-    zero_mean = False
-    pattern_type = "linear"
-    #pattern_type = "relu"
+    # parameters for model and data choice.
+    #        modelname          input value ranges     n_epochs
+    models = {'mlp_2dense':         ([0, 1],               2,             ),
+              'mlp_3dense':         ([0, 1],               4,             ),
+              'mlp_2dense_zeromean':([-1, 1],              2,             ),
+              'mlp_3dense_zeromean':([-1, 1],              4,             ),
+              'pt_plos_long_rect':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+              'pt_plos_short_rect': ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+              'pt_plos_long_tanh':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+              'pt_plos_long_tanh':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+             }
+
+    # unpack model params by name
+    modelname = 'mlp_2dense_zeromean' # pick a name from the list above!
+    input_range, n_epochs = models[modelname]
+    #n_epochs = 0 #optionally change n_epochs manually
+    print (input_range) #TODO: remove
+    print(n_epochs) #TODO: remove
+
+
+
+    # TODO: option to re-set some parameters manually
     channels_first = keras.backend.image_data_format == "channels_first"
     data = fetch_data(channels_first)
     images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
@@ -126,11 +145,24 @@ if __name__ == "__main__":
     # Utility function.
     ###########################################################################
 
-    def preprocess(X):
-        X.copy()
-        X /= 255
-        if zero_mean:
-            X -= 0.5
+    def preprocess(X, input_range=[0,1]):
+        #generically shifts data from interval
+        #[a, b] to interval [c, d]
+        # assumes that theoretical min and max values are populated.
+        assert len(input_range) == 2, 'Input range must be of length 2, but was {}'.format(len(input_range))
+        assert input_range[0] < input_range[1], 'Values in input_range must be ascending. have been {}'.format(input_range)
+
+        a, b = X.min(), X.max()
+        c, d = input_range
+
+        #shift original data to [0, b-a] (and copy)
+        X = X - a
+        #scale to new range gap [0, d-c]
+        X /= (b-a)
+        X *= (d-c)
+        #shift to desired output range
+        X += c
+        print(X.min(), X.max())
         return X
 
     def postprocess(X):
@@ -158,12 +190,11 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    data_preprocessed = (preprocess(data[0]), data[1],
-                         preprocess(data[2]), data[3])
-    model, modelp = create_model(channels_first)
-    n_epochs = 2
-    train_model(modelp, data_preprocessed, n_epochs=n_epochs)
-    model.set_weights(modelp.get_weights())
+    data_preprocessed = (preprocess(data[0], input_range), data[1], #TODO: give proper names such as xtrain, xtest, ...
+                         preprocess(data[2], input_range), data[3])
+    model, modelp = create_model(channels_first, modelname)
+    train_model(modelp, data_preprocessed, n_epochs=n_epochs) # TODO only do if n_epochs > 0
+    model.set_weights(modelp.get_weights()) #TODO: take care of this softmax business with pretrained models (which dont have softmax layers. just add it.)
 
     ###########################################################################
     # Analysis.
@@ -202,8 +233,6 @@ if __name__ == "__main__":
         analyzer = innvestigate.create_analyzer(method[0],
                                                 model,
                                                 **method[1])
-        analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
-                     batch_size=256, verbose=1)
         analyzers.append(analyzer)
 
     # Create analysis.
@@ -213,7 +242,7 @@ if __name__ == "__main__":
         print ('Image {}: '.format(i), end='')
         image = image[None, :, :, :]
         # Predict label.
-        x = preprocess(image)
+        x = preprocess(image, input_range)
         presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
@@ -256,7 +285,7 @@ if __name__ == "__main__":
                            col_label_offset=15,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="mnist_lrp_{}epochs.pdf".format(n_epochs))
+                           file_name="mnist_lrp-{}-{}epochs.pdf".format(modelname, n_epochs))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
