@@ -214,9 +214,10 @@ def _assert_epsilon_parameter(epsilon, caller):
         :param caller: the class instance calling this assertion function
     """
 
-    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
-    assert epsilon > 0, err_msg
+    if epsilon <= 0:
+        err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
+        err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
+        raise ValueError(err_msg)
     return epsilon
 
 
