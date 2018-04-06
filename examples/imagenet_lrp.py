@@ -92,7 +92,7 @@ if __name__ == "__main__":
         return ivis.project(X)
 
     def heatmap(X):
-        #X = ivis.gamma(X, minamp=0)
+        X = ivis.gamma(X, minamp=0, gamma=0.9)
         return ivis.heatmap(X)
 
     def graymap(X):
