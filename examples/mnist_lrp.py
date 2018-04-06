@@ -75,7 +75,7 @@ def create_model(channels_first):
     else:
         input_shape = (None, 28, 28, 1)
 
-    network = innvestigate.utils.tests.networks.base.mlp_2dense(
+    network = innvestigate.utils.tests.networks.base.mlp_3dense(
         input_shape,
         num_classes,
         dense_units=1024,
@@ -113,7 +113,7 @@ def train_model(model, data, n_epochs=20):
 ###############################################################################
 
 if __name__ == "__main__":
-
+    # parameters for model and data choice. TODO: make dict holding those values. zero_mean, architecture, nepochs, not that order
     zero_mean = False
     pattern_type = "linear"
     #pattern_type = "relu"
@@ -214,10 +214,12 @@ if __name__ == "__main__":
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
+        presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
         text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm.max(),
                      r"(%.2f)" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 
