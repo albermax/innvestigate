@@ -18,5 +18,3 @@
 5) numerical testing for supported layers # TODO: issue describing what needs to exist
 6) ipython notebooks showing analyzer setup and influence of parameters
 
-99) #exceptions instead of asserts!!!!
-
