@@ -92,7 +92,7 @@ if __name__ == "__main__":
         return ivis.project(X)
 
     def heatmap(X):
-        X = ivis.gamma(X, minamp=0, gamma=0.9)
+        X = ivis.gamma(X, minamp=0, gamma=0.95)
         return ivis.heatmap(X)
 
     def graymap(X):
@@ -116,18 +116,18 @@ if __name__ == "__main__":
         #("lrp.z_IB",              {},                       heatmap, "LRP-Z-IB"),
         ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
         #("lrp.epsilon_IB",        {},                       heatmap, "LRP-Epsilon-IB"),
-        ("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
+        #("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
         ("lrp.flat",              {},                       heatmap, "LRP-Flat"),
         #("lrp.alpha_beta",        {},                       heatmap, "LRP-AB"),
-        ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
         #("lrp.alpha_2_beta_1_IB", {},                       heatmap, "LRP-A2B1-IB"),
         ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
         #("lrp.alpha_1_beta_0_IB", {},                       heatmap, "LRP-A1B0-IB"),
-        ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
-        ("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
+        #("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
+        #("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
         ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-        ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
-        #("lrp.composite_a_flat",           {},                     heatmap, "LRP-CompositeAFlat"),
+        #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
+        ("lrp.composite_a_flat",           {},                     heatmap, "LRP-CompositeAFlat"),
         #("lrp.composite_b_flat",           {},                     heatmap, "LRP-CompositeBFlat"),
     ]
 
