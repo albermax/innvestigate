@@ -754,7 +754,7 @@ class LRP(base.ReverseAnalyzerBase):
 
             if use_conditions is True:
                 rules.insert(0,
-                             (lambda layer, foo: kgraph.is_input_layer(layer),
+                             (lambda layer, foo: kchecks.is_input_layer(layer),
                               input_layer_rule))
 
             else:
