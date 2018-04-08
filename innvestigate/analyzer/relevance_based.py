@@ -841,7 +841,7 @@ class LRP(base.ReverseAnalyzerBase):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
                 print(layer, rule_class)
                 if isinstance(rule_class, six.string_types):
-                    rule_class = LRP_RULES[rule]
+                    rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
