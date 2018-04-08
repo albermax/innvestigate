@@ -74,3 +74,13 @@ class TestSerializeReverseAnalyzerkBase(dryrun.SerializeAnalyzerTestCase):
 
     def _method(self, model):
         return Gradient(model)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+import unittest
+fast_tests = unittest.TestSuite()
+fast_tests.addTest(TestBasicGraphReversal(network_filter="mnsit.*"))
+test_fast = fast_tests

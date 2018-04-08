@@ -29,26 +29,18 @@ from . import imagenet
 ###############################################################################
 
 
-def iterator():
+def iterator(network_filter="*"):
     """
     Iterator over various networks.
     """
-
-    # TODO: change environment variable name.
-    # TODO: make this more transparent! use attributes/tags of unittests
-    # Default test only for one network. To test all put "*"
-    #name_filter = "mnist.log_reg"
-    name_filter = "*"
-    if "NNPATTERNS_TEST_FILTER" in os.environ:
-        name_filter = os.environ["NNPATTERNS_TEST_FILTER"]
 
     def fetch_networks(module_name, module):
         ret = [
             ("%s.%s" % (module_name, name),
              getattr(module, name)())
             for name in module.__all__
-            if (fnmatch.fnmatch(name, name_filter) or
-                fnmatch.fnmatch("%s.%s" % (module_name, name), name_filter))
+            if (fnmatch.fnmatch(name, network_filter) or
+                fnmatch.fnmatch("%s.%s" % (module_name, name), network_filter))
         ]
 
         for name, network in ret:
