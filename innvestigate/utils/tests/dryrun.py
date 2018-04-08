@@ -60,14 +60,18 @@ class BaseTestCase(unittest.TestCase):
     and executed with random inputs.
     """
 
+    def __init__(self, *args, network_filter="trivia.*", **kwargs):
+        self._network_filter = network_filter
+        super(BaseTestCase, self).__init__(*args, **kwargs)
+
     def _apply_test(self, network):
         raise NotImplementedError("Set in subclass.")
 
-    def test_dryrun(self):
+    def runTest(self):
         np.random.seed(2349784365)
         K.clear_session()
 
-        for network in networks.iterator():
+        for network in networks.iterator(self._network_filter):
             if six.PY2:
                 self._apply_test(network)
             else:
