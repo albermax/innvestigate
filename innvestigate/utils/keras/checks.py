@@ -36,7 +36,6 @@ import keras.legacy.layers
 from ..keras import graph as kgraph
 
 
-
 __all__ = [
     "get_current_layers",
     "get_known_layers",
@@ -350,10 +349,11 @@ def is_average_pooling(layer):
     return isinstance(layer, AVERAGEPOOLING_LAYERS)
 
 
-def is_input_layer(layer):
+def is_input_layer(layer, ignore_reshape_layers=True):
     # Triggers if ALL inputs of layer are connected
-    # to a Keras input layer object or
-    # the layer itself is the first layer.
+    # to a Keras input layer object.
+    # Note: In the sequential api the Sequential object
+    # adds the Input layer if the user does not.
 
     layer_inputs = kgraph.get_input_layers(layer)
     # We ignore certain layers, that do not modify
@@ -367,7 +367,8 @@ def is_input_layer(layer):
     while any([isinstance(x, IGNORED_LAYERS) for x in layer_inputs]):
         tmp = set()
         for l in layer_inputs:
-            if isinstance(l, IGNORED_LAYERS):
+            if(ignore_reshape_layers and
+               isinstance(l, IGNORED_LAYERS)):
                 tmp.update(kgraph.get_input_layers(l))
             else:
                 tmp.add(l)
@@ -375,12 +376,6 @@ def is_input_layer(layer):
 
     if all([isinstance(x, keras.layers.InputLayer)
             for x in layer_inputs]):
-        return True
-    elif getattr(layer, "input_shape", None) is not None:
-        # relies on Keras convention
-        return True
-    elif getattr(layer, "batch_input_shape", None) is not None:
-        # relies on Keras convention
         return True
     else:
         return False
