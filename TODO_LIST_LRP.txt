@@ -1,9 +1,4 @@
-0) handle input layers
-0.1) fix kchecks.is_input_layer
-0.2) add more preparameterized layers based on Flat for input layers
 
-
-1) Load PLOS2015 MNIST models which take inputs scaled to [-1,1] and evaluate lrp for relu and tanh
 
 2) Refactor ReverseLayer and all dependencies as independent classes
 2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
