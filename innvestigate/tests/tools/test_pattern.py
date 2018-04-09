@@ -49,6 +49,7 @@ def test_fast__PatternComputer_dummy_parallel():
     return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.skip("Feature not supported.")
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_dummy_sequential():
