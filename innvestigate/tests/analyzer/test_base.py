@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradient
@@ -26,61 +29,79 @@ from innvestigate.analyzer import Gradient
 ###############################################################################
 
 
-class TestBasicGraphReversal(dryrun.EqualAnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BasicGraphReversal():
 
-    def _method1(self, model):
+    def method1(model):
         return BaselineGradient(model)
 
-    def _method2(self, model):
+    def method2(model):
         return Gradient(model)
 
+    return dryrun.test_equal_analyzer(method1,
+                                      method2,
+                                      "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestBaseReverseNetwork_reverse_debug(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaseReverseNetwork_reverse_debug():
 
-    def _method(self, model):
-        return Gradient(model, reverse_verbose=True)
-
-
-class TestBaseReverseNetwork_reverse_check_minmax(dryrun.AnalyzerTestCase):
-
-    def _method(self, model):
+    def method(model):
         return Gradient(model, reverse_verbose=True,
                         reverse_check_min_max_values=True)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestBaseReverseNetwork_reverse_check_finite(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaseReverseNetwork_reverse_check_minmax():
+
+    def method(model):
+        return Gradient(model, reverse_verbose=True,
+                        reverse_check_min_max_values=True)
+
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaseReverseNetwork_reverse_check_finite():
+
+    def method(model):
         return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestSerializeAnalyzerBase(dryrun.SerializeAnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeAnalyzerBase():
 
-    def _method(self, model):
+    def method(model):
         return BaselineGradient(model)
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeReverseAnalyzerkBase(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeReverseAnalyzerkBase():
+
+    def method(model):
         return Gradient(model)
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-import unittest
-fast_tests = unittest.TestSuite()
-fast_tests.addTest(TestBasicGraphReversal(network_filter="mnsit.*"))
-test_fast = fast_tests
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+ 

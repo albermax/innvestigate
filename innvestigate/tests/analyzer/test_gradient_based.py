@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradient
@@ -33,52 +36,76 @@ from innvestigate.analyzer import SmoothGrad
 ###############################################################################
 
 
-class TestBaselineGradient(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaselineGradient():
 
-    def _method(self, model):
+    def method(model):
         return BaselineGradient(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestGradient(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Gradient():
+
+    def method(model):
         return Gradient(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestDeconvnet(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Deconvnet():
 
-    def _method(self, model):
+    def method(model):
         return Deconvnet(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestGuidedBackprop(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__GuidedBackprop():
+
+    def method(model):
         return GuidedBackprop(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestIntegratedGradients(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__IntegratedGradients():
 
-    def _method(self, model):
+    def method(model):
         return IntegratedGradients(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestSmoothGrad(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SmoothGrad():
 
-    def _method(self, model):
+    def method(model):
         return SmoothGrad(model)
+
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

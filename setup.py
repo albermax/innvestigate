@@ -2,13 +2,22 @@ import os
 import setuptools
 
 
-requirements = [
-    "numpy",
-    "scipy",
-    "keras",
+install_requirements = [
     "future",
     "h5py",
-    "pillow"
+    "keras",
+    "numpy",
+    "pillow",
+    "pytest",
+    "scipy",
+]
+
+setup_requirements = [
+    "pytest-runner",
+]
+
+test_requirements = [
+    "pytest"
 ]
 
 
@@ -39,7 +48,9 @@ def setup():
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
         packages=setuptools.find_packages(),
-        install_requires=requirements,
+        install_requires=install_requirements,
+        setup_requires=setup_requirements,
+        tests_require=test_requirements,
         include_package_data=True,
         zip_safe=False,
     )
