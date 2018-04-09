@@ -126,10 +126,10 @@ if __name__ == "__main__":
     #        modelname              input value ranges         n_epochs         kwargs
     models = {'mlp_2dense':         ([0, 1],                   2,             {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
               'mlp_3dense':         ([0, 1],                   4,             {'dense_units':1024, 'dropout_rate':0.25}),
-              'pt_plos_long_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_short_relu': ([-1, 1],                  0,             {}), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_long_tanh':  ([-1, 1],                  0,             {}), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+              'pt_plos_long_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_short_relu': ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_long_tanh':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
              }
 
     # unpack model params by name
