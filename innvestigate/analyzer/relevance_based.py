@@ -68,6 +68,9 @@ __all__ = [
 
     "LRPCompositeAFlat",
     "LRPCompositeBFlat",
+
+    "LRPCompositeAWSquare",
+    "LRPCompositeBWSquare",
 ]
 
 
@@ -1165,7 +1168,7 @@ class LRPCompositeB(_LRPFixedParams):
 
 
 
-#TODO: FIX kcheck.is_input_layer !!!!
+
 #TODO: allow to pass input layer identification by index.
 class LRPCompositeAFlat(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
@@ -1175,11 +1178,30 @@ class LRPCompositeAFlat(LRPCompositeA):
                                                 **kwargs)
 
 
-#TODO: FIX kcheck.is_input_layer !!!!
+
 #TODO: allow to pass input layer identification by index.
 class LRPCompositeBFlat(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
+                                                **kwargs)
+
+
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeAWSquare(LRPCompositeA):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeAWSquare, self).__init__(model,
+                                                *args,
+                                                input_layer_rule=WSquareRule,
+                                                **kwargs)
+
+
+
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeBWSquare(LRPCompositeB):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeBWSquare, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="WSquare",
                                                 **kwargs)
