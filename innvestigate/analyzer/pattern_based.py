@@ -108,7 +108,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         # Pattern projections can lead to +-inf value with long networks.
         # We are only interested in the direction, therefore it is save to
         # Prevent this by projecting the values in bottleneck layers to +-1.
-        if "reverse_project_bottleneck_layers" in kwargs:
+        if not kwargs.get("reverse_project_bottleneck_layers", True):
             warnings.warn("The standard setting for "
                           "'reverse_project_bottleneck_layers' "
                           "is overwritten.")
