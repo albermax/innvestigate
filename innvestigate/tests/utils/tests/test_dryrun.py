@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 
@@ -23,15 +26,19 @@ from innvestigate.utils.tests import dryrun
 ###############################################################################
 
 
-class TestDryRunAnalyzerTestCase(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__DryRunAnalyzerTestCase():
     """
     Sanity test for the TestCase.
     """
 
-    def _method(self, output_layer):
+    def method(output_layer):
 
         class TestAnalyzer(object):
             def analyze(self, X):
                 return X
 
         return TestAnalyzer()
+
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

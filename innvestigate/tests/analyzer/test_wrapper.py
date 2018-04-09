@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import WrapperBase
@@ -31,82 +34,126 @@ from innvestigate.analyzer import Gradient
 ###############################################################################
 
 
-class TestWrapperBase(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__WrapperBase():
 
-    def _method(self, model):
+    def method(model):
         return WrapperBase(Gradient(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeWrapperBase(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeWrapperBase():
+
+    def method(model):
         return WrapperBase(Gradient(model))
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestAugmentReduceBase__python_based(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__AugmentReduceBase__python_based():
 
-    def _method(self, model):
+    def method(model):
         return AugmentReduceBase(Input(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestAugmentReduceBase__keras_based(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__AugmentReduceBase__keras_based():
+
+    def method(model):
         return AugmentReduceBase(Gradient(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeAugmentReduceBase(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeAugmentReduceBase():
+
+    def method(model):
         return AugmentReduceBase(Gradient(model))
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestGaussianSmoother__python_based(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__GaussianSmoother__python_based():
 
-    def _method(self, model):
+    def method(model):
         return GaussianSmoother(Input(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestGaussianSmoother__keras_based(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__GaussianSmoother__keras_based():
+
+    def method(model):
         return GaussianSmoother(Gradient(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeGaussianSmoother(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeGaussianSmoother():
+
+    def method(model):
         return GaussianSmoother(Gradient(model))
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestPathIntegrator__python_based(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PathIntegrator__python_based():
 
-    def _method(self, model):
+    def method(model):
         return PathIntegrator(Input(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestPathIntegrator__keras_based(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PathIntegrator__keras_based():
+
+    def method(model):
         return PathIntegrator(Gradient(model))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializePathIntegrator(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializePathIntegrator():
+
+    def method(model):
         return PathIntegrator(Gradient(model))
+
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

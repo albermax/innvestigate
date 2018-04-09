@@ -60,14 +60,21 @@ class BaseTestCase(unittest.TestCase):
     and executed with random inputs.
     """
 
+    _network_filter = "trivia.*"
+
+    def __init__(self, *args, network_filter=None, **kwargs):
+        if network_filter is not None:
+            self._network_filter = network_filter
+        super(BaseTestCase, self).__init__(*args, **kwargs)
+
     def _apply_test(self, network):
         raise NotImplementedError("Set in subclass.")
 
-    def test_dryrun(self):
+    def runTest(self):
         np.random.seed(2349784365)
         K.clear_session()
 
-        for network in networks.iterator():
+        for network in networks.iterator(self._network_filter):
             if six.PY2:
                 self._apply_test(network)
             else:
@@ -82,6 +89,11 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AnalyzerTestCase(BaseTestCase):
+
+    def __init__(self, *args, method=None, **kwargs):
+        if method is not None:
+            self._method = method
+        super(AnalyzerTestCase, self).__init__(*args, **kwargs)
 
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
@@ -103,7 +115,22 @@ class AnalyzerTestCase(BaseTestCase):
         pass
 
 
+def test_analyzer(method, network_filter):
+    # todo: Mixing of pytest and unittest is not ideal.
+    # Move completely to pytest.
+    test_case = AnalyzerTestCase(method=method,
+                                 network_filter=network_filter)
+    test_result = unittest.TextTestRunner().run(test_case)
+    assert len(test_result.errors) == 0
+    assert len(test_result.failures) == 0
+
+
 class AnalyzerTrainTestCase(BaseTestCase):
+
+    def __init__(self, *args, method=None, **kwargs):
+        if method is not None:
+            self._method = method
+        super(AnalyzerTrainTestCase, self).__init__(*args, **kwargs)
 
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
@@ -124,10 +151,29 @@ class AnalyzerTrainTestCase(BaseTestCase):
                          (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
+        self.assertFalse(True)
         pass
 
 
+def test_train_analyzer(method, network_filter):
+    # todo: Mixing of pytest and unittest is not ideal.
+    # Move completely to pytest.
+    test_case = AnalyzerTrainTestCase(method=method,
+                                      network_filter=network_filter)
+    test_result = unittest.TextTestRunner().run(test_case)
+    assert len(test_result.errors) == 0
+    assert len(test_result.failures) == 0
+
+
 class EqualAnalyzerTestCase(BaseTestCase):
+
+    def __init__(self, *args, method1=None, method2=None, **kwargs):
+        if method1 is not None:
+            self._method1 = method1
+        if method2 is not None:
+            self._method2 = method2
+
+        super(EqualAnalyzerTestCase, self).__init__(*args, **kwargs)
 
     def _method1(self, model):
         raise NotImplementedError("Set in subclass.")
@@ -167,9 +213,25 @@ class EqualAnalyzerTestCase(BaseTestCase):
         pass
 
 
+def test_equal_analyzer(method1, method2, network_filter):
+    # todo: Mixing of pytest and unittest is not ideal.
+    # Move completely to pytest.
+    test_case = EqualAnalyzerTestCase(method1=method1,
+                                      method2=method2,
+                                      network_filter=network_filter)
+    test_result = unittest.TextTestRunner().run(test_case)
+    assert len(test_result.errors) == 0
+    assert len(test_result.failures) == 0
+
+
 # todo: merge with base test case? if we don't run the analysis
 # its only half the test.
 class SerializeAnalyzerTestCase(BaseTestCase):
+
+    def __init__(self, *args, method=None, **kwargs):
+        if method is not None:
+            self._method = method
+        super(SerializeAnalyzerTestCase, self).__init__(*args, **kwargs)
 
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
@@ -195,12 +257,27 @@ class SerializeAnalyzerTestCase(BaseTestCase):
         pass
 
 
+def test_serialize_analyzer(method, network_filter):
+    # todo: Mixing of pytest and unittest is not ideal.
+    # Move completely to pytest.
+    test_case = SerializeAnalyzerTestCase(method=method,
+                                          network_filter=network_filter)
+    test_result = unittest.TextTestRunner().run(test_case)
+    assert len(test_result.errors) == 0
+    assert len(test_result.failures) == 0
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
 class PatternComputerTestCase(BaseTestCase):
+
+    def __init__(self, *args, method=None, **kwargs):
+        if method is not None:
+            self._method = method
+        super(PatternComputerTestCase, self).__init__(*args, **kwargs)
 
     def _method(self, model):
         raise NotImplementedError("Set in subclass.")
@@ -215,3 +292,13 @@ class PatternComputerTestCase(BaseTestCase):
         x = np.random.rand(10, *(network["input_shape"][1:]))
         patterns = computer.compute(x)
         pass
+
+
+def test_pattern_computer(method, network_filter):
+    # todo: Mixing of pytest and unittest is not ideal.
+    # Move completely to pytest.
+    test_case = PatternComputerTestCase(method=method,
+                                        network_filter=network_filter)
+    test_result = unittest.TextTestRunner().run(test_case)
+    assert len(test_result.errors) == 0
+    assert len(test_result.failures) == 0
