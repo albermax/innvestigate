@@ -44,6 +44,20 @@ def test_fast__BasicGraphReversal():
                                       "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__BasicGraphReversal():
+
+    def method1(model):
+        return BaselineGradient(model)
+
+    def method2(model):
+        return Gradient(model)
+
+    return dryrun.test_equal_analyzer(method1,
+                                      method2,
+                                      "mnist.*")
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -60,6 +74,16 @@ def test_fast__BaseReverseNetwork_reverse_debug():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__BaseReverseNetwork_reverse_debug():
+
+    def method(model):
+        return Gradient(model, reverse_verbose=True,
+                        reverse_check_min_max_values=True)
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaseReverseNetwork_reverse_check_minmax():
@@ -71,6 +95,16 @@ def test_fast__BaseReverseNetwork_reverse_check_minmax():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__BaseReverseNetwork_reverse_check_minmax():
+
+    def method(model):
+        return Gradient(model, reverse_verbose=True,
+                        reverse_check_min_max_values=True)
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaseReverseNetwork_reverse_check_finite():
@@ -79,6 +113,15 @@ def test_fast__BaseReverseNetwork_reverse_check_finite():
         return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__BaseReverseNetwork_reverse_check_finite():
+
+    def method(model):
+        return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
+
+    return dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################

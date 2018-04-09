@@ -46,6 +46,15 @@ def test_fast__BaselineGradient():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__BaselineGradient():
+
+    def method(model):
+        return BaselineGradient(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Gradient():
@@ -54,6 +63,15 @@ def test_fast__Gradient():
         return Gradient(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__Gradient():
+
+    def method(model):
+        return Gradient(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################
@@ -71,6 +89,15 @@ def test_fast__Deconvnet():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__Deconvnet():
+
+    def method(model):
+        return Deconvnet(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__GuidedBackprop():
@@ -79,6 +106,15 @@ def test_fast__GuidedBackprop():
         return GuidedBackprop(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__GuidedBackprop():
+
+    def method(model):
+        return GuidedBackprop(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################
@@ -96,6 +132,15 @@ def test_fast__IntegratedGradients():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__IntegratedGradients():
+
+    def method(model):
+        return IntegratedGradients(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -109,3 +154,12 @@ def test_fast__SmoothGrad():
         return SmoothGrad(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__SmoothGrad():
+
+    def method(model):
+        return SmoothGrad(model)
+
+    return dryrun.test_analyzer(method, "mnist.*")

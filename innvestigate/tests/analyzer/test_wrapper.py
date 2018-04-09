@@ -44,6 +44,15 @@ def test_fast__WrapperBase():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__WrapperBase():
+
+    def method(model):
+        return WrapperBase(Gradient(model))
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__SerializeWrapperBase():
@@ -59,6 +68,7 @@ def test_fast__SerializeWrapperBase():
 ###############################################################################
 
 
+@pytest.mark.skip("Deprecated feature.")
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__AugmentReduceBase__python_based():
@@ -79,6 +89,15 @@ def test_fast__AugmentReduceBase__keras_based():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__AugmentReduceBase__keras_based():
+
+    def method(model):
+        return AugmentReduceBase(Gradient(model))
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__SerializeAugmentReduceBase():
@@ -94,6 +113,7 @@ def test_fast__SerializeAugmentReduceBase():
 ###############################################################################
 
 
+@pytest.mark.skip("Deprecated feature.")
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__GaussianSmoother__python_based():
@@ -114,6 +134,15 @@ def test_fast__GaussianSmoother__keras_based():
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__GaussianSmoother__keras_based():
+
+    def method(model):
+        return GaussianSmoother(Gradient(model))
+
+    return dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__SerializeGaussianSmoother():
@@ -129,6 +158,7 @@ def test_fast__SerializeGaussianSmoother():
 ###############################################################################
 
 
+@pytest.mark.skip("Deprecated feature.")
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PathIntegrator__python_based():
@@ -147,6 +177,15 @@ def test_fast__PathIntegrator__keras_based():
         return PathIntegrator(Gradient(model))
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__PathIntegrator__keras_based():
+
+    def method(model):
+        return PathIntegrator(Gradient(model))
+
+    return dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast

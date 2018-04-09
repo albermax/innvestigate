@@ -128,6 +128,9 @@ class AugmentReduceBase(WrapperBase):
                 self.compile_analyzer()
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
+            # todo: remove python based code.
+            # also tests.
+            raise DeprecationWarning("Not supported anymore.")
             return_list = isinstance(X, list)
 
             X = self._python_based_augment(iutils.to_list(X))
