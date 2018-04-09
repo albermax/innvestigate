@@ -18,7 +18,7 @@ import six
 import matplotlib
 
 import imp
-import keras.backend
+import keras.backend as K
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
@@ -121,6 +121,8 @@ if __name__ == "__main__":
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
         ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("lrp.composite_a_flat",       {},                     heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",       {},                     heatmap, "LRP-CompositeBFlat"),
     ]
 
     # Create analyzers.
@@ -175,3 +177,7 @@ if __name__ == "__main__":
                            usetex=False,
                            is_fontsize_adaptive=False,
                            file_name="all_methods_%s.pdf" % netname)
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()
