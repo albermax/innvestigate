@@ -33,8 +33,8 @@ import keras.layers.recurrent
 import keras.layers.wrappers
 import keras.legacy.layers
 
+from ..keras import graph as kgraph
 
-from . import graph as kgraph
 
 __all__ = [
     "get_current_layers",

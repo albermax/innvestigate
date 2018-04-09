@@ -79,6 +79,8 @@ def create_analyzer(name, model, **kwargs):
         "lrp.composite_b": LRPCompositeB,
         "lrp.composite_a_flat": LRPCompositeAFlat,
         "lrp.composite_b_flat": LRPCompositeBFlat,
+        "lrp.composite_a_wsquare": LRPCompositeAWSquare,
+        "lrp.composite_b_wsquare": LRPCompositeBWSquare,
 
         # Pattern based
         "pattern.net": PatternNet,
