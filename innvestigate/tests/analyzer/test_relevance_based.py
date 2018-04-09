@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import *
@@ -25,143 +28,229 @@ from innvestigate.analyzer import *
 ###############################################################################
 
 
-class TestBaselineLRPZ(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaselineLRPZ():
 
-    def _method(self, model):
+    def method(model):
         return BaselineLRPZ(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestLRPZ(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZ():
 
-    def _method(self, model):
+    def method(model):
         return LRPZ(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPZ__equal_BaselineLRPZ(dryrun.EqualAnalyzerTestCase):
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZ__equal_BaselineLRPZ():
 
     _all_close_rtol = 10**-5
     _all_close_atol = 10**-5
 
-    def _method1(self, model):
+    def method1(model):
         return BaselineLRPZ(model)
 
-    def _method2(self, model):
+    def method2(model):
         return LRPZWithBias(model)
 
+    return dryrun.test_equal_analyzer(method1,
+                                      method2,
+                                      "trivia.*:mnist.log_reg")
 
-class TestLRPZ__with_input_layer_rule(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZ__with_input_layer_rule():
+
+    def method(model):
         return LRPZ(model, input_layer_rule="Flat")
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPZ__with_boxed_input_layer_rule(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZ__with_boxed_input_layer_rule():
+
+    def method(model):
         return LRPZ(model, input_layer_rule=(-10, 10))
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPZWithBias(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZWithBias():
+
+    def method(model):
         return LRPZWithBias(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPZPlus(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZPlus():
+
+    def method(model):
         return LRPZPlus(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPEpsilon(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPEpsilon():
+
+    def method(model):
         return LRPEpsilon(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPEpsilonWithBias(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPEpsilonWithBias():
+
+    def method(model):
         return LRPEpsilonWithBias(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPWSquare(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPWSquare():
+
+    def method(model):
         return LRPWSquare(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPFlat(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPFlat():
+
+    def method(model):
         return LRPFlat(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlphaBeta(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlphaBeta():
+
+    def method(model):
         return LRPAlphaBeta(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha1Beta1(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha1Beta1():
+
+    def method(model):
         return LRPAlpha1Beta1(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha1Beta1WithBias(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha1Beta1WithBias():
+
+    def method(model):
         return LRPAlpha1Beta1WithBias(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha2Beta1(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha2Beta1():
+
+    def method(model):
         return LRPAlpha2Beta1(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha2Beta1WithBias(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha2Beta1WithBias():
+
+    def method(model):
         return LRPAlpha2Beta1WithBias(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha1Beta0(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha1Beta0():
+
+    def method(model):
         return LRPAlpha1Beta0(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestLRPAlpha1Beta0WithBias(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPAlpha1Beta0WithBias():
+
+    def method(model):
         return LRPAlpha1Beta0WithBias(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestSerializeLRPZ(dryrun.SerializeAnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeLRPZ():
 
-    def _method(self, model):
+    def method(model):
         return LRPZ(model)
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeLRPAlphaBeta(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeLRPAlphaBeta():
+
+    def method(model):
         return LRPAlphaBeta(model)
 
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestSerializeLRPAlpha1Beta1(dryrun.SerializeAnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeLRPAlpha1Beta1():
+
+    def method(model):
         return LRPAlpha1Beta1(model)
+
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

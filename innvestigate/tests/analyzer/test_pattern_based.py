@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import PatternNet
@@ -28,9 +31,11 @@ from innvestigate.analyzer import PatternAttribution
 ###############################################################################
 
 
-class TestPatternNet(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternNet():
 
-    def _method(self, model):
+    def method(model):
         # enough for test purposes, only pattern application is tested here
         # pattern computation is tested separately.
         # assume that one dim weights are biases, drop them.
@@ -38,10 +43,14 @@ class TestPatternNet(dryrun.AnalyzerTestCase):
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestPatternAttribution(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternAttribution():
+
+    def method(model):
         # enough for test purposes, only pattern application is tested here
         # pattern computation is tested separately.
         # assume that one dim weights are biases, drop them.
@@ -49,18 +58,24 @@ class TestPatternAttribution(dryrun.AnalyzerTestCase):
                     if len(x.shape) > 1]
         return PatternAttribution(model, patterns=patterns)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestSerializePatternNet(dryrun.SerializeAnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializePatternNet():
 
-    def _method(self, model):
+    def method(model):
         # enough for test purposes, only pattern application is tested here
         # pattern computation is tested separately.
         # assume that one dim weights are biases, drop them.
         patterns = [x for x in model.get_weights()
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
+
+    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

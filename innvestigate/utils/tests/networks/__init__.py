@@ -39,8 +39,9 @@ def iterator(network_filter="*"):
             ("%s.%s" % (module_name, name),
              getattr(module, name)())
             for name in module.__all__
-            if (fnmatch.fnmatch(name, network_filter) or
-                fnmatch.fnmatch("%s.%s" % (module_name, name), network_filter))
+            if any((fnmatch.fnmatch(name, one_filter) or
+                    fnmatch.fnmatch("%s.%s" % (module_name, name), one_filter))
+                   for one_filter in network_filter.split(":"))
         ]
 
         for name, network in ret:
