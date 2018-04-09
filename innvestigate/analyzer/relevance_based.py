@@ -68,6 +68,9 @@ __all__ = [
 
     "LRPCompositeAFlat",
     "LRPCompositeBFlat",
+
+    "LRPCompositeAWSquare",
+    "LRPCompositeBWSquare",
 ]
 
 
@@ -214,9 +217,10 @@ def _assert_epsilon_parameter(epsilon, caller):
         :param caller: the class instance calling this assertion function
     """
 
-    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
-    assert epsilon > 0, err_msg
+    if epsilon <= 0:
+        err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
+        err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
+        raise ValueError(err_msg)
     return epsilon
 
 
@@ -242,33 +246,39 @@ def _assert_infer_alpha_beta_parameters(alpha, beta, caller):
     """
 
     err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    err_msg = err_head + "Neither alpha or beta were given"
-    assert not (alpha is None and beta is None), err_msg
+    if alpha is None and beta is None:
+        err_msg = err_head + "Neither alpha or beta were given"
+        raise ValueError(err_msg)
 
     #assert passed parameter choices
-    if alpha is not None:
+    if alpha is not None and alpha < 1:
         err_msg = err_head +"Passed parameter alpha invalid. Expecting alpha >= 1 but was {}".format(alpha)
-        assert alpha >= 1, err_msg
+        raise ValueError(err_msg)
 
-    if beta is not None:
+    if beta is not None and beta < 0:
         err_msg = err_head +"Passed parameter beta invalid. Expecting beta >= 0 but was {}".format(beta)
-        assert beta >= 0, err_msg
+        raise ValueError(err_msg)
 
     #assert inferred parameter choices
     if alpha is None:
         alpha = beta + 1
-        err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
-        assert alpha >= 1, err_msg
+        if alpha < 1:
+            err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
+            raise ValueError(err_msg)
+
 
     if beta is None:
         beta = alpha - 1
-        err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
-        assert beta >= 0, err_msg
+        if beta < 0:
+            err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
+            raise ValueError(err_msg)
+
 
     #final check: alpha - beta = 1
     amb = alpha - beta
-    err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
-    assert amb == 1, err_msg
+    if amb != 1:
+        err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
+        raise ValueError(err_msg)
 
     #return benign values for alpha and beta
     return alpha, beta
@@ -444,20 +454,73 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_negative.set_weights(negative_weights)
 
 
-
     def apply(self, Xs, Ys, Rs, reverse_state):
+        #this method is correct, but wasteful
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
         times_beta = keras.layers.Lambda(lambda x: x * self._beta)
         keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
         keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
 
+
+        def f(layer1, layer2, X1, X2):
+            # Get activations of full positive or negative part.
+            Z1 = kutils.apply(layer1, X1)
+            Z2 = kutils.apply(layer2, X2)
+            Zs = [keras.layers.Add()([a, b])
+                    for a, b in zip(Z1, Z2)]
+            # Divide incoming relevance by the activations.
+            tmp = [ilayers.SafeDivide()([a, b])
+                    for a, b in zip(Rs, Zs)]
+            # Propagate the relevance to the input neurons
+            # using the gradient
+            tmp1 = iutils.to_list(grad(X1+Zs+tmp))
+            tmp2 = iutils.to_list(grad(X2+Zs+tmp))
+            # Re-weight relevance with the input values.
+            tmp1 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X1, tmp1)]
+            tmp2 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X2, tmp2)]
+            #combine and return
+            return [keras.layers.Add()([a, b])
+                    for a, b in zip(tmp1, tmp2)]
+
+
+        # Distinguish postive and negative inputs.
+        Xs_pos = kutils.apply(keep_positives, Xs)
+        Xs_neg = kutils.apply(keep_negatives, Xs)
+        # xpos*wpos + xneg*wneg
+        activator_relevances = f(self._layer_wo_act_positive,
+                                 self._layer_wo_act_negative,
+                                 Xs_pos, Xs_neg)
+
+        if self._beta: #only compute beta-weighted contributions of beta is not zero
+            # xpos*wneg + xneg*wpos
+            inhibitor_relevances = f(self._layer_wo_act_negative,
+                                     self._layer_wo_act_positive,
+                                     Xs_pos, Xs_neg)
+            return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
+                        for a, b in zip(activator_relevances, inhibitor_relevances)]
+        else:
+            return activator_relevances
+
+
+    """
+    def apply_buggy(self, Xs, Ys, Rs, reverse_state):
+        # keeping this for reference around. this method is buggy, as the name implies
+        grad = ilayers.GradientWRT(len(Xs))
+        times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
+        times_beta = keras.layers.Lambda(lambda x: x * self._beta)
+        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
+
+
         def f(layer, X):
             # Get activations.
             Zs = kutils.apply(layer, X)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b])
-                   for a, b in zip(Rs, Zs)]
+                   for a, b in zip(Rs, Zs)] # TODO: THIS IS BUGGY! Zs here must be computed for the FULL negative or positive part, not half of it. alpha-beta needs an additional step! see below
             # Propagate the relevance to input neurons
             # using the gradient.
             tmp = iutils.to_list(grad(X+Zs+tmp))
@@ -470,7 +533,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         Xs_pos = kutils.apply(keep_positives, Xs)
         Xs_neg = kutils.apply(keep_negatives, Xs)
 
-
+        #NOTE: this stuff below is only half-right, e.g. wrong.
         # Compute positive and negative relevance.
         positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
         positive_part = [keras.layers.Add()(positive_part)] #add and put back in a list
@@ -482,7 +545,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                         for a, b in zip(positive_part, negative_part)]
         else:
             return positive_part
-
+    """
 
 
 
@@ -747,7 +810,7 @@ class LRP(base.ReverseAnalyzerBase):
                 low, high = input_layer_rule
 
                 class input_layer_rule(BoundedRule):
-                    def __init__(self, *args, **kwars):
+                    def __init__(self, *args, **kwargs):
                         super(input_layer_rule, self).__init__(
                             *args, low=low, high=high, **kwargs)
 
@@ -767,11 +830,11 @@ class LRP(base.ReverseAnalyzerBase):
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        #print(rule.__name__) #debug
+                        #print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                #print(rules[0].__class__.__name__ + ' (pop)') #debug
+                #print(str(rules[0]) + ' (pop)') #debug
                 return rules.pop()
 
 
@@ -779,8 +842,9 @@ class LRP(base.ReverseAnalyzerBase):
             # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
+                #print(layer, rule_class) #debug
                 if isinstance(rule_class, six.string_types):
-                    rule_class = LRP_RULES[rule]
+                    rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
@@ -1104,21 +1168,40 @@ class LRPCompositeB(_LRPFixedParams):
 
 
 
-#TODO: FIX kcheck.is_input_layer !!!!
+
 #TODO: allow to pass input layer identification by index.
 class LRPCompositeAFlat(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule="Flat",
+                                                input_layer_rule=FlatRule,
                                                 **kwargs)
 
 
-#TODO: FIX kcheck.is_input_layer !!!!
+
 #TODO: allow to pass input layer identification by index.
 class LRPCompositeBFlat(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
+                                                **kwargs)
+
+
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeAWSquare(LRPCompositeA):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeAWSquare, self).__init__(model,
+                                                *args,
+                                                input_layer_rule=WSquareRule,
+                                                **kwargs)
+
+
+
+#TODO: allow to pass input layer identification by index.
+class LRPCompositeBWSquare(LRPCompositeB):
+    def __init__(self, model, *args, **kwargs):
+        super(LRPCompositeBWSquare, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="WSquare",
                                                 **kwargs)

@@ -92,7 +92,7 @@ if __name__ == "__main__":
         return ivis.project(X)
 
     def heatmap(X):
-        #X = ivis.gamma(X, minamp=0)
+        X = ivis.gamma(X, minamp=0, gamma=0.95)
         return ivis.heatmap(X)
 
     def graymap(X):
@@ -123,10 +123,14 @@ if __name__ == "__main__":
         #("lrp.alpha_2_beta_1_IB", {},                       heatmap, "LRP-A2B1-IB"),
         ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
         #("lrp.alpha_1_beta_0_IB", {},                       heatmap, "LRP-A1B0-IB"),
-        ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
-        ("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
+        #("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
+        #("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
         ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-        ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB")
+        ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
+        ("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
+        ("lrp.composite_a_wsquare",   {},                     heatmap, "LRP-CompositeAWSquare"),
+        ("lrp.composite_b_wsquare",   {},                     heatmap, "LRP-CompositeBWSquare"),
     ]
 
     # Create analyzers.
@@ -144,10 +148,12 @@ if __name__ == "__main__":
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
+        presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
         text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm.max(),
                      r"(%.2f)" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 

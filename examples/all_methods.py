@@ -18,7 +18,7 @@ import six
 import matplotlib
 
 import imp
-import keras.backend
+import keras.backend as K
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
@@ -121,6 +121,8 @@ if __name__ == "__main__":
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
         ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("lrp.composite_a_flat",  {},                     heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",  {},                     heatmap, "LRP-CompositeBFlat"),
     ]
 
     # Create analyzers.
@@ -137,12 +139,14 @@ if __name__ == "__main__":
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
+        presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
-        text.append((r"\textbf{%s}" % label_to_class_name[y],
-                     r"\textit{(%.2f)}" % prob.max(),
-                     r"\textit{%s}" % label_to_class_name[y_hat]))
+        text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm.max(),
+                     r"(%.2f)" % prob.max(),
+                     r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
@@ -170,5 +174,10 @@ if __name__ == "__main__":
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,
                            col_label_offset=-50,
-                           usetex=True,
+                           usetex=False,
+                           is_fontsize_adaptive=False,
                            file_name="all_methods_%s.pdf" % netname)
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()
