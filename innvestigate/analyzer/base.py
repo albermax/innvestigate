@@ -502,7 +502,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
             values = list(six.itervalues(ret[1]))
             mapping = {i: v["id"] for i, v in enumerate(values)}
-            tensors = [v["tensor"] for v in values]
+            tensors = [v["final_tensor"] for v in values]
             self._reverse_tensors_mapping = mapping
 
             if self._reverse_check_min_max_values:
