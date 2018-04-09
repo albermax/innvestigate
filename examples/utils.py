@@ -90,8 +90,8 @@ def plot_image_grid(grid,
 
             if not r: #method names
                 ax.set_title(col_labels[c],
-                             rotation=45,
-                             #horizontalalignment='left',
+                             rotation=22.5,
+                             horizontalalignment='left',
                              verticalalignment='bottom')
             if not c: #label + prediction info
                 lbl, presm, prob, yhat = row_labels[r]
