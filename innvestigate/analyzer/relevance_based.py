@@ -826,15 +826,15 @@ class LRP(base.ReverseAnalyzerBase):
 
         def select_rule(layer, reverse_state): #TODO make module fxn.
             # TODO: check if use_conditions functions properly. should be class variable.
-            print(layer.__class__.__name__, end='->') #debug
+            #print(layer.__class__.__name__, end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        print(str(rule)) #debug
+                        #print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                print(str(rules[0]) + ' (pop)') #debug
+                #print(str(rules[0]) + ' (pop)') #debug
                 return rules.pop()
 
 
@@ -842,7 +842,7 @@ class LRP(base.ReverseAnalyzerBase):
             # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
-                print(layer, rule_class)
+                #print(layer, rule_class) #debug
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
