@@ -505,7 +505,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             return activator_relevances
 
 
-
+    """
     def apply_buggy(self, Xs, Ys, Rs, reverse_state):
         # keeping this for reference around. this method is buggy, as the name implies
         grad = ilayers.GradientWRT(len(Xs))
@@ -545,7 +545,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                         for a, b in zip(positive_part, negative_part)]
         else:
             return positive_part
-
+    """
 
 
 
