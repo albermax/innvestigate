@@ -222,9 +222,9 @@ if __name__ == "__main__":
         ("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
         ("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
         ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-        #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
         ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
-        #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
+        ("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
     ]
 
     # Create analyzers.
