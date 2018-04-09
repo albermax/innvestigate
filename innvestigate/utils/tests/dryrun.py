@@ -51,7 +51,7 @@ def _set_zero_weights_to_random(weights):
 ###############################################################################
 
 
-class BaseTestCase(unittest.TestCase):
+class BaseLayerTestCase(unittest.TestCase):
     """
     A dryrun test on various networks for an analyzing method.
 
@@ -65,7 +65,7 @@ class BaseTestCase(unittest.TestCase):
     def __init__(self, *args, network_filter=None, **kwargs):
         if network_filter is not None:
             self._network_filter = network_filter
-        super(BaseTestCase, self).__init__(*args, **kwargs)
+        super(BaseLayerTestCase, self).__init__(*args, **kwargs)
 
     def _apply_test(self, network):
         raise NotImplementedError("Set in subclass.")
@@ -88,7 +88,7 @@ class BaseTestCase(unittest.TestCase):
 ###############################################################################
 
 
-class AnalyzerTestCase(BaseTestCase):
+class AnalyzerTestCase(BaseLayerTestCase):
 
     def __init__(self, *args, method=None, **kwargs):
         if method is not None:
@@ -125,7 +125,7 @@ def test_analyzer(method, network_filter):
     assert len(test_result.failures) == 0
 
 
-class AnalyzerTrainTestCase(BaseTestCase):
+class AnalyzerTrainTestCase(BaseLayerTestCase):
 
     def __init__(self, *args, method=None, **kwargs):
         if method is not None:
@@ -165,7 +165,7 @@ def test_train_analyzer(method, network_filter):
     assert len(test_result.failures) == 0
 
 
-class EqualAnalyzerTestCase(BaseTestCase):
+class EqualAnalyzerTestCase(BaseLayerTestCase):
 
     def __init__(self, *args, method1=None, method2=None, **kwargs):
         if method1 is not None:
@@ -226,7 +226,7 @@ def test_equal_analyzer(method1, method2, network_filter):
 
 # todo: merge with base test case? if we don't run the analysis
 # its only half the test.
-class SerializeAnalyzerTestCase(BaseTestCase):
+class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
     def __init__(self, *args, method=None, **kwargs):
         if method is not None:
@@ -272,7 +272,7 @@ def test_serialize_analyzer(method, network_filter):
 ###############################################################################
 
 
-class PatternComputerTestCase(BaseTestCase):
+class PatternComputerTestCase(BaseLayerTestCase):
 
     def __init__(self, *args, method=None, **kwargs):
         if method is not None:
