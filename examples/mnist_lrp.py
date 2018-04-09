@@ -67,7 +67,7 @@ def fetch_data(channels_first):
     return x_train, y_train, x_test, y_test
 
 
-def create_model(channels_first, modelname): #TODO: get/create/load model
+def create_model(channels_first, modelname, **kwargs):
     num_classes = 10
 
     if channels_first:
@@ -75,14 +75,22 @@ def create_model(channels_first, modelname): #TODO: get/create/load model
     else:
         input_shape = (None, 28, 28, 1)
 
-    #TODO: instantiate model based on model name
-    network = innvestigate.utils.tests.networks.base.mlp_2dense(
-        input_shape,
-        num_classes,
-        dense_units=1024,
-        dropout_rate=0.25)
-    model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
-    model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+
+    if not modelname in innvestigate.utils.tests.networks.base.__all__:
+        raise ValueError('Unknown model name {}'.format(modelname))
+
+    if modelname.startswith('pt_'): # load PreTrained models
+        model_init_fxn = eval("innvestigate.utils.tests.networks.base.{}".format(modelname))
+        model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
+
+    else:
+        network_init_fxn = eval("innvestigate.utils.tests.networks.base.{}".format(modelname))
+        network = network_init_fxn(input_shape,
+                                   num_classes,
+                                   **kwargs)
+        model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
+        model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+
     return model_wo_sm, model_w_sm
 
 
@@ -115,27 +123,21 @@ def train_model(model, data, n_epochs=20):
 
 if __name__ == "__main__":
     # parameters for model and data choice.
-    #        modelname          input value ranges     n_epochs
-    models = {'mlp_2dense':         ([0, 1],               2,             ),
-              'mlp_3dense':         ([0, 1],               4,             ),
-              'mlp_2dense_zeromean':([-1, 1],              2,             ),
-              'mlp_3dense_zeromean':([-1, 1],              4,             ),
-              'pt_plos_long_rect':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_short_rect': ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_long_tanh':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
-              'pt_plos_long_tanh':  ([-1, 1],              0,             ), #pre-trained model from [TODO enter DOI PLOS + TOOLBOX]
+    #        modelname              input value ranges         n_epochs         kwargs
+    models = {'mlp_2dense':         ([0, 1],                   2,             {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
+              'mlp_3dense':         ([0, 1],                   4,             {'dense_units':1024, 'dropout_rate':0.25}),
+              'pt_plos_long_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_short_relu': ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_long_tanh':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pt_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
              }
 
     # unpack model params by name
-    modelname = 'mlp_2dense_zeromean' # pick a name from the list above!
-    input_range, n_epochs = models[modelname]
+    modelname = 'pt_plos_long_relu' # pick a name from the list above!
+    input_range, n_epochs, kwargs = models[modelname]
     #n_epochs = 0 #optionally change n_epochs manually
-    print (input_range) #TODO: remove
-    print(n_epochs) #TODO: remove
 
 
-
-    # TODO: option to re-set some parameters manually
     channels_first = keras.backend.image_data_format == "channels_first"
     data = fetch_data(channels_first)
     images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
@@ -162,7 +164,6 @@ if __name__ == "__main__":
         X *= (d-c)
         #shift to desired output range
         X += c
-        print(X.min(), X.max())
         return X
 
     def postprocess(X):
@@ -190,11 +191,11 @@ if __name__ == "__main__":
     ###########################################################################
     # Build model.
     ###########################################################################
-    data_preprocessed = (preprocess(data[0], input_range), data[1], #TODO: give proper names such as xtrain, xtest, ...
+    data_preprocessed = (preprocess(data[0], input_range), data[1],
                          preprocess(data[2], input_range), data[3])
-    model, modelp = create_model(channels_first, modelname)
-    train_model(modelp, data_preprocessed, n_epochs=n_epochs) # TODO only do if n_epochs > 0
-    model.set_weights(modelp.get_weights()) #TODO: take care of this softmax business with pretrained models (which dont have softmax layers. just add it.)
+    model, modelp = create_model(channels_first, modelname, **kwargs)
+    train_model(modelp, data_preprocessed, n_epochs=n_epochs)
+    model.set_weights(modelp.get_weights())
 
     ###########################################################################
     # Analysis.
@@ -287,7 +288,7 @@ if __name__ == "__main__":
                            col_label_offset=15,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="mnist_lrp-{}-{}epochs.pdf".format(modelname, n_epochs))
+                           file_name="mnist_lrp.pdf")
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':

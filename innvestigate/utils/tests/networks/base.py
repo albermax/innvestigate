@@ -14,8 +14,13 @@ import six
 ###############################################################################
 ###############################################################################
 
-
+import os
 import keras.layers
+from keras.utils.data_utils import get_file
+from keras.models import load_model, clone_model
+from keras.models import Sequential
+
+
 
 
 __all__ = [
@@ -28,6 +33,11 @@ __all__ = [
     "cnn_2convb_2dense",
     "cnn_2convb_3dense",
     "cnn_3convb_3dense",
+
+    "pt_plos_long_relu",
+    "pt_plos_short_relu",
+    "pt_plos_long_tanh",
+    "pt_plos_short_tanh",
 ]
 
 
@@ -36,7 +46,7 @@ __all__ = [
 ###############################################################################
 
 
-# todo: more consistent nameing
+# TODO: more consistent nameing
 
 def input_layer(shape, *args, **kwargs):
     return keras.layers.Input(shape=shape[1:], *args, **kwargs)
@@ -57,7 +67,7 @@ def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
     current_layer = layer_in
     for i in range(n_conv):
         conv = conv_layer(current_layer, filters=n_filter,
-                          kernel_size=(3, 3), strides=(1, 1), padding="same", 
+                          kernel_size=(3, 3), strides=(1, 1), padding="same",
                           kernel_initializer="glorot_uniform", **kwargs)
         current_layer = conv
         ret[conv_prefix % i] = conv
@@ -281,3 +291,59 @@ def cnn_3convb_3dense(input_shape, output_n, activation=None,
         "output_n": output_n,
     })
     return net
+
+
+
+PRETRAINED_MODELS = {"pt_plos_long_relu":
+                        {"file":"plos-mnist-rect-long.h5",
+                         "url" : "https://www.dropbox.com/s/26w7i58qqcuosn4/plos-mnist-rect-long.h5"
+                        },
+                     "pt_plos_short_relu":
+                        {"file":"plos-mnist-rect-short.h5",
+                         "url":"https://www.dropbox.com/s/89nvwyls55xycmw/plos-mnist-rect-short.h5"
+                        },
+                     "pt_plos_long_tanh":
+                        {"file":"plos-mnist-tanh-long.h5",
+                         "url":"https://www.dropbox.com/s/61e3a4gdbjo9bca/plos-mnist-tanh-long.h5"
+                        },
+                     "pt_plos_short_tanh":
+                        {"file":"plos-mnist-tanh-short.h5",
+                         "url":"https://www.dropbox.com/s/foqv60kot0retfr/plos-mnist-tanh-short.h5"
+                        },
+                    }
+
+def _load_pretrained_net(modelname, new_input_shape):
+    #TODO: adapt / tidy up to your liking
+    filename = PRETRAINED_MODELS[modelname]["file"]
+    urlname = PRETRAINED_MODELS[modelname]["url"]
+    #model_path = get_file(filename, urlname) #TODO: FIX! corrupts the file?
+    model_path = filename
+    print (model_path)
+
+    #workaround the more elegant, but dysfunctional solution.
+    if not os.path.isfile(model_path):
+        os.system("wget {}".format(urlname))
+
+
+    model = load_model(model_path)
+    #create replacement input layer with new shape.
+    model.layers[0] = keras.layers.InputLayer(input_shape=new_input_shape, name="input_1")
+    model = Sequential(layers=model.layers)
+
+    model_w_sm = clone_model(model)
+    model_w_sm.set_weights(model.get_weights())
+    model_w_sm.add(keras.layers.Activation("softmax"))
+    return model, model_w_sm
+
+
+def pt_plos_long_relu(input_shape, **kwargs):
+    return _load_pretrained_net("pt_plos_long_relu", input_shape)
+
+def pt_plos_short_relu(input_shape, **kwargs):
+    return _load_pretrained_net("pt_plos_short_relu", input_shape)
+
+def pt_plos_long_tanh(input_shape, **kwargs):
+    return _load_pretrained_net("pt_plos_long_tanh", input_shape)
+
+def pt_plos_short_tanh(input_shape, **kwargs):
+    return _load_pretrained_net("pt_plos_short_tanh", input_shape)
