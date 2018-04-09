@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import Input
@@ -26,13 +29,21 @@ from innvestigate.analyzer import Random
 ###############################################################################
 
 
-class TestInput(dryrun.AnalyzerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Input():
 
-    def _method(self, model):
+    def method(model):
         return Input(model)
 
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-class TestRandom(dryrun.AnalyzerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Random():
+
+    def method(model):
         return Random(model)
+
+    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

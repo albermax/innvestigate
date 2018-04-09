@@ -15,6 +15,9 @@ import six
 ###############################################################################
 
 
+import pytest
+
+
 import keras.backend as K
 from keras.datasets import mnist
 import keras.layers
@@ -35,48 +38,70 @@ from innvestigate.tools import PatternComputer
 ###############################################################################
 
 
-class TestPatternComputer_dummy_parallel(dryrun.PatternComputerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternComputer_dummy_parallel():
 
-    def _method(self, model):
+    def method(model):
         return PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=True)
 
+    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
-class TestPatternComputer_dummy_sequential(dryrun.PatternComputerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternComputer_dummy_sequential():
+
+    def method(model):
         return PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=False)
 
+    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestPatternComputer_linear(dryrun.PatternComputerTestCase):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternComputer_linear():
 
-    def _method(self, model):
+    def method(model):
         return PatternComputer(model, pattern_type="linear")
 
+    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
-class TestPatternComputer_relupositive(dryrun.PatternComputerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternComputer_relupositive():
+
+    def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
 
+    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
-class TestPatternComputer_relunegative(dryrun.PatternComputerTestCase):
 
-    def _method(self, model):
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__PatternComputer_relunegative():
+
+    def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
 
+    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
+@pytest.mark.fast
+@pytest.mark.precommit
 class HaufePatternExample(unittest.TestCase):
 
     def test(self):
@@ -219,6 +244,8 @@ def extract_2d_patches(X, conv_layer):
     return ret
 
 
+@pytest.mark.fast
+@pytest.mark.precommit
 class MnistPatternExample_dense_linear(unittest.TestCase):
 
     def test(self):
@@ -257,6 +284,8 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 
+@pytest.mark.fast
+@pytest.mark.precommit
 class MnistPatternExample_dense_relu(unittest.TestCase):
 
     def test(self):
@@ -299,39 +328,39 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 
-class __disabled__MnistPatternExample_conv_linear(unittest.TestCase):
+# class __disabled__MnistPatternExample_conv_linear(unittest.TestCase):
 
-    def test(self):
-        np.random.seed(234354346)
-        K.set_image_data_format("channels_first")
-        model_class = innvestigate.utils.tests.networks.base.cnn_2convb_2dense
-        data = fetch_data()
-        model, modelp = create_model(model_class)
-        train_model(modelp, data, epochs=1)
-        model.set_weights(modelp.get_weights())
-        analyzer = innvestigate.create_analyzer("pattern.net", model)
-        analyzer.fit(data[0], pattern_type="linear",
-                     batch_size=256, verbose=0)
+#     def test(self):
+#         np.random.seed(234354346)
+#         K.set_image_data_format("channels_first")
+#         model_class = innvestigate.utils.tests.networks.base.cnn_2convb_2dense
+#         data = fetch_data()
+#         model, modelp = create_model(model_class)
+#         train_model(modelp, data, epochs=1)
+#         model.set_weights(modelp.get_weights())
+#         analyzer = innvestigate.create_analyzer("pattern.net", model)
+#         analyzer.fit(data[0], pattern_type="linear",
+#                      batch_size=256, verbose=0)
 
-        patterns = analyzer._patterns
-        W = model.get_weights()[0]
-        W2D = W.reshape((-1, W.shape[-1]))
-        X = extract_2d_patches(data[0], model.layers[1])
-        Y = np.dot(X, W2D)
+#         patterns = analyzer._patterns
+#         W = model.get_weights()[0]
+#         W2D = W.reshape((-1, W.shape[-1]))
+#         X = extract_2d_patches(data[0], model.layers[1])
+#         Y = np.dot(X, W2D)
 
-        def safe_divide(a, b):
-            return a / (b + (b == 0))
+#         def safe_divide(a, b):
+#             return a / (b + (b == 0))
 
-        mean_x = X.mean(axis=0)
-        mean_y = Y.mean(axis=0)
-        mean_xy = np.dot(X.T, Y) / Y.shape[0]
+#         mean_x = X.mean(axis=0)
+#         mean_y = Y.mean(axis=0)
+#         mean_xy = np.dot(X.T, Y) / Y.shape[0]
 
-        ExEy = mean_x[:, None] * mean_y[None, :]
-        cov_xy = mean_xy - ExEy
-        w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = safe_divide(cov_xy, w_cov_xy[None, :])
+#         ExEy = mean_x[:, None] * mean_y[None, :]
+#         cov_xy = mean_xy - ExEy
+#         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
+#         A = safe_divide(cov_xy, w_cov_xy[None, :])
 
-        def allclose(a, b):
-            return np.allclose(a, b, rtol=0.05, atol=0.05)
+#         def allclose(a, b):
+#             return np.allclose(a, b, rtol=0.05, atol=0.05)
 
-        self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
+#         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
