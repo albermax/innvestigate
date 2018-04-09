@@ -116,3 +116,4 @@ nosetests.cfg
 # lapuschkin development ignores
 gamma_test.py
 .vscode
+*.h5
