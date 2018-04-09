@@ -64,11 +64,16 @@ def test_fast__LRPZ__equal_BaselineLRPZ():
         return BaselineLRPZ(model)
 
     def method2(model):
-        return LRPZWithBias(model)
+        # LRP-Z with bias
+        return LRPZ(model)
 
     return dryrun.test_equal_analyzer(method1,
                                       method2,
-                                      "trivia.*:mnist.log_reg")
+                                      # mind this only works for
+                                      # networks with relu, max,
+                                      # activations and no
+                                      # skip connections!
+                                      "trivia.dot:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -93,10 +98,10 @@ def test_fast__LRPZ__with_boxed_input_layer_rule():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPZWithBias():
+def test_fast__LRPZIgnoreBias():
 
     def method(model):
-        return LRPZWithBias(model)
+        return LRPZIgnoreBias(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
@@ -123,10 +128,10 @@ def test_fast__LRPEpsilon():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPEpsilonWithBias():
+def test_fast__LRPEpsilonIgnoreBias():
 
     def method(model):
-        return LRPEpsilonWithBias(model)
+        return LRPEpsilonIgnoreBias(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
@@ -153,36 +158,6 @@ def test_fast__LRPFlat():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPAlphaBeta():
-
-    def method(model):
-        return LRPAlphaBeta(model)
-
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha1Beta1():
-
-    def method(model):
-        return LRPAlpha1Beta1(model)
-
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha1Beta1WithBias():
-
-    def method(model):
-        return LRPAlpha1Beta1WithBias(model)
-
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
 def test_fast__LRPAlpha2Beta1():
 
     def method(model):
@@ -193,10 +168,10 @@ def test_fast__LRPAlpha2Beta1():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPAlpha2Beta1WithBias():
+def test_fast__LRPAlpha2Beta1IgnoreBias():
 
     def method(model):
-        return LRPAlpha2Beta1WithBias(model)
+        return LRPAlpha2Beta1IgnoreBias(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
@@ -213,10 +188,10 @@ def test_fast__LRPAlpha1Beta0():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPAlpha1Beta0WithBias():
+def test_fast__LRPAlpha1Beta0IgnoreBias():
 
     def method(model):
-        return LRPAlpha1Beta0WithBias(model)
+        return LRPAlpha1Beta0IgnoreBias(model)
 
     return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
@@ -238,19 +213,9 @@ def test_fast__SerializeLRPZ():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__SerializeLRPAlphaBeta():
+def test_fast__SerializeLRPAlpha2Beta1():
 
     def method(model):
-        return LRPAlphaBeta(model)
-
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeLRPAlpha1Beta1():
-
-    def method(model):
-        return LRPAlpha1Beta1(model)
+        return LRPAlpha2Beta1(model)
 
     return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
