@@ -34,7 +34,9 @@ from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
+from . import relevance_rule as rrule
 from . import utils as rutils
+
 
 
 __all__ = [
@@ -199,6 +201,29 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+LRP_RULES = {
+    "Z": rrule.ZRule,
+    "ZIgnoreBias": rrule.ZIgnoreBiasRule,
+
+    "Epsilon": rrule.EpsilonRule,
+    "EpsilonIgnoreBias": rrule.EpsilonIgnoreBiasRule,
+
+    "WSquare": rrule.WSquareRule,
+    "Flat": rrule.FlatRule,
+
+    "AlphaBeta": rrule.AlphaBetaRule,
+    "AlphaBetaIgnoreBias": rrule.AlphaBetaIgnoreBiasRule,
+
+    "Alpha2Beta1": rrule.Alpha2Beta1Rule,
+    "Alpha2Beta1IgnoreBias": rrule.Alpha2Beta1IgnoreBiasRule,
+    "Alpha1Beta0": rrule.Alpha1Beta0Rule,
+    "Alpha1Beta0IgnoreBias": rrule.Alpha1Beta0IgnoreBiasRule,
+
+    "ZPlus": rrule.ZPlusRule,
+    "ZPlusFast": rrule.ZPlusFastRule,
+    "Bounded": rrule.BoundedRule,
+}
 
 class LRP(base.ReverseAnalyzerBase):
     """
@@ -421,7 +446,7 @@ class LRPEpsilon(_LRPFixedParams):
         epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
         self._epsilon = epsilon
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             """
             Dummy class inheriting from EpsilonRule
             for passing along the chosen parameters from
@@ -469,7 +494,7 @@ class LRPAlphaBeta(LRP):
         self._beta = beta
         self._bias = bias
 
-        class AlphaBetaProxyRule(AlphaBetaRule):
+        class AlphaBetaProxyRule(rrule.AlphaBetaRule):
             """
             Dummy class inheriting from AlphaBetaRule
             for the purpose of passing along the chosen parameters from
@@ -598,7 +623,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
         }
         ]
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
                                                        epsilon=1e-3,
@@ -607,7 +632,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
 
 
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
-                             (kchecks.is_conv_layer, Alpha1Beta0Rule)
+                             (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
                             ]
 
         super(LRPCompositeA, self).__init__(model,
@@ -635,7 +660,7 @@ class LRPCompositeB(_LRPFixedParams):
         }
         ]
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
                                                        epsilon=1e-3,
@@ -644,7 +669,7 @@ class LRPCompositeB(_LRPFixedParams):
 
 
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
-                             (kchecks.is_conv_layer, Alpha2Beta1Rule)
+                             (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
                             ]
         super(LRPCompositeB, self).__init__(model,
                                            *args,
@@ -660,7 +685,7 @@ class LRPCompositeAFlat(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule=FlatRule,
+                                                input_layer_rule=rrule.FlatRule,
                                                 **kwargs)
 
 
@@ -679,7 +704,7 @@ class LRPCompositeAWSquare(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAWSquare, self).__init__(model,
                                                 *args,
-                                                input_layer_rule=WSquareRule,
+                                                input_layer_rule=rrule.WSquareRule,
                                                 **kwargs)
 
 

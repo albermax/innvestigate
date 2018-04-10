@@ -35,7 +35,7 @@ from innvestigate import utils as iutils
 from innvestigate.utils import keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
-#from ..import relevance_rule as rule
+#from ..import relevance_rule as rrule
 
 
 
@@ -45,6 +45,7 @@ __all__ = [
 ]
 
 
+#TODO: move rule selection code here.
 """
 LRP_RULES = {
     "Z": rule.ZRule,
