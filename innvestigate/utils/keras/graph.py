@@ -45,6 +45,9 @@ __all__ = [
     "model_contains",
 
     "trace_model_execution",
+    "get_model_execution_trace",
+    "get_model_execution_graph",
+    "print_model_execution_graph",
 
     "ReverseMappingBase",
     "reverse_model",
