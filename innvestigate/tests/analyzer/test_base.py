@@ -81,7 +81,6 @@ def test_precommit__BaseReverseNetwork_reverse_debug():
 
     dryrun.test_analyzer(method, "mnist.*")
 
-
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaseReverseNetwork_reverse_check_minmax():
