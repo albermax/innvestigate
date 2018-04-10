@@ -39,9 +39,9 @@ def test_fast__BasicGraphReversal():
     def method2(model):
         return Gradient(model)
 
-    return dryrun.test_equal_analyzer(method1,
-                                      method2,
-                                      "trivia.*:mnist.log_reg")
+    dryrun.test_equal_analyzer(method1,
+                               method2,
+                               "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -53,9 +53,9 @@ def test_precommit__BasicGraphReversal():
     def method2(model):
         return Gradient(model)
 
-    return dryrun.test_equal_analyzer(method1,
-                                      method2,
-                                      "mnist.*")
+    dryrun.test_equal_analyzer(method1,
+                               method2,
+                               "mnist.*")
 
 
 ###############################################################################
@@ -68,20 +68,18 @@ def test_precommit__BasicGraphReversal():
 def test_fast__BaseReverseNetwork_reverse_debug():
 
     def method(model):
-        return Gradient(model, reverse_verbose=True,
-                        reverse_check_min_max_values=True)
+        return Gradient(model, reverse_verbose=True)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
 def test_precommit__BaseReverseNetwork_reverse_debug():
 
     def method(model):
-        return Gradient(model, reverse_verbose=True,
-                        reverse_check_min_max_values=True)
+        return Gradient(model, reverse_verbose=True)
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -92,7 +90,7 @@ def test_fast__BaseReverseNetwork_reverse_check_minmax():
         return Gradient(model, reverse_verbose=True,
                         reverse_check_min_max_values=True)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -102,7 +100,7 @@ def test_precommit__BaseReverseNetwork_reverse_check_minmax():
         return Gradient(model, reverse_verbose=True,
                         reverse_check_min_max_values=True)
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -112,7 +110,7 @@ def test_fast__BaseReverseNetwork_reverse_check_finite():
     def method(model):
         return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -121,7 +119,7 @@ def test_precommit__BaseReverseNetwork_reverse_check_finite():
     def method(model):
         return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################
@@ -136,7 +134,7 @@ def test_fast__SerializeAnalyzerBase():
     def method(model):
         return BaselineGradient(model)
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -146,5 +144,5 @@ def test_fast__SerializeReverseAnalyzerkBase():
     def method(model):
         return Gradient(model)
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
  

@@ -43,7 +43,7 @@ def test_fast__PatternNet():
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -57,7 +57,7 @@ def test_precommit__PatternNet():
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -72,7 +72,7 @@ def test_fast__PatternAttribution():
                     if len(x.shape) > 1]
         return PatternAttribution(model, patterns=patterns)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -86,7 +86,7 @@ def test_precommit__PatternAttribution():
                     if len(x.shape) > 1]
         return PatternAttribution(model, patterns=patterns)
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################
@@ -106,4 +106,4 @@ def test_fast__SerializePatternNet():
                     if len(x.shape) > 1]
         return PatternNet(model, patterns=patterns)
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
