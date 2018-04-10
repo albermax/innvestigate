@@ -38,6 +38,8 @@ import innvestigate
 import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.base
 import innvestigate.utils.visualizations as ivis
+import innvestigate.applications
+import innvestigate.applications.mnist
 
 
 base_dir = os.path.dirname(__file__)
@@ -76,20 +78,19 @@ def create_model(channels_first, modelname, **kwargs):
         input_shape = (None, 28, 28, 1)
 
 
-    if not modelname in innvestigate.utils.tests.networks.base.__all__:
-        raise ValueError('Unknown model name {}'.format(modelname))
-
-    if modelname.startswith('pt_'): # load PreTrained models
-        model_init_fxn = eval("innvestigate.utils.tests.networks.base.{}".format(modelname))
+    if modelname in innvestigate.applications.mnist.__all__: # load PreTrained models
+        model_init_fxn = getattr(innvestigate.applications.mnist, modelname)
         model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
 
-    else:
-        network_init_fxn = eval("innvestigate.utils.tests.networks.base.{}".format(modelname))
+    elif modelname in innvestigate.utils.tests.networks.base.__all__:
+        network_init_fxn = getattr(innvestigate.utils.tests.networks.base, modelname)
         network = network_init_fxn(input_shape,
                                    num_classes,
                                    **kwargs)
         model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
         model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+    else:
+        raise ValueError("Invalid model name {}".format(modelname))
 
     return model_wo_sm, model_w_sm
 
@@ -123,18 +124,18 @@ def train_model(model, data, n_epochs=20):
 
 if __name__ == "__main__":
     # parameters for model and data choice.
-    #        modelname              input value ranges         n_epochs         kwargs
-    models = {'mlp_2dense':         ([0, 1],                   2,             {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
-              'mlp_3dense':         ([0, 1],                   4,             {'dense_units':1024, 'dropout_rate':0.25}),
-              'cnn_2convb_2dense':  ([-.5, .5],                8,             {}),
-              'pt_plos_long_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pt_plos_short_relu': ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pt_plos_long_tanh':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pt_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+    #        modelname                      input value ranges         n_epochs         kwargs
+    models = {'mlp_2dense':                  ([0, 1],                   2,             {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
+              'mlp_3dense':                  ([0, 1],                   4,             {'dense_units':1024, 'dropout_rate':0.25}),
+              'cnn_2convb_2dense':           ([-.5, .5],                8,             {}),
+              'pretrained_plos_long_relu':   ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pretrained_plos_short_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pretrained_plos_long_tanh':   ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pretrained_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
              }
 
     # unpack model params by name
-    modelname = 'pt_plos_long_relu' # pick a name from the list above!
+    modelname = 'pretrained_plos_long_relu' # pick a name from the list above!
     input_range, n_epochs, kwargs = models[modelname]
     #n_epochs = 0 #optionally change n_epochs manually
 
