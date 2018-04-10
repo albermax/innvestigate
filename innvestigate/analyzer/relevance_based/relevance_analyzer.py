@@ -43,6 +43,7 @@ __all__ = [
     "BaselineLRPZ",
 
     "LRP",
+    "LRP_RULES",
 
     "LRPZ",
     "LRPZIgnoreBias",
@@ -202,6 +203,7 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 ###############################################################################
 ###############################################################################
 
+# Utility list enabling name mappings via string
 LRP_RULES = {
     "Z": rrule.ZRule,
     "ZIgnoreBias": rrule.ZIgnoreBiasRule,
@@ -314,8 +316,14 @@ class LRP(base.ReverseAnalyzerBase):
                 rules.insert(0, input_layer_rule)
 
 
-        def select_rule(layer, reverse_state): #TODO make module fxn.
-            # TODO: check if use_conditions functions properly. should be class variable.
+
+
+
+        ####################################################################
+        ### Functionality responible for backwards rule selection below ####
+        ####################################################################
+
+        def select_rule(layer, reverse_state):
             #print(layer.__class__.__name__, end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
@@ -327,9 +335,7 @@ class LRP(base.ReverseAnalyzerBase):
                 #print(str(rules[0]) + ' (pop)') #debug
                 return rules.pop()
 
-
         class ReverseLayer(kgraph.ReverseMappingBase):
-            # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
                 #print(layer, rule_class) #debug
@@ -351,9 +357,6 @@ class LRP(base.ReverseAnalyzerBase):
         # finalize constructor.
         super(LRP, self).__init__(model, *args, **kwargs)
 
-
-
-
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
         default_return_layers = [keras.layers.Activation]# TODO extend
@@ -373,6 +376,11 @@ class LRP(base.ReverseAnalyzerBase):
             # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
             #print(' ilayers.GradientWRT')
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+
+
+    ########################################
+    ### End of Rule Selection Business. ####
+    ########################################
 
 
     def _get_state(self):
