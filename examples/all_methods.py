@@ -111,11 +111,11 @@ if __name__ == "__main__":
         # Function
         ("gradient",              {},                       graymap, "Gradient"),
         ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
+        ("integrated_gradients",  {},                       graymap, "Integrated Gradients"),
 
         # Signal
         ("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
+        ("guided_backprop",       {},                       bk_proj, "Guided Backprop",),
         ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
 
         # Interaction
