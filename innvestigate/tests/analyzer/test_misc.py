@@ -36,7 +36,7 @@ def test_fast__Input():
     def method(model):
         return Input(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -46,4 +46,4 @@ def test_fast__Random():
     def method(model):
         return Random(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

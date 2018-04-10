@@ -41,7 +41,7 @@ def test_fast__WrapperBase():
     def method(model):
         return WrapperBase(Gradient(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -50,7 +50,7 @@ def test_precommit__WrapperBase():
     def method(model):
         return WrapperBase(Gradient(model))
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -60,7 +60,7 @@ def test_fast__SerializeWrapperBase():
     def method(model):
         return WrapperBase(Gradient(model))
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -76,7 +76,7 @@ def test_fast__AugmentReduceBase__python_based():
     def method(model):
         return AugmentReduceBase(Input(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -86,7 +86,7 @@ def test_fast__AugmentReduceBase__keras_based():
     def method(model):
         return AugmentReduceBase(Gradient(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -95,7 +95,7 @@ def test_precommit__AugmentReduceBase__keras_based():
     def method(model):
         return AugmentReduceBase(Gradient(model))
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -105,7 +105,7 @@ def test_fast__SerializeAugmentReduceBase():
     def method(model):
         return AugmentReduceBase(Gradient(model))
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -121,7 +121,7 @@ def test_fast__GaussianSmoother__python_based():
     def method(model):
         return GaussianSmoother(Input(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -131,7 +131,7 @@ def test_fast__GaussianSmoother__keras_based():
     def method(model):
         return GaussianSmoother(Gradient(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -140,7 +140,7 @@ def test_precommit__GaussianSmoother__keras_based():
     def method(model):
         return GaussianSmoother(Gradient(model))
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -150,7 +150,7 @@ def test_fast__SerializeGaussianSmoother():
     def method(model):
         return GaussianSmoother(Gradient(model))
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -166,7 +166,7 @@ def test_fast__PathIntegrator__python_based():
     def method(model):
         return PathIntegrator(Input(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -176,7 +176,7 @@ def test_fast__PathIntegrator__keras_based():
     def method(model):
         return PathIntegrator(Gradient(model))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -185,7 +185,7 @@ def test_precommit__PathIntegrator__keras_based():
     def method(model):
         return PathIntegrator(Gradient(model))
 
-    return dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -195,4 +195,4 @@ def test_fast__SerializePathIntegrator():
     def method(model):
         return PathIntegrator(Gradient(model))
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
