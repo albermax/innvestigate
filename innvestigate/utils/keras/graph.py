@@ -656,13 +656,13 @@ def reverse_model(model, reverse_mappings,
     reversed_tensors = {}
     bottleneck_tensors = set()
 
-    def add_reversed_tensors(reverse_id,
+    def add_reversed_tensors(nid,
                              tensors_list,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, X, reversed_X):
             if X not in reversed_tensors:
-                reversed_tensors[X] = {"id": (reverse_id, i),
+                reversed_tensors[X] = {"id": (nid, i),
                                        "tensor": reversed_X}
             else:
                 tmp = reversed_tensors[X]
