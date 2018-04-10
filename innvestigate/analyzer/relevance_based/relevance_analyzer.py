@@ -14,7 +14,6 @@ import six
 ###############################################################################
 ###############################################################################
 
-
 import inspect
 import keras
 import keras.backend as K
@@ -30,20 +29,21 @@ import keras.layers.pooling
 import numpy as np
 
 
-from . import base
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils import keras as kutils
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
+from .. import base
+from innvestigate import layers as ilayers
+from innvestigate import utils as iutils
+from innvestigate.utils.keras import checks as kchecks
+from innvestigate.utils.keras import graph as kgraph
+from . import relevance_rule as rrule
+from . import utils as rutils
+
 
 
 __all__ = [
     "BaselineLRPZ",
 
-    "LRP_RULES",
-
     "LRP",
+    "LRP_RULES",
 
     "LRPZ",
     "LRPZIgnoreBias",
@@ -78,7 +78,6 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 
-# TODO: Inherit from LRP, specialize from there.
 class BaselineLRPZ(base.AnalyzerNetworkBase):
     """LRPZ analyzer.
 
@@ -204,534 +203,29 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 ###############################################################################
 ###############################################################################
 
-def _assert_epsilon_parameter(epsilon, caller):
-    """
-        Function for asserting epsilon parameter choice
-        passed to constructors inheriting from EpsilonRule
-        and LRPEpsilon.
-        The following conditions can not be met:
-
-        epsilon > 1
-
-        :param epsilon: the epsilon parameter.
-        :param caller: the class instance calling this assertion function
-    """
-
-    if epsilon <= 0:
-        err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-        err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
-        raise ValueError(err_msg)
-    return epsilon
-
-
-def _assert_infer_alpha_beta_parameters(alpha, beta, caller):
-    """
-        Function for asserting parameter choices for alpha and beta
-        passed to constructors inheriting from AlphaBetaRule
-        and LRPAlphaBeta.
-
-        since alpha - beta are subjected to sum to 1,
-        it is sufficient for only one of the parameters to be passed
-        to a corresponding class constructor.
-        this method will cause an assertion error if both are None
-        or the following conditions can not be met
-
-        alpha >= 1
-        beta >= 0
-        alpha - beta = 1
-
-        :param alpha: the alpha parameter.
-        :param beta: the beta parameter
-        :param caller: the class instance calling this assertion function
-    """
-
-    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-    if alpha is None and beta is None:
-        err_msg = err_head + "Neither alpha or beta were given"
-        raise ValueError(err_msg)
-
-    #assert passed parameter choices
-    if alpha is not None and alpha < 1:
-        err_msg = err_head +"Passed parameter alpha invalid. Expecting alpha >= 1 but was {}".format(alpha)
-        raise ValueError(err_msg)
-
-    if beta is not None and beta < 0:
-        err_msg = err_head +"Passed parameter beta invalid. Expecting beta >= 0 but was {}".format(beta)
-        raise ValueError(err_msg)
-
-    #assert inferred parameter choices
-    if alpha is None:
-        alpha = beta + 1
-        if alpha < 1:
-            err_msg = err_head +"Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(beta)
-            raise ValueError(err_msg)
-
-
-    if beta is None:
-        beta = alpha - 1
-        if beta < 0:
-            err_msg = err_head +"Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(alpha)
-            raise ValueError(err_msg)
-
-
-    #final check: alpha - beta = 1
-    amb = alpha - beta
-    if amb != 1:
-        err_msg = err_head +"Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(alpha, beta, amb)
-        raise ValueError(err_msg)
-
-    #return benign values for alpha and beta
-    return alpha, beta
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-
-class ZRule(kgraph.ReverseMappingBase):
-    """
-    Basic LRP decomposition rule (for layers with weight kernels),
-    which considers the bias a constant input neuron.
-    """
-
-    def __init__(self, layer, state, bias=True):
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
-                                                             keep_bias=bias,
-                                                             name_template="reversed_kernel_%s")
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
-
-
-class ZIgnoreBiasRule(ZRule):
-    """
-    Basic LRP decomposition rule, ignoring the bias neuron
-    """
-    def __init__(self, *args, **kwargs):
-        super(ZIgnoreBiasRule, self).__init__(*args,
-                                              bias=False,
-                                              **kwargs)
-
-
-
-class EpsilonRule(kgraph.ReverseMappingBase):
-    """
-    Similar to ZRule.
-    The only difference is the addition of a numerical stabilizer term
-    epsilon to the decomposition function's denominator.
-    the sign of epsilon depends on the sign of the output activation
-    0 is considered to be positive, ie sign(0) = 1
-    """
-
-    def __init__(self, layer, state, epsilon = 1e-7, bias=True):
-        self._epsilon = _assert_epsilon_parameter(epsilon, self)
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=bias, name_template="reversed_kernel_%s")
-
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-        # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
-        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*self._epsilon)
-
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.Divide()([a, prepare_div(b)])
-               for a, b in zip(Rs, Zs)]
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
-
-
-
-class EpsilonIgnoreBiasRule(EpsilonRule):
-    def __init__(self, *args, **kwargs):
-        super(EpsilonIgnoreBiasRule, self).__init__(*args,
-                                                    bias=False,
-                                                    **kwargs)
-
-
-class WSquareRule(kgraph.ReverseMappingBase):
-
-    def __init__(self, layer, state):
-        # W-square rule works with squared weights and no biases.
-        self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
-        tmp = [x**2 for x in self._layer_wo_act_b.get_weights()]
-        self._layer_wo_act_b.set_weights(tmp)
-
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-        # Create dummy forward path to take the derivative below.
-        Ys = kutils.apply(self._layer_wo_act_b, Xs)
-
-        # Compute the sum of the weights.
-        ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.to_list(self._layer_wo_act_b(ones))
-        # Weight the incoming relevance.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-        # Redistribute the relevances along the gradient.
-        tmp = iutils.to_list(grad(Xs+Ys+tmp))
-        return tmp
-
-
-
-
-
-class FlatRule(WSquareRule):
-    def __init__(self, layer, state):
-        # The flat rule works with weights equal to one and
-        # no biases.
-        self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
-        tmp = [np.ones_like(x) for x in self._layer_wo_act_b.get_weights()]
-        self._layer_wo_act_b.set_weights(tmp)
-
-
-
-
-class AlphaBetaRule(kgraph.ReverseMappingBase):
-    """
-    This decomposition rule handles the positive forward
-    activations (x*w > 0) and negative forward activations
-    (w * x < 0) independently, reducing the risk of zero
-    divisions considerably. In fact, the only case where
-    divisions by zero can happen is if there are either
-    no positive or no negative parts to the activation
-    at all.
-    Corresponding parameterization of this rule implement
-    methods such as Excitation Backpropagation with
-    alpha=1, beta=0
-    s.t.
-    alpha - beta = 1 (after current param. scheme.)
-    and
-    alpha > 1
-    beta > 0
-    """
-
-
-    def __init__(self, layer, state, alpha=None, beta=None, bias=True):
-        alpha, beta = _assert_infer_alpha_beta_parameters(alpha, beta, self)
-        self._alpha = alpha
-        self._beta = beta
-
-        # prepare positive and negative weights for computing positive
-        # and negative preactivations z in apply_accordingly.
-        self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
-            layer,
-            keep_bias=bias,
-            name_template="reversed_kernel_positive_%s")
-        self._layer_wo_act_negative = kgraph.copy_layer_wo_activation(
-            layer,
-            keep_bias=bias,
-            name_template="reversed_kernel_negative_%s")
-
-        # filter by thresholding at zero.
-        positive_weights = [x * (x > 0)
-                            for x in self._layer_wo_act_positive.get_weights()]
-        negative_weights = [x * (x < 0)
-                            for x in self._layer_wo_act_negative.get_weights()]
-        self._layer_wo_act_positive.set_weights(positive_weights)
-        self._layer_wo_act_negative.set_weights(negative_weights)
-
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        #this method is correct, but wasteful
-        grad = ilayers.GradientWRT(len(Xs))
-        times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
-        times_beta = keras.layers.Lambda(lambda x: x * self._beta)
-        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
-        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
-
-
-        def f(layer1, layer2, X1, X2):
-            # Get activations of full positive or negative part.
-            Z1 = kutils.apply(layer1, X1)
-            Z2 = kutils.apply(layer2, X2)
-            Zs = [keras.layers.Add()([a, b])
-                    for a, b in zip(Z1, Z2)]
-            # Divide incoming relevance by the activations.
-            tmp = [ilayers.SafeDivide()([a, b])
-                    for a, b in zip(Rs, Zs)]
-            # Propagate the relevance to the input neurons
-            # using the gradient
-            tmp1 = iutils.to_list(grad(X1+Zs+tmp))
-            tmp2 = iutils.to_list(grad(X2+Zs+tmp))
-            # Re-weight relevance with the input values.
-            tmp1 = [keras.layers.Multiply()([a, b])
-                    for a, b in zip(X1, tmp1)]
-            tmp2 = [keras.layers.Multiply()([a, b])
-                    for a, b in zip(X2, tmp2)]
-            #combine and return
-            return [keras.layers.Add()([a, b])
-                    for a, b in zip(tmp1, tmp2)]
-
-
-        # Distinguish postive and negative inputs.
-        Xs_pos = kutils.apply(keep_positives, Xs)
-        Xs_neg = kutils.apply(keep_negatives, Xs)
-        # xpos*wpos + xneg*wneg
-        activator_relevances = f(self._layer_wo_act_positive,
-                                 self._layer_wo_act_negative,
-                                 Xs_pos, Xs_neg)
-
-        if self._beta: #only compute beta-weighted contributions of beta is not zero
-            # xpos*wneg + xneg*wpos
-            inhibitor_relevances = f(self._layer_wo_act_negative,
-                                     self._layer_wo_act_positive,
-                                     Xs_pos, Xs_neg)
-            return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-                        for a, b in zip(activator_relevances, inhibitor_relevances)]
-        else:
-            return activator_relevances
-
-
-    """
-    def apply_buggy(self, Xs, Ys, Rs, reverse_state):
-        # keeping this for reference around. this method is buggy, as the name implies
-        grad = ilayers.GradientWRT(len(Xs))
-        times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
-        times_beta = keras.layers.Lambda(lambda x: x * self._beta)
-        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
-        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
-
-
-        def f(layer, X):
-            # Get activations.
-            Zs = kutils.apply(layer, X)
-            # Divide incoming relevance by the activations.
-            tmp = [ilayers.SafeDivide()([a, b])
-                   for a, b in zip(Rs, Zs)] # TODO: THIS IS BUGGY! Zs here must be computed for the FULL negative or positive part, not half of it. alpha-beta needs an additional step! see below
-            # Propagate the relevance to input neurons
-            # using the gradient.
-            tmp = iutils.to_list(grad(X+Zs+tmp))
-            # Re-weight relevance with the input values.
-            return [keras.layers.Multiply()([a, b])
-                    for a, b in zip(X, tmp)]
-
-
-        # Distinguish postive and negative inputs.
-        Xs_pos = kutils.apply(keep_positives, Xs)
-        Xs_neg = kutils.apply(keep_negatives, Xs)
-
-        #NOTE: this stuff below is only half-right, e.g. wrong.
-        # Compute positive and negative relevance.
-        positive_part = f(self._layer_wo_act_positive, Xs_pos) + f(self._layer_wo_act_negative, Xs_neg) #concatenate
-        positive_part = [keras.layers.Add()(positive_part)] #add and put back in a list
-
-        if self._beta: #only compute beta if beta is not zero.
-            negative_part = f(self._layer_wo_act_negative, Xs_pos) + f(self._layer_wo_act_positive, Xs_neg)
-            negative_part = [keras.layers.Add()(negative_part)] #add and put back in a list
-            return [keras.layers.Subtract()([times_alpha(a), times_beta(b)])
-                        for a, b in zip(positive_part, negative_part)]
-        else:
-            return positive_part
-    """
-
-
-
-class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
-                                                      bias=False,
-                                                      **kwargs)
-
-
-
-class Alpha2Beta1Rule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        super(Alpha2Beta1Rule, self).__init__(*args,
-                                              alpha=2,
-                                              beta=1,
-                                              bias=True,
-                                              **kwargs)
-
-
-class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
-                                                        alpha=2,
-                                                        beta=1,
-                                                        bias=False,
-                                                        **kwargs)
-
-
-class Alpha1Beta0Rule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        super(Alpha1Beta0Rule, self).__init__(*args,
-                                              alpha=1,
-                                              beta=0,
-                                              bias=True,
-                                              **kwargs)
-
-
-class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
-    def __init__(self, *args, **kwargs):
-        super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
-                                                        alpha=1,
-                                                        beta=0,
-                                                        bias=False,
-                                                        **kwargs)
-
-
-class BoundedRule(kgraph.ReverseMappingBase):
-    # TODO: this only works for relu networks, needs to be extended.
-    # TODO: check
-    def __init__(self, layer, state, low=-1, high=1):
-        self._low = low
-        self._high = high
-
-        # This rule works with three variants of the layer, all without biases.
-        # One is the original form and two with only the positive or
-        # negative weights.
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
-            layer,
-            keep_bias=False,
-            name_template="reversed_kernel_%s")
-        self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
-            layer,
-            keep_bias=False,
-            name_template="reversed_kernel_positive_%s")
-        self._layer_wo_act_negative = kgraph.copy_layer_wo_activation(
-            layer,
-            keep_bias=False,
-            name_template="reversed_kernel_negative_%s")
-        positive_weights = [x * (x > 0)
-                            for x in self._layer_wo_act_positive.get_weights()]
-        negative_weights = [x * (x < 0)
-                            for x in self._layer_wo_act_negative.get_weights()]
-        self._layer_wo_act_positive.set_weights(positive_weights)
-        self._layer_wo_act_negative.set_weights(negative_weights)
-
-    # TODO: check if this is a correct implementation.
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-        to_low = keras.layers.Lambda(lambda x: x * 0 + self._low)
-        to_high = keras.layers.Lambda(lambda x: x * 0 + self._high)
-
-        def f(Xs):
-            low = [to_low(x) for x in Xs]
-            high = [to_high(x) for x in Xs]
-
-            A = kutils.apply(self._layer_wo_act, Xs)
-            B = kutils.apply(self._layer_wo_act_positive, low)
-            C = kutils.apply(self._layer_wo_act_negative, high)
-            return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
-                    for a, b, c in zip(A, B, C)]
-
-        # Get values for the division.
-        Zs = f(Xs)
-        # Divide relevances with the value.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-        # Distribute along the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        return tmp
-
-
-class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
-    """
-    The ZPlus rule is a special case of the AlphaBetaRule
-    for alpha=1, beta=0, which assumes inputs x >= 0
-    and ignores the bias.
-    CAUTION! Results differ from Alpha=1, Beta=2
-    if inputs are not strictly >= 0
-    """
-    #TODO: assert that layer inputs are always >= 0
-    def __init__(self, *args, **kwargs):
-        super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
-                                                        **kwargs)
-
-
-class ZPlusFastRule(kgraph.ReverseMappingBase):
-    """
-    The ZPlus rule is a special case of the AlphaBetaRule
-    for alpha=1, beta=0 and assumes inputs x >= 0.
-    """
-
-    def __init__(self, layer, state):
-        # The z-plus rule only works with positive weights and
-        # no biases.
-        #TODO: assert that layer inputs are always >= 0
-        self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False,
-            name_template="reversed_kernel_positive_%s")
-        tmp = [x * (x > 0)
-               for x in self._layer_wo_act_b_positive.get_weights()]
-        self._layer_wo_act_b_positive.set_weights(tmp)
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-
-        #TODO: assert all inputs are positive, instead of only keeping the positives.
-        #keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
-        #Xs = kutils.apply(keep_positives, Xs)
-
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act_b_positive, Xs)
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
-
-
-
-#        alpha-beta all networks
-#        bias+- for some other rules
+# Utility list enabling name mappings via string
 LRP_RULES = {
-    "Z": ZRule,
-    "ZIgnoreBias": ZIgnoreBiasRule,
+    "Z": rrule.ZRule,
+    "ZIgnoreBias": rrule.ZIgnoreBiasRule,
 
-    "Epsilon": EpsilonRule,
-    "EpsilonIgnoreBias": EpsilonIgnoreBiasRule,
+    "Epsilon": rrule.EpsilonRule,
+    "EpsilonIgnoreBias": rrule.EpsilonIgnoreBiasRule,
 
-    "WSquare": WSquareRule,
-    "Flat": FlatRule,
+    "WSquare": rrule.WSquareRule,
+    "Flat": rrule.FlatRule,
 
-    "AlphaBeta": AlphaBetaRule,
-    "AlphaBetaIgnoreBias": AlphaBetaIgnoreBiasRule,
+    "AlphaBeta": rrule.AlphaBetaRule,
+    "AlphaBetaIgnoreBias": rrule.AlphaBetaIgnoreBiasRule,
 
-    "Alpha2Beta1": Alpha2Beta1Rule,
-    "Alpha2Beta1IgnoreBias": Alpha2Beta1IgnoreBiasRule,
-    "Alpha1Beta0": Alpha1Beta0Rule,
-    "Alpha1Beta0IgnoreBias": Alpha1Beta0IgnoreBiasRule,
+    "Alpha2Beta1": rrule.Alpha2Beta1Rule,
+    "Alpha2Beta1IgnoreBias": rrule.Alpha2Beta1IgnoreBiasRule,
+    "Alpha1Beta0": rrule.Alpha1Beta0Rule,
+    "Alpha1Beta0IgnoreBias": rrule.Alpha1Beta0IgnoreBiasRule,
 
-    "ZPlus": ZPlusRule,
-    "ZPlusFast": ZPlusFastRule,
-    "Bounded": BoundedRule,
+    "ZPlus": rrule.ZPlusRule,
+    "ZPlusFast": rrule.ZPlusFastRule,
+    "Bounded": rrule.BoundedRule,
 }
-
-
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 class LRP(base.ReverseAnalyzerBase):
     """
@@ -769,8 +263,6 @@ class LRP(base.ReverseAnalyzerBase):
 
 
         # check if rule was given explicitly.
-        # TODO: make LRP-Z the default behaviour / rule
-        # TODO: create PRESETs for LRP, e.g. alphabeta for conv, eps/z für linear layers
         # rule can be a string, a list (of strings) or a list of conditions [(Condition, Rule), ... ] for each layer.
         if rule is None:
             raise ValueError("Need LRP rule(s).")
@@ -824,8 +316,14 @@ class LRP(base.ReverseAnalyzerBase):
                 rules.insert(0, input_layer_rule)
 
 
-        def select_rule(layer, reverse_state): #TODO make module fxn.
-            # TODO: check if use_conditions functions properly. should be class variable.
+
+
+
+        ####################################################################
+        ### Functionality responible for backwards rule selection below ####
+        ####################################################################
+
+        def select_rule(layer, reverse_state):
             #print(layer.__class__.__name__, end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
@@ -837,9 +335,7 @@ class LRP(base.ReverseAnalyzerBase):
                 #print(str(rules[0]) + ' (pop)') #debug
                 return rules.pop()
 
-
         class ReverseLayer(kgraph.ReverseMappingBase):
-            # TODO: refactor as independent class?
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
                 #print(layer, rule_class) #debug
@@ -860,9 +356,6 @@ class LRP(base.ReverseAnalyzerBase):
 
         # finalize constructor.
         super(LRP, self).__init__(model, *args, **kwargs)
-
-
-
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
@@ -885,6 +378,11 @@ class LRP(base.ReverseAnalyzerBase):
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
+    ########################################
+    ### End of Rule Selection Business. ####
+    ########################################
+
+
     def _get_state(self):
         state = super(LRP, self)._get_state()
         state.update({"rule": self._rule})
@@ -901,8 +399,29 @@ class LRP(base.ReverseAnalyzerBase):
         return kwargs
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###############################################################################
-# ANALYZER CLASSES ################################################################
+# ANALYZER CLASSES AND PRESETS ################################################
 ###############################################################################
 
 
@@ -932,10 +451,10 @@ class LRPZIgnoreBias(_LRPFixedParams):
 class LRPEpsilon(_LRPFixedParams):
 
     def __init__(self, model, epsilon=1e-7, bias=True, *args, **kwargs):
-        epsilon = _assert_epsilon_parameter(epsilon, self)
+        epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
         self._epsilon = epsilon
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             """
             Dummy class inheriting from EpsilonRule
             for passing along the chosen parameters from
@@ -978,12 +497,12 @@ class LRPAlphaBeta(LRP):
     """ Base class for LRP AlphaBeta"""
 
     def __init__(self, model, alpha=None, beta=None, bias=True, *args, **kwargs):
-        alpha, beta = _assert_infer_alpha_beta_parameters(alpha, beta, self)
+        alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
         self._bias = bias
 
-        class AlphaBetaProxyRule(AlphaBetaRule):
+        class AlphaBetaProxyRule(rrule.AlphaBetaRule):
             """
             Dummy class inheriting from AlphaBetaRule
             for the purpose of passing along the chosen parameters from
@@ -1023,6 +542,9 @@ class LRPAlphaBeta(LRP):
 
 
 
+
+
+
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
 
     @classmethod
@@ -1033,10 +555,6 @@ class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
         del kwargs["bias"]
         return kwargs
 
-
-###############################################################################
-# LRP PARAM PRESETS CLASSES ###################################################
-###############################################################################
 
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
@@ -1083,8 +601,11 @@ class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
         super(LRPZPlus, self).__init__(model, *args, **kwargs)
 
 
-#TODO: decide whether to remove or reinstate
 class LRPZPlusFast(_LRPFixedParams):
+    """
+    The ZPlus rule is a special case of the AlphaBetaRule
+    for alpha=1, beta=0 and assumes inputs x >= 0.
+    """
     #TODO: assert that layer inputs are always >= 0
     def __init__(self, model, *args, **kwargs):
         super(LRPZPlusFast, self).__init__(model, *args,
@@ -1094,7 +615,7 @@ class LRPZPlusFast(_LRPFixedParams):
 class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
     def __init__(self, model, *args, **kwargs):
         self._model_checks = [
-        # todo: Check for non-linear output in general.
+        # TODO: Check for non-linear output in general.
         {
             "check": lambda layer: kchecks.contains_activation(
                 layer, activation="softmax"),
@@ -1110,7 +631,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
         }
         ]
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
                                                        epsilon=1e-3,
@@ -1119,7 +640,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
 
 
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
-                             (kchecks.is_conv_layer, Alpha1Beta0Rule)
+                             (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
                             ]
 
         super(LRPCompositeA, self).__init__(model,
@@ -1128,12 +649,10 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
                                            **kwargs )
 
 
-
-
 class LRPCompositeB(_LRPFixedParams):
     def __init__(self, model, *args, **kwargs):
         self._model_checks = [
-        # todo: Check for non-linear output in general.
+        # TODO: Check for non-linear output in general.
         {
             "check": lambda layer: kchecks.contains_activation(
                 layer, activation="softmax"),
@@ -1149,7 +668,7 @@ class LRPCompositeB(_LRPFixedParams):
         }
         ]
 
-        class EpsilonProxyRule(EpsilonRule):
+        class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
                                                        epsilon=1e-3,
@@ -1158,7 +677,7 @@ class LRPCompositeB(_LRPFixedParams):
 
 
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
-                             (kchecks.is_conv_layer, Alpha2Beta1Rule)
+                             (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
                             ]
         super(LRPCompositeB, self).__init__(model,
                                            *args,
@@ -1169,17 +688,17 @@ class LRPCompositeB(_LRPFixedParams):
 
 
 
-#TODO: allow to pass input layer identification by index.
+#TODO: allow to pass input layer identification by index or id.
 class LRPCompositeAFlat(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAFlat, self).__init__(model,
                                                 *args,
-                                                input_layer_rule=FlatRule,
+                                                input_layer_rule=rrule.FlatRule,
                                                 **kwargs)
 
 
 
-#TODO: allow to pass input layer identification by index.
+#TODO: allow to pass input layer identification by index or id.
 class LRPCompositeBFlat(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBFlat, self).__init__(model,
@@ -1188,17 +707,17 @@ class LRPCompositeBFlat(LRPCompositeB):
                                                 **kwargs)
 
 
-#TODO: allow to pass input layer identification by index.
+#TODO: allow to pass input layer identification by index or id.
 class LRPCompositeAWSquare(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAWSquare, self).__init__(model,
                                                 *args,
-                                                input_layer_rule=WSquareRule,
+                                                input_layer_rule=rrule.WSquareRule,
                                                 **kwargs)
 
 
 
-#TODO: allow to pass input layer identification by index.
+#TODO: allow to pass input layer identification by index or id.
 class LRPCompositeBWSquare(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBWSquare, self).__init__(model,

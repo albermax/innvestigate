@@ -18,7 +18,7 @@ import six
 import matplotlib
 
 import imp
-import keras.backend
+import keras.backend as K
 import keras.models
 import matplotlib.pyplot as plt
 import numpy as np
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     zero_mean = False
     pattern_type = "linear"
     #pattern_type = "relu"
-    channels_first = keras.backend.image_data_format == "channels_first"
+    channels_first = K.image_data_format == "channels_first"
     data = fetch_data(channels_first)
     images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
     label_to_class_name = [str(i) for i in range(10)]
@@ -203,12 +203,14 @@ if __name__ == "__main__":
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
+        presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
-        text.append((r"\textbf{%s}" % label_to_class_name[y],
-                     r"\textit{(%.2f)}" % prob.max(),
-                     r"\textit{%s}" % label_to_class_name[y_hat]))
+        text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm.max(),
+                     r"(%.2f)" % prob.max(),
+                     r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
@@ -233,3 +235,7 @@ if __name__ == "__main__":
                            row_label_offset=5,
                            col_label_offset=15,
                            usetex=True, file_name="mnist_all_methods.pdf")
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()
