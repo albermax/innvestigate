@@ -41,4 +41,4 @@ def test_fast__DryRunAnalyzerTestCase():
 
         return TestAnalyzer()
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

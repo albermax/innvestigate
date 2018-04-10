@@ -46,7 +46,7 @@ def test_fast__PatternComputer_dummy_parallel():
         return PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=True)
 
-    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.skip("Feature not supported.")
@@ -58,7 +58,7 @@ def test_fast__PatternComputer_dummy_sequential():
         return PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=False)
 
-    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -73,7 +73,7 @@ def test_fast__PatternComputer_linear():
     def method(model):
         return PatternComputer(model, pattern_type="linear")
 
-    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -82,7 +82,7 @@ def test_precommit__PatternComputer_linear():
     def method(model):
         return PatternComputer(model, pattern_type="linear")
 
-    return dryrun.test_pattern_computer(method, "mnist.*")
+    dryrun.test_pattern_computer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -92,7 +92,7 @@ def test_fast__PatternComputer_relupositive():
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
 
-    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -101,7 +101,7 @@ def test_precommit__PatternComputer_relupositive():
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
 
-    return dryrun.test_pattern_computer(method, "mnist.*")
+    dryrun.test_pattern_computer(method, "mnist.*")
 
 
 @pytest.mark.fast
@@ -111,7 +111,7 @@ def test_fast__PatternComputer_relunegative():
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
 
-    return dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_pattern_computer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
@@ -120,7 +120,7 @@ def test_precommit__PatternComputer_relunegative():
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
 
-    return dryrun.test_pattern_computer(method, "mnist.*")
+    dryrun.test_pattern_computer(method, "mnist.*")
 
 
 ###############################################################################

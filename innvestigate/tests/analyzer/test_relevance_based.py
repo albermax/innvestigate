@@ -35,7 +35,7 @@ def test_fast__BaselineLRPZ():
     def method(model):
         return BaselineLRPZ(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -50,7 +50,7 @@ def test_fast__LRPZ():
     def method(model):
         return LRPZ(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -67,7 +67,7 @@ def test_fast__LRPZ__equal_BaselineLRPZ():
         # LRP-Z with bias
         return LRPZ(model)
 
-    return dryrun.test_equal_analyzer(method1,
+    dryrun.test_equal_analyzer(method1,
                                       method2,
                                       # mind this only works for
                                       # networks with relu, max,
@@ -83,7 +83,7 @@ def test_fast__LRPZ__with_input_layer_rule():
     def method(model):
         return LRPZ(model, input_layer_rule="Flat")
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -93,7 +93,7 @@ def test_fast__LRPZ__with_boxed_input_layer_rule():
     def method(model):
         return LRPZ(model, input_layer_rule=(-10, 10))
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -103,7 +103,7 @@ def test_fast__LRPZIgnoreBias():
     def method(model):
         return LRPZIgnoreBias(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -113,7 +113,7 @@ def test_fast__LRPZPlus():
     def method(model):
         return LRPZPlus(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -123,7 +123,7 @@ def test_fast__LRPEpsilon():
     def method(model):
         return LRPEpsilon(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -133,7 +133,7 @@ def test_fast__LRPEpsilonIgnoreBias():
     def method(model):
         return LRPEpsilonIgnoreBias(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -143,7 +143,7 @@ def test_fast__LRPWSquare():
     def method(model):
         return LRPWSquare(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -153,7 +153,7 @@ def test_fast__LRPFlat():
     def method(model):
         return LRPFlat(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -163,7 +163,7 @@ def test_fast__LRPAlpha2Beta1():
     def method(model):
         return LRPAlpha2Beta1(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -173,7 +173,7 @@ def test_fast__LRPAlpha2Beta1IgnoreBias():
     def method(model):
         return LRPAlpha2Beta1IgnoreBias(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -183,7 +183,7 @@ def test_fast__LRPAlpha1Beta0():
     def method(model):
         return LRPAlpha1Beta0(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -193,7 +193,7 @@ def test_fast__LRPAlpha1Beta0IgnoreBias():
     def method(model):
         return LRPAlpha1Beta0IgnoreBias(model)
 
-    return dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -208,7 +208,7 @@ def test_fast__SerializeLRPZ():
     def method(model):
         return LRPZ(model)
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
@@ -218,4 +218,4 @@ def test_fast__SerializeLRPAlpha2Beta1():
     def method(model):
         return LRPAlpha2Beta1(model)
 
-    return dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
