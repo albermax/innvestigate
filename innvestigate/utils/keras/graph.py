@@ -572,6 +572,10 @@ def reverse_model(model, reverse_mappings,
     layers, execution_list, outputs = trace_model_execution(
         model,
         reapply_on_copied_layers=reapply_on_copied_layers)
+    len_execution_list = len(execution_list)
+    num_input_layers = len([_ for l, _, _ in execution_list
+                            if isinstance(l, keras.layers.InputLayer)])
+    len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
     reverse_execution_list = reversed(execution_list)
 
     # Initialize the reverse mapping functions.
@@ -611,7 +615,9 @@ def reverse_model(model, reverse_mappings,
                          [head_mapping(tmp) for tmp in outputs])
 
     # Follow the list and revert the graph.
-    for reverse_id, (layer, Xs, Ys) in enumerate(reverse_execution_list):
+    for _reverse_id, (layer, Xs, Ys) in enumerate(reverse_execution_list):
+        reverse_id = len_execution_list_wo_inputs_layers - _reverse_id - 1
+
         if isinstance(layer, keras.layers.InputLayer):
             # Special case. Do nothing.
             pass
