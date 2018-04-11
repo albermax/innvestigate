@@ -45,8 +45,8 @@ class WrapperBase(base.AnalyzerBase):
         self._subanalyzer = subanalyzer
         model = None
 
-        return super(WrapperBase, self).__init__(model,
-                                                 *args, **kwargs)
+        super(WrapperBase, self).__init__(model,
+                                          *args, **kwargs)
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
@@ -79,8 +79,8 @@ class AugmentReduceBase(WrapperBase):
 
     def __init__(self, subanalyzer, *args, augment_by_n=2, **kwargs):
         self._augment_by_n = augment_by_n
-        ret = super(AugmentReduceBase, self).__init__(subanalyzer,
-                                                      *args, **kwargs)
+        super(AugmentReduceBase, self).__init__(subanalyzer,
+                                                *args, **kwargs)
 
         self._keras_based_augment_reduce = False
         if isinstance(self._subanalyzer, base.AnalyzerNetworkBase):
@@ -88,7 +88,6 @@ class AugmentReduceBase(WrapperBase):
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
 
-        return ret
 
     def compile_analyzer(self):
         if not self._keras_based_augment_reduce:
@@ -187,8 +186,8 @@ class GaussianSmoother(AugmentReduceBase):
 
     def __init__(self, subanalyzer, *args, noise_scale=1, **kwargs):
         self._noise_scale = noise_scale
-        return super(GaussianSmoother, self).__init__(subanalyzer,
-                                                      *args, **kwargs)
+        super(GaussianSmoother, self).__init__(subanalyzer,
+                                               *args, **kwargs)
 
     def _python_based_augment(self, X):
         tmp = super(GaussianSmoother, self)._python_based_augment(X)
@@ -221,14 +220,14 @@ class GaussianSmoother(AugmentReduceBase):
 
 class PathIntegrator(AugmentReduceBase):
 
-    def __init__(self, subanalyzer, *args, 
+    def __init__(self, subanalyzer, *args,
                  reference_inputs=0, steps=16, **kwargs):
         self._reference_inputs = reference_inputs
         self._keras_constant_inputs = None
-        return super(PathIntegrator, self).__init__(subanalyzer,
-                                                    *args,
-                                                    augment_by_n=steps,
-                                                    **kwargs)
+        super(PathIntegrator, self).__init__(subanalyzer,
+                                             *args,
+                                              augment_by_n=steps,
+                                              **kwargs)
 
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:
