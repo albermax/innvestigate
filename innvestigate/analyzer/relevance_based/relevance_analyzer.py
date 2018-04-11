@@ -351,20 +351,66 @@ class LRP(base.ReverseAnalyzerBase):
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
         #specialized backward hook
-        class BatchNormalizationReverseLayer(ReverseLayer):
+        class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                params = self.get_weights()
-                self._gamma = params[0]
-                self._beta = params[1]
-                self._mean = params[2]
-                self._std = params[3]
+                config = layer.get_config()
+                params = layer.get_weights()
+
+                self._center = config['center']
+                self._scale = config['scale']
+
+                if self._center and self._scale:
+                    #self._gamma, self._beta, self._mean, self._std = params
+                    self._gamma = layer.gamma
+                    self._beta = layer.beta
+                    self._mean = layer.moving_mean
+                    self._std = layer.moving_variance
+                elif self._center:
+                    self._beta = layer.beta
+                    self._mean = layer.moving_mean
+                    self._std = layer.moving_variance
+                elif self._scale:
+                    self._gamma = layer.gamma
+                    self._mean = layer.moving_mean
+                    self._std = layer.moving_variance
+                else:
+                    self._mean = layer.moving_mean
+                    self._std = layer.moving_variance
+
+                #package into lists for list comprehensions
+                self._mean = [self._mean]
+                self._std = [self._std]
+
+                if self._scale:
+                    print('gamma', type(self._gamma), type(layer.gamma))
+                    print('gamma', self._gamma.shape, K.shape(layer.gamma))
+                    self._gamma = [self._gamma]
+                if self._center:
+                    print('beta', type(self._beta), type(layer.beta))
+                    print('beta', self._beta.shape, K.shape(layer.beta))
+                    self._beta = [self._beta]
 
                 #enables rule support for later.
-                super(BatchNormalizationReverseLayer, self).__init__(self, layer, state)
-
+                #super(BatchNormalizationReverseLayer, self).__init__(self, layer, state)
+                #exit()
 
             def apply(self, Xs, Ys, Rs, reverse_state):
+                print([(K.int_shape(x), K.int_shape(y)) for x, y in zip(Xs, Ys)])
+                print(self._gamma.shape, self._beta.shape, self._mean.shape, self._std.shape)
+                print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
+
+
+                #compute reweighting term based on BatchNorm operations and output#
+                #NOTE: this line is just a test. make proper.
+                tmp = [keras.layers.Subtract()([x, m]) for x, m in zip(Xs, self._mean)]
+                # TODO: CONTINUE HERE
+                # TODO: broadcasting? see keras implementation of needs_broadcasting. if yes, then reshape/broadcast everything before continuing.
+
+
+
                 return Rs
+
+
 
 
         # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
@@ -385,8 +431,6 @@ class LRP(base.ReverseAnalyzerBase):
         if(len(Xs) == len(Ys) and
            isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
-        #if isinstance(reverse_state['layer'], keras.layers.Activation): # TODO: complete this. Activation should not be everything.
-            # TODO: this is not necessarily true. Do explicit layer check.
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
@@ -395,6 +439,7 @@ class LRP(base.ReverseAnalyzerBase):
         else:
             # This branch covers:
             # MaxPooling
+            # Average Pooling
             # Max
             # Flatten
             # Reshape
