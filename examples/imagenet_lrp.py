@@ -143,10 +143,9 @@ if __name__ == "__main__":
             ("input",                 {},                       image,   "Input"),
 
             # Interaction
-            #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"), #NOTE: PARAMETERS CAN NOT BE SET FOR inception_v3
-            #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
-            #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
-            ("lrp.epsilon",           {},           heatmap, "LRP-Epsilon"),
+            ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"), #NOTE: PARAMETERS CAN NOT BE SET FOR inception_v3
+            ("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
+            ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
             ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
             ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
             ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
