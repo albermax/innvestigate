@@ -148,7 +148,6 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
-
     def __init__(self, layer, state):
         # W-square rule works with squared weights and no biases.
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
