@@ -325,27 +325,27 @@ class LRP(base.ReverseAnalyzerBase):
         ####################################################################
 
         def select_rule(layer, reverse_state):
-            #print(layer.__class__.__name__, end='->') #debug
+            print("in select_rule:", layer.__class__.__name__ , end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        #print(str(rule)) #debug
+                        print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                #print(str(rules[0]) + ' (pop)') #debug
+                print(str(rules[0]), '(via pop)') #debug
                 return rules.pop()
 
         class ReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #this avoids refactoring.
-                #print(layer, rule_class) #debug
+                print("in ReverseLayer.init:",layer.__class__.__name__,"->" , rule_class if isinstance(rule_class, six.string_types) else rule_class.__name__) #debug
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                #print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
+                print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '-> {}.apply'.format(self._rule.__class__.__name__))
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
 
@@ -361,7 +361,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
+        print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__,  end='->')
         default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
@@ -370,14 +370,14 @@ class LRP(base.ReverseAnalyzerBase):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            #print(' return R')
+            print('return R')
             return reversed_Ys
         else:
             # TODO: make this more clear, here we assume to have reshape layers
             # TODO: add assert
             # TODO: BatchNorm layer should end up here (?): Implements an affine transformation.
             # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
-            #print(' ilayers.GradientWRT')
+            print('ilayers.GradientWRT')
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
