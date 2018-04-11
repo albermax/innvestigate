@@ -494,11 +494,12 @@ class LRPEpsilon(_LRPFixedParams):
                                          **kwargs)
 
 
-class LRPEpsilonIgnoreBias(_LRPFixedParams):
+class LRPEpsilonIgnoreBias(LRPEpsilon):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, epsilon=1e-7, *args, **kwargs):
         super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
-                                                   rule="EpsilonIgnoreBias",
+                                                   epsilon=epsilon,
+                                                   bias=False,
                                                    **kwargs)
 
 
