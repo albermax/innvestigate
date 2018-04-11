@@ -69,7 +69,7 @@ class BaselineGradient(base.AnalyzerNetworkBase):
             },
         ]
 
-        return super(BaselineGradient, self).__init__(model, **kwargs)
+        super(BaselineGradient, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
@@ -96,7 +96,7 @@ class Gradient(base.ReverseAnalyzerBase):
             },
         ]
 
-        return super(Gradient, self).__init__(model, **kwargs)
+        super(Gradient, self).__init__(model, **kwargs)
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
@@ -157,7 +157,7 @@ class Deconvnet(base.ReverseAnalyzerBase):
             (lambda layer: kchecks.contains_activation(layer, "relu"),
              ReverseLayer),
         ]
-        return super(Deconvnet, self).__init__(model, **kwargs)
+        super(Deconvnet, self).__init__(model, **kwargs)
 
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
@@ -199,7 +199,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
             (lambda layer: kchecks.contains_activation(layer, "relu"),
              reverse_layer_instance),
         ]
-        return super(GuidedBackprop, self).__init__(model, **kwargs)
+        super(GuidedBackprop, self).__init__(model, **kwargs)
 
 
 ###############################################################################
@@ -218,9 +218,9 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
     def __init__(self, model, steps=64, **kwargs):
         subanalyzer = Gradient(model)
-        return super(IntegratedGradients, self).__init__(subanalyzer,
-                                                         steps=steps,
-                                                         **kwargs)
+        super(IntegratedGradients, self).__init__(subanalyzer,
+                                                  steps=steps,
+                                                  **kwargs)
 
 
 ###############################################################################
@@ -239,7 +239,6 @@ class SmoothGrad(wrapper.GaussianSmoother):
 
     def __init__(self, model, augment_by_n=64, **kwargs):
         subanalyzer = Gradient(model)
-        return super(SmoothGrad, self).__init__(
-            subanalyzer,
-            augment_by_n=augment_by_n,
-            **kwargs)
+        super(SmoothGrad, self).__init__(subanalyzer,
+                                         augment_by_n=augment_by_n,
+                                         **kwargs)
