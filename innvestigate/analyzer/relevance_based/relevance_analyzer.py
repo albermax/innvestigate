@@ -364,13 +364,14 @@ class LRP(base.ReverseAnalyzerBase):
 
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                pass
+                return Rs
 
 
         # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
-            #TODO: BatchNOrm, MaxPooling (ReverseLayer), SumPooling (ReverseLayer), Flatten, Reshape
+            (kchecks.is_batch_normalization_layer, BatchNormalizationReverseLayer)
+            #TODO: BatchNOrm for rules,  SumPooling (ReverseLayer, for rules)
         ]
 
         # FINALIZED constructor.

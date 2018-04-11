@@ -49,6 +49,7 @@ __all__ = [
     "is_relu_convnet_layer",
     "is_average_pooling",
     "is_input_layer",
+    "is_batch_normalization_layer",
 ]
 
 
@@ -257,6 +258,9 @@ def is_conv_layer(layer, *args, **kwargs):
     )
     return isinstance(layer, CONV_LAYERS)
 
+
+def is_batch_normalization_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.normalization.BatchNormalization)
 
 
 def is_dense_layer(layer, *args, **kwargs):
