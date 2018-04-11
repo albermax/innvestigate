@@ -51,11 +51,11 @@ class AnalyzerBase(object):
     >>> a = Analyzer(model)
     >>> a.fit(X_train)  # If analyzer needs training.
     >>> analysis = a.analyze(X_test)
-    >>> 
+    >>>
     >>> state = a.save()
     >>> a_new = A.load(*state)
     >>> analysis = a_new.analyze(X_test)
-    
+
     :param model: A Keras model.
     :param disable_model_checks: Do not execute model checks that enforce
       compatibility of analyzer and model.
@@ -89,7 +89,6 @@ class AnalyzerBase(object):
                         warnings.warn(message)
                     else:
                         raise NotImplementedError()
-        pass
 
     def fit(self, *args, disable_no_training_warning=False, **kwargs):
         """
@@ -104,7 +103,6 @@ class AnalyzerBase(object):
             # but is fit is still called.
             warnings.warn("This analyzer does not need to be trained."
                           " Still fit() is called.", RuntimeWarning)
-        pass
 
     def fit_generator(self, *args,
                       disable_no_training_warning=False, **kwargs):
@@ -120,7 +118,6 @@ class AnalyzerBase(object):
             # but is fit is still called.
             warnings.warn("This analyzer does not need to be trained."
                           " Still fit_generator() is called.", RuntimeWarning)
-        pass
 
     def analyze(self, X):
         """
@@ -152,14 +149,13 @@ class AnalyzerBase(object):
     def save_npz(self, fname):
         """
         Save state of analyzer, can be passed to :func:`Analyzer.load_npz`
-        to resemble the analyzer.        
+        to resemble the analyzer.
 
         :param fname: The file's name.
         """
         class_name, state = self.save()
         np.savez(fname, **{"class_name": class_name,
                            "state": state})
-        pass
 
     @classmethod
     def _state_to_kwargs(clazz, state):
@@ -245,7 +241,6 @@ class TrainerMixin(object):
                        verbose=0,
                        disable_no_training_warning=None):
         raise NotImplementedError()
-    pass
 
 
 class OneEpochTrainerMixin(TrainerMixin):
@@ -282,7 +277,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     This class provides helpful functionality to create analyzer's.
     Basically it:
-    
+
     * takes the input model and adds a layer that selects
       the desired output neuron to analyze.
     * passes the new model to :func:`_create_analysis` which should
@@ -304,7 +299,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
         self._neuron_selection_mode = neuron_selection_mode
-        pass
 
     def compile_analyzer(self):
         """
@@ -354,7 +348,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
             inputs=model_inputs+neuron_selection_inputs+constant_inputs,
             outputs=analysis_outputs+debug_outputs)
         #self._analyzer_model.compile(optimizer="sgd", loss="mse")
-        pass
 
     def _create_analysis(self, model):
         raise NotImplementedError()
@@ -413,7 +406,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     This class contains many helper functions around the graph
     reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
-    
+
     The deriving classes should specify how the graph should be reverted
     by implementing the following functions:
 
@@ -426,7 +419,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       should be instantiated before the are passed to the reversed
       network.
 
-    Furthermore other parameters of the function 
+    Furthermore other parameters of the function
     :func:`innvestigate.utils.keras.graph.reverse_model` can
     be changed by setting the according parameters of the
     init function:
@@ -444,7 +437,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     :param reverse_reapply_on_copied_layers: See
       :func:`innvestigate.utils.keras.graph.reverse_model`.
     """
-    
+
 
     # Should be specified by the base class.
     _conditional_mappings = []
@@ -466,7 +459,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         self._reverse_reapply_on_copied_layers = (
             reverse_reapply_on_copied_layers)
-        return super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
+        super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
     def _reverse_mapping(self, layer):
         for condition, reverse_f in self._conditional_mappings:
@@ -555,7 +548,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                                           for i in nfinite_tensors])
                 print("Not finite values found in following nodes: "
                       "(ReverseID, TensorID) - {}".format(nfinite_tensors))
-        pass
+
 
     def _get_state(self):
         state = super(ReverseAnalyzerBase, self)._get_state()
