@@ -35,7 +35,7 @@ from innvestigate import utils as iutils
 from innvestigate.utils import keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
-#from ..import relevance_rule as rrule
+
 
 
 
@@ -44,32 +44,6 @@ __all__ = [
     "assert_infer_lrp_alpha_beta_param"
 ]
 
-
-#TODO: move rule selection code here.
-"""
-LRP_RULES = {
-    "Z": rule.ZRule,
-    "ZIgnoreBias": rule.ZIgnoreBiasRule,
-
-    "Epsilon": rule.EpsilonRule,
-    "EpsilonIgnoreBias": rule.EpsilonIgnoreBiasRule,
-
-    "WSquare": rule.WSquareRule,
-    "Flat": rule.FlatRule,
-
-    "AlphaBeta": rule.AlphaBetaRule,
-    "AlphaBetaIgnoreBias": rule.AlphaBetaIgnoreBiasRule,
-
-    "Alpha2Beta1": rule.Alpha2Beta1Rule,
-    "Alpha2Beta1IgnoreBias": rule.Alpha2Beta1IgnoreBiasRule,
-    "Alpha1Beta0": rule.Alpha1Beta0Rule,
-    "Alpha1Beta0IgnoreBias": rule.Alpha1Beta0IgnoreBiasRule,
-
-    "ZPlus": rule.ZPlusRule,
-    "ZPlusFast": rule.ZPlusFastRule,
-    "Bounded": rule.BoundedRule,
-}
-"""
 
 ###############################################################################
 ###############################################################################
