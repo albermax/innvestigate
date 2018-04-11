@@ -102,6 +102,9 @@ if __name__ == "__main__":
     # Analysis.
     ###########################################################################
 
+    print(model.summary())#debug
+    #exit() #debug
+
     patterns = net["patterns"]
     # Methods we use and some properties.
     if netname in ["vgg16", "vgg19"]: #TODO write get_methods(netname) function
@@ -146,12 +149,12 @@ if __name__ == "__main__":
             ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"), #NOTE: PARAMETERS CAN NOT BE SET FOR inception_v3
             ("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
             ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
-            ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-            ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-            ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-            ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
-            ("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
-            ("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
+            #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+            #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+            #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
+            #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
+            #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+            #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
         ]
 
     elif netname == "resnet50":
@@ -161,22 +164,36 @@ if __name__ == "__main__":
             ("input",                 {},                       image,   "Input"),
 
             # Interaction
-            ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
-            ("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
-            ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
-            ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-            ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-            ("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-            ("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
+            #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+            #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
+            #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+            #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+            #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+            #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
+            #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
             ("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
-            ("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
+            #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
         ]
 
     else:
-        raise ValueError('Network not supported yet')
+        methods = [
+            # NAME             POSTPROCESSING     TITLE
+            # Show input.
+            ("input",                 {},                       image,   "Input"),
 
-    print(model.summary())#debug
-    #exit()
+            # Interaction
+            #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+            #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
+            ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+            #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+            #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+            #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
+            #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
+            #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+            #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
+        ]
+
+
     # Create analyzers.
     analyzers = []
     for method in methods:
