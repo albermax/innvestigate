@@ -115,7 +115,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         else:
             kwargs["reverse_project_bottleneck_layers"] = True
 
-        return super(PatternNet, self).__init__(model, **kwargs)
+        super(PatternNet, self).__init__(model, **kwargs)
 
     def _prepare_pattern(self, layer, state, pattern):
         return pattern
