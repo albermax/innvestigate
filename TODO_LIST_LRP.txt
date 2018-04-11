@@ -1,6 +1,6 @@
 
 
-2) Refactor ReverseLayer and all dependencies as independent classes
+2) (redacted) Refactor ReverseLayer and all dependencies as independent classes (not possible without major rework/deviation from the major class structure for all analyzer classes)
 2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
 2.1.1) BatchNormalization
 2.1.2) Merge type layers
