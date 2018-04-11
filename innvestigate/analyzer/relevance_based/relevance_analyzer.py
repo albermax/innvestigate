@@ -354,8 +354,10 @@ class LRP(base.ReverseAnalyzerBase):
             #TODO: BatchNOrm, MaxPooling (ReverseLayer), SumPooling (ReverseLayer), Flatten, Reshape
         ]
 
-        # finalize constructor.
+        # FINALIZED constructor.
         super(LRP, self).__init__(model, *args, **kwargs)
+
+
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
@@ -644,9 +646,9 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
                             ]
 
         super(LRPCompositeA, self).__init__(model,
-                                           *args,
-                                           rule = conditional_rules,
-                                           **kwargs )
+                                            *args,
+                                            rule = conditional_rules,
+                                            **kwargs )
 
 
 class LRPCompositeB(_LRPFixedParams):
@@ -680,9 +682,9 @@ class LRPCompositeB(_LRPFixedParams):
                              (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
                             ]
         super(LRPCompositeB, self).__init__(model,
-                                           *args,
-                                           rule = conditional_rules,
-                                           **kwargs )
+                                            *args,
+                                            rule = conditional_rules,
+                                            **kwargs )
 
 
 
@@ -711,9 +713,9 @@ class LRPCompositeBFlat(LRPCompositeB):
 class LRPCompositeAWSquare(LRPCompositeA):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeAWSquare, self).__init__(model,
-                                                *args,
-                                                input_layer_rule=rrule.WSquareRule,
-                                                **kwargs)
+                                                   *args,
+                                                   input_layer_rule=rrule.WSquareRule,
+                                                   **kwargs)
 
 
 
@@ -721,6 +723,6 @@ class LRPCompositeAWSquare(LRPCompositeA):
 class LRPCompositeBWSquare(LRPCompositeB):
     def __init__(self, model, *args, **kwargs):
         super(LRPCompositeBWSquare, self).__init__(model,
-                                                *args,
-                                                input_layer_rule="WSquare",
-                                                **kwargs)
+                                                   *args,
+                                                   input_layer_rule="WSquare",
+                                                   **kwargs)
