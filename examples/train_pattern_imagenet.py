@@ -199,6 +199,7 @@ if __name__ == "__main__":
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
         ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("lrp.composite_a_flat",  {},                       heatmap, "LRP-CompositeAFlat"),
     ]
 
     # Create analyzers.
