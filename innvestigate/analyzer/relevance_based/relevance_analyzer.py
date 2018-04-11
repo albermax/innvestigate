@@ -301,10 +301,11 @@ class LRP(base.ReverseAnalyzerBase):
             if isinstance(input_layer_rule, tuple):
                 low, high = input_layer_rule
 
-                class input_layer_rule(rrule.BoundedRule):
+                class BoundedProxyRule(rrule.BoundedRule):
                     def __init__(self, *args, **kwargs):
-                        super(input_layer_rule, self).__init__(
+                        super(BoundedProxyRule, self).__init__(
                             *args, low=low, high=high, **kwargs)
+                input_layer_rule = BoundedProxyRule
 
 
             if use_conditions is True:
