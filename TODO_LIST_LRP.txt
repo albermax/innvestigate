@@ -19,5 +19,6 @@
 5.*)
 6) numerical testing for rule types on layers with kernels and pooling layers.
 6.*)
-7) ipython notebooks showing analyzer setup and influence of parameters
 
+7) ipython notebooks showing analyzer setup and influence of parameters
+8) find out: which settings make the most sense for which models?
