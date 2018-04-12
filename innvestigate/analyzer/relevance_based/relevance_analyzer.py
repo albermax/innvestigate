@@ -350,66 +350,107 @@ class LRP(base.ReverseAnalyzerBase):
                 print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']) ,  '-> {}.apply'.format(self._rule.__class__.__name__))
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
+
         #specialized backward hook
         class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
+                print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Special Treatment" ) #debug
                 config = layer.get_config()
-                params = layer.get_weights()
+                param = layer.get_weights()
+                for c in config:
+                    print(c)
+                for p in param:
+                    print(p)
 
                 self._center = config['center']
                 self._scale = config['scale']
+                self._axis = config['axis']
+
+                self._mean = [layer.moving_mean]
+                self._std = [layer.moving_variance]
+                if self._center:
+                    self._beta = [layer.beta]
+                #if self._scale: # not needed.
+                #    self._gamma = [layer.gamma]
+
+
+                """
+                self._std = [param[-1]]
+                self._mean = [param[-2]]
 
                 if self._center and self._scale:
-                    #self._gamma, self._beta, self._mean, self._std = params
-                    self._gamma = layer.gamma
-                    self._beta = layer.beta
-                    self._mean = layer.moving_mean
-                    self._std = layer.moving_variance
+                    self._beta = [param[0]]
+                    self._gamma= [param[1]]
                 elif self._center:
-                    self._beta = layer.beta
-                    self._mean = layer.moving_mean
-                    self._std = layer.moving_variance
-                elif self._scale:
-                    self._gamma = layer.gamma
-                    self._mean = layer.moving_mean
-                    self._std = layer.moving_variance
-                else:
-                    self._mean = layer.moving_mean
-                    self._std = layer.moving_variance
+                    self._beta = [param[0]]
+                elif self._gamma:
+                    self._gamma = [param[0]]
+                """
 
-                #package into lists for list comprehensions
-                self._mean = [self._mean]
-                self._std = [self._std]
-
-                if self._scale:
-                    print('gamma', type(self._gamma), type(layer.gamma))
-                    print('gamma', self._gamma.shape, K.shape(layer.gamma))
-                    self._gamma = [self._gamma]
-                if self._center:
-                    print('beta', type(self._beta), type(layer.beta))
-                    print('beta', self._beta.shape, K.shape(layer.beta))
-                    self._beta = [self._beta]
-
-                #enables rule support for later.
+                #TODO: enable rule support for later.
                 #super(BatchNormalizationReverseLayer, self).__init__(self, layer, state)
-                #exit()
 
             def apply(self, Xs, Ys, Rs, reverse_state):
+                print()
                 print([(K.int_shape(x), K.int_shape(y)) for x, y in zip(Xs, Ys)])
-                print(self._gamma.shape, self._beta.shape, self._mean.shape, self._std.shape)
+                print(self._beta[0].shape, self._mean[0].shape, self._std[0].shape)
                 print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
 
+                input_shapes = [K.int_shape(x) for x in Xs]
+                # Prepare broadcasting shape.
+                #ndims = [len(ish) for ish in input_shapes]
+                #reduction_axes = [list(range(len(ish))) for ish in input_shapes]
+                #for r in reduction_axes:
+                #    del r[self._axis]
 
-                #compute reweighting term based on BatchNorm operations and output#
-                #NOTE: this line is just a test. make proper.
-                tmp = [keras.layers.Subtract()([x, m]) for x, m in zip(Xs, self._mean)]
-                # TODO: CONTINUE HERE
-                # TODO: broadcasting? see keras implementation of needs_broadcasting. if yes, then reshape/broadcast everything before continuing.
+                # Determines whether broadcasting is needed.
+                broadcast_shapes = [[-1] * len(ish) for ish in input_shapes]
+                #needs_broadcasting = [None]*len(input_shapes)
+                for j in range(len(input_shapes)):
+                    broadcast_shapes[j][self._axis] = input_shapes[j][self._axis]
+                    #needs_broadcasting[j] = sorted(reduction_axes[j]) != list(range(ndims[j]))[:-1]
+
+                #print("ndims", ndims)
+                print("input_shapes", input_shapes)
+                #print("reduction_axes", reduction_axes)
+                print("broadcast_shapes", broadcast_shapes)
+                #print("needs_broadcasting", needs_broadcasting)
+
+                #reweight relevances as
+                #        x * (y - beta)     R
+                # Rin = ---------------- * ----
+                #           x - mu          y
+                # batch norm can be considered as 3 distinct layers of subtraction,
+                # multiplication and then addition. The multiplicative scaling layer
+                # has no effect on LRP and functions as a linear activation layer
+
+                #prepare division by avoiding divisions by zero
+                #prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+                #reshape_mean = keras.layers.Lambda(lambda newshape: K.reshape(self._mean, newshape)) #the goal is to attach a _keras_history attribute
 
 
 
-                return Rs
+                #prepare elements for above equation
+                x_minus_mu = [keras.layers.Subtract()([x, K.reshape(mu, bs)])
+                              for x, mu, bs in zip(Xs, self._mean * len(Xs), broadcast_shapes)]
+                #return x_minus_mu # NOTE: PROBLEMM OCCURS HERE ALREADY
 
+                if self._center:
+                    y_minus_beta = [keras.layers.Subtract()([y, K.reshape(beta, bs)])
+                                    for y, beta, bs in zip(Ys, self._beta * len(Ys), broadcast_shapes)]
+                else:
+                    y_minus_beta = Ys
+
+                numerator = [keras.layers.Multiply()([x, ymb, r])
+                             for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
+                denominator = [keras.layers.Multiply()([xmm, y])
+                             for xmm, y in zip(x_minus_mu, Ys)]
+                print("numerator shapes", [K.int_shape(n) for n in numerator])
+                print("denominator shapes", [K.int_shape(d) for d in denominator])
+                print()
+                return [ilayers.SafeDivide()([n, d])
+                        for n, d in zip(numerator, denominator)]
+                #return Rs
 
 
 
