@@ -389,7 +389,6 @@ class LRP(base.ReverseAnalyzerBase):
                 broadcast_shape[self._axis] = input_shape[self._axis]
                 broadcast_shape[0] =  -1
 
-
                 #reweight relevances as
                 #        x * (y - beta)     R
                 # Rin = ---------------- * ----
