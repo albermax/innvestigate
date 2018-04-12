@@ -164,6 +164,7 @@ if __name__ == "__main__":
             ("input",                 {},                       image,   "Input"),
 
             # Interaction
+            ("lrp.z",                 {},                       heatmap, "LRP-Z"),
             #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
             #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
             #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
@@ -171,7 +172,7 @@ if __name__ == "__main__":
             #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
             #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
             #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
-            ("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
+            #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
             #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
         ]
 
@@ -182,9 +183,10 @@ if __name__ == "__main__":
             ("input",                 {},                       image,   "Input"),
 
             # Interaction
+            #("lrp.z",                  {"epsilon": 1},           heatmap, "LRP-Z"),
             #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
             #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
-            ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+            #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
             #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
             #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
             #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
