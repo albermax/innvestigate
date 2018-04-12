@@ -262,6 +262,8 @@ def is_conv_layer(layer, *args, **kwargs):
 def is_batch_normalization_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.normalization.BatchNormalization)
 
+def is_add_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.Add)
 
 def is_dense_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.core.Dense)
