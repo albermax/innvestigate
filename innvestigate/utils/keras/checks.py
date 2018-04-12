@@ -214,9 +214,9 @@ def contains_kernel(layer):
     Check whether the layer contains a kernel.
     """
 
-    # todo: add test and check this more throughroughly.
+    # TODO: add test and check this more throughroughly.
     # rely on Keras convention.
-    if hasattr(layer, "kernel"):
+    if hasattr(layer, "kernel") or hasattr(layer, "depthwise_kernel") or hasattr(layer, "pointwise_kernel"):
         return True
     else:
         return False
