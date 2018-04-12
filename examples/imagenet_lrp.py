@@ -143,8 +143,8 @@ if __name__ == "__main__":
             ]
 
         else:
-            methods += [("lrp.z",                 {},                       heatmap, "LRP-Z"),
-                        #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+            methods += [#("lrp.z",                 {},                       heatmap, "LRP-Z"),
+                        ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
                         #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
                         #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
                         #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     #collect all model layer classes
     all_layer_classes = list(set([l.__class__.__name__ for  l in model.layers]))
     print("{} contains the following layers: {}".format(netname, all_layer_classes))
-    exit() #debug
+    #exit() #debug
 
     patterns = net["patterns"]
     # Methods we use and some properties.

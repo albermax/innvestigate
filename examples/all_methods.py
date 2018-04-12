@@ -47,7 +47,7 @@ eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 if __name__ == "__main__":
 
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
-    pattern_type = "relu"
+    pattern_type = False #TODO: set to "relu" again
 
     # Get some example test set images.
     images, label_to_class_name = eutils.get_imagenet_data()[:2]
@@ -116,10 +116,10 @@ if __name__ == "__main__":
         # Signal
         ("deconvnet",             {},                       bk_proj, "Deconvnet"),
         ("guided_backprop",       {},                       bk_proj, "Guided Backprop",),
-        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
-
+        #("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
+        #TODO: uncomment pattern stuff
         # Interaction
-        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
+        #("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
         ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
         ("lrp.composite_a_flat",  {},                     heatmap, "LRP-CompositeAFlat"),
         ("lrp.composite_b_flat",  {},                     heatmap, "LRP-CompositeBFlat"),
