@@ -369,6 +369,10 @@ class LRP(base.ReverseAnalyzerBase):
 
                 #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
                 #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
+                # how to do this:
+                # super.__init__ calls select_rule and sets a self._rule class
+                # check if isinstance(self_rule, EpsiloneRule), then reroute
+                # to BatchNormEpsilonRule. Not pretty, but should work.
 
 
             def apply(self, Xs, Ys, Rs, reverse_state):
