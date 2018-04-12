@@ -123,45 +123,34 @@ if __name__ == "__main__":
                 ("input",                 {},                       image,   "Input"),
 
                 # Interaction
-                ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"), #NOTE: PARAMETERS CAN NOT BE SET FOR inception_v3
-                #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
-                ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+                ("lrp.z",                 {},                       heatmap, "LRP-Z")
+                #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+                #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
                 #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
                 #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-                #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-                #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
                 #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
                 #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
             ]
 
         elif netname == "resnet50":
             methods += [("lrp.z",                 {},                       heatmap, "LRP-Z"),
-                        ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
-                        ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
-                        ("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-                        ("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-                        ("lrp.composite_a_flat",           {},                     heatmap, "LRP-CompositeA"),
-                        ("lrp.composite_b_flat",           {},                     heatmap, "LRP-CompositeB"),
+                        #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+                        #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+                        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+                        #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+                        #("lrp.composite_a_flat",           {},                     heatmap, "LRP-CompositeA"),
+                        #("lrp.composite_b_flat",           {},                     heatmap, "LRP-CompositeB"),
             ]
 
         else:
-            methods = [
-                # NAME             POSTPROCESSING     TITLE
-                # Show input.
-                ("input",                 {},                       image,   "Input"),
-
-                # Interaction
-                #("lrp.z",                  {"epsilon": 1},           heatmap, "LRP-Z"),
-                #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
-                #("lrp.epsilon_IB",        {"epsilon": 1},           heatmap, "LRP-Epsilon-IB 1"),
-                #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
-                #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-                #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-                #("lrp.composite_a",           {},                     heatmap, "LRP-CompositeA"),
-                #("lrp.composite_b",           {},                     heatmap, "LRP-CompositeB"),
-                #("lrp.composite_a_flat",      {},                     heatmap, "LRP-CompositeAFlat"),
-                #("lrp.composite_b_flat",      {},                     heatmap, "LRP-CompositeBFlat"),
-            ]
+            methods += [("lrp.z",                 {},                       heatmap, "LRP-Z"),
+                        #("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
+                        #("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
+                        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
+                        #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
+                        #("lrp.composite_a_flat",           {},                     heatmap, "LRP-CompositeA"),
+                        #("lrp.composite_b_flat",           {},                     heatmap, "LRP-CompositeB"),
+                       ]
         return methods
 
 
@@ -170,7 +159,10 @@ if __name__ == "__main__":
     ###########################################################################
 
     print(model.summary())#debug
-    #exit() #debug
+    #collect all model layer classes
+    all_layer_classes = list(set([l.__class__.__name__ for  l in model.layers]))
+    print("{} contains the following layers: {}".format(netname, all_layer_classes))
+    exit() #debug
 
     patterns = net["patterns"]
     # Methods we use and some properties.
