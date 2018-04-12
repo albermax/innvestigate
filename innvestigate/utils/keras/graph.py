@@ -151,18 +151,29 @@ def get_layer_neuronwise_io(layer,
         raise Exception()
 
 
-def get_layer_from_config(old_layer, new_config, weights=None):
+def get_layer_from_config(old_layer,
+                          new_config,
+                          weights=None,
+                          reuse_symbolic_tensors=True):
     new_layer = old_layer.__class__.from_config(new_config)
 
     if weights is None:
-        weights = old_layer.get_weights()
+        if reuse_symbolic_tensors:
+            weights = old_layer.weights
+        else:
+            weights = old_layer.get_weights()
 
     if len(weights) > 0:
         # init weights
         n_nodes = get_layer_inbound_count(old_layer)
         for i in range(n_nodes):
             new_layer(old_layer.get_input_at(i))
-        new_layer.set_weights(weights)
+
+        are_numpy_weights = isinstance(weights[0], np.ndarray)
+        if are_numpy_weights:
+            new_layer.set_weights(weights)
+        else:
+            new_layer.weights[:] = weights
 
     return new_layer
 
@@ -170,7 +181,8 @@ def get_layer_from_config(old_layer, new_config, weights=None):
 def copy_layer_wo_activation(layer,
                              keep_bias=True,
                              name_template=None,
-                             weights=None):
+                             weights=None,
+                             **kwargs):
     config = layer.get_config()
     if name_template is None:
         config["name"] = None
@@ -182,13 +194,14 @@ def copy_layer_wo_activation(layer,
         config["use_bias"] = False
         if weights is None:
             weights = layer.get_weights()[:-1]
-    return get_layer_from_config(layer, config, weights=weights)
+    return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
 def copy_layer(layer,
                keep_bias=True,
                name_template=None,
-               weights=None):
+               weights=None,
+               **kwargs):
 
     config = layer.get_config()
     if name_template is None:
@@ -199,7 +212,7 @@ def copy_layer(layer,
         config["use_bias"] = False
         if weights is None:
             weights = layer.get_weights()[:-1]
-    return get_layer_from_config(layer, config, weights=weights)
+    return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
 def pre_softmax_tensors(Xs, should_find_softmax=True):
