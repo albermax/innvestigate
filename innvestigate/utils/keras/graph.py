@@ -154,7 +154,7 @@ def get_layer_neuronwise_io(layer,
 def get_layer_from_config(old_layer,
                           new_config,
                           weights=None,
-                          reuse_symbolic_tensors=True):
+                          reuse_symbolic_tensors=False):
     new_layer = old_layer.__class__.from_config(new_config)
 
     if weights is None:
@@ -173,6 +173,7 @@ def get_layer_from_config(old_layer,
         if are_numpy_weights:
             new_layer.set_weights(weights)
         else:
+            raise Exception("This features is buggy.")
             new_layer.weights[:] = weights
 
     return new_layer
