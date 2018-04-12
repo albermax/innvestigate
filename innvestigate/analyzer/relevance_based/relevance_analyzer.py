@@ -32,6 +32,7 @@ import numpy as np
 from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
+import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import relevance_rule as rrule
@@ -354,67 +355,36 @@ class LRP(base.ReverseAnalyzerBase):
         #specialized backward hook
         class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Special Treatment" ) #debug
+                print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
                 config = layer.get_config()
-                param = layer.get_weights()
-                for c in config:
-                    print(c)
-                for p in param:
-                    print(p)
 
                 self._center = config['center']
                 self._scale = config['scale']
                 self._axis = config['axis']
 
-                self._mean = [layer.moving_mean]
-                self._std = [layer.moving_variance]
+                self._mean = layer.moving_mean
+                self._std = layer.moving_variance
                 if self._center:
-                    self._beta = [layer.beta]
-                #if self._scale: # not needed.
-                #    self._gamma = [layer.gamma]
+                    self._beta = layer.beta
 
-
-                """
-                self._std = [param[-1]]
-                self._mean = [param[-2]]
-
-                if self._center and self._scale:
-                    self._beta = [param[0]]
-                    self._gamma= [param[1]]
-                elif self._center:
-                    self._beta = [param[0]]
-                elif self._gamma:
-                    self._gamma = [param[0]]
-                """
 
                 #TODO: enable rule support for later.
                 #super(BatchNormalizationReverseLayer, self).__init__(self, layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                print()
-                print([(K.int_shape(x), K.int_shape(y)) for x, y in zip(Xs, Ys)])
-                print(self._beta[0].shape, self._mean[0].shape, self._std[0].shape)
                 print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
 
-                input_shapes = [K.int_shape(x) for x in Xs]
-                # Prepare broadcasting shape.
-                #ndims = [len(ish) for ish in input_shapes]
-                #reduction_axes = [list(range(len(ish))) for ish in input_shapes]
-                #for r in reduction_axes:
-                #    del r[self._axis]
+                input_shape = [K.int_shape(x) for x in Xs]
+                if len(input_shape) != 1:
+                    #extend below lambda layers towars multiple parameters.
+                    raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1")
+                input_shape = input_shape[0]
 
-                # Determines whether broadcasting is needed.
-                broadcast_shapes = [[-1] * len(ish) for ish in input_shapes]
-                #needs_broadcasting = [None]*len(input_shapes)
-                for j in range(len(input_shapes)):
-                    broadcast_shapes[j][self._axis] = input_shapes[j][self._axis]
-                    #needs_broadcasting[j] = sorted(reduction_axes[j]) != list(range(ndims[j]))[:-1]
+                # prepare broadcasting shape for layer parameters
+                broadcast_shape = [1] * len(input_shape)
+                broadcast_shape[self._axis] = input_shape[self._axis]
+                broadcast_shape[0] =  -1
 
-                #print("ndims", ndims)
-                print("input_shapes", input_shapes)
-                #print("reduction_axes", reduction_axes)
-                print("broadcast_shapes", broadcast_shapes)
-                #print("needs_broadcasting", needs_broadcasting)
 
                 #reweight relevances as
                 #        x * (y - beta)     R
@@ -424,20 +394,14 @@ class LRP(base.ReverseAnalyzerBase):
                 # multiplication and then addition. The multiplicative scaling layer
                 # has no effect on LRP and functions as a linear activation layer
 
-                #prepare division by avoiding divisions by zero
-                #prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
-                #reshape_mean = keras.layers.Lambda(lambda newshape: K.reshape(self._mean, newshape)) #the goal is to attach a _keras_history attribute
+                minus_mu = keras.layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
+                minus_beta = keras.layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
+                prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
 
 
-
-                #prepare elements for above equation
-                x_minus_mu = [keras.layers.Subtract()([x, K.reshape(mu, bs)])
-                              for x, mu, bs in zip(Xs, self._mean * len(Xs), broadcast_shapes)]
-                #return x_minus_mu # NOTE: PROBLEMM OCCURS HERE ALREADY
-
+                x_minus_mu = kutils.apply(minus_mu, Xs)
                 if self._center:
-                    y_minus_beta = [keras.layers.Subtract()([y, K.reshape(beta, bs)])
-                                    for y, beta, bs in zip(Ys, self._beta * len(Ys), broadcast_shapes)]
+                    y_minus_beta = kutils.apply(minus_beta, Ys)
                 else:
                     y_minus_beta = Ys
 
@@ -448,9 +412,8 @@ class LRP(base.ReverseAnalyzerBase):
                 print("numerator shapes", [K.int_shape(n) for n in numerator])
                 print("denominator shapes", [K.int_shape(d) for d in denominator])
                 print()
-                return [ilayers.SafeDivide()([n, d])
+                return [ilayers.SafeDivide()([n, prepare_div(d)])
                         for n, d in zip(numerator, denominator)]
-                #return Rs
 
 
 
