@@ -536,14 +536,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             tmp = sorted([(self._reverse_tensors_mapping[i], v)
                           for i, v in enumerate(tmp)])
             print("Minimum values in tensors: "
-                  "((ReverseID, TensorID), Value) - {}".format(tmp))
+                  "((NodeID, TensorID), Value) - {}".format(tmp))
 
             indices = self._debug_tensors_indices["max"]
             tmp = debug_values[indices[0]:indices[1]]
             tmp = sorted([(self._reverse_tensors_mapping[i], v)
                           for i, v in enumerate(tmp)])
             print("Maximum values in tensors: "
-                  "((ReverseID, TensorID), Value) - {}".format(tmp))
+                  "((NodeID, TensorID), Value) - {}".format(tmp))
 
         if self._reverse_check_finite:
             indices = self._debug_tensors_indices["finite"]
@@ -554,7 +554,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 nfinite_tensors = sorted([self._reverse_tensors_mapping[i]
                                           for i in nfinite_tensors])
                 print("Not finite values found in following nodes: "
-                      "(ReverseID, TensorID) - {}".format(nfinite_tensors))
+                      "(NodeID, TensorID) - {}".format(nfinite_tensors))
         pass
 
     def _get_state(self):
