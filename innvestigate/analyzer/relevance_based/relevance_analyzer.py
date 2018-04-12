@@ -352,7 +352,7 @@ class LRP(base.ReverseAnalyzerBase):
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
 
-        #specialized backward hook
+        #specialized backward hooks
         class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
                 print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
@@ -367,17 +367,17 @@ class LRP(base.ReverseAnalyzerBase):
                 if self._center:
                     self._beta = layer.beta
 
+                #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
+                #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
 
-                #TODO: enable rule support for later.
-                #super(BatchNormalizationReverseLayer, self).__init__(self, layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
                 print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
 
                 input_shape = [K.int_shape(x) for x in Xs]
                 if len(input_shape) != 1:
-                    #extend below lambda layers towars multiple parameters.
-                    raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1")
+                    #extend below lambda layers towards multiple parameters.
+                    raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(len(Xs)))
                 input_shape = input_shape[0]
 
                 # prepare broadcasting shape for layer parameters
@@ -409,9 +409,7 @@ class LRP(base.ReverseAnalyzerBase):
                              for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
                 denominator = [keras.layers.Multiply()([xmm, y])
                              for xmm, y in zip(x_minus_mu, Ys)]
-                print("numerator shapes", [K.int_shape(n) for n in numerator])
-                print("denominator shapes", [K.int_shape(d) for d in denominator])
-                print()
+
                 return [ilayers.SafeDivide()([n, prepare_div(d)])
                         for n, d in zip(numerator, denominator)]
 
