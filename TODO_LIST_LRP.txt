@@ -2,7 +2,7 @@
 
 2) (redacted) Refactor ReverseLayer [...]
 2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
-2.1.1) BatchNormalization
+2.1.1) BatchNormalization: Support for eps / alpha beta rules.
 2.1.2) Merge type layers
 2.1.3) Add type layers
 2.1.4) Nonlinearities and activation layers (handle non-zero-centered fxns. they break things)
@@ -20,5 +20,8 @@
 6) numerical testing for rule types on layers with kernels and pooling layers.
 6.*)
 
-7) ipython notebooks showing analyzer setup and influence of parameters
-8) find out: which settings make the most sense for which models?
+7) Parameter tuning for LRP and
+1.1) resnet50
+
+9) ipython notebooks showing analyzer setup and influence of parameters
+10) find out: which settings make the most sense for which models?
