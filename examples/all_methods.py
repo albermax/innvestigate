@@ -120,7 +120,7 @@ if __name__ == "__main__":
         #TODO: uncomment pattern stuff
         # Interaction
         #("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("lrp.epsilon",        {},                       heatmap, "LRP-Epsilon"),
         ("lrp.composite_a_flat",  {},                     heatmap, "LRP-CompositeAFlat"),
         ("lrp.composite_b_flat",  {},                     heatmap, "LRP-CompositeBFlat"),
     ]
