@@ -27,3 +27,4 @@
 
 9) ipython notebooks showing analyzer setup and influence of parameters
 
+(max) One of the application networks uses Lambda-Layers. Probably needs special treatment.
