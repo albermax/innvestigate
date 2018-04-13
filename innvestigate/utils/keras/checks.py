@@ -49,6 +49,7 @@ __all__ = [
     "is_relu_convnet_layer",
     "is_average_pooling",
     "is_input_layer",
+    "is_batch_normalization_layer",
 ]
 
 
@@ -213,9 +214,9 @@ def contains_kernel(layer):
     Check whether the layer contains a kernel.
     """
 
-    # todo: add test and check this more throughroughly.
+    # TODO: add test and check this more throughroughly.
     # rely on Keras convention.
-    if hasattr(layer, "kernel"):
+    if hasattr(layer, "kernel") or hasattr(layer, "depthwise_kernel") or hasattr(layer, "pointwise_kernel"):
         return True
     else:
         return False
@@ -258,6 +259,11 @@ def is_conv_layer(layer, *args, **kwargs):
     return isinstance(layer, CONV_LAYERS)
 
 
+def is_batch_normalization_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.normalization.BatchNormalization)
+
+def is_add_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.Add)
 
 def is_dense_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.core.Dense)

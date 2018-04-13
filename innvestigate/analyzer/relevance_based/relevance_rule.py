@@ -41,6 +41,10 @@ from . import utils as rutils
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions
 __all__ = [
+    #dedicated treatment for special layers
+
+
+    #general rules
     "ZRule",
     "ZIgnoreBiasRule",
 
@@ -127,6 +131,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
+
         # Divide incoming relevance by the activations.
         tmp = [ilayers.Divide()([a, prepare_div(b)])
                for a, b in zip(Rs, Zs)]
