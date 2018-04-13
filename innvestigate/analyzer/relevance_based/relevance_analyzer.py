@@ -418,9 +418,9 @@ class LRP(base.ReverseAnalyzerBase):
         class AddReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
                 print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                config = layer.get_config()
-                for k,v in config.items():
-                    print (k,v)
+                #config = layer.get_config()
+                #for k,v in config.items():
+                #    print (k,v)
 
                 self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                                      name_template="reversed_kernel_%s")
@@ -452,9 +452,9 @@ class LRP(base.ReverseAnalyzerBase):
         class AveragePoolingRerseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
                 print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                config = layer.get_config()
-                for k,v in config.items():
-                    print (k,v)
+                #config = layer.get_config()
+                #for k,v in config.items():
+                #    print (k,v)
 
                 self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                                      name_template="reversed_kernel_%s")
