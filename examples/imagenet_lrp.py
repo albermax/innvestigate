@@ -120,7 +120,7 @@ if __name__ == "__main__":
         elif netname == "inception_v3":
             methods += [
                 # NAME             POSTPROCESSING     TITLE
-                ("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
+                #("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
                 ("lrp.z",                 {},                       heatmap, "LRP-Z"),
                 ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
                 ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
@@ -135,7 +135,7 @@ if __name__ == "__main__":
         elif netname == "resnet50":
             methods += [
                 # NAME             POSTPROCESSING     TITLE
-                ("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
+                #("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
                 ("lrp.z",                 {},                       heatmap, "LRP-Z"),
                 ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
                 ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         else:
             methods += [
                 # NAME             POSTPROCESSING     TITLE
-                ("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
+                #("lrp.z_baseline",        {},                       heatmap, "Grad*Inp"),
                 ("lrp.z",                 {},                       heatmap, "LRP-Z"),
                 ("lrp.epsilon",           {"epsilon": 1},           heatmap, "LRP-Epsilon 1"),
                 ("lrp.epsilon",           {"epsilon": 1e2},          heatmap, "LRP-Epsilon 1e2"),
