@@ -32,6 +32,7 @@ import numpy as np
 from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
+import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import relevance_rule as rrule
@@ -325,34 +326,172 @@ class LRP(base.ReverseAnalyzerBase):
         ####################################################################
 
         def select_rule(layer, reverse_state):
-            #print(layer.__class__.__name__, end='->') #debug
+            print("in select_rule:", layer.__class__.__name__ , end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        #print(str(rule)) #debug
+                        print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                #print(str(rules[0]) + ' (pop)') #debug
+                print(str(rules[0]), '(via pop)') #debug
                 return rules.pop()
 
+
+        # default backward hook
         class ReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                rule_class = select_rule(layer, state) #this avoids refactoring.
-                #print(layer, rule_class) #debug
+                rule_class = select_rule(layer, state) #NOTE: this prevents refactoring.
+                print("in ReverseLayer.init:",layer.__class__.__name__,"->" , rule_class if isinstance(rule_class, six.string_types) else rule_class.__name__) #debug
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                #print(reverse_state['layer'].__class__.__name__, 'Rule.apply kicking in for rule', self._rule)
+                print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']) ,  '-> {}.apply'.format(self._rule.__class__.__name__))
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
+
+
+        #specialized backward hooks
+        class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
+            def __init__(self, layer, state):
+                print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+                config = layer.get_config()
+
+                self._center = config['center']
+                self._scale = config['scale']
+                self._axis = config['axis']
+
+                self._mean = layer.moving_mean
+                self._std = layer.moving_variance
+                if self._center:
+                    self._beta = layer.beta
+
+                #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
+                #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
+                # how to do this:
+                # super.__init__ calls select_rule and sets a self._rule class
+                # check if isinstance(self_rule, EpsiloneRule), then reroute
+                # to BatchNormEpsilonRule. Not pretty, but should work.
+
+            def apply(self, Xs, Ys, Rs, reverse_state):
+                print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
+
+                input_shape = [K.int_shape(x) for x in Xs]
+                if len(input_shape) != 1:
+                    #extend below lambda layers towards multiple parameters.
+                    raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(len(Xs)))
+                input_shape = input_shape[0]
+
+                # prepare broadcasting shape for layer parameters
+                broadcast_shape = [1] * len(input_shape)
+                broadcast_shape[self._axis] = input_shape[self._axis]
+                broadcast_shape[0] =  -1
+
+                #reweight relevances as
+                #        x * (y - beta)     R
+                # Rin = ---------------- * ----
+                #           x - mu          y
+                # batch norm can be considered as 3 distinct layers of subtraction,
+                # multiplication and then addition. The multiplicative scaling layer
+                # has no effect on LRP and functions as a linear activation layer
+
+                minus_mu = keras.layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
+                minus_beta = keras.layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
+                prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+
+
+                x_minus_mu = kutils.apply(minus_mu, Xs)
+                if self._center:
+                    y_minus_beta = kutils.apply(minus_beta, Ys)
+                else:
+                    y_minus_beta = Ys
+
+                numerator = [keras.layers.Multiply()([x, ymb, r])
+                             for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
+                denominator = [keras.layers.Multiply()([xmm, y])
+                             for xmm, y in zip(x_minus_mu, Ys)]
+
+                return [ilayers.SafeDivide()([n, prepare_div(d)])
+                        for n, d in zip(numerator, denominator)]
+
+        class AddReverseLayer(kgraph.ReverseMappingBase):
+            def __init__(self, layer, state):
+                print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+                #config = layer.get_config()
+                #for k,v in config.items():
+                #    print (k,v)
+
+                self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                                     name_template="reversed_kernel_%s")
+
+                #TODO: implement rule support.
+                #super(AddReverseLayer, self).__init__(layer, state)
+
+            def apply(self, Xs, Ys, Rs, reverse_state):
+                # the outputs of the pooling operation at each location is the sum of its inputs.
+                # the forward message must be known in this case, and are the inputs for each pooling thing.
+                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+                grad = ilayers.GradientWRT(len(Xs))
+                # Get activations.
+                Zs = kutils.apply(self._layer_wo_act, Xs)
+                # Divide incoming relevance by the activations.
+                tmp = [ilayers.SafeDivide()([a, b])
+                       for a, b in zip(Rs, Zs)]
+
+                # Propagate the relevance to input neurons
+                # using the gradient.
+                tmp = iutils.to_list(grad(Xs+Zs+tmp))
+                # Re-weight relevance with the input values.
+                return [keras.layers.Multiply()([a, b])
+                        for a, b in zip(Xs, tmp)]
+
+
+
+        class AveragePoolingRerseLayer(kgraph.ReverseMappingBase):
+            def __init__(self, layer, state):
+                print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+                #config = layer.get_config()
+                #for k,v in config.items():
+                #    print (k,v)
+
+                self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                                     name_template="reversed_kernel_%s")
+
+                #TODO: implement rule support.
+                #super(AveragePoolingRerseLayer, self).__init__(layer, state)
+
+            def apply(self, Xs, Ys, Rs, reverse_state):
+                # the outputs of the pooling operation at each location is the sum of its inputs.
+                # the forward message must be known in this case, and are the inputs for each pooling thing.
+                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+
+                grad = ilayers.GradientWRT(len(Xs))
+                # Get activations.
+                Zs = kutils.apply(self._layer_wo_act, Xs)
+                # Divide incoming relevance by the activations.
+                tmp = [ilayers.SafeDivide()([a, b])
+                       for a, b in zip(Rs, Zs)]
+
+                # Propagate the relevance to input neurons
+                # using the gradient.
+                tmp = iutils.to_list(grad(Xs+Zs+tmp))
+                # Re-weight relevance with the input values.
+                return [keras.layers.Multiply()([a, b])
+                        for a, b in zip(Xs, tmp)]
+
+
+
 
 
         # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
-            #TODO: BatchNOrm, MaxPooling (ReverseLayer), SumPooling (ReverseLayer), Flatten, Reshape
+            (kchecks.is_batch_normalization_layer, BatchNormalizationReverseLayer),
+            (kchecks.is_average_pooling, AveragePoolingRerseLayer),
+            (kchecks.is_add_layer, AddReverseLayer),
         ]
 
         # FINALIZED constructor.
@@ -361,23 +500,26 @@ class LRP(base.ReverseAnalyzerBase):
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        #print(reverse_state['layer'].__class__.__name__, '_default_reverse_layer', end=':')
+        print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
         default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
+           isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
-        #if isinstance(reverse_state['layer'], keras.layers.Activation): # TODO: complete this. Activation should not be everything.
-            # TODO: this is not necessarily true. Do explicit layer check.
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            #print(' return R')
+            print('return R')
             return reversed_Ys
         else:
-            # TODO: make this more clear, here we assume to have reshape layers
-            # TODO: add assert
-            # TODO: BatchNorm layer should end up here (?): Implements an affine transformation.
-            # TODO: Confirm that behaviour of GradientWRT. Flatten and BatchNorm are correct
-            #print(' ilayers.GradientWRT')
+            # This branch covers:
+            # MaxPooling
+            # Average Pooling
+            # Max
+            # Flatten
+            # Reshape
+            # Concatenate
+            # Cropping
+            print('ilayers.GradientWRT')
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
@@ -474,11 +616,12 @@ class LRPEpsilon(_LRPFixedParams):
                                          **kwargs)
 
 
-class LRPEpsilonIgnoreBias(_LRPFixedParams):
+class LRPEpsilonIgnoreBias(LRPEpsilon):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, epsilon=1e-7, *args, **kwargs):
         super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
-                                                   rule="EpsilonIgnoreBias",
+                                                   epsilon=epsilon,
+                                                   bias=False,
                                                    **kwargs)
 
 
