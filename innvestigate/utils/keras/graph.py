@@ -207,7 +207,7 @@ def update_symbolic_weights(layer, weight_mapping):
 def get_layer_from_config(old_layer,
                           new_config,
                           weights=None,
-                          reuse_symbolic_tensors=False):
+                          reuse_symbolic_tensors=True):
     new_layer = old_layer.__class__.from_config(new_config)
 
     if weights is None:
@@ -241,7 +241,7 @@ def copy_layer_wo_activation(layer,
                              keep_bias=True,
                              name_template=None,
                              weights=None,
-                             reuse_symbolic_tensors=False,
+                             reuse_symbolic_tensors=True,
                              **kwargs):
     config = layer.get_config()
     if name_template is None:
@@ -264,7 +264,7 @@ def copy_layer(layer,
                keep_bias=True,
                name_template=None,
                weights=None,
-               reuse_symbolic_tensors=False,
+               reuse_symbolic_tensors=True,
                **kwargs):
 
     config = layer.get_config()
