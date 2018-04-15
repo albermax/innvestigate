@@ -33,6 +33,7 @@ from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
+from innvestigate.utils.keras import backend as kbackend
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
@@ -153,12 +154,18 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
-    def __init__(self, layer, state):
+    def __init__(self, layer, state, copy_weights=True):
         # W-square rule works with squared weights and no biases.
+        if copy_weights:
+            weights = [x**2 for x in layer.get_weights()[:-1]]
+        else:
+            weights = [x**2 for x in layer.weights[:-1]]
+
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
-        tmp = [x**2 for x in self._layer_wo_act_b.get_weights()]
-        self._layer_wo_act_b.set_weights(tmp)
+            layer,
+            keep_bias=False,
+            weights=weights,
+            name_template="reversed_kernel_%s")
 
 
     def apply(self, Xs, Ys, Rs, reverse_state):
@@ -180,13 +187,19 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
 
 class FlatRule(WSquareRule):
-    def __init__(self, layer, state):
+    def __init__(self, layer, state, copy_weights=True):
         # The flat rule works with weights equal to one and
         # no biases.
+        if copy_weights:
+            weights = [np.ones_like(x) for x in layer.get_weights()[:-1]]
+        else:
+            weights = [K.ones_like(x) for x in layer.weights[:-1]]
+
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False, name_template="reversed_kernel_%s")
-        tmp = [np.ones_like(x) for x in self._layer_wo_act_b.get_weights()]
-        self._layer_wo_act_b.set_weights(tmp)
+            layer,
+            keep_bias=False,
+            weights=weights,
+            name_template="reversed_kernel_%s")
 
 
 
@@ -211,29 +224,42 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
     """
 
 
-    def __init__(self, layer, state, alpha=None, beta=None, bias=True):
+    def __init__(self,
+                 layer,
+                 state,
+                 alpha=None,
+                 beta=None,
+                 bias=True,
+                 copy_weights=True):
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
 
         # prepare positive and negative weights for computing positive
         # and negative preactivations z in apply_accordingly.
+        if copy_weights:
+            weights = layer.get_weights()
+            if not bias:
+                weights = weights[:-1]
+            positive_weights = [x * (x > 0) for x in weights]
+            negative_weights = [x * (x < 0) for x in weights]
+        else:
+            weights = layer.weights
+            if not bias:
+                weights = weights[:-1]
+            positive_weights = [x * kbackend.to_floatx(x > 0) for x in weights]
+            negative_weights = [x * kbackend.to_floatx(x < 0) for x in weights]
+
         self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=bias,
+            weights=positive_weights,
             name_template="reversed_kernel_positive_%s")
         self._layer_wo_act_negative = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=bias,
+            weights=negative_weights,
             name_template="reversed_kernel_negative_%s")
-
-        # filter by thresholding at zero.
-        positive_weights = [x * (x > 0)
-                            for x in self._layer_wo_act_positive.get_weights()]
-        negative_weights = [x * (x < 0)
-                            for x in self._layer_wo_act_negative.get_weights()]
-        self._layer_wo_act_positive.set_weights(positive_weights)
-        self._layer_wo_act_negative.set_weights(negative_weights)
 
 
     def apply(self, Xs, Ys, Rs, reverse_state):
@@ -337,13 +363,22 @@ class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
 class BoundedRule(kgraph.ReverseMappingBase):
     # TODO: this only works for relu networks, needs to be extended.
     # TODO: check
-    def __init__(self, layer, state, low=-1, high=1):
+    def __init__(self, layer, state, low=-1, high=1, copy_weights=True):
         self._low = low
         self._high = high
 
         # This rule works with three variants of the layer, all without biases.
         # One is the original form and two with only the positive or
         # negative weights.
+        if copy_weights:
+            weights = layer.get_weights()[:-1]
+            positive_weights = [x * (x > 0) for x in weights]
+            negative_weights = [x * (x < 0) for x in weights]
+        else:
+            weights = layer.weights[:-1]
+            positive_weights = [x * kbackend.to_floatx(x > 0) for x in weights]
+            negative_weights = [x * kbackend.to_floatx(x < 0) for x in weights]
+
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=False,
@@ -351,17 +386,13 @@ class BoundedRule(kgraph.ReverseMappingBase):
         self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=False,
+            weights=positive_weights,
             name_template="reversed_kernel_positive_%s")
         self._layer_wo_act_negative = kgraph.copy_layer_wo_activation(
             layer,
             keep_bias=False,
+            weights=negative_weights,
             name_template="reversed_kernel_negative_%s")
-        positive_weights = [x * (x > 0)
-                            for x in self._layer_wo_act_positive.get_weights()]
-        negative_weights = [x * (x < 0)
-                            for x in self._layer_wo_act_negative.get_weights()]
-        self._layer_wo_act_positive.set_weights(positive_weights)
-        self._layer_wo_act_negative.set_weights(negative_weights)
 
     # TODO: check if this is a correct implementation.
     def apply(self, Xs, Ys, Rs, reverse_state):
@@ -410,16 +441,22 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
     for alpha=1, beta=0 and assumes inputs x >= 0.
     """
 
-    def __init__(self, layer, state):
+    def __init__(self, layer, state, copy_weights=True):
         # The z-plus rule only works with positive weights and
         # no biases.
         #TODO: assert that layer inputs are always >= 0
+        if copy_weights:
+            weights = [x * kbackend.to_floatx(x > 0)
+                       for x in layer.get_weights()[:-1]]
+        else:
+            weights = [x * kbackend.to_floatx(x > 0)
+                       for x in layer.weights[:-1]]
+
         self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=False,
+            layer,
+            keep_bias=False,
+            weights=weights,
             name_template="reversed_kernel_positive_%s")
-        tmp = [x * (x > 0)
-               for x in self._layer_wo_act_b_positive.get_weights()]
-        self._layer_wo_act_b_positive.set_weights(tmp)
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))

@@ -151,6 +151,59 @@ def get_layer_neuronwise_io(layer,
         raise Exception()
 
 
+def get_symbolic_weight_names(layer, weights=None):
+    #TODO: documentate.
+
+    if weights is None:
+        weights = layer.weights
+
+    good_guesses = [
+        "kernel",
+        "bias",
+        "gamma",
+        "beta",
+        "moving_mean",
+        "moving_variance",
+        "depthwise_kernel",
+        "pointwise_kernel"
+    ]
+
+    ret = []
+    for weight in weights:
+        for attr_name in good_guesses+dir(layer):
+            if id(weight) == id(getattr(layer, attr_name)):
+                ret.append(attr_name)
+                break
+    if len(weights) != len(ret):
+        raise Exception("Could not find symoblic weight name(s).")
+
+    return ret
+
+
+def update_symbolic_weights(layer, weight_mapping):
+    """
+    Note this does not update the loss or anything alike!
+    Use with caution!
+    """
+    #TODO: documentate.
+
+    trainable_weight_ids = [id(x) for x in layer._trainable_weights]
+    non_trainable_weight_ids = [id(x) for x in layer._non_trainable_weights]
+
+    for name, weight in six.iteritems(weight_mapping):
+        current_weight = getattr(layer, name)
+        current_weight_id = id(current_weight)
+
+        if current_weight_id in trainable_weight_ids:
+            idx = trainable_weight_ids.index(current_weight_id)
+            layer._trainable_weights[idx] = weight
+        else:
+            idx = non_trainable_weight_ids.index(current_weight_id)
+            layer._non_trainable_weights[idx] = weight
+
+        setattr(layer, name, weight)
+
+
 def get_layer_from_config(old_layer,
                           new_config,
                           weights=None,
@@ -164,17 +217,22 @@ def get_layer_from_config(old_layer,
             weights = old_layer.get_weights()
 
     if len(weights) > 0:
-        # init weights
-        n_nodes = get_layer_inbound_count(old_layer)
-        for i in range(n_nodes):
-            new_layer(old_layer.get_input_at(i))
+        input_shapes = old_layer.get_input_shape_at(0)
+        # todo: inspect and set initializers to something fast for speedup
+        new_layer.build(input_shapes)
 
-        are_numpy_weights = isinstance(weights[0], np.ndarray)
-        if are_numpy_weights:
+        is_np_weight = [isinstance(x, np.ndarray) for x in weights]
+        if all(is_np_weight):
             new_layer.set_weights(weights)
         else:
-            raise Exception("This features is buggy.")
-            new_layer.weights[:] = weights
+            if any(is_np_weight):
+                raise ValueError("Expect either all weights to be "
+                                 "np tensors or symbolic tensors.")
+
+            symbolic_names = get_symbolic_weight_names(old_layer)
+            update = {name: weight
+                      for name, weight in zip(symbolic_names, weights)}
+            update_symbolic_weights(new_layer, update)
 
     return new_layer
 
@@ -183,6 +241,7 @@ def copy_layer_wo_activation(layer,
                              keep_bias=True,
                              name_template=None,
                              weights=None,
+                             reuse_symbolic_tensors=False,
                              **kwargs):
     config = layer.get_config()
     if name_template is None:
@@ -194,7 +253,10 @@ def copy_layer_wo_activation(layer,
     if keep_bias is False and config.get("use_bias", False):
         config["use_bias"] = False
         if weights is None:
-            weights = layer.get_weights()[:-1]
+            if reuse_symbolic_tensors:
+                weights = layer.weights[:-1]
+            else:
+                weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
@@ -202,6 +264,7 @@ def copy_layer(layer,
                keep_bias=True,
                name_template=None,
                weights=None,
+               reuse_symbolic_tensors=False,
                **kwargs):
 
     config = layer.get_config()
@@ -212,7 +275,10 @@ def copy_layer(layer,
     if keep_bias is False and config.get("use_bias", False):
         config["use_bias"] = False
         if weights is None:
-            weights = layer.get_weights()[:-1]
+            if reuse_symbolic_tensors:
+                weights = layer.weights[:-1]
+            else:
+                weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
