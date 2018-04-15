@@ -154,7 +154,7 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
-    def __init__(self, layer, state, copy_weights=True):
+    def __init__(self, layer, state, copy_weights=False):
         # W-square rule works with squared weights and no biases.
         if copy_weights:
             weights = [x**2 for x in layer.get_weights()[:-1]]
@@ -187,7 +187,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
 
 class FlatRule(WSquareRule):
-    def __init__(self, layer, state, copy_weights=True):
+    def __init__(self, layer, state, copy_weights=False):
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
@@ -230,7 +230,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                  alpha=None,
                  beta=None,
                  bias=True,
-                 copy_weights=True):
+                 copy_weights=False):
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
@@ -363,7 +363,7 @@ class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
 class BoundedRule(kgraph.ReverseMappingBase):
     # TODO: this only works for relu networks, needs to be extended.
     # TODO: check
-    def __init__(self, layer, state, low=-1, high=1, copy_weights=True):
+    def __init__(self, layer, state, low=-1, high=1, copy_weights=False):
         self._low = low
         self._high = high
 
@@ -441,7 +441,7 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
     for alpha=1, beta=0 and assumes inputs x >= 0.
     """
 
-    def __init__(self, layer, state, copy_weights=True):
+    def __init__(self, layer, state, copy_weights=False):
         # The z-plus rule only works with positive weights and
         # no biases.
         #TODO: assert that layer inputs are always >= 0
