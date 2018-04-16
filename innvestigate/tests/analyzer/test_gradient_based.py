@@ -55,6 +55,17 @@ def test_precommit__BaselineGradient():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__BaselineGradient():
+
+    def method(model):
+        return BaselineGradient(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Gradient():
@@ -72,6 +83,17 @@ def test_precommit__Gradient():
         return Gradient(model)
 
     dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__Gradient():
+
+    def method(model):
+        return Gradient(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
 
 
 ###############################################################################
@@ -98,6 +120,17 @@ def test_precommit__Deconvnet():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__Deconvnet():
+
+    def method(model):
+        return Deconvnet(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__GuidedBackprop():
@@ -115,6 +148,17 @@ def test_precommit__GuidedBackprop():
         return GuidedBackprop(model)
 
     dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__GuidedBackprop():
+
+    def method(model):
+        return GuidedBackprop(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
 
 
 ###############################################################################
@@ -141,6 +185,17 @@ def test_precommit__IntegratedGradients():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__IntegratedGradients():
+
+    def method(model):
+        return IntegratedGradients(model, steps=2)
+
+    dryrun.test_analyzer(method, "imagenet.*")
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -163,3 +218,14 @@ def test_precommit__SmoothGrad():
         return SmoothGrad(model)
 
     dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__SmoothGrad():
+
+    def method(model):
+        return SmoothGrad(model, augment_by_n=2)
+
+    dryrun.test_analyzer(method, "imagenet.*")
