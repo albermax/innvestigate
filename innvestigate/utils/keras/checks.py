@@ -255,6 +255,9 @@ def is_conv_layer(layer, *args, **kwargs):
         keras.layers.convolutional.Conv2DTranspose,
         keras.layers.convolutional.Conv3D,
         keras.layers.convolutional.Conv3DTranspose,
+        keras.layers.convolutional.SeparableConv1D,
+        keras.layers.convolutional.SeparableConv2D,
+        keras.layers.convolutional.DepthwiseConv2D
     )
     return isinstance(layer, CONV_LAYERS)
 
