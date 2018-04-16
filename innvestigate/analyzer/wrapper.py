@@ -99,6 +99,11 @@ class AugmentReduceBase(WrapperBase):
             raise Exception("No debug output at subanalyzer is supported.")
 
         model = self._subanalyzer._analyzer_model
+        if None in model.input_shape[1:]:
+            raise ValueError("The input shape for the model needs "
+                             "to be fully specified (except the batch axis). "
+                             "Model input shape is: %s" % (model.input_shape,))
+
         inputs = model.inputs[:self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
         # todo: check this, index seems not right.
