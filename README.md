@@ -16,7 +16,7 @@ Our goal is to make analyzing neural network's predictions easy!
 ![Different explanation methods on ImageNet.](https://raw.githubusercontent.com/pikinder/nn-patterns/master/images/fig5.png)
 
 
-**If you use this code please cite the following paper:**
+**If you use this code please star the repository and cite the following paper:**
 ```
 TODO: Add link to SW paper.
 ```
