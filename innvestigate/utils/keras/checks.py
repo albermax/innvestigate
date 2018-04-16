@@ -247,14 +247,15 @@ def is_container(layer):
 
 
 def is_conv_layer(layer, *args, **kwargs):
-    #NOTE: args and kwargs are necessary due to the evaluation of the condition in select_rule in relevance_based
-    #not to be confused with is_convnet_layer below
     CONV_LAYERS = (
         keras.layers.convolutional.Conv1D,
         keras.layers.convolutional.Conv2D,
         keras.layers.convolutional.Conv2DTranspose,
         keras.layers.convolutional.Conv3D,
         keras.layers.convolutional.Conv3DTranspose,
+        keras.layers.convolutional.SeparableConv1D,
+        keras.layers.convolutional.SeparableConv2D,
+        keras.layers.convolutional.DepthwiseConv2D
     )
     return isinstance(layer, CONV_LAYERS)
 
