@@ -313,6 +313,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if len(model_output) > 1:
             raise ValueError("Only models with one output tensor are allowed.")
 
+        # TODO Flatten the output before proceeding.
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max()(model_output)
         elif neuron_selection_mode == "index":
