@@ -74,7 +74,8 @@ class BaseLayerTestCase(unittest.TestCase):
         np.random.seed(2349784365)
         K.clear_session()
 
-        for network in networks.iterator(self._network_filter):
+        for network in networks.iterator(self._network_filter,
+                                         clear_sessions=True):
             if six.PY2:
                 self._apply_test(network)
             else:
