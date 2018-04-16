@@ -132,23 +132,23 @@ def _prepare_keras_net(clazz, image_shape,
                        color_coding="RGB",
                        load_weights=False,
                        load_patterns=False):
-    weights = None
-    if load_weights is True:
-        weights = "imagenet"
-
-    model = clazz(weights=weights)
-
     net = {}
-    net["model"] = model
-    net["in"] = model.inputs
-    net["sm_out"] = model.outputs
-    net["out"] = kgraph.pre_softmax_tensors(model.outputs)
-
     net["image_shape"] = image_shape
     if K.image_data_format() == "channels_first":
         net["input_shape"] = [None, 3]+image_shape
     else:
         net["input_shape"] = [None]+image_shape+[3]
+
+    weights = None
+    if load_weights is True:
+        weights = "imagenet"
+    model = clazz(weights=weights, input_shape=net["input_shape"][1:])
+    net["model"] = model
+
+    net["in"] = model.inputs
+    net["sm_out"] = model.outputs
+    net["out"] = kgraph.pre_softmax_tensors(model.outputs)
+
     net["color_coding"] = color_coding
     net["preprocess_f"] = preprocess_f
 
