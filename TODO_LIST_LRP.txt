@@ -1,4 +1,4 @@
-
+1) AddLayer und AVeragePooling als ReverseLayer (ohne weight copy)
 
 2) (redacted) Refactor ReverseLayer [...]
 2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
