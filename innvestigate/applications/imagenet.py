@@ -142,7 +142,8 @@ def _prepare_keras_net(clazz, image_shape,
     weights = None
     if load_weights is True:
         weights = "imagenet"
-    model = clazz(weights=weights, input_shape=net["input_shape"][1:])
+    #model = clazz(weights=weights, input_shape=net["input_shape"][1:])
+    model = clazz(weights=weights)
     net["model"] = model
 
     net["in"] = model.inputs
