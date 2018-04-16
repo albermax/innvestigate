@@ -1,7 +1,7 @@
 1) AddLayer und AVeragePooling als ReverseLayer (ohne weight copy)
 
 2) (redacted) Refactor ReverseLayer [...]
-2.1) Ensure ReverseLayer works for layers without kernels (some LRP methods will make no sense/are the same, others do.)
+2.1) updated: ReverseLayer classes for layers without weight kernels.
 2.1.0) refactor special ReverseLayer code. Add secondary SpecialREverseLayer class, feeding of alternate rule dictionary.
 2.1.1) BatchNormalization: Support for eps / alpha beta / flat type rules.
 2.1.3) Add type layers: Support for eps / alpha beta / flat type rules.
