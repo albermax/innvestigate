@@ -282,8 +282,8 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
                     for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
-            tmp1 = iutils.to_list(grad(X1+Zs+tmp))
-            tmp2 = iutils.to_list(grad(X2+Zs+tmp))
+            tmp1 = iutils.to_list(grad(X1+Z1+tmp))
+            tmp2 = iutils.to_list(grad(X2+Z2+tmp))
             # Re-weight relevance with the input values.
             tmp1 = [keras.layers.Multiply()([a, b])
                     for a, b in zip(X1, tmp1)]
