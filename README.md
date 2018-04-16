@@ -1,5 +1,7 @@
 # iNNvestigate neural networks!
 
+## Note: The library is in under alpha testing! Please let us know if you find any bugs.
+
 ## Introduction
 
 In the recent years neural networks furthered the state of the art in many domains like, e.g., object detection and speech recognition.
@@ -40,7 +42,7 @@ cd innvestigate
 python setup.py test
 ```
 
-The library was developed and tested on a Linux platform with Python 3.5 and Cuda 8.x.
+The library was developed and tested on a Linux platform with Python 3.5 and Cuda 8.x. Currently only the Keras Tensorflow backend is supported.
 
 ## Usage and Examples
 
@@ -56,7 +58,7 @@ The iNNvestigate library contains implementations for the following methods:
   * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598)
 * *interaction:*
   * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
-  * **lrp.* :** *coming soon* [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+  * **lrp.\*:** *coming soon* [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
