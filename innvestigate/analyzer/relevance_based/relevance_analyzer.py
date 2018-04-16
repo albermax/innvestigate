@@ -773,7 +773,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
             lambda layer: not kchecks.only_relu_activation(layer),
             "type": "warning",
             "message": (" is not advised for "
-                        "networks with non-ReLU activations.")
+                        "networks with non-ReLU activations.") #TODO: fix. specify. extend.
         }
         ]
 
@@ -810,7 +810,7 @@ class LRPCompositeB(_LRPFixedParams):
             lambda layer: not kchecks.only_relu_activation(layer),
             "type": "warning",
             "message": (" is not advised for "
-                        "networks with non-ReLU activations.")
+                        "networks with non-ReLU activations.") #TODO: fix. specify. extend.
         }
         ]
 
