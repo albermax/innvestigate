@@ -81,7 +81,6 @@ class BaseLayerTestCase(unittest.TestCase):
             else:
                 with self.subTest(network_name=network["name"]):
                     self._apply_test(network)
-        pass
 
 
 ###############################################################################
@@ -113,7 +112,6 @@ class AnalyzerTestCase(BaseLayerTestCase):
                          (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
-        pass
 
 
 def test_analyzer(method, network_filter):
@@ -153,7 +151,6 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         self.assertFalse(True)
-        pass
 
 
 def test_train_analyzer(method, network_filter):
@@ -211,7 +208,6 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
             all_close_kwargs["atol"] = self._all_close_atol
         #print(analysis1.sum(), analysis2.sum())
         self.assertTrue(np.allclose(analysis1, analysis2, **all_close_kwargs))
-        pass
 
 
 def test_equal_analyzer(method1, method2, network_filter):
@@ -255,7 +251,6 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
                          (1,)+tuple(network["input_shape"][1:]))
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
-        pass
 
 
 def test_serialize_analyzer(method, network_filter):
@@ -292,7 +287,6 @@ class PatternComputerTestCase(BaseLayerTestCase):
         # Dryrun.
         x = np.random.rand(10, *(network["input_shape"][1:]))
         patterns = computer.compute(x)
-        pass
 
 
 def test_pattern_computer(method, network_filter):
