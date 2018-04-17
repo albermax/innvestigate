@@ -125,9 +125,10 @@ class GradientWRT(keras.layers.Layer):
     "Returns gradient wrt to another layer and given gradient,"
     " expects inputs+[output,]."
 
-    def __init__(self, n_inputs, *args, **kwargs):
+    def __init__(self, n_inputs, mask=None, **kwargs):
         self.n_inputs = n_inputs
-        super(GradientWRT, self).__init__(*args, **kwargs)
+        self.mask = mask
+        super(GradientWRT, self).__init__(**kwargs)
 
     def call(self, x):
         assert isinstance(x, (list, tuple))
@@ -136,11 +137,17 @@ class GradientWRT(keras.layers.Layer):
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
         ret = iK.gradients(Xs, Ys, known_Ys)
+        if self.mask is not None:
+            ret = [x for c, x in zip(self.mask, ret) if c]
         self.__workaround__len_ret = len(ret)
         return ret
 
     def compute_output_shape(self, input_shapes):
-        return input_shapes[:self.n_inputs]
+        if self.mask is None:
+            return input_shapes[:self.n_inputs]
+        else:
+            return [x for c, x in zip(self.mask, input_shapes[:self.n_inputs])
+                    if c]
 
     # todo: remove once keras is fixed.
     # this is a workaround for cases when
@@ -579,3 +586,13 @@ class Broadcast(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[0]
+
+
+class Gather(keras.layers.Layer):
+
+    def call(self, inputs):
+        x, index = inputs
+        return iK.gather(x, 1, index)
+
+    def compute_output_shape(self, input_shapes):
+        return (input_shapes[0][0], 1)
