@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import numpy as np
 import pytest
 
 
@@ -56,6 +57,61 @@ def test_precommit__BasicGraphReversal():
     dryrun.test_equal_analyzer(method1,
                                method2,
                                "mnist.*")
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__AnalyzerNetworkBase_neuron_selection_max():
+
+    def method(model):
+        return Gradient(model, neuron_selection_mode="max_activation")
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__AnalyzerNetworkBase_neuron_selection_max():
+
+    def method(model):
+        return Gradient(model, neuron_selection_mode="max_activation")
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__AnalyzerNetworkBase_neuron_selection_index():
+
+    class CustomAnalyzer(Gradient):
+
+        def analyze(self, X):
+            index = 0 * np.ones((X.shape[0],), np.int32)
+            return super(CustomAnalyzer, self).analyze(X, index)
+
+    def method(model):
+        return CustomAnalyzer(model, neuron_selection_mode="index")
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__AnalyzerNetworkBase_neuron_selection_index():
+
+    class CustomAnalyzer(Gradient):
+
+        def analyze(self, X):
+            index = 3 * np.ones((X.shape[0],), np.int32)
+            return super(CustomAnalyzer, self).analyze(X, index)
+
+    def method(model):
+        return CustomAnalyzer(model, neuron_selection_mode="index")
+
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################
