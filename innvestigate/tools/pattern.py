@@ -184,7 +184,10 @@ class LinearPattern(BasePattern):
         return ilayers.OnesLike()(Ys[0])
 
     def get_stats_from_batch(self):
-        layer = kgraph.copy_layer_wo_activation(self.layer, keep_bias=False)
+        # todo: reuse_sybmolic tensors and apply once to ALL input tensors
+        layer = kgraph.copy_layer_wo_activation(self.layer,
+                                                keep_bias=False,
+                                                reuse_symbolic_tensors=False)
         Xs, Ys = _get_active_neuron_io(layer, self._active_node_indices)
         if len(Ys) != 1:
             raise ValueError("Assume that kernel layer have only one output.")
