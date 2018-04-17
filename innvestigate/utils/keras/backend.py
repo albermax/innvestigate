@@ -60,7 +60,6 @@ def gradients(Xs, Ys, known_Ys):
     else:
         # todo: add cntk
         raise NotImplementedError()
-    pass
 
 
 ###############################################################################
@@ -83,7 +82,6 @@ def is_not_finite(x):
     else:
         # todo: add cntk
         raise NotImplementedError()
-    pass
 
 
 ###############################################################################

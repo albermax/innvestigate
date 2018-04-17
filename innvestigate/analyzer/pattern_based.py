@@ -223,7 +223,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             workers=workers,
             use_multiprocessing=use_multiprocessing,
             verbose=verbose)
-        pass
 
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
