@@ -27,6 +27,7 @@ from ..utils.keras import graph as kgraph
 
 
 __all__ = [
+    "NotAnalyzeableModelException",
     "AnalyzerBase",
 
     "TrainerMixin",
@@ -40,6 +41,11 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
+class NotAnalyzeableModelException(Exception):
+    """Indicates that the model cannot be analyzed by an analyzer."""
+    pass
 
 
 class AnalyzerBase(object):
@@ -82,7 +88,7 @@ class AnalyzerBase(object):
             for check_count, message, check_type in tmp:
                 if check_count > 0:
                     if check_type == "exception":
-                        raise Exception(message)
+                        raise NotAnalyzeableModelException(message)
                     elif check_type == "warning":
                         # TODO: fix only first warning is showed.
                         # but all should be.
