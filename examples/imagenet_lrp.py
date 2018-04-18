@@ -50,9 +50,6 @@ if __name__ == "__main__":
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
     pattern_type = False
 
-    # Get some example test set images.
-    images, label_to_class_name = eutils.get_imagenet_data()[:2]
-
 
     ###########################################################################
     # Build model.
@@ -167,6 +164,9 @@ if __name__ == "__main__":
     ###########################################################################
     # Analysis.
     ###########################################################################
+    # Get some example test set images.
+    images, label_to_class_name = eutils.get_imagenet_data(
+        net["image_shape"][0])
 
     print(model.summary())#debug
     #collect all model layer classes
@@ -182,12 +182,16 @@ if __name__ == "__main__":
     # Create analyzers.
     analyzers = []
     for method in methods:
-        analyzers.append(innvestigate.create_analyzer(method[0],
-                                                      model,
-                                                      **method[1]))
+        try:
+            analyzer = innvestigate.create_analyzer(method[0],
+                                                    model,
+                                                    **method[1])
+        except innvestigate.NotAnalyzeableModelException:
+            analyzer = None
+        analyzers.append(analyzer)
 
     # Create analysis.
-    analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
+    analysis = np.zeros([len(images), len(analyzers)]+net["image_shape"]+[3])
     text = []
     for i, (image, y) in enumerate(images):
         print ('Image {}: '.format(i), end='')
@@ -204,25 +208,29 @@ if __name__ == "__main__":
                      r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
-            #measure execution time
-            t_start = time.time()
-            print('{} '.format(methods[aidx][-1]), end='')
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            a = analyzer.analyze(image if is_input_analyzer else x)
+            if analzyer:
+                #measure execution time
+                t_start = time.time()
+                print('{} '.format(methods[aidx][-1]), end='')
 
-            t_elapsed = time.time() - t_start
-            print('({:.4f}s) '.format(t_elapsed), end='')
+                a = analyzer.analyze(image if is_input_analyzer else x)
 
-            # Postprocess.
-            if not np.all(np.isfinite(a)):
-                print("Image %i, analysis of %s not finite: nan %s inf %s" %
-                      (i, methods[aidx][3],
-                       np.any(np.isnan(a)), np.any(np.isinf(a))))
-            if not is_input_analyzer:
-                a = postprocess(a)
-            a = methods[aidx][2](a)
+                t_elapsed = time.time() - t_start
+                print('({:.4f}s) '.format(t_elapsed), end='')
+
+                # Postprocess.
+                if not np.all(np.isfinite(a)):
+                    print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                          (i, methods[aidx][3],
+                           np.any(np.isnan(a)), np.any(np.isinf(a))))
+                if not is_input_analyzer:
+                    a = postprocess(a)
+                a = methods[aidx][2](a)
+            else:
+                a = np.zeros_like(image)
             analysis[i, aidx] = a[0]
         print('')
 

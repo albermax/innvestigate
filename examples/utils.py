@@ -40,7 +40,7 @@ def load_image(path, size):
     return ret
 
 
-def get_imagenet_data():
+def get_imagenet_data(size=224):
     base_dir = os.path.dirname(__file__)
     with open(os.path.join(base_dir, "images", "ground_truth")) as f:
         ground_truth = {x.split()[0]: int(x.split()[1])
@@ -49,7 +49,7 @@ def get_imagenet_data():
         image_label_mapping = {int(x.split(":")[0]): x.split(":")[1].strip()
                                for x in f.readlines() if len(x.strip()) > 0}
 
-    images = [(load_image(os.path.join(base_dir, "images", f), 224),
+    images = [(load_image(os.path.join(base_dir, "images", f), size),
                ground_truth[f])
               for f in os.listdir(os.path.join(base_dir, "images"))
               if f.endswith(".JPEG")]

@@ -47,11 +47,7 @@ eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 if __name__ == "__main__":
 
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
-    pattern_type = False #TODO: set to "relu" again
-
-    # Get some example test set images.
-    images, label_to_class_name = eutils.get_imagenet_data()[:2]
-
+    pattern_type = "relu"
 
     ###########################################################################
     # Build model.
@@ -99,6 +95,9 @@ if __name__ == "__main__":
     ###########################################################################
     # Analysis.
     ###########################################################################
+    # Get some example test set images.
+    images, label_to_class_name = eutils.get_imagenet_data(
+        net["image_shape"][0])
 
     patterns = net["patterns"]
     # Methods we use and some properties.
@@ -116,24 +115,27 @@ if __name__ == "__main__":
         # Signal
         ("deconvnet",             {},                       bk_proj, "Deconvnet"),
         ("guided_backprop",       {},                       bk_proj, "Guided Backprop",),
-        #("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
-        #TODO: uncomment pattern stuff
+        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
         # Interaction
-        #("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.epsilon",        {},                       heatmap, "LRP-Epsilon"),
-        ("lrp.composite_a_flat",  {},                     heatmap, "LRP-CompositeAFlat"),
-        ("lrp.composite_b_flat",  {},                     heatmap, "LRP-CompositeBFlat"),
+        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
+        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
+        ("lrp.composite_a_flat",  {},                       heatmap, "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",  {},                       heatmap, "LRP-CompositeBFlat"),
     ]
 
     # Create analyzers.
     analyzers = []
     for method in methods:
-        analyzers.append(innvestigate.create_analyzer(method[0],
-                                                      model,
-                                                      **method[1]))
+        try:
+            analyzer = innvestigate.create_analyzer(method[0],
+                                                    model,
+                                                    **method[1])
+        except innvestigate.NotAnalyzeableModelException:
+            analyzer = None
+        analyzers.append(analyzer)
 
     # Create analysis.
-    analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
+    analysis = np.zeros([len(images), len(analyzers)]+net["image_shape"]+[3])
     text = []
     for i, (image, y) in enumerate(images):
         image = image[None, :, :, :]
@@ -151,15 +153,18 @@ if __name__ == "__main__":
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            a = analyzer.analyze(image if is_input_analyzer else x)
-            # Postprocess.
-            if not np.all(np.isfinite(a)):
-                print("Image %i, analysis of %s not finite: nan %s inf %s" %
-                      (i, methods[aidx][3],
-                       np.any(np.isnan(a)), np.any(np.isinf(a))))
-            if not is_input_analyzer:
-                a = postprocess(a)
-            a = methods[aidx][2](a)
+            if analyzer:
+                a = analyzer.analyze(image if is_input_analyzer else x)
+                # Postprocess.
+                if not np.all(np.isfinite(a)):
+                    print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                          (i, methods[aidx][3],
+                           np.any(np.isnan(a)), np.any(np.isinf(a))))
+                if not is_input_analyzer:
+                    a = postprocess(a)
+                a = methods[aidx][2](a)
+            else:
+                a = np.zeros_like(image)
             analysis[i, aidx] = a[0]
 
     ###########################################################################
