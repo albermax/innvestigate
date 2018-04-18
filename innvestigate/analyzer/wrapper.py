@@ -124,7 +124,6 @@ class AugmentReduceBase(WrapperBase):
             outputs=new_outputs+extra_outputs)
         new_model.compile(optimizer="sgd", loss="mse")
         self._subanalyzer._analyzer_model = new_model
-        pass
 
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:

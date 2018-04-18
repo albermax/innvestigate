@@ -317,12 +317,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max()(model_output)
         elif neuron_selection_mode == "index":
-            # todo: implement index mode
-            raise NotImplementedError("Only a stub present so far.")
-            neuron_indexing = keras.layers.Input(shape=[None, None])
-            neuron_selection_inputs += neuron_indexing
+            neuron_indexing = keras.layers.Input(shape=[None], dtype=np.int32)
+            neuron_selection_inputs += [neuron_indexing]
 
-            model_output = keras.layers.Index()([model_output, neuron_indexing])
+            model_output = ilayers.Gather()(model_output+[neuron_indexing])
         elif neuron_selection_mode == "all":
             pass
         else:
@@ -331,15 +329,21 @@ class AnalyzerNetworkBase(AnalyzerBase):
         model = keras.models.Model(inputs=model_inputs+neuron_selection_inputs,
                                    outputs=model_output)
         tmp = self._create_analysis(model)
-        try:
-            analysis_outputs, debug_outputs, constant_inputs = tmp
-        except (TypeError, ValueError):
-            try:
+        if isinstance(tmp, tuple):
+            if len(tmp) == 3:
+                analysis_outputs, debug_outputs, constant_inputs = tmp
+            elif len(tmp) == 2:
                 analysis_outputs, debug_outputs = tmp
                 constant_inputs = list()
-            except (TypeError, ValueError):
-                analysis_outputs = iutils.to_list(tmp)
-                constant_inputs, debug_outputs = list(), list()
+            else:
+                raise Exception("Unexpected output from _create_analysis.")
+        else:
+            analysis_outputs = iutils.to_list(tmp)
+            constant_inputs, debug_outputs = list(), list()
+
+        if neuron_selection_mode == "index":
+            # Drop index, don't want to analyze that input.
+            analysis_outputs = analysis_outputs[:-1]
 
         self._n_data_input = len(model_inputs)
         self._n_constant_input = len(constant_inputs)
@@ -377,7 +381,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
-            ret = self._analyzer_model.predict_on_batch(X, neuron_selection)
+            ret = self._analyzer_model.predict_on_batch([X, neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
 
@@ -463,14 +467,30 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
     def _reverse_mapping(self, layer):
+        if isinstance(layer, (ilayers.Max, ilayers.Gather)):
+            # Special layers added by AnalyzerNetworkBase
+            # that should not be exposed to user.
+            if isinstance(layer, ilayers.Max):
+                return self._default_reverse_mapping
+            if isinstance(layer, ilayers.Gather):
+                # Gather second paramter is an index and has no gradient.
+                def ignored_index_gradient(*args):
+                    ret = self._default_reverse_mapping(*args,
+                                                        mask=[True, False])
+                    return iutils.to_list(ret)+[None]
+
+                return ignored_index_gradient
+
         for condition, reverse_f in self._conditional_mappings:
             if condition(layer):
                 return reverse_f
         return None
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self,
+                                 Xs, Ys, reversed_Ys, reverse_state,
+                                 mask=None):
         # The gradient.
-        return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
 
     def _head_mapping(self, X):
         return X
