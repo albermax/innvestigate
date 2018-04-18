@@ -326,15 +326,15 @@ class LRP(base.ReverseAnalyzerBase):
         ####################################################################
 
         def select_rule(layer, reverse_state):
-            print("in select_rule:", layer.__class__.__name__ , end='->') #debug
+            ##print("in select_rule:", layer.__class__.__name__ , end='->') #debug
             if use_conditions is True:
                 for condition, rule in rules:
                     if condition(layer, reverse_state):
-                        print(str(rule)) #debug
+                        ##print(str(rule)) #debug
                         return rule
                 raise Exception("No rule applies to layer: %s" % layer)
             else:
-                print(str(rules[0]), '(via pop)') #debug
+                ##print(str(rules[0]), '(via pop)') #debug
                 return rules.pop()
 
 
@@ -342,20 +342,20 @@ class LRP(base.ReverseAnalyzerBase):
         class ReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
                 rule_class = select_rule(layer, state) #NOTE: this prevents refactoring.
-                print("in ReverseLayer.init:",layer.__class__.__name__,"->" , rule_class if isinstance(rule_class, six.string_types) else rule_class.__name__) #debug
+                ##print("in ReverseLayer.init:",layer.__class__.__name__,"->" , rule_class if isinstance(rule_class, six.string_types) else rule_class.__name__) #debug
                 if isinstance(rule_class, six.string_types):
                     rule_class = LRP_RULES[rule_class]
                 self._rule = rule_class(layer, state)
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']) ,  '-> {}.apply'.format(self._rule.__class__.__name__))
+                ##print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']) ,  '-> {}.apply'.format(self._rule.__class__.__name__))
                 return self._rule.apply(Xs, Ys, Rs, reverse_state)
 
 
-        #specialized backward hooks
+        #specialized backward hooks. TODO: add ReverseLayer class handling layers Without kernel: Add and AvgPool
         class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+                ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
                 config = layer.get_config()
 
                 self._center = config['center']
@@ -375,7 +375,7 @@ class LRP(base.ReverseAnalyzerBase):
                 # to BatchNormEpsilonRule. Not pretty, but should work.
 
             def apply(self, Xs, Ys, Rs, reverse_state):
-                print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
+                ##print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
 
                 input_shape = [K.int_shape(x) for x in Xs]
                 if len(input_shape) != 1:
@@ -417,11 +417,7 @@ class LRP(base.ReverseAnalyzerBase):
 
         class AddReverseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                #config = layer.get_config()
-                #for k,v in config.items():
-                #    print (k,v)
-
+                ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
                 self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                                      name_template="reversed_kernel_%s")
 
@@ -451,11 +447,7 @@ class LRP(base.ReverseAnalyzerBase):
 
         class AveragePoolingRerseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
-                print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                #config = layer.get_config()
-                #for k,v in config.items():
-                #    print (k,v)
-
+                ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
                 self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                                      name_template="reversed_kernel_%s")
 
@@ -486,7 +478,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
 
-        # conditional mappings layer_criterion -> Rule on how to handle backward passes through layers.
+        # conditional mappings layer_criterion -> ReverseLayer on how to handle backward passes through layers.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
             (kchecks.is_batch_normalization_layer, BatchNormalizationReverseLayer),
@@ -500,7 +492,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
+        ##print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
         default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
            isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
@@ -508,7 +500,7 @@ class LRP(base.ReverseAnalyzerBase):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            print('return R')
+            ##print('return R')
             return reversed_Ys
         else:
             # This branch covers:
@@ -519,7 +511,7 @@ class LRP(base.ReverseAnalyzerBase):
             # Reshape
             # Concatenate
             # Cropping
-            print('ilayers.GradientWRT')
+            ##print('ilayers.GradientWRT')
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
 
