@@ -171,7 +171,8 @@ def get_symbolic_weight_names(layer, weights=None):
     ret = []
     for weight in weights:
         for attr_name in good_guesses+dir(layer):
-            if id(weight) == id(getattr(layer, attr_name)):
+            if(hasattr(layer, attr_name) and
+               id(weight) == id(getattr(layer, attr_name))):
                 ret.append(attr_name)
                 break
     if len(weights) != len(ret):
