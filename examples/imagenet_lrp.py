@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            if analzyer:
+            if analyzer:
                 #measure execution time
                 t_start = time.time()
                 print('{} '.format(methods[aidx][-1]), end='')
