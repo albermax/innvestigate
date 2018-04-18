@@ -29,6 +29,7 @@
 
 
 ============================================================================================================================
+NOTE(Max): It's time to conclude, thus it would be great if we do thing by thing and finish part by part.
 Important Stuff to deal with:
 + One of the application networks uses Lambda-Layers. Probably needs special treatment.
 + stand der notebooks (aller notebooks) erörtern
