@@ -26,6 +26,7 @@
 7.3) *
 
 9) ipython notebooks showing analyzer setup and influence of parameters
+10) add (custom) pretrained models from our publications with ongoing work
 
 
 ============================================================================================================================
