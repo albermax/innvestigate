@@ -29,6 +29,8 @@ iNNvestigate can be installed with the following command:
 pip install git+https://github.com/albermax/innvestigate
 ```
 
+The library builds upon Keras and one needs to [install a Keras backend to use it.](https://keras.io/backend/).
+
 To use the example scripts and notebooks one additionally needs to install the package matplotlib:
 
 ```bash
