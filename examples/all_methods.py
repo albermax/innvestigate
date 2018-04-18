@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
+import time
 
 import innvestigate
 import innvestigate.utils as iutils
@@ -138,6 +139,7 @@ if __name__ == "__main__":
     analysis = np.zeros([len(images), len(analyzers)]+net["image_shape"]+[3])
     text = []
     for i, (image, y) in enumerate(images):
+        print ('Image {}: '.format(i), end='', flush=True)
         image = image[None, :, :, :]
         # Predict label.
         x = preprocess(image)
@@ -154,7 +156,15 @@ if __name__ == "__main__":
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
             if analyzer:
+                #measure execution time
+                t_start = time.time()
+                print('{} '.format(methods[aidx][-1]), end='', flush=True)
+
                 a = analyzer.analyze(image if is_input_analyzer else x)
+
+                t_elapsed = time.time() - t_start
+                print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
+
                 # Postprocess.
                 if not np.all(np.isfinite(a)):
                     print("Image %i, analysis of %s not finite: nan %s inf %s" %
@@ -166,6 +176,7 @@ if __name__ == "__main__":
             else:
                 a = np.zeros_like(image)
             analysis[i, aidx] = a[0]
+        print('')
 
     ###########################################################################
     # Plot the analysis.
