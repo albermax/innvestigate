@@ -44,3 +44,4 @@ Important Stuff to deal with:
 + talk about perturbation code / optimize / rectify
 + ALLE NOTEBOOKS BRAUCHEN TEXT! Was macht das alles, was ist der sinn, etc, was passiert
    - und input sizes der netze anpassen. das steht in den netzen in applications drin.
++ add notebook looping over single methods (one tf session each) for memory intensive methods.
