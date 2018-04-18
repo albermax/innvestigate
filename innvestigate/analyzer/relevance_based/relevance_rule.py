@@ -33,7 +33,7 @@ from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
-from innvestigate.utils.keras import backend as kbackend
+from innvestigate.utils.keras import backend as iK
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
@@ -247,8 +247,8 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             weights = layer.weights
             if not bias:
                 weights = weights[:-1]
-            positive_weights = [x * kbackend.to_floatx(x > 0) for x in weights]
-            negative_weights = [x * kbackend.to_floatx(x < 0) for x in weights]
+            positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
+            negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
 
         self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
             layer,
@@ -376,8 +376,8 @@ class BoundedRule(kgraph.ReverseMappingBase):
             negative_weights = [x * (x < 0) for x in weights]
         else:
             weights = layer.weights[:-1]
-            positive_weights = [x * kbackend.to_floatx(x > 0) for x in weights]
-            negative_weights = [x * kbackend.to_floatx(x < 0) for x in weights]
+            positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
+            negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
 
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer,
@@ -446,10 +446,10 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
         # no biases.
         #TODO: assert that layer inputs are always >= 0
         if copy_weights:
-            weights = [x * kbackend.to_floatx(x > 0)
+            weights = [x * iK.to_floatx(x > 0)
                        for x in layer.get_weights()[:-1]]
         else:
-            weights = [x * kbackend.to_floatx(x > 0)
+            weights = [x * iK.to_floatx(x > 0)
                        for x in layer.weights[:-1]]
 
         self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(

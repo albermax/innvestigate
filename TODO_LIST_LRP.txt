@@ -27,4 +27,19 @@
 
 9) ipython notebooks showing analyzer setup and influence of parameters
 
-(max) One of the application networks uses Lambda-Layers. Probably needs special treatment.
+
+============================================================================================================================
+Important Stuff to deal with:
++ One of the application networks uses Lambda-Layers. Probably needs special treatment.
++ stand der notebooks (aller notebooks) erörtern
++ create all methods notebook mit +1-2 lrp methoden. !!! all_methods !!! LRP für input indices (index)
+   - primär support für vgg16. für andere models, exception werfen und schwarzes bild returnen wenn irgendwas supported ist.
+   - in welchem format werden bilder erwartet
++ create training code für PLOS mnist-models:
+   - use data loader from imagenet example.
+   - pixel scale to [-1 1]
++ ipython notebook: networks vs methods grid
++ py2/py3 kümmert max. auch install.
++ talk about perturbation code / optimize / rectify
++ ALLE NOTEBOOKS BRAUCHEN TEXT! Was macht das alles, was ist der sinn, etc, was passiert
+   - und input sizes der netze anpassen. das steht in den netzen in applications drin.

@@ -218,7 +218,6 @@ def train_model(model, data, epochs=20):
     score = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
     #print('Test loss:', score[0])
     #print('Test accuracy:', score[1])
-    pass
 
 
 def extract_2d_patches(X, conv_layer):

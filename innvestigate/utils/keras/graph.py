@@ -463,7 +463,6 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         outputs = model.outputs
 
         executed_nodes = reversed(reverse_executed_nodes)
-        pass
 
     # This list contains potentially nodes that are not part
     # final execution graph.
@@ -732,7 +731,6 @@ def reverse_model(model, reverse_mappings,
     def _print(s):
         if verbose is True:
             print(s)
-        pass
 
     # Initialize structure that keeps track of reversed tensors ###############
 

@@ -23,6 +23,7 @@ __all__ = [
     "gradients",
     "is_not_finite",
     "extract_conv2d_patches",
+    "index",
 ]
 
 
@@ -59,7 +60,6 @@ def gradients(Xs, Ys, known_Ys):
     else:
         # todo: add cntk
         raise NotImplementedError()
-    pass
 
 
 ###############################################################################
@@ -82,7 +82,6 @@ def is_not_finite(x):
     else:
         # todo: add cntk
         raise NotImplementedError()
-    pass
 
 
 ###############################################################################
@@ -114,6 +113,26 @@ def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
             # todo: check if we need to permute again.xs
             pass
         return ret
+    else:
+        # todo: add cntk
+        raise NotImplementedError()
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def gather(x, axis, indices):
+    backend = K.backend()
+    if backend == "theano":
+        # todo: add theano function.
+        raise NotImplementedError()
+    elif backend == "tensorflow":
+        # no global import => do not break if module is not present
+        import tensorflow
+
+        return tensorflow.gather(x, indices, axis=axis)
     else:
         # todo: add cntk
         raise NotImplementedError()
