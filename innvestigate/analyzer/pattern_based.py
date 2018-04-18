@@ -16,6 +16,10 @@ import six
 
 import keras.activations
 import keras.backend as K
+import keras.engine.topology
+import keras.layers
+import keras.layers.core
+import keras.layers.pooling
 import keras.models
 import keras
 import numpy as np
@@ -40,6 +44,25 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
+SUPPORTED_LAYER_PATTERNNET = (
+    keras.engine.topology.InputLayer,
+    keras.layers.convolutional.Conv2D,
+    keras.layers.core.Dense,
+    keras.layers.core.Dropout,
+    keras.layers.core.Flatten,
+    keras.layers.core.Masking,
+    keras.layers.core.Permute,
+    keras.layers.core.Reshape,
+    keras.layers.Concatenate,
+    keras.layers.pooling.GlobalMaxPooling1D,
+    keras.layers.pooling.GlobalMaxPooling2D,
+    keras.layers.pooling.GlobalMaxPooling3D,
+    keras.layers.pooling.MaxPooling1D,
+    keras.layers.pooling.MaxPooling2D,
+    keras.layers.pooling.MaxPooling3D,
+)
 
 
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
@@ -82,10 +105,18 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                 "message": ("PatternNet is only well defined for "
                             "convolutional neural networks."),
             },
+            # Clear cut, only support layers the method is developed for now.
+            {
+                "check":
+                lambda layer: not isinstance(layer, SUPPORTED_LAYER_PATTERNNET),
+                "type": "exception",
+                "message": ("PatternNet is only well defined for "
+                            "conv2d/max-pooling/dense layers."),
+            },
             {
                 "check":
                 lambda layer: kchecks.is_average_pooling(layer),
-                "type": "warning",
+                "type": "exception",
                 "message": ("PatternNet is only well defined for "
                             "max-pooling pooling layers."),
             },
