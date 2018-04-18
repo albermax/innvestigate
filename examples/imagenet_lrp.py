@@ -168,7 +168,7 @@ if __name__ == "__main__":
     images, label_to_class_name = eutils.get_imagenet_data(
         net["image_shape"][0])
 
-    print(model.summary())#debug
+    #print(model.summary())#debug
     #collect all model layer classes
     all_layer_classes = list(set([l.__class__.__name__ for  l in model.layers]))
     print("{} contains the following layers: {}".format(netname, all_layer_classes))
