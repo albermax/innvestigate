@@ -29,11 +29,30 @@ def fetch_data(channels_first):
     return x_train, y_train, x_test, y_test
 
 
-def preprocess(X, zero_mean):
-    X.copy()
-    X /= 255
-    if zero_mean:
-        X -= 0.5
+# def preprocess(X, zero_mean):
+#     X.copy()
+#     X /= 255
+#     if zero_mean:
+#         X -= 0.5
+#     return X
+
+def preprocess(X, input_range=[0,1]):
+    #generically shifts data from interval
+    #[a, b] to interval [c, d]
+    # assumes that theoretical min and max values are populated.
+    assert len(input_range) == 2, 'Input range must be of length 2, but was {}'.format(len(input_range))
+    assert input_range[0] < input_range[1], 'Values in input_range must be ascending. have been {}'.format(input_range)
+
+    a, b = X.min(), X.max()
+    c, d = input_range
+
+    #shift original data to [0, b-a] (and copy)
+    X = X - a
+    #scale to new range gap [0, d-c]
+    X /= (b-a)
+    X *= (d-c)
+    #shift to desired output range
+    X += c
     return X
 
 
