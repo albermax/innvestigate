@@ -55,7 +55,7 @@ if __name__ == "__main__":
     image_n = args.integer
     netnames = args.nets
     n_nets = len(netnames)
-    n_analyses = 9
+    n_analyses = 10             #TODO: undo hardcoding
 
     pattern_type = "relu"
 
@@ -169,6 +169,8 @@ if __name__ == "__main__":
                 a = postprocess(a)
             a = methods[aidx][2](a)
             analysis[i, aidx] = a[0]
+
+            print('Finished analysis of {}'.format(methods[aidx][3]))
 
         ###########################################################################
         # Plot the analysis.
