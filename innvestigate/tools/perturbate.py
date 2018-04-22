@@ -44,6 +44,8 @@ class Perturbation:
                                                                             size=x.shape)  # TODO scale?
             elif perturbation_function == "mean":
                 self.perturbation_function = np.mean
+            elif perturbation_function == "invert":
+                self.perturbation_function = lambda x: -x
             else:
                 raise ValueError("Perturbation function type '{}' not known.".format(perturbation_function))
         elif callable(perturbation_function):
@@ -59,8 +61,6 @@ class Perturbation:
         self.pad_mode = pad_mode  # numpy.pad
 
         self.in_place = in_place
-        if in_place:
-            raise NotImplementedError("In-place perturbation is not supported yet.")  # TODO
 
     @staticmethod
     def compute_perturbation_mask(aggregated_regions, ratio):
@@ -137,6 +137,8 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
+        if not self.in_place:
+            x = np.copy(x)
         assert analysis.shape == x.shape, analysis.shape
         original_shape = x.shape
         # reduce the analysis along channel axis -> n x 1 x h x w
@@ -197,7 +199,7 @@ class PerturbationAnalysis:
             raise NotImplementedError(
                 "Not recomputing the analysis is not supported yet.")
 
-    def compute_on_batch(self, x):
+    def compute_on_batch(self, x, return_analysis=False):
         """
         Computes the analysis and perturbes the input batch accordingly.
 
@@ -206,7 +208,10 @@ class PerturbationAnalysis:
         """
         a = self.analyzer.analyze(x)
         x_perturbated = self.perturbation.perturbate_on_batch(x, a)
-        return x_perturbated
+        if return_analysis:
+            return x_perturbated, a
+        else:
+            return x_perturbated
 
     def evaluate_on_batch(self, x, y, sample_weight=None):
         """
@@ -326,6 +331,7 @@ class PerturbationAnalysis:
         scores.append(self.model.evaluate_generator(self.generator))
         self.perturbation.ratio = 0  # Reset ratio of Perturbation
         for step in range(self.steps):
+            print("Step {}".format(step + 1))
             if self.perturbation.ratio >= 1:
                 print("Perturbed all regions after {} steps, stopping now.".format(step))
                 break
