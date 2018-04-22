@@ -61,8 +61,6 @@ class Perturbation:
         self.pad_mode = pad_mode  # numpy.pad
 
         self.in_place = in_place
-        if in_place:
-            raise NotImplementedError("In-place perturbation is not supported yet.")  # TODO
 
     @staticmethod
     def compute_perturbation_mask(aggregated_regions, ratio):
@@ -139,6 +137,8 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
+        if not self.in_place:
+            x = np.copy(x)
         assert analysis.shape == x.shape, analysis.shape
         original_shape = x.shape
         # reduce the analysis along channel axis -> n x 1 x h x w
