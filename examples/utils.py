@@ -108,7 +108,7 @@ def plot_image_grid(grid,
                               horizontalalignment='right'
                               )
             if c == n_cols-1:
-                txt_right = 'pre-softmax activation:{}\n'.format(presm)
+                txt_right = 'logit:{}\n'.format(presm)
                 txt_right += 'prob: {}'.format(prob)
                 ax2.set_ylabel(txt_right,
                               rotation=0,
