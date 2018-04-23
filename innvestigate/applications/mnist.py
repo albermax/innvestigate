@@ -47,7 +47,7 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 
-
+# pre-trained models from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
 PRETRAINED_MODELS = {"pretrained_plos_long_relu":
                         {"file":"plos-mnist-rect-long.h5",
                          "url" : "https://www.dropbox.com/s/26w7i58qqcuosn4/plos-mnist-rect-long.h5"

@@ -88,6 +88,10 @@ def plot_image_grid(grid,
             ax.set_xticks([])
             ax.set_yticks([])
 
+            ax2 = ax.twinx()
+            ax2.set_xticks([])
+            ax2.set_yticks([])
+
             if not r: #method names
                 ax.set_title(col_labels[c],
                              rotation=22.5,
@@ -96,13 +100,21 @@ def plot_image_grid(grid,
             if not c: #label + prediction info
                 lbl, presm, prob, yhat = row_labels[r]
                 txt = 'label: {}\n'.format(lbl)
-                txt += 'pred: {}\n'.format(yhat)
-                txt += '{} {}'.format(presm, prob)
+                txt += 'pred: {}'.format(yhat)
+                #txt += '{} {}'.format(presm, prob)
                 ax.set_ylabel(txt,
                               rotation=0,
                               verticalalignment='center',
                               horizontalalignment='right'
                               )
+            if c == n_cols-1:
+                txt_right = 'logit:{}\n'.format(presm)
+                txt_right += 'prob: {}'.format(prob)
+                ax2.set_ylabel(txt_right,
+                              rotation=0,
+                              verticalalignment='center',
+                              horizontalalignment='left'
+                               )
 
     if file_name is None:
         plt.show()
