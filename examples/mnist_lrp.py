@@ -32,7 +32,7 @@ import keras.backend as K
 from keras.datasets import mnist
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Input
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, SGD, Adam
 
 import innvestigate
 import innvestigate.utils as iutils
@@ -43,193 +43,90 @@ import innvestigate.applications.mnist
 
 
 base_dir = os.path.dirname(__file__)
+#import utils.py as eutils and utils_mnist.py as mutils in non-module environment
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
+mutils = imp.load_source("utils_mnist", os.path.join(base_dir, "utils_mnist.py"))
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def fetch_data(channels_first):
-    # the data, shuffled and split between train and test sets
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-    if channels_first:
-        x_train = x_train.reshape(60000, 1, 28, 28)
-        x_test = x_test.reshape(10000, 1, 28, 28)
-    else:
-        x_train = x_train.reshape(60000, 28, 28, 1)
-        x_test = x_test.reshape(10000, 28, 28, 1)
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
-
-    return x_train, y_train, x_test, y_test
-
-
-def create_model(channels_first, modelname, **kwargs):
-    num_classes = 10
-
-    if channels_first:
-        input_shape = (None, 1, 28, 28)
-    else:
-        input_shape = (None, 28, 28, 1)
-
-
-    if modelname in innvestigate.applications.mnist.__all__: # load PreTrained models
-        model_init_fxn = getattr(innvestigate.applications.mnist, modelname)
-        model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
-
-    elif modelname in innvestigate.utils.tests.networks.base.__all__:
-        network_init_fxn = getattr(innvestigate.utils.tests.networks.base, modelname)
-        network = network_init_fxn(input_shape,
-                                   num_classes,
-                                   **kwargs)
-        model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
-        model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
-    else:
-        raise ValueError("Invalid model name {}".format(modelname))
-
-    return model_wo_sm, model_w_sm
-
-
-def train_model(model, data, n_epochs=20):
-    batch_size = 128
-    num_classes = 10
-    epochs = n_epochs
-
-    x_train, y_train, x_test, y_test = data
-    # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
-
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=RMSprop(),
-                  metrics=['accuracy'])
-
-    history = model.fit(x_train, y_train,
-                        batch_size=batch_size,
-                        epochs=epochs,
-                        verbose=1)
-    score = model.evaluate(x_test, y_test, verbose=0)
-    print('Test loss:', score[0])
-    print('Test accuracy:', score[1])
-    pass
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-    # parameters for model and data choice.
-    #        modelname                      input value ranges         n_epochs         kwargs
-    models = {'mlp_2dense':                  ([0, 1],                   2,             {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
-              'mlp_3dense':                  ([0, 1],                   4,             {'dense_units':1024, 'dropout_rate':0.25}),
-              'cnn_2convb_2dense':           ([-.5, .5],                8,             {}),
-              'pretrained_plos_long_relu':   ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pretrained_plos_short_relu':  ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pretrained_plos_long_tanh':   ([-1, 1],                  0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
-              'pretrained_plos_short_tanh':  ([-1, 1],                 0,             {}), #pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+    # A list of predefined models. Set modelname to one of the keys in dict models below.
+    modelname = 'mlp_2dense'
+
+    #Adapt to Play around!
+    #         MODELNAME                      DATA INPUT RANGE           TRAINING EPOCHS     MODEL CREATION KWARGS
+    models = {'mlp_2dense':                  ([-1, 1],                  15,                 {'dense_units':1024, 'dropout_rate':0.25, 'activation':'relu'}),
+              'mlp_3dense':                  ([-1, 1],                  20,                 {'dense_units':1024, 'dropout_rate':0.25}),
+              'cnn_2convb_2dense':           ([-.5, .5],                20,                 {}),
+
+              # pre-trained model from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
+              'pretrained_plos_long_relu':   ([-1, 1],                  0,                  {}),
+              'pretrained_plos_short_relu':  ([-1, 1],                  0,                  {}),
+              'pretrained_plos_long_tanh':   ([-1, 1],                  0,                  {}),
+              'pretrained_plos_short_tanh':  ([-1, 1],                  0,                  {}),
              }
 
     # unpack model params by name
-    modelname = 'pretrained_plos_long_relu' # pick a name from the list above!
     input_range, n_epochs, kwargs = models[modelname]
-    #n_epochs = 0 #optionally change n_epochs manually
 
 
+
+
+    ###########################################################################
+    # Get Data / Set Parameters
+    ###########################################################################
+    pattern_type = "relu"
     channels_first = keras.backend.image_data_format == "channels_first"
-    data = fetch_data(channels_first)
+    data = mutils.fetch_data(channels_first)
     images = [(data[2][i].copy(), data[3][i]) for i in range(10)]
     label_to_class_name = [str(i) for i in range(10)]
 
-    ###########################################################################
-    # Utility function.
-    ###########################################################################
 
-    def preprocess(X, input_range=[0,1]):
-        #generically shifts data from interval
-        #[a, b] to interval [c, d]
-        # assumes that theoretical min and max values are populated.
-        assert len(input_range) == 2, 'Input range must be of length 2, but was {}'.format(len(input_range))
-        assert input_range[0] < input_range[1], 'Values in input_range must be ascending. have been {}'.format(input_range)
-
-        a, b = X.min(), X.max()
-        c, d = input_range
-
-        #shift original data to [0, b-a] (and copy)
-        X = X - a
-        #scale to new range gap [0, d-c]
-        X /= (b-a)
-        X *= (d-c)
-        #shift to desired output range
-        X += c
-        return X
-
-    def postprocess(X):
-        X = X.copy()
-        X = iutils.postprocess_images(X,
-                                      channels_first=channels_first)
-        return X
-
-    def image(X):
-        X = X.copy()
-        X = iutils.postprocess_images(X,
-                                      channels_first=channels_first)
-        return ivis.graymap(X,
-                            input_is_postive_only=True)
-
-    def bk_proj(X):
-        return ivis.graymap(X)
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
 
     ###########################################################################
     # Build model.
     ###########################################################################
-    data_preprocessed = (preprocess(data[0], input_range), data[1],
-                         preprocess(data[2], input_range), data[3])
-    model, modelp = create_model(channels_first, modelname, **kwargs)
-    train_model(modelp, data_preprocessed, n_epochs=n_epochs)
+    data_preprocessed = (mutils.preprocess(data[0], input_range), data[1],
+                         mutils.preprocess(data[2], input_range), data[3])
+    model, modelp = mutils.create_model(channels_first, modelname, **kwargs)
+    mutils.train_model(modelp, data_preprocessed, epochs=n_epochs)
     model.set_weights(modelp.get_weights())
+
+
+
 
     ###########################################################################
     # Analysis.
     ###########################################################################
 
+
+
     # Methods we use and some properties.
     methods = [
-        # NAME             POSTPROCESSING     TITLE
+        # NAME                    OPT.PARAMS               POSTPROC FXN            TITLE
 
         # Show input.
-        ("input",                 {},                       image,   "Input"),
+        ("input",                 {},                       mutils.image,          "Input"),
 
-        #("lrp.z_baseline",        {},                       heatmap, "Gradient*Input"),
-        #("lrp.z",                 {},                       heatmap, "LRP-Z"),
-        #("lrp.z_IB",              {},                       heatmap, "LRP-Z-IB"),
-        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
-        #("lrp.epsilon_IB",        {},                       heatmap, "LRP-Epsilon-IB"),
-        #("lrp.w_square",          {},                       heatmap, "LRP-W-Square"),
-        #("lrp.flat",              {},                       heatmap, "LRP-Flat"),
-        #("lrp.alpha_beta",        {},                       heatmap, "LRP-AB"),
-        #("lrp.alpha_2_beta_1",    {},                       heatmap, "LRP-A2B1"),
-        #("lrp.alpha_2_beta_1_IB", {},                       heatmap, "LRP-A2B1-IB"),
-        #("lrp.alpha_1_beta_0",    {},                       heatmap, "LRP-A1B0"),
-        #("lrp.alpha_1_beta_0_IB", {},                       heatmap, "LRP-A1B0-IB"),
-        #("lrp.z_plus",            {},                       heatmap, "LRP-ZPlus"),
-        #("lrp.z_plus_fast",       {},                       heatmap, "LRP-ZPlusFast"),
-        #("lrp.composite_a",           {},                   heatmap, "LRP-CompositeA"),
-        #("lrp.composite_a_flat",      {},                   heatmap, "LRP-CompositeAFlat"),
-        #("lrp.composite_a_wsquare",      {},                heatmap, "LRP-CompositeAWSquare"),
-        #("lrp.composite_b",           {},                   heatmap, "LRP-CompositeB"),
-        #("lrp.composite_b_flat",      {},                   heatmap, "LRP-CompositeBFlat"),
-        #("lrp.composite_b_wsquare",      {},                heatmap, "LRP-CompositeBWSquare"),
+        # Function
+        ("gradient",              {},                       mutils.graymap,        "Gradient"),
+        ("smoothgrad",            {"noise_scale": 50},      mutils.graymap,        "SmoothGrad"),
+        ("integrated_gradients",  {},                       mutils.graymap,        "Integrated Gradients"),
+
+        # Signal
+        ("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
+        ("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
+        ("pattern.net",           {},                       mutils.bk_proj,        "PatterNet"),
+
+        # Interaction
+        ("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
+        ("lrp.z",                 {},                       mutils.heatmap,         "LRP-Z"),
+        ("lrp.epsilon",           {"epsilon": 1},           mutils.heatmap,         "LRP-Epsilon"),
+        ("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
+        ("lrp.composite_b",       {"epsilon": 1},           mutils.heatmap,         "LRP-CompositeB"),
     ]
 
     # Create analyzers.
@@ -238,6 +135,9 @@ if __name__ == "__main__":
         analyzer = innvestigate.create_analyzer(method[0],
                                                 model,
                                                 **method[1])
+        analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
+                     batch_size=256, verbose=1)
+
         analyzers.append(analyzer)
 
     # Create analysis.
@@ -247,7 +147,7 @@ if __name__ == "__main__":
         print ('Image {}: '.format(i), end='', flush=True)
         image = image[None, :, :, :]
         # Predict label.
-        x = preprocess(image, input_range)
+        x = mutils.preprocess(image, input_range)
         presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
@@ -271,7 +171,7 @@ if __name__ == "__main__":
 
             # Postprocess.
             if not is_input_analyzer:
-                a = postprocess(a)
+                a = mutils.postprocess(a)
             a = methods[aidx][2](a)
             analysis[i, aidx] = a[0]
         print('')
@@ -290,7 +190,7 @@ if __name__ == "__main__":
                            col_label_offset=15,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="mnist_lrp.pdf")
+                           file_name="mnist_all_methods_{}.pdf".format(modelname))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
