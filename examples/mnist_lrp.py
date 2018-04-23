@@ -54,7 +54,7 @@ mutils = imp.load_source("utils_mnist", os.path.join(base_dir, "utils_mnist.py")
 
 if __name__ == "__main__":
     # A list of predefined models. Set modelname to one of the keys in dict models below.
-    modelname = 'pretrained_plos_long_relu'
+    modelname = 'mlp_2dense'
 
     #Adapt to Play around!
     #         MODELNAME                      DATA INPUT RANGE           TRAINING EPOCHS     MODEL CREATION KWARGS
@@ -102,9 +102,7 @@ if __name__ == "__main__":
     # Analysis.
     ###########################################################################
 
-
-
-    # Methods we use and some properties.
+    # Analysis methods and properties
     methods = [
         # NAME                    OPT.PARAMS               POSTPROC FXN            TITLE
 
