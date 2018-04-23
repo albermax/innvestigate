@@ -751,7 +751,7 @@ class LRPZPlusFast(_LRPFixedParams):
 
 
 class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
         self._model_checks = [
         # TODO: Check for non-linear output in general.
         {
@@ -772,7 +772,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
         class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
-                                                       epsilon=1e-3,
+                                                       epsilon=epsilon,
                                                        bias=True,
                                                        **kwargs)
 
@@ -788,7 +788,7 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
 
 
 class LRPCompositeB(_LRPFixedParams):
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
         self._model_checks = [
         # TODO: Check for non-linear output in general.
         {
@@ -809,7 +809,7 @@ class LRPCompositeB(_LRPFixedParams):
         class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
                 super(EpsilonProxyRule, self).__init__(*args,
-                                                       epsilon=1e-3,
+                                                       epsilon=epsilon,
                                                        bias=True,
                                                        **kwargs)
 

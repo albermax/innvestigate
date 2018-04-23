@@ -4,12 +4,15 @@ import keras
 from keras.datasets import mnist
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Input
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import Adam
 
 import innvestigate
 import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
 
+############################
+# Data Preprocessing Utility
+############################
 
 def fetch_data(channels_first):
     # the data, shuffled and split between train and test sets
@@ -29,28 +32,54 @@ def fetch_data(channels_first):
     return x_train, y_train, x_test, y_test
 
 
-def preprocess(X, zero_mean):
-    X.copy()
-    X /= 255
-    if zero_mean:
-        X -= 0.5
+
+def preprocess(X, input_range=[0,1]):
+    #generically shifts data from interval
+    #[a, b] to interval [c, d]
+    # assumes that theoretical min and max values are populated.
+    assert len(input_range) == 2, 'Input range must be of length 2, but was {}'.format(len(input_range))
+    assert input_range[0] < input_range[1], 'Values in input_range must be ascending. have been {}'.format(input_range)
+
+    a, b = X.min(), X.max()
+    c, d = input_range
+
+    #shift original data to [0, b-a] (and copy)
+    X = X - a
+    #scale to new range gap [0, d-c]
+    X /= (b-a)
+    X *= (d-c)
+    #shift to desired output range
+    X += c
     return X
 
 
-def create_model(channels_first, activation, num_classes, dense_units=1024, dropout_rate=0.25):
+############################
+# Model Utility
+############################
+
+def create_model(channels_first, modelname, **kwargs):
+    num_classes = 10
+
     if channels_first:
         input_shape = (None, 1, 28, 28)
     else:
         input_shape = (None, 28, 28, 1)
 
-    network = innvestigate.utils.tests.networks.base.mlp_2dense(
-        input_shape,
-        num_classes,
-		activation = activation,
-        dense_units = dense_units,
-        dropout_rate = dropout_rate)
-    model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
-    model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+
+    if modelname in innvestigate.applications.mnist.__all__: # load PreTrained models
+        model_init_fxn = getattr(innvestigate.applications.mnist, modelname)
+        model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
+
+    elif modelname in innvestigate.utils.tests.networks.base.__all__:
+        network_init_fxn = getattr(innvestigate.utils.tests.networks.base, modelname)
+        network = network_init_fxn(input_shape,
+                                   num_classes,
+                                   **kwargs)
+        model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
+        model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+    else:
+        raise ValueError("Invalid model name {}".format(modelname))
+
     return model_wo_sm, model_w_sm
 
 
@@ -75,7 +104,11 @@ def train_model(model, data, batch_size=128, epochs=20):
     print('Test accuracy:', score[1])
     pass
 
-# Utility function.
+
+
+############################
+# Post Processing Utility
+############################
 
 def postprocess(X):
     X = X.copy()

@@ -5,12 +5,12 @@ import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
 
 
-def preprocess(X):
+def preprocess(X, net):
     X = X.copy()
     X = net["preprocess_f"](X)
     return X
 
-def postprocess(X):
+def postprocess(X, color_conversion, channels_first):
     X = X.copy()
     X = iutils.postprocess_images(X, color_coding=color_conversion, channels_first=channels_first)
     return X
@@ -24,6 +24,7 @@ def bk_proj(X):
     return ivis.project(X)
 
 def heatmap(X):
+    X = ivis.gamma(X, minamp=0, gamma=0.95)
     return ivis.heatmap(X)
 
 def graymap(X):

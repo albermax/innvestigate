@@ -14,13 +14,9 @@ import six
 ###############################################################################
 ###############################################################################
 
-
-import matplotlib
-
 import imp
 import keras.backend as K
 import keras.models
-import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os
@@ -39,7 +35,7 @@ import innvestigate.utils.visualizations as ivis
 
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
-
+in_utils = imp.load_source("utils", os.path.join(base_dir, "utils_imagenet.py"))
 
 ###############################################################################
 ###############################################################################
@@ -47,6 +43,7 @@ eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
 if __name__ == "__main__":
 
+    # pass a model name from innvestigate.applications.imagenet via command line
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
     pattern_type = "relu"
 
@@ -62,36 +59,11 @@ if __name__ == "__main__":
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
 
     ###########################################################################
-    # Utility functions.
+    # Handle Input.
     ###########################################################################
     color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
     channels_first = keras.backend.image_data_format == "channels_first"
 
-    def preprocess(X):
-        X = X.copy()
-        X = net["preprocess_f"](X)
-        return X
-
-    def postprocess(X):
-        X = X.copy()
-        X = iutils.postprocess_images(X,
-                                      color_coding=color_conversion,
-                                      channels_first=channels_first)
-        return X
-
-    def image(X):
-        X = X.copy()
-        return ivis.project(X, absmax=255.0, input_is_postive_only=True)
-
-    def bk_proj(X):
-        X = ivis.clip_quantile(X, 1)
-        return ivis.project(X)
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
 
     ###########################################################################
     # Analysis.
@@ -103,26 +75,30 @@ if __name__ == "__main__":
     patterns = net["patterns"]
     # Methods we use and some properties.
     methods = [
-        # NAME             POSTPROCESSING     TITLE
+        # NAME                    OPT.PARAMS               POSTPROC FXN             TITLE
 
         # Show input.
-        ("input",                 {},                       image,   "Input"),
+        ("input",                 {},                       in_utils.image,         "Input"),
 
         # Function
-        ("gradient",              {},                       graymap, "Gradient"),
-        ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       graymap, "Integrated Gradients"),
+        ("gradient",              {},                       in_utils.graymap,       "Gradient"),
+        ("smoothgrad",            {"noise_scale": 50},      in_utils.graymap,       "SmoothGrad"),
+        ("integrated_gradients",  {},                       in_utils.graymap,       "Integrated Gradients"),
 
         # Signal
-        ("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       bk_proj, "Guided Backprop",),
-        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
+        ("deconvnet",             {},                       in_utils.bk_proj,       "Deconvnet"),
+        ("guided_backprop",       {},                       in_utils.bk_proj,       "Guided Backprop",),
+        ("pattern.net",           {"patterns": patterns},   in_utils.bk_proj,       "PatternNet"),
+
         # Interaction
-        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.epsilon",           {},                       heatmap, "LRP-Epsilon"),
-        ("lrp.composite_a_flat",  {},                       heatmap, "LRP-CompositeAFlat"),
-        ("lrp.composite_b_flat",  {},                       heatmap, "LRP-CompositeBFlat"),
+        ("pattern.attribution",   {"patterns": patterns},   in_utils.heatmap,       "PatternAttribution"),
+        ("lrp.z_baseline",        {},                       in_utils.heatmap,       "Gradient*Input"),
+        ("lrp.z",                 {},                       in_utils.heatmap,       "LRP-Z"),
+        ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap,       "LRP-Epsilon"),
+        ("lrp.composite_a_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeBFlat"),
     ]
+
 
     # Create analyzers.
     analyzers = []
@@ -142,21 +118,21 @@ if __name__ == "__main__":
         print ('Image {}: '.format(i), end='', flush=True)
         image = image[None, :, :, :]
         # Predict label.
-        x = preprocess(image)
+        x = in_utils.preprocess(image, net)
         presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
         text.append((r"%s" % label_to_class_name[y],
                      r"%.2f" % presm.max(),
-                     r"(%.2f)" % prob.max(),
+                     r"%.2f" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
             if analyzer:
-                #measure execution time
+                # Measure execution time
                 t_start = time.time()
                 print('{} '.format(methods[aidx][-1]), end='', flush=True)
 
@@ -171,7 +147,7 @@ if __name__ == "__main__":
                           (i, methods[aidx][3],
                            np.any(np.isnan(a)), np.any(np.isinf(a))))
                 if not is_input_analyzer:
-                    a = postprocess(a)
+                    a = in_utils.postprocess(a, color_conversion, channels_first)
                 a = methods[aidx][2](a)
             else:
                 a = np.zeros_like(image)
@@ -192,7 +168,7 @@ if __name__ == "__main__":
                            col_label_offset=-50,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="all_methods_%s.pdf" % netname)
+                           file_name="all_methods_{}.pdf".format(netname))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
