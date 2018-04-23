@@ -47,7 +47,7 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 
-
+# pre-trained models from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
 PRETRAINED_MODELS = {"pretrained_plos_long_relu":
                         {"file":"plos-mnist-rect-long.h5",
                          "url" : "https://www.dropbox.com/s/26w7i58qqcuosn4/plos-mnist-rect-long.h5"
@@ -71,12 +71,15 @@ def _load_pretrained_net(modelname, new_input_shape):
     filename = PRETRAINED_MODELS[modelname]["file"]
     urlname = PRETRAINED_MODELS[modelname]["url"]
     #model_path = get_file(filename, urlname) #TODO: FIX! corrupts the file?
-    model_path = filename
-    print (model_path)
+    model_path = os.path.expanduser('~') + "/.keras/models/" + filename
+    #print (model_path)
 
     #workaround the more elegant, but dysfunctional solution.
     if not os.path.isfile(model_path):
-        os.system("wget {}".format(urlname))
+        model_dir = os.path.dirname(model_path)
+        if not os.path.isdir(model_dir):
+            os.makedirs(model_dir)
+        os.system("wget {} &&  mv -v {} {}".format(urlname, filename, model_path))
 
 
     model = load_model(model_path)
