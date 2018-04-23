@@ -119,3 +119,4 @@ gamma_test.py
 *.h5
 *.png
 examples/logs
+examples/gpu-logs
