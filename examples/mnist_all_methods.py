@@ -28,7 +28,7 @@ import keras
 from keras.datasets import mnist
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Input
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 
 import innvestigate
 import innvestigate.utils as iutils
@@ -92,7 +92,7 @@ def train_model(model, data):
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer=RMSprop(),
+                  optimizer=Adam(),
                   metrics=['accuracy'])
 
     history = model.fit(x_train, y_train,
@@ -174,11 +174,11 @@ if __name__ == "__main__":
         # Function
         ("gradient",              {},                       graymap, "Gradient"),
         ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
+        ("integrated_gradients",  {},                       graymap, "Integrated Gradients"),
 
         # Signal
         ("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
+        ("guided_backprop",       {},                       bk_proj, "Guided Backprop",),
         ("pattern.net",           {},                       bk_proj, "PatterNet"),
 
         # Interaction
