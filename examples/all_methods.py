@@ -168,7 +168,7 @@ if __name__ == "__main__":
                            col_label_offset=-50,
                            usetex=False,
                            is_fontsize_adaptive=False,
-                           file_name="all_methods_%s.pdf" % netname)
+                           file_name="all_methods_{}.pdf".format(modelname))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
