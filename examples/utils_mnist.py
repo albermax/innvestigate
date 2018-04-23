@@ -32,6 +32,12 @@ def fetch_data(channels_first):
     return x_train, y_train, x_test, y_test
 
 
+# def preprocess(X, zero_mean):
+#     X.copy()
+#     X /= 255
+#     if zero_mean:
+#         X -= 0.5
+#     return X
 
 def preprocess(X, input_range=[0,1]):
     #generically shifts data from interval
