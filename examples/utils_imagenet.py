@@ -24,6 +24,7 @@ def bk_proj(X):
     return ivis.project(X)
 
 def heatmap(X):
+    X = ivis.gamma(X, minamp=0, gamma=0.95)
     return ivis.heatmap(X)
 
 def graymap(X):
