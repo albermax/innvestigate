@@ -47,6 +47,7 @@ in_utils = imp.load_source("utils", os.path.join(base_dir, "utils_imagenet.py"))
 
 if __name__ == "__main__":
 
+    # pass a model name from innvestigate.applications.imagenet via command line
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
     pattern_type = "relu"
 
@@ -62,38 +63,11 @@ if __name__ == "__main__":
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
 
     ###########################################################################
-    # Utility functions.
+    # Handle Input.
     ###########################################################################
     color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
     channels_first = keras.backend.image_data_format == "channels_first"
 
-    """
-    def preprocess(X):
-        X = X.copy()
-        X = net["preprocess_f"](X)
-        return X
-
-    def postprocess(X):
-        X = X.copy()
-        X = iutils.postprocess_images(X,
-                                      color_coding=color_conversion,
-                                      channels_first=channels_first)
-        return X
-
-    def image(X):
-        X = X.copy()
-        return ivis.project(X, absmax=255.0, input_is_postive_only=True)
-
-    def bk_proj(X):
-        X = ivis.clip_quantile(X, 1)
-        return ivis.project(X)
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
-    """
 
     ###########################################################################
     # Analysis.
@@ -105,30 +79,30 @@ if __name__ == "__main__":
     patterns = net["patterns"]
     # Methods we use and some properties.
     methods = [
-        # NAME             POSTPROCESSING     TITLE
+        # NAME                    OPT.PARAMS               POSTPROC FXN             TITLE
 
         # Show input.
-        ("input",                 {},                       in_utils.image,   "Input"),
+        ("input",                 {},                       in_utils.image,         "Input"),
 
         # Function
-        ("gradient",              {},                       in_utils.graymap, "Gradient"),
-        ("smoothgrad",            {"noise_scale": 50},      in_utils.graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       in_utils.graymap, "Integrated Gradients"),
+        ("gradient",              {},                       in_utils.graymap,       "Gradient"),
+        ("smoothgrad",            {"noise_scale": 50},      in_utils.graymap,       "SmoothGrad"),
+        ("integrated_gradients",  {},                       in_utils.graymap,       "Integrated Gradients"),
 
         # Signal
-        ("deconvnet",             {},                       in_utils.bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       in_utils.bk_proj, "Guided Backprop",),
-        ("pattern.net",           {"patterns": patterns},   in_utils.bk_proj, "PatterNet"),
+        ("deconvnet",             {},                       in_utils.bk_proj,       "Deconvnet"),
+        ("guided_backprop",       {},                       in_utils.bk_proj,       "Guided Backprop",),
+        ("pattern.net",           {"patterns": patterns},   in_utils.bk_proj,       "PatternNet"),
 
         # Interaction
-        ("pattern.attribution",   {"patterns": patterns},   in_utils.heatmap, "PatternAttribution"),
-        ("lrp.z_baseline",        {},                       in_utils.heatmap, "Gradient*Input"),
-        ("lrp.z",                 {},                       in_utils.heatmap, "LRP-Z"),
-        ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap, "LRP-Epsilon"),
-        ("lrp.alpha_1_beta_0",    {},                       in_utils.heatmap, "LRP-A1B0"),
-        ("lrp.composite_a_flat",  {"epsilon": 1},           in_utils.heatmap, "LRP-CompositeAFlat"),
-        ("lrp.composite_b_flat",  {"epsilon": 1},           in_utils.heatmap, "LRP-CompositeBFlat"),
+        ("pattern.attribution",   {"patterns": patterns},   in_utils.heatmap,       "PatternAttribution"),
+        ("lrp.z_baseline",        {},                       in_utils.heatmap,       "Gradient*Input"),
+        ("lrp.z",                 {},                       in_utils.heatmap,       "LRP-Z"),
+        ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap,       "LRP-Epsilon"),
+        ("lrp.composite_a_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeBFlat"),
     ]
+
 
     # Create analyzers.
     analyzers = []
@@ -162,7 +136,7 @@ if __name__ == "__main__":
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
             if analyzer:
-                #measure execution time
+                # Measure execution time
                 t_start = time.time()
                 print('{} '.format(methods[aidx][-1]), end='', flush=True)
 
