@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
         text.append((r"%s" % label_to_class_name[y],
                      r"%.2f" % presm.max(),
-                     r"(%.2f)" % prob.max(),
+                     r"%.2f" % prob.max(),
                      r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
