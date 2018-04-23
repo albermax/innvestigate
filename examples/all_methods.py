@@ -14,13 +14,9 @@ import six
 ###############################################################################
 ###############################################################################
 
-
-import matplotlib
-
 import imp
 import keras.backend as K
 import keras.models
-import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import os

@@ -15,14 +15,10 @@ import six
 ###############################################################################
 
 
-import matplotlib
-
-matplotlib.use('Agg')
 
 import imp
 import keras.backend
 import keras.models
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import time
