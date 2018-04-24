@@ -61,23 +61,11 @@ def plot_image_grid(grid,
                     row_labels,
                     col_labels,
                     file_name=None,
-                    row_label_offset=0,
-                    col_label_offset=0,
-					is_fontsize_adaptive=True,
-                    usetex=False,
                     dpi=224):
     n_rows = len(grid)
     n_cols = len(grid[0])
-    shape_per_image = grid[0][0].shape[:2]
-    n_padding = shape_per_image[0]//5
-    shape_per_image_padded = [s + 2 * n_padding for s in shape_per_image]
-    if is_fontsize_adaptive:
-        fontsize = shape_per_image[1]//2  #TODO: what is the best way to scale this?
-    else:
-        fontsize = 10
 
     plt.clf()
-    plt.rc("text", usetex=usetex)
     plt.rc("font", family="sans-serif")
 
     plt.figure(figsize = (n_cols, n_rows)) #TODO figsize
@@ -108,7 +96,7 @@ def plot_image_grid(grid,
                               horizontalalignment='right'
                               )
             if c == n_cols-1:
-                txt_right = 'logit:{}\n'.format(presm)
+                txt_right = 'logit: {}\n'.format(presm)
                 txt_right += 'prob: {}'.format(prob)
                 ax2.set_ylabel(txt_right,
                               rotation=0,

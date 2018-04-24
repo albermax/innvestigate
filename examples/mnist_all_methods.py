@@ -180,10 +180,6 @@ if __name__ == "__main__":
     col_labels = [method[3] for method in methods]
 
     eutils.plot_image_grid(grid, row_labels, col_labels,
-                           row_label_offset=5,
-                           col_label_offset=15,
-                           usetex=False,
-                           is_fontsize_adaptive=False,
                            file_name="mnist_all_methods_{}.pdf".format(modelname))
 
     #clean shutdown for tf.

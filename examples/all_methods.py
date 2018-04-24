@@ -164,10 +164,6 @@ if __name__ == "__main__":
     col_labels = [method[3] for method in methods]
 
     eutils.plot_image_grid(grid, row_labels, col_labels,
-                           row_label_offset=50,
-                           col_label_offset=-50,
-                           usetex=False,
-                           is_fontsize_adaptive=False,
                            file_name="all_methods_{}.pdf".format(netname))
 
     #clean shutdown for tf.
