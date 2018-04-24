@@ -10,6 +10,10 @@ import innvestigate
 import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
 
+import innvestigate.utils
+import innvestigate.utils.tests
+import innvestigate.utils.tests.networks
+
 ############################
 # Data Preprocessing Utility
 ############################
