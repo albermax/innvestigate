@@ -85,6 +85,8 @@ def _load_pretrained_net(modelname, new_input_shape):
     model = load_model(model_path)
     #create replacement input layer with new shape.
     model.layers[0] = keras.layers.InputLayer(input_shape=new_input_shape, name="input_1")
+    for l in model.layers:
+        l.name = "%s_workaround" % l.name
     model = keras.models.Sequential(layers=model.layers)
 
     model_w_sm = clone_model(model)
