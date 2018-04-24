@@ -119,7 +119,7 @@ if __name__ == "__main__":
         #("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
 
         # Interaction
-        ("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
+        #("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
         ("lrp.z",                 {},                       mutils.heatmap,         "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           mutils.heatmap,         "LRP-Epsilon"),
        #("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
@@ -163,9 +163,10 @@ if __name__ == "__main__":
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            #neuronmap = np.zeros_like(presm)
-            #neuronmap[...,neuron_analysis_idx] = 1
-            neuronmap = neuron_analysis_idx
+            neuronmap = np.zeros_like(presm)
+            neuronmap[...,neuron_analysis_idx] = 1
+            #neuronmap = neuron_analysis_idx
+            #neuronmap = np.array([neuron_analysis_idx])
             if is_input_analyzer:
                 a = analyzer.analyze(image, neuron_selection=neuronmap)
             elif isinstance(analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
