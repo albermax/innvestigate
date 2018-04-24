@@ -190,10 +190,12 @@ if __name__ == "__main__":
 
     grid = [[analysis[i, j] for j in range(analysis.shape[1])]
             for i in range(analysis.shape[0])]
-    row_labels = text
-    col_labels = [method[3] for method in methods]
+    label, presm, prob, pred = zip(*text)
+    row_labels_left = [('label: {}'.format(label[i]), 'pred: {}'.format(pred[i])) for i in range(len(label))]
+    row_labels_right = [('logit: {}'.format(presm[i]), 'prob: {}'.format(prob[i])) for i in range(len(label))]
+    col_labels = [''.join(method[3]) for method in methods]
 
-    eutils.plot_image_grid(grid, row_labels, col_labels,
+    eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
                            file_name="mnist_select_neuron_{}_{}.pdf".format(neuron_analysis_idx, modelname))
 
     #clean shutdown for tf.
