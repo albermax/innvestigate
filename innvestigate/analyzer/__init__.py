@@ -30,7 +30,8 @@ from .relevance_based.relevance_analyzer import *
 ###############################################################################
 
 
-# todo: update lrp; it is confusing as is.
+# TODO: update LRP, reduce methods, split into LRP and DTD.
+# Some rules do not make sense when used for the full network, which is confusing.
 def create_analyzer(name, model, **kwargs):
     """ Convenience interface to create analyzers.
 
