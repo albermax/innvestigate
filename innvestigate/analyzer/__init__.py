@@ -29,21 +29,7 @@ from .relevance_based.relevance_analyzer import *
 ###############################################################################
 ###############################################################################
 
-
-# TODO: update LRP, reduce methods, split into LRP and DTD.
-# Some rules do not make sense when used for the full network, which is confusing.
-def create_analyzer(name, model, **kwargs):
-    """ Convenience interface to create analyzers.
-
-    This function is a convenient interface to create analyzer.
-    It allows to address analyzers via names instead of classes.
-
-    :param name: Name of the analyzer.
-    :param model: The model to analyze.
-    :param kwargs: Parameters for the analyzer's init function.
-    :return: An instance of the chosen analyzer.
-    """
-    return {
+analyzers = {
         # Utility.
         "input": Input,
         "random": Random,
@@ -87,4 +73,19 @@ def create_analyzer(name, model, **kwargs):
         # Pattern based
         "pattern.net": PatternNet,
         "pattern.attribution": PatternAttribution,
-    }[name](model, **kwargs)
+    }
+
+# TODO: update LRP, reduce methods, split into LRP and DTD.
+# Some rules do not make sense when used for the full network, which is confusing.
+def create_analyzer(name, model, **kwargs):
+    """ Convenience interface to create analyzers.
+
+    This function is a convenient interface to create analyzer.
+    It allows to address analyzers via names instead of classes.
+
+    :param name: Name of the analyzer.
+    :param model: The model to analyze.
+    :param kwargs: Parameters for the analyzer's init function.
+    :return: An instance of the chosen analyzer.
+    """
+    return analyzers[name](model, **kwargs)
