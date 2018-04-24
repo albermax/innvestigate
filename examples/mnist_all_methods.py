@@ -113,7 +113,7 @@ if __name__ == "__main__":
         # Signal
         ("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
         ("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
-        ("pattern.net",           {},                       mutils.bk_proj,        "PatterNet"),
+        ("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
 
         # Interaction
         ("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
