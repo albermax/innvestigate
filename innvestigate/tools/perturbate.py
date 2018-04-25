@@ -12,6 +12,7 @@ import six
 import numpy as np
 import math
 import warnings
+import time
 
 import keras
 from keras.utils import Sequence
@@ -182,9 +183,11 @@ class PerturbationAnalysis:
     :type ratio: float
     :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
     :type recompute_analysis: bool
+    :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, steps=1, ratio=0.05, recompute_analysis=True):
+    def __init__(self, analyzer, model, generator, perturbation, steps=1, ratio=0.05, recompute_analysis=True,
+                 verbose=False):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
@@ -198,6 +201,8 @@ class PerturbationAnalysis:
         if not self.recompute_analysis:
             raise NotImplementedError(
                 "Not recomputing the analysis is not supported yet.")
+
+        self.verbose = verbose
 
     def compute_on_batch(self, x, return_analysis=False):
         """
@@ -330,13 +335,25 @@ class PerturbationAnalysis:
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
         self.perturbation.ratio = 0  # Reset ratio of Perturbation
+        time_start = time.time()
         for step in range(self.steps):
-            print("Step {}".format(step + 1))
+            tic = time.time()
             if self.perturbation.ratio >= 1:
                 print("Perturbed all regions after {} steps, stopping now.".format(step))
                 break
             self.perturbation.ratio += min(self.ratio, 1.0)
+            if self.verbose:
+                print("Step {} of {}: {:.0f}% of pixels perturbated.".format(step + 1, self.steps,
+                                                                             100.0 * self.perturbation.ratio), end=" ")
             scores.append(self.evaluate_generator(self.generator))
+            toc = time.time()
+            if self.verbose:
+                print("Time elapsed: {:.3f} seconds.".format(toc - tic))
+        time_end = time.time()
+
+        if self.verbose:
+            print("Time elapsed for {} steps: {:.3f} seconds.".format(step + 1,
+                                                                      time_end - time_start))  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
 
         self.perturbation.ratio = self.ratio  # Reset to original value
         assert len(scores) == self.steps + 1
