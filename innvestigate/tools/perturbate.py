@@ -212,6 +212,10 @@ class PerturbationAnalysis:
         :type x: numpy.ndarray
         """
         a = self.analyzer.analyze(x)
+
+        # Increase perturbation ratio
+        self.perturbation.ratio += min(self.ratio, 1.0)
+
         x_perturbated = self.perturbation.perturbate_on_batch(x, a)
         if return_analysis:
             return x_perturbated, a
@@ -341,7 +345,6 @@ class PerturbationAnalysis:
             if self.perturbation.ratio >= 1:
                 print("Perturbed all regions after {} steps, stopping now.".format(step))
                 break
-            self.perturbation.ratio += min(self.ratio, 1.0)
             if self.verbose:
                 print("Step {} of {}: {:.0f}% of pixels perturbated.".format(step + 1, self.steps,
                                                                              100.0 * self.perturbation.ratio), end=" ")
