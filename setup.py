@@ -44,7 +44,7 @@ def setup():
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber, Sebastian Bach, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans",
+        author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans",
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
         packages=setuptools.find_packages(),
