@@ -1,13 +1,13 @@
 # iNNvestigate neural networks!
 
-## Note: The library is in under alpha testing! Please let us know if you find any bugs.
+## Note: The library is alpha-state and you might encounter issues using it. We are working on the next release. Please let us know if you find any bugs.
 
 ## Introduction
 
 In the recent years neural networks furthered the state of the art in many domains like, e.g., object detection and speech recognition.
 Despite the success neural networks are typically still treated as black boxes. Their internal workings are not fully understood and the basis for their predictions is unclear.
-In the attempt to understand neural networks better several methods were propose, a.i, Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntergratedGradients, LRP, PatternNet-\&Attribution.
-None of the methods is fully solves the stated problems and due to the lack of a reference implementations their comparison is linked to a major effort.
+In the attempt to understand neural networks better several methods were proposed, a.i, Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntergratedGradients, LRP, PatternNet\&-Attribution.
+None of the methods fully solves the stated problems and due to the lack of a reference implementations comparing them is a major effort.
 This library addresses this by providing a common interface and out-of-the-box implementation for many analysis methods.
 Our goal is to make analyzing neural network's predictions easy!
 
@@ -23,13 +23,14 @@ TODO: Add link to SW paper.
 
 ## Installation
 
-iNNvestigate can be installed with the following command:
+iNNvestigate can be installed with the following commands.
+The library is based on Keras and therefore requires a supported [Keras-backend](https://keras.io/backend/):
 
 ```bash
 pip install git+https://github.com/albermax/innvestigate
+# Installing Keras backend
+pip install [tensorflow | theano | cntk]
 ```
-
-The library builds upon Keras and one needs to [install a Keras backend to use it.](https://keras.io/backend/).
 
 To use the example scripts and notebooks one additionally needs to install the package matplotlib:
 
@@ -37,14 +38,15 @@ To use the example scripts and notebooks one additionally needs to install the p
 pip install matplotlib
 ```
 
-The tests of the library can be executed via:
+The library's tests can be executed via:
 ```bash
 git clone https://github.com/albermax/innvestigate.git
 cd innvestigate
 python setup.py test
 ```
 
-The library was developed and tested on a Linux platform with Python 3.5 and Cuda 8.x. Currently only the Keras Tensorflow backend is supported.
+The library was developed and tested on a Linux platform with Python 3.5 and Cuda 8.x.
+Currently only Python 3 and the Keras Tensorflow backend are supported.
 
 ## Usage and Examples
 
@@ -66,8 +68,8 @@ The iNNvestigate library contains implementations for the following methods:
   * **random:** Returns random Gaussian noise.
 
 All the available methods have in common that they try to analyze the output of a specific neuron with respect to input to the neural network.
-Typically one analysis the neuron with the largest activation in the output layer.
-Now for example, given a Keras model, one can create a 'gradient' analyzer:
+Typically one analyses the neuron with the largest activation in the output layer.
+For example, given a Keras model, one can create a 'gradient' analyzer:
 
 ```python
 import innvestigate
@@ -109,11 +111,8 @@ analysis = analyzer.analyze(X_test)
 
 In the directory [examples](https://github.com/albermax/innvestigate/blob/master/examples/) one can find different examples as Python scripts and as Jupyter notebooks:
 
-# TODO: update this list.
-* **[step_by_step_cifar10]():** explains how to compute patterns for a given neural networks and how to use them with PatternNet and PatternLRP.
-* **[step_by_step_imagenet](https://github.com/pikinder/nn-patterns/blob/master/examples/step_by_step_imagenet.ipynb):** explains how to apply pre-computed patterns for the VGG16 network on ImageNet.
-* **[all_methods](https://github.com/pikinder/nn-patterns/blob/master/examples/all_methods.ipynb):** shows how to use the different methods with VGG16 on ImageNet, i.e. the reproduce the explanation grid above.
-
+* **[Imagenet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_example.ipynb):** shows how to use the different methods with VGG16 on ImageNet and how the reproduce the analysis grid above. This example uses pre-trained patterns for PatternNet.
+* **[MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_example.ipynb):** shows how to train and use analyzers on MNIST.
 
 ## Contribution
 
