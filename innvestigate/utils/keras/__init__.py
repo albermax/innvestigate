@@ -21,7 +21,7 @@ from ... import utils as iutils
 
 
 __all__ = [
-    "easy_apply",
+    "apply",
 ]
 
 
@@ -30,12 +30,13 @@ __all__ = [
 ###############################################################################
 
 
-def easy_apply(layer, inputs):
+def apply(layer, inputs):
     """
     Apply a layer to input[s].
 
-    We don't know at this point if layer can handle a list of tensor and
-    just try therefore.
+    A flexible apply that tries to fit input to layers expected input.
+    This is useful when one doesn´t know if a layer expects a single tensor
+    or many.
     """
 
     if isinstance(inputs, list) and len(inputs) > 1:
@@ -49,4 +50,4 @@ def easy_apply(layer, inputs):
     else:
         ret = layer(inputs[0])
 
-    return iutils.listify(ret)
+    return iutils.to_list(ret)

@@ -26,6 +26,7 @@ from . import wrapper
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 __all__ = [
@@ -47,22 +48,55 @@ __all__ = [
 
 
 class BaselineGradient(base.AnalyzerNetworkBase):
+    """Gradient analyzer based on build-in gradient.
 
-    properties = {
-        "name": "BaselineGradient",
-        "show_as": "rgb",
-    }
+    Returns as analysis the function value with respect to the input.
+    The gradient is computed via the build in function.
+    Is mainly used for debugging purposes.
+
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        super(BaselineGradient, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 
 class Gradient(base.ReverseAnalyzerBase):
+    """Gradient analyzer.
 
-    properties = {
-        "name": "Gradient",
-        "show_as": "rgb",
-    }
+    Returns as analysis the function value with respect to the input.
+    The gradient is computed via the librarie's network reverting.
+
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
+        self._model_checks = [
+            # todo: Check for non-linear output in general.
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+        ]
+
+        super(Gradient, self).__init__(model, **kwargs)
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
@@ -74,80 +108,98 @@ class Gradient(base.ReverseAnalyzerBase):
 
 
 class Deconvnet(base.ReverseAnalyzerBase):
+    """Deconvnet analyzer.
 
-    properties = {
-        "name": "Deconvnet",
-        # todo: set right value
-        "show_as": "rgb",
-    }
+    Applies the "deconvnet" algorithm to analyze the model.
 
-    def __init__(self, *args, **kwargs):
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "Deconvnet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+            {
+                "check":
+                lambda layer: not kchecks.only_relu_activation(layer),
+                "type": "warning",
+                "message": ("Deconvnet is only well defined for "
+                            "neural networks with "
+                            "relu activations."),
+            },
         ]
 
         class ReverseLayer(kgraph.ReverseMappingBase):
 
             def __init__(self, layer, state):
                 self._activation = keras.layers.Activation("relu")
-                self._layer_wo_relu = kgraph.get_layer_wo_activation(
+                self._layer_wo_relu = kgraph.copy_layer_wo_activation(
                     layer,
                     name_template="reversed_%s",
                 )
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
                 # apply relus conditioned on backpropagated values.
-                reversed_Ys = kutils.easy_apply(self._activation, reversed_Ys)
+                reversed_Ys = kutils.apply(self._activation, reversed_Ys)
 
                 # apply gradient of forward without relus
-                Ys_wo_relu = kutils.easy_apply(self._layer_wo_relu, Xs)
+                Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
                 return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"),
+            (lambda layer: kchecks.contains_activation(layer, "relu"),
              ReverseLayer),
         ]
-        return super(Deconvnet, self).__init__(*args, **kwargs)
+        super(Deconvnet, self).__init__(model, **kwargs)
 
 
 class GuidedBackprop(base.ReverseAnalyzerBase):
+    """Guided backprop analyzer.
 
-    properties = {
-        "name": "GuidedBackprop",
-        # todo: set right value
-        "show_as": "rgb",
-    }
+    Applies the "guided backprop" algorithm to analyze the model.
 
-    def __init__(self, *args, **kwargs):
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "GuidedBackprop is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check": lambda layer: kchecks.contains_activation(
+                    layer, activation="softmax"),
+                "type": "warning",
+                "message": ("Typically models are analyzed with respect to "
+                            "pre-softmax output."),
+            },
+            {
+                "check":
+                lambda layer: not kchecks.only_relu_activation(layer),
+                "type": "warning",
+                "message": ("Guided Backprop is only well defined for "
+                            "neural networks with "
+                            "relu activations."),
+            },
         ]
 
         def reverse_layer_instance(Xs, Ys, reversed_Ys, reverse_state):
             activation = keras.layers.Activation("relu")
-            reversed_Ys = kutils.easy_apply(activation, reversed_Ys)
+            reversed_Ys = kutils.apply(activation, reversed_Ys)
 
             return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
 
         # todo: add check for other non-linearities.
         self._conditional_mappings = [
-            (lambda layer: kgraph.contains_activation(layer, "relu"),
+            (lambda layer: kchecks.contains_activation(layer, "relu"),
              reverse_layer_instance),
         ]
-        return super(GuidedBackprop, self).__init__(*args, **kwargs)
+        super(GuidedBackprop, self).__init__(model, **kwargs)
 
 
 ###############################################################################
@@ -156,21 +208,19 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 
 class IntegratedGradients(wrapper.PathIntegrator):
+    """Integrated gradient analyzer.
 
-    properties = {
-        "name": "Integrated-Gradients",
-        "show_as": "rgb",
-    }
+    Applies the "integrated gradient" algorithm to analyze the model.
 
-    def __init__(self, model, *args, steps=64, **kwargs):
+    :param model: A Keras model.
+    :param steps: Number of steps to use average along integration path.
+    """
+
+    def __init__(self, model, steps=64, **kwargs):
         subanalyzer = Gradient(model)
-        ret = super(IntegratedGradients, self).__init__(subanalyzer,
-                                                        *args,
-                                                        steps=steps,
-                                                        **kwargs)
-        # Was overwritten by base class.
-        self.properties["name"] = "Integrated-Gradients"
-        return ret
+        super(IntegratedGradients, self).__init__(subanalyzer,
+                                                  steps=steps,
+                                                  **kwargs)
 
 
 ###############################################################################
@@ -179,19 +229,16 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 
 class SmoothGrad(wrapper.GaussianSmoother):
+    """Smooth grad analyzer.
 
-    properties = {
-        "name": "SmoothGrad",
-        "show_as": "rgb",
-    }
+    Applies the "smooth grad" algorithm to analyze the model.
 
-    def __init__(self, model, *args, augment_by_n=64, **kwargs):
+    :param model: A Keras model.
+    :param augment_by_n: Number of distortions to average for smoothing.
+    """
+
+    def __init__(self, model, augment_by_n=64, **kwargs):
         subanalyzer = Gradient(model)
-        ret = super(SmoothGrad, self).__init__(
-            subanalyzer,
-            *args,
-            augment_by_n=augment_by_n,
-            **kwargs)
-        # Was overwritten by base class.
-        self.properties["name"] = "SmoothGrad"
-        return ret
+        super(SmoothGrad, self).__init__(subanalyzer,
+                                         augment_by_n=augment_by_n,
+                                         **kwargs)

@@ -17,8 +17,6 @@ import six
 
 import matplotlib
 
-matplotlib.use('Agg')
-
 import imp
 import keras.backend
 import keras.models
@@ -26,50 +24,14 @@ import keras.preprocessing.image
 import keras.utils
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
 import os
 
 import innvestigate
 import innvestigate.tools
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
-
-
-keras.backend.set_image_data_format("channels_first")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-# todo: make nicer!
-
-
-def load_parameters(filename):
-    f = np.load(filename)
-    ret = [f["arr_%i" % i] for i in range(len(f.keys()))]
-    return ret
-
-
-def load_patterns(filename):
-    f = np.load(filename)
-
-    ret = {}
-    for prefix in ["A", "r", "mu"]:
-        l = sum([x.startswith(prefix) for x in f.keys()])
-        ret.update({prefix: [f["%s_%i" % (prefix, i)] for i in range(l)]})
-
-    return ret
-
-
-def lasagne_weights_to_keras_weights(weights):
-    ret = []
-    for w in weights:
-        if len(w.shape) < 4:
-            ret.append(w)
-        else:
-            ret.append(w.transpose(2, 3, 1, 0))
-    return ret
 
 
 ###############################################################################
@@ -80,12 +42,12 @@ def lasagne_weights_to_keras_weights(weights):
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
-param_file = "./imagenet_224_vgg_16.npz"
-# Note those weights are CC 4.0:
-# See http://www.robots.ox.ac.uk/~vgg/research/very_deep/
-param_url = "https://www.dropbox.com/s/cvjj8x19hzya9oe/imagenet_224_vgg_16.npz?dl=1"
 
-
+# Path to train and validation images of Imagenet.
+# Each directory should contain one directory for each class which contains
+# the according images,
+# see https://keras.io/preprocessing/image/#imagedatagenerator-class
+# function flow_from_directory().
 imagenet_train_dir = "/temp/datasets/imagenet/2012/train_set_small"
 imagenet_val_dir = "/temp/datasets/imagenet/2012/train_set_small"
 
@@ -95,11 +57,9 @@ imagenet_val_dir = "/temp/datasets/imagenet/2012/train_set_small"
 ###############################################################################
 
 if __name__ == "__main__":
-    # Download the necessary parameters for VGG16.
-    eutils.download(param_url, param_file)
 
-    # Get some example test set images.
-    images, label_to_class_name = eutils.get_imagenet_data()
+    netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
+    pattern_type = "relu"
 
     steps = None
     gpu_count = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
@@ -108,11 +68,35 @@ if __name__ == "__main__":
     use_multiprocessing = True
     print("GPU_COUNT", gpu_count)
 
+    ###########################################################################
+    # Build model.
+    ###########################################################################
+    tmp = getattr(innvestigate.applications.imagenet, netname)
+    net = tmp(load_weights=True)
+    model = keras.models.Model(inputs=net["in"], outputs=net["out"])
+    model.compile(optimizer="adam", loss="categorical_crossentropy")
+    modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
+    modelp.compile(optimizer="adam", loss="categorical_crossentropy",
+                   metrics=["accuracy"])
+    if gpu_count > 1:
+        modelp = keras.utils.multi_gpu_model(modelp, gpus=gpu_count)
+        modelp.compile(optimizer="adam",
+                       loss="categorical_crossentropy",
+                       metrics=["accuracy"])
+
+    ###########################################################################
+    # Create data loaders.
+    ###########################################################################
+
+    if keras.backend.image_data_format() == "channels_first":
+        target_size = net["input_shape"][2:4]
+    else:
+        target_size = net["input_shape"][1:3]
+
     def preprocess(X):
-        X = X.copy()[None, :, :, :]
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
-        return X[0]
+        X = X.copy()
+        X = net["preprocess_f"](X)
+        return X
 
     train_data_generator = keras.preprocessing.image.ImageDataGenerator(
         preprocessing_function=preprocess,
@@ -122,35 +106,18 @@ if __name__ == "__main__":
 
     train_generator = train_data_generator.flow_from_directory(
         imagenet_train_dir,
-        target_size=(224, 224),
+        target_size=target_size,
         batch_size=32*gpu_count,
         class_mode=None)
     val_generator = test_data_generator.flow_from_directory(
         imagenet_val_dir,
-        target_size=(224, 224),
+        target_size=target_size,
         batch_size=32*gpu_count,
         class_mode='categorical')
 
     ###########################################################################
-    # Build model.
+    # Evaluate and compute patterns.
     ###########################################################################
-    parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
-    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16()
-    print("Compile model1.")
-    model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
-    model.compile(optimizer="adam", loss="categorical_crossentropy")
-    model.set_weights(parameters)
-    print("Compile model2.")
-    modelp = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["sm_out"])
-    modelp.compile(optimizer="adam",
-                   loss="categorical_crossentropy",
-                   metrics=["accuracy"])
-    modelp.set_weights(parameters)
-    if gpu_count > 1:
-        modelp = keras.utils.multi_gpu_model(modelp, gpus=gpu_count)
-        modelp.compile(optimizer="adam",
-                       loss="categorical_crossentropy",
-                       metrics=["accuracy"])
 
     # Check if all works correctly.
     print("Evaluate:")
@@ -165,7 +132,7 @@ if __name__ == "__main__":
     print("Compute patterns:")
     pattern_computer = innvestigate.tools.PatternComputer(
         model,
-        pattern_type="linear",
+        pattern_type=pattern_type,
         compute_layers_in_parallel=True,
         gpus=gpu_count)
     patterns = pattern_computer.compute_generator(
@@ -176,23 +143,26 @@ if __name__ == "__main__":
         use_multiprocessing=use_multiprocessing,
         verbose=1)
 
-    np.savez("trained_patterns.npz", *patterns)
+    np.savez("%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" %
+             (netname, pattern_type),
+             *patterns)
 
     ###########################################################################
     # Utility functions.
     ###########################################################################
+    color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
+    channels_first = keras.backend.image_data_format == "channels_first"
 
     def preprocess(X):
         X = X.copy()
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
+        X = net["preprocess_f"](X)
         return X
 
     def postprocess(X):
         X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
+        X = iutils.postprocess_images(X,
+                                      color_coding=color_conversion,
+                                      channels_first=channels_first)
         return X
 
     def image(X):
@@ -211,6 +181,8 @@ if __name__ == "__main__":
     ###########################################################################
     # Analysis.
     ###########################################################################
+    # Get some example test set images.
+    images, label_to_class_name = eutils.get_imagenet_data()
 
     # Methods we use and some properties.
     methods = [
@@ -231,7 +203,8 @@ if __name__ == "__main__":
 
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("lrp.z",                 {},                       heatmap, "LRP-Z"),
+        ("lrp.composite_a_flat",  {},                       heatmap, "LRP-CompositeAFlat"),
     ]
 
     # Create analyzers.
@@ -260,6 +233,10 @@ if __name__ == "__main__":
             # Analyze.
             a = analyzer.analyze(image if is_input_analyzer else x)
             # Postprocess.
+            if not np.all(np.isfinite(a)):
+                print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                      (i, methods[aidx][3],
+                       np.any(np.isnan(a)), np.any(np.isinf(a))))
             if not is_input_analyzer:
                 a = postprocess(a)
             a = methods[aidx][2](a)
@@ -274,7 +251,8 @@ if __name__ == "__main__":
     row_labels = text
     col_labels = [method[3] for method in methods]
 
+    file_name = "all_methods_%s_%s.pdf" % (netname, pattern_type)
     eutils.plot_image_grid(grid, row_labels, col_labels,
                            row_label_offset=50,
                            col_label_offset=-50,
-                           usetex=True, file_name="all_methods.pdf")
+                           usetex=True, file_name=file_name)

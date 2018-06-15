@@ -14,25 +14,36 @@ import six
 ###############################################################################
 ###############################################################################
 
-# Todo: fix:
-#from ...utils.tests import dryrun
+
+import pytest
+
+
 from innvestigate.utils.tests import dryrun
 
+from innvestigate.analyzer import Input
+from innvestigate.analyzer import Random
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
-class TestDryRunAnalyzerTestCase(dryrun.AnalyzerTestCase):
-    """
-    Sanity test for the TestCase.
-    """
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Input():
 
-    def _method(self, output_layer):
+    def method(model):
+        return Input(model)
 
-        class TestAnalyzer(object):
-            def analyze(self, X):
-                return X
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
-        return TestAnalyzer()
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Random():
+
+    def method(model):
+        return Random(model)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")

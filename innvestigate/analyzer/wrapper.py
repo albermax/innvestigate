@@ -41,19 +41,12 @@ __all__ = [
 
 class WrapperBase(base.AnalyzerBase):
 
-    properties = {
-        "name": "WrapperBase",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args, **kwargs):
         self._subanalyzer = subanalyzer
         model = None
 
-        self.properties["name"] = "%s_%s" % (
-            self.properties["name"], self._subanalyzer.properties["name"])
-        return super(WrapperBase, self).__init__(model,
-                                                 *args, **kwargs)
+        super(WrapperBase, self).__init__(model,
+                                          *args, **kwargs)
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
@@ -84,15 +77,10 @@ class WrapperBase(base.AnalyzerBase):
 
 class AugmentReduceBase(WrapperBase):
 
-    properties = {
-        "name": "AugmentReduceBase",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args, augment_by_n=2, **kwargs):
         self._augment_by_n = augment_by_n
-        ret = super(AugmentReduceBase, self).__init__(subanalyzer,
-                                                      *args, **kwargs)
+        super(AugmentReduceBase, self).__init__(subanalyzer,
+                                                *args, **kwargs)
 
         self._keras_based_augment_reduce = False
         if isinstance(self._subanalyzer, base.AnalyzerNetworkBase):
@@ -100,7 +88,6 @@ class AugmentReduceBase(WrapperBase):
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
 
-        return ret
 
     def compile_analyzer(self):
         if not self._keras_based_augment_reduce:
@@ -112,8 +99,14 @@ class AugmentReduceBase(WrapperBase):
             raise Exception("No debug output at subanalyzer is supported.")
 
         model = self._subanalyzer._analyzer_model
+        if None in model.input_shape[1:]:
+            raise ValueError("The input shape for the model needs "
+                             "to be fully specified (except the batch axis). "
+                             "Model input shape is: %s" % (model.input_shape,))
+
         inputs = model.inputs[:self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
+        # todo: check this, index seems not right.
         outputs = model.outputs[:self._subanalyzer._n_data_input]
         extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
 
@@ -121,9 +114,9 @@ class AugmentReduceBase(WrapperBase):
             raise Exception("No extra output is allowed "
                             "with this wrapper.")
 
-        new_inputs = iutils.listify(self._keras_based_augment(inputs))
-        tmp = iutils.listify(model(new_inputs))
-        new_outputs = iutils.listify(self._keras_based_reduce(tmp))
+        new_inputs = iutils.to_list(self._keras_based_augment(inputs))
+        tmp = iutils.to_list(model(new_inputs))
+        new_outputs = iutils.to_list(self._keras_based_reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
         new_model = keras.models.Model(
@@ -131,7 +124,6 @@ class AugmentReduceBase(WrapperBase):
             outputs=new_outputs+extra_outputs)
         new_model.compile(optimizer="sgd", loss="mse")
         self._subanalyzer._analyzer_model = new_model
-        pass
 
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:
@@ -139,9 +131,12 @@ class AugmentReduceBase(WrapperBase):
                 self.compile_analyzer()
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
+            # todo: remove python based code.
+            # also tests.
+            raise DeprecationWarning("Not supported anymore.")
             return_list = isinstance(X, list)
 
-            X = self._python_based_augment(iutils.listify(X))
+            X = self._python_based_augment(iutils.to_list(X))
             ret = self._subanalyzer.analyze(X, *args, **kwargs)
             ret = self._python_based_reduce(ret)
 
@@ -163,10 +158,10 @@ class AugmentReduceBase(WrapperBase):
 
     def _keras_based_augment(self, X):
         repeat = ilayers.Repeat(self._augment_by_n, axis=0)
-        return [repeat(x) for x in iutils.listify(X)]
+        return [repeat(x) for x in iutils.to_list(X)]
 
     def _keras_based_reduce(self, X):
-        X_shape = [K.int_shape(x) for x in iutils.listify(X)]
+        X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
         reshape = [ilayers.Reshape((-1, self._augment_by_n)+shape[1:])
                    for shape in X_shape]
         mean = ilayers.Mean(axis=1)
@@ -193,15 +188,10 @@ class AugmentReduceBase(WrapperBase):
 
 class GaussianSmoother(AugmentReduceBase):
 
-    properties = {
-        "name": "GaussianSmoother",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args, noise_scale=1, **kwargs):
         self._noise_scale = noise_scale
-        return super(GaussianSmoother, self).__init__(subanalyzer,
-                                                      *args, **kwargs)
+        super(GaussianSmoother, self).__init__(subanalyzer,
+                                               *args, **kwargs)
 
     def _python_based_augment(self, X):
         tmp = super(GaussianSmoother, self)._python_based_augment(X)
@@ -234,23 +224,18 @@ class GaussianSmoother(AugmentReduceBase):
 
 class PathIntegrator(AugmentReduceBase):
 
-    properties = {
-        "name": "Path-Integrator",
-        "show_as": "rgb",
-    }
-
     def __init__(self, subanalyzer, *args,
                  reference_inputs=0, steps=16, **kwargs):
         self._reference_inputs = reference_inputs
         self._keras_constant_inputs = None
-        return super(PathIntegrator, self).__init__(subanalyzer,
-                                                    *args,
-                                                    augment_by_n=steps,
-                                                    **kwargs)
+        super(PathIntegrator, self).__init__(subanalyzer,
+                                             *args,
+                                              augment_by_n=steps,
+                                              **kwargs)
 
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:
-            reference_inputs = iutils.listify(self._reference_inputs)
+            reference_inputs = iutils.to_list(self._reference_inputs)
             difference = [ri-x for ri, x in zip(reference_inputs, X)]
             self._difference = difference
         return self._difference

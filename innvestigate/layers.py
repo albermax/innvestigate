@@ -86,23 +86,23 @@ def One(reference=None):
 
 class ZerosLike(keras.layers.Layer):
     def call(self, x):
-        return [K.zeros_like(tmp) for tmp in iutils.listify(x)]
+        return [K.zeros_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class OnesLike(keras.layers.Layer):
     def call(self, x):
-        return [K.ones_like(tmp) for tmp in iutils.listify(x)]
+        return [K.ones_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class AsFloatX(keras.layers.Layer):
     def call(self, x):
-        return [iK.to_floatx(tmp) for tmp in iutils.listify(x)]
+        return [iK.to_floatx(tmp) for tmp in iutils.to_list(x)]
 
 
 class FiniteCheck(keras.layers.Layer):
     def call(self, x):
         return [K.sum(iK.to_floatx(iK.is_not_finite(tmp)))
-                for tmp in iutils.listify(x)]
+                for tmp in iutils.to_list(x)]
 
 
 ###############################################################################
@@ -125,9 +125,10 @@ class GradientWRT(keras.layers.Layer):
     "Returns gradient wrt to another layer and given gradient,"
     " expects inputs+[output,]."
 
-    def __init__(self, n_inputs, *args, **kwargs):
+    def __init__(self, n_inputs, mask=None, **kwargs):
         self.n_inputs = n_inputs
-        super(GradientWRT, self).__init__(*args, **kwargs)
+        self.mask = mask
+        super(GradientWRT, self).__init__(**kwargs)
 
     def call(self, x):
         assert isinstance(x, (list, tuple))
@@ -135,10 +136,56 @@ class GradientWRT(keras.layers.Layer):
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
-        return iK.gradients(Xs, Ys, known_Ys)
+        ret = iK.gradients(Xs, Ys, known_Ys)
+        if self.mask is not None:
+            ret = [x for c, x in zip(self.mask, ret) if c]
+        self.__workaround__len_ret = len(ret)
+        return ret
 
     def compute_output_shape(self, input_shapes):
-        return input_shapes[:self.n_inputs]
+        if self.mask is None:
+            return input_shapes[:self.n_inputs]
+        else:
+            return [x for c, x in zip(self.mask, input_shapes[:self.n_inputs])
+                    if c]
+
+    # todo: remove once keras is fixed.
+    # this is a workaround for cases when
+    # wrapper and skip connections are used together.
+    # bring the fix into keras and remove once
+    # keras is patched.
+    def compute_mask(self, inputs, mask=None):
+        """Computes an output mask tensor.
+
+        # Arguments
+            inputs: Tensor or list of tensors.
+            mask: Tensor or list of tensors.
+
+        # Returns
+            None or a tensor (or list of tensors,
+                one per output tensor of the layer).
+        """
+        if not self.supports_masking:
+            if mask is not None:
+                if isinstance(mask, list):
+                    if any(m is not None for m in mask):
+                        raise TypeError('Layer ' + self.name +
+                                        ' does not support masking, '
+                                        'but was passed an input_mask: ' +
+                                        str(mask))
+                else:
+                    raise TypeError('Layer ' + self.name +
+                                    ' does not support masking, '
+                                    'but was passed an input_mask: ' +
+                                    str(mask))
+            # masking not explicitly supported: return None as mask
+
+            # this is the workaround for model.run_internal_graph.
+            # it is required that there as many masks as outputs:
+            return [None for _ in range(self.__workaround__len_ret)]
+        # if masking is explicitly supported, by default
+        # carry over the input mask
+        return mask
 
 
 ###############################################################################
@@ -165,10 +212,10 @@ class _Reduce(keras.layers.Layer):
         else:
             axes = np.arange(len(input_shape))
             if self.keepdims is False:
-                for i in iutils.listify(self.axis):
+                for i in iutils.to_list(self.axis):
                     axes = np.delete(axes, i, 0)
             else:
-                for i in iutils.listify(self.axis):
+                for i in iutils.to_list(self.axis):
                     axes[i] = 1
             return tuple([idx
                           for i, idx in enumerate(input_shape)
@@ -225,6 +272,46 @@ class _Map(keras.layers.Layer):
 class Square(_Map):
     def _apply_map(self, x):
         return K.square(x)
+
+
+class Clip(_Map):
+
+    def __init__(self, min_value, max_value):
+        self._min_value = min_value
+        self._max_value = max_value
+        return super(Clip, self).__init__()
+
+    def _apply_map(self, x):
+        return K.clip(x, self._min_value, self._max_value)
+
+
+class Project(_Map):
+
+    def __init__(self, output_range=False, input_is_postive_only=False):
+        self._output_range = output_range
+        self._input_is_positive_only = input_is_postive_only
+        return super(Project, self).__init__()
+
+    def _apply_map(self, x):
+        def safe_divide(a, b):
+            return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
+
+        absmax = K.max(K.abs(x),
+                       axis=tuple(range(1, len(x.shape))))
+        x = safe_divide(x, absmax)
+
+        if self._output_range not in (False, True):  # True = (-1, +1)
+            output_range = self._output_range
+
+            if not self._input_is_positive_only:
+                x = (x+1) / 2
+            x = K.clip(x, 0, 1)
+
+            x = output_range[0] + (x * (output_range[1]-output_range[0]))
+        else:
+            x = K.clip(x, -1, 1)
+
+        return x
 
 
 class Print(_Map):
@@ -499,3 +586,13 @@ class Broadcast(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[0]
+
+
+class Gather(keras.layers.Layer):
+
+    def call(self, inputs):
+        x, index = inputs
+        return iK.gather(x, 1, index)
+
+    def compute_output_shape(self, input_shapes):
+        return (input_shapes[0][0], 1)

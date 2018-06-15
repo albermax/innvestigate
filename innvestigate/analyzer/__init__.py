@@ -21,16 +21,15 @@ from .wrapper import *
 from .gradient_based import *
 from .misc import *
 from .pattern_based import *
-from .relevance_based import *
+from .relevance_based.relevance_analyzer import *
+
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-
-def create_analyzer(name, model, **kwargs):
-    return {
+analyzers = {
         # Utility.
         "input": Input,
         "random": Random,
@@ -47,21 +46,46 @@ def create_analyzer(name, model, **kwargs):
         "lrp": LRP,
         "lrp.z_baseline": BaselineLRPZ,
         "lrp.z": LRPZ,
-        "lrp.z_WB": LRPZWithBias,
-        "lrp.z_plus": LRPZPlus,
+        "lrp.z_IB": LRPZIgnoreBias,
+
         "lrp.epsilon": LRPEpsilon,
-        "lrp.epsilon_WB": LRPEpsilonWithBias,
+        "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
+
         "lrp.w_square": LRPWSquare,
         "lrp.flat": LRPFlat,
+
         "lrp.alpha_beta": LRPAlphaBeta,
-        "lrp.alpha_1_beta_1": LRPAlpha1Beta1,
-        "lrp.alpha_1_beta_1_WB": LRPAlpha1Beta1WithBias,
+
         "lrp.alpha_2_beta_1": LRPAlpha2Beta1,
-        "lrp.alpha_2_beta_1_WB": LRPAlpha2Beta1WithBias,
+        "lrp.alpha_2_beta_1_IB": LRPAlpha2Beta1IgnoreBias,
         "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
-        "lrp.alpha_1_beta_0_WB": LRPAlpha1Beta0WithBias,
+        "lrp.alpha_1_beta_0_IB": LRPAlpha1Beta0IgnoreBias,
+        "lrp.z_plus": LRPZPlus,
+        "lrp.z_plus_fast": LRPZPlusFast,
+
+        "lrp.composite_a": LRPCompositeA,
+        "lrp.composite_b": LRPCompositeB,
+        "lrp.composite_a_flat": LRPCompositeAFlat,
+        "lrp.composite_b_flat": LRPCompositeBFlat,
+        "lrp.composite_a_wsquare": LRPCompositeAWSquare,
+        "lrp.composite_b_wsquare": LRPCompositeBWSquare,
 
         # Pattern based
         "pattern.net": PatternNet,
         "pattern.attribution": PatternAttribution,
-    }[name](model, **kwargs)
+    }
+
+# TODO: update LRP, reduce methods, split into LRP and DTD.
+# Some rules do not make sense when used for the full network, which is confusing.
+def create_analyzer(name, model, **kwargs):
+    """ Convenience interface to create analyzers.
+
+    This function is a convenient interface to create analyzer.
+    It allows to address analyzers via names instead of classes.
+
+    :param name: Name of the analyzer.
+    :param model: The model to analyze.
+    :param kwargs: Parameters for the analyzer's init function.
+    :return: An instance of the chosen analyzer.
+    """
+    return analyzers[name](model, **kwargs)
