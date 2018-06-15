@@ -97,37 +97,42 @@ if __name__ == "__main__":
     ###########################################################################
     # Analysis.
     ###########################################################################
+    # Select neural network output neuron index for analysis
+    #neuron_analysis_idx = np.array([9])
+    neuron_analysis_idx = 9
 
     # Analysis methods and properties
     methods = [
         # NAME                    OPT.PARAMS               POSTPROC FXN            TITLE
 
         # Show input.
-        ("input",                 {},                       mutils.image,          "Input"),
+        #("input",                 {},                       mutils.image,          "Input"),
 
         # Function
-        ("gradient",              {},                       mutils.graymap,        "Gradient"),
-        ("smoothgrad",            {"noise_scale": 50},      mutils.graymap,        "SmoothGrad"),
-        ("integrated_gradients",  {},                       mutils.graymap,        "Integrated Gradients"),
+        #("gradient",              {},                       mutils.graymap,        "Gradient"),
+        #("smoothgrad",            {"noise_scale": 50},      mutils.graymap,        "SmoothGrad"),
+        #("integrated_gradients",  {},                       mutils.graymap,        "Integrated Gradients"),
 
         # Signal
-        ("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
-        ("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
-        ("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
+        #("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
+        #("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
+        #("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
 
         # Interaction
-        ("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
+        #("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
         ("lrp.z",                 {},                       mutils.heatmap,         "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           mutils.heatmap,         "LRP-Epsilon"),
-        ("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
-        ("lrp.composite_b",       {"epsilon": 1},           mutils.heatmap,         "LRP-CompositeB"),
+       #("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
+       #("lrp.composite_b",       {"epsilon": 1},           mutils.heatmap,         "LRP-CompositeB"),
     ]
+
 
     # Create analyzers.
     analyzers = []
     for method in methods:
         analyzer = innvestigate.create_analyzer(method[0],
                                                 model,
+                                                neuron_selection_mode="index",
                                                 **method[1])
         analyzer.fit(data_preprocessed[0], pattern_type=pattern_type,
                      batch_size=256, verbose=1)
@@ -158,7 +163,16 @@ if __name__ == "__main__":
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            a = analyzer.analyze(image if is_input_analyzer else x)
+            neuronmap = np.zeros_like(presm)
+            neuronmap[...,neuron_analysis_idx] = 1
+            #neuronmap = neuron_analysis_idx
+            #neuronmap = np.array([neuron_analysis_idx])
+            if is_input_analyzer:
+                a = analyzer.analyze(image, neuron_selection=neuronmap)
+            elif isinstance(analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
+                a = analyzer.analyze(x, neuron_selection=neuronmap)
+            else:
+                a = analyzer.analyze(x)
 
             t_elapsed = time.time() - t_start
             print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
@@ -182,7 +196,7 @@ if __name__ == "__main__":
     col_labels = [''.join(method[3]) for method in methods]
 
     eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
-                           file_name="mnist_all_methods_{}.pdf".format(modelname))
+                           file_name="mnist_select_neuron_{}_{}.pdf".format(neuron_analysis_idx, modelname))
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
