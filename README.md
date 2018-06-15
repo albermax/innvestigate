@@ -11,7 +11,7 @@ None of the methods fully solves the stated problems and due to the lack of a re
 This library addresses this by providing a common interface and out-of-the-box implementation for many analysis methods.
 Our goal is to make analyzing neural network's predictions easy!
 
-![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/e27bff97edbeaf5dad8035be70bb0cb5c04cdbba/examples/images/analysis_grid.png)
+![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 
 
 **If you use this code please star the repository and cite the following paper:**
