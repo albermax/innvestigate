@@ -63,12 +63,10 @@ analyzers = {
         "lrp.z_plus": LRPZPlus,
         "lrp.z_plus_fast": LRPZPlusFast,
 
-        "lrp.composite_a": LRPCompositeA,
-        "lrp.composite_b": LRPCompositeB,
-        "lrp.composite_a_flat": LRPCompositeAFlat,
-        "lrp.composite_b_flat": LRPCompositeBFlat,
-        "lrp.composite_a_wsquare": LRPCompositeAWSquare,
-        "lrp.composite_b_wsquare": LRPCompositeBWSquare,
+        "lrp.sequential_preset_a": LRPSequentialPresetA,
+        "lrp.sequential_preset_b": LRPSequentialPresetB,
+        "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
+        "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
 
         # Pattern based
         "pattern.net": PatternNet,
