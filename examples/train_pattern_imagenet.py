@@ -43,6 +43,11 @@ base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
 
+# Path to train and validation images of Imagenet.
+# Each directory should contain one directory for each class which contains
+# the according images,
+# see https://keras.io/preprocessing/image/#imagedatagenerator-class
+# function flow_from_directory().
 imagenet_train_dir = "/temp/datasets/imagenet/2012/train_set_small"
 imagenet_val_dir = "/temp/datasets/imagenet/2012/train_set_small"
 
