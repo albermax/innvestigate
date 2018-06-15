@@ -20,60 +20,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# todo: rename this module!
 __all__ = [
-    "preprocess_images",
-    "postprocess_images",
-
     "project",
     "heatmap",
     "graymap",
+    "gamma"
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def preprocess_images(images, color_coding=None):
-
-    ret = images
-    image_data_format = K.image_data_format()
-    # todo: not very general:
-    channels_first = images.shape[1] in [1, 3]
-    if image_data_format == "channels_first" and not channels_first:
-        ret = ret.transpose(0, 3, 1, 2)
-    if image_data_format == "channels_last" and channels_first:
-        ret = ret.transpose(0, 2, 3, 1)
-
-    assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
-    if color_coding in ["RGBtoBGR", "BGRtoRGB"]:
-        if image_data_format == "channels_first":
-            ret = ret[:, ::-1, :, :]
-        if image_data_format == "channels_last":
-            ret = ret[:, :, :, ::-1]
-
-    return ret
-
-
-def postprocess_images(images, color_coding=None, channels_first=None):
-
-    ret = images
-    image_data_format = K.image_data_format()
-    assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
-    if color_coding in ["RGBtoBGR", "BGRtoRGB"]:
-        if image_data_format == "channels_first":
-            ret = ret[:, ::-1, :, :]
-        if image_data_format == "channels_last":
-            ret = ret[:, :, :, ::-1]
-
-    if image_data_format == "channels_first" and not channels_first:
-        ret = ret.transpose(0, 2, 3, 1)
-    if image_data_format == "channels_last" and channels_first:
-        ret = ret.transpose(0, 3, 1, 2)
-
-    return ret
 
 
 ###############################################################################
@@ -131,6 +83,47 @@ def graymap(X, **kwargs):
     return heatmap(X, cmap_type="gray", **kwargs)
 
 
+def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
+    """
+    apply gamma correction to an input array X
+    while maintaining the relative order of entries,
+    also for negative vs positive values in X.
+    the fxn firstly determines the max
+    amplitude in both positive and negative
+    direction and then applies gamma scaling
+    to the positive and negative values of the
+    array separately, according to the common amplitude.
+
+    :param gamma: the gamma parameter for gamma scaling
+    :param minamp: the smallest absolute value to consider.
+    if not given assumed to be zero (neutral value for relevance,
+        min value for saliency, ...). values above and below
+        minamp are treated separately.
+    :param maxamp: the largest absolute value to consider relative
+    to the neutral value minamp
+    if not given determined from the given data.
+    """
+
+    #prepare return array
+    Y = np.zeros_like(X)
+
+    X = X - minamp # shift to given/assumed center
+    if maxamp is None: maxamp = np.abs(X).max() #infer maxamp if not given
+    X = X / maxamp # scale linearly
+
+    #apply gamma correction for both positive and negative values.
+    i_pos = X > 0
+    i_neg = np.invert(i_pos)
+    Y[i_pos] = X[i_pos]**gamma
+    Y[i_neg] = -(-X[i_neg])**gamma
+
+    #reconstruct original scale and center
+    Y *= maxamp
+    Y += minamp
+
+    return Y
+
+
 def clip_quantile(X, quantile=1):
 
     if not isinstance(quantile, (list, tuple)):
@@ -142,3 +135,10 @@ def clip_quantile(X, quantile=1):
     X[X > high] = high
 
     return X
+
+
+def batch_flatten(x):
+    # Flattens all but the first dimensions of a numpy array, i.e. flatten each sample in a batch
+    if not isinstance(x, np.ndarray):
+        raise TypeError("Only applicable to Numpy arrays.")
+    return x.reshape(x.shape[0], -1)

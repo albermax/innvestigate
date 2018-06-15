@@ -14,59 +14,18 @@ import six
 ###############################################################################
 ###############################################################################
 
-
-import matplotlib
-
-matplotlib.use('Agg')
-
 import imp
-import keras.backend
+import keras.backend as K
 import keras.models
-import matplotlib.pyplot as plt
 import numpy as np
+import sys
 import os
+import time
 
 import innvestigate
+import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
-
-
-keras.backend.set_image_data_format("channels_first")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-# todo: make nicer!
-
-
-def load_parameters(filename):
-    f = np.load(filename)
-    ret = [f["arr_%i" % i] for i in range(len(f.keys()))]
-    return ret
-
-
-def load_patterns(filename):
-    f = np.load(filename)
-
-    ret = {}
-    for prefix in ["A", "r", "mu"]:
-        l = sum([x.startswith(prefix) for x in f.keys()])
-        ret.update({prefix: [f["%s_%i" % (prefix, i)] for i in range(l)]})
-
-    return ret
-
-
-def lasagne_weights_to_keras_weights(weights):
-    ret = []
-    for w in weights:
-        if len(w.shape) < 4:
-            ret.append(w)
-        else:
-            ret.append(w.transpose(2, 3, 1, 0))
-    return ret
 
 
 ###############################################################################
@@ -76,130 +35,124 @@ def lasagne_weights_to_keras_weights(weights):
 
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
-
-param_file = "./imagenet_224_vgg_16.npz"
-# Note those weights are CC 4.0:
-# See http://www.robots.ox.ac.uk/~vgg/research/very_deep/
-param_url = "https://www.dropbox.com/s/cvjj8x19hzya9oe/imagenet_224_vgg_16.npz?dl=1"
-
-pattern_file = "./imagenet_224_vgg_16.pattern_file.A_only.npz"
-pattern_url = "https://www.dropbox.com/s/v7e0px44jqwef5k/imagenet_224_vgg_16.patterns.A_only.npz?dl=1"
-
+in_utils = imp.load_source("utils", os.path.join(base_dir, "utils_imagenet.py"))
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 if __name__ == "__main__":
-    # Download the necessary parameters for VGG16 and the according patterns.
-    eutils.download(param_url, param_file)
-    eutils.download(pattern_url, pattern_file)
 
-    # Get some example test set images.
-    images, label_to_class_name = eutils.get_imagenet_data()[:2]
-
+    # pass a model name from innvestigate.applications.imagenet via command line
+    netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
+    pattern_type = "relu"
 
     ###########################################################################
     # Build model.
     ###########################################################################
-    parameters = lasagne_weights_to_keras_weights(load_parameters(param_file))
-    vgg16 = innvestigate.utils.tests.networks.imagenet.vgg16()
-    model = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["out"])
+    tmp = getattr(innvestigate.applications.imagenet, netname)
+    # todo: specify type of patterns:
+    net = tmp(load_weights=True, load_patterns=pattern_type)
+    model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
-    model.set_weights(parameters)
-    modelp = keras.models.Model(inputs=vgg16["in"], outputs=vgg16["sm_out"])
+    modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
     modelp.compile(optimizer="adam", loss="categorical_crossentropy")
-    modelp.set_weights(parameters)
-
-    patterns = lasagne_weights_to_keras_weights(
-        load_patterns(pattern_file)["A"])
 
     ###########################################################################
-    # Utility functions.
+    # Handle Input.
     ###########################################################################
+    color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
+    channels_first = keras.backend.image_data_format == "channels_first"
 
-    def preprocess(X):
-        X = X.copy()
-        X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
-        X = innvestigate.utils.tests.networks.imagenet.vgg16_preprocess(X)
-        return X
-
-    def postprocess(X):
-        X = X.copy()
-        X = ivis.postprocess_images(X,
-                                    color_coding="BGRtoRGB",
-                                    channels_first=False)
-        return X
-
-    def image(X):
-        X = X.copy()
-        return ivis.project(X, absmax=255.0, input_is_postive_only=True)
-
-    def bk_proj(X):
-        return ivis.project(X)
-
-    def heatmap(X):
-        return ivis.heatmap(X)
-
-    def graymap(X):
-        return ivis.graymap(np.abs(X), input_is_postive_only=True)
 
     ###########################################################################
     # Analysis.
     ###########################################################################
+    # Get some example test set images.
+    images, label_to_class_name = eutils.get_imagenet_data(
+        net["image_shape"][0])
 
+    patterns = net["patterns"]
     # Methods we use and some properties.
     methods = [
-        # NAME             POSTPROCESSING     TITLE
+        # NAME                    OPT.PARAMS               POSTPROC FXN             TITLE
 
         # Show input.
-        ("input",                 {},                       image,   "Input"),
+        ("input",                 {},                       in_utils.image,         "Input"),
 
         # Function
-        ("gradient",              {},                       graymap, "Gradient"),
-        ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
+        ("gradient",              {},                       in_utils.graymap,       "Gradient"),
+        ("smoothgrad",            {"noise_scale": 50},      in_utils.graymap,       "SmoothGrad"),
+        ("integrated_gradients",  {},                       in_utils.graymap,       "Integrated Gradients"),
 
         # Signal
-        ("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
-        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
+        ("deconvnet",             {},                       in_utils.bk_proj,       "Deconvnet"),
+        ("guided_backprop",       {},                       in_utils.bk_proj,       "Guided Backprop",),
+        ("pattern.net",           {"patterns": patterns},   in_utils.bk_proj,       "PatternNet"),
 
         # Interaction
-        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.z_baseline",        {},                       heatmap, "LRP-Z"),
+        ("pattern.attribution",   {"patterns": patterns},   in_utils.heatmap,       "PatternAttribution"),
+        ("lrp.z_baseline",        {},                       in_utils.heatmap,       "Gradient*Input"),
+        ("lrp.z",                 {},                       in_utils.heatmap,       "LRP-Z"),
+        ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap,       "LRP-Epsilon"),
+        ("lrp.composite_a_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeAFlat"),
+        ("lrp.composite_b_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeBFlat"),
     ]
+
 
     # Create analyzers.
     analyzers = []
     for method in methods:
-        analyzers.append(innvestigate.create_analyzer(method[0],
-                                                      model,
-                                                      **method[1]))
+        try:
+            analyzer = innvestigate.create_analyzer(method[0],
+                                                    model,
+                                                    **method[1])
+        except innvestigate.NotAnalyzeableModelException:
+            analyzer = None
+        analyzers.append(analyzer)
 
     # Create analysis.
-    analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
+    analysis = np.zeros([len(images), len(analyzers)]+net["image_shape"]+[3])
     text = []
     for i, (image, y) in enumerate(images):
+        print ('Image {}: '.format(i), end='', flush=True)
         image = image[None, :, :, :]
         # Predict label.
-        x = preprocess(image)
+        x = in_utils.preprocess(image, net)
+        presm = model.predict_on_batch(x)[0]
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
-        text.append((r"\textbf{%s}" % label_to_class_name[y],
-                     r"\textit{(%.2f)}" % prob.max(),
-                     r"\textit{%s}" % label_to_class_name[y_hat]))
+        text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm.max(),
+                     r"%.2f" % prob.max(),
+                     r"%s" % label_to_class_name[y_hat]))
 
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            a = analyzer.analyze(image if is_input_analyzer else x)
-            # Postprocess.
-            if not is_input_analyzer:
-                a = postprocess(a)
-            a = methods[aidx][2](a)
+            if analyzer:
+                # Measure execution time
+                t_start = time.time()
+                print('{} '.format(methods[aidx][-1]), end='', flush=True)
+
+                a = analyzer.analyze(image if is_input_analyzer else x)
+
+                t_elapsed = time.time() - t_start
+                print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
+
+                # Postprocess.
+                if not np.all(np.isfinite(a)):
+                    print("Image %i, analysis of %s not finite: nan %s inf %s" %
+                          (i, methods[aidx][3],
+                           np.any(np.isnan(a)), np.any(np.isinf(a))))
+                if not is_input_analyzer:
+                    a = in_utils.postprocess(a, color_conversion, channels_first)
+                a = methods[aidx][2](a)
+            else:
+                a = np.zeros_like(image)
             analysis[i, aidx] = a[0]
+        print('')
 
     ###########################################################################
     # Plot the analysis.
@@ -207,10 +160,14 @@ if __name__ == "__main__":
 
     grid = [[analysis[i, j] for j in range(analysis.shape[1])]
             for i in range(analysis.shape[0])]
-    row_labels = text
-    col_labels = [method[3] for method in methods]
+    label, presm, prob, pred = zip(*text)
+    row_labels_left = [('label: {}'.format(label[i]), 'pred: {}'.format(pred[i])) for i in range(len(label))]
+    row_labels_right = [('logit: {}'.format(presm[i]), 'prob: {}'.format(prob[i])) for i in range(len(label))]
+    col_labels = [''.join(method[3]) for method in methods]
 
-    eutils.plot_image_grid(grid, row_labels, col_labels,
-                           row_label_offset=50,
-                           col_label_offset=-50,
-                           usetex=True, file_name="all_methods.pdf")
+    eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
+                           file_name="all_methods_{}.pdf".format(netname))
+
+    #clean shutdown for tf.
+    if K.backend() == 'tensorflow':
+        K.clear_session()

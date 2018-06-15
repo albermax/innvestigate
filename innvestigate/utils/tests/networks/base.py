@@ -14,8 +14,13 @@ import six
 ###############################################################################
 ###############################################################################
 
-
+import os
 import keras.layers
+from keras.utils.data_utils import get_file
+from keras.models import load_model, clone_model
+from keras.models import Sequential
+
+
 
 
 __all__ = [
@@ -36,7 +41,7 @@ __all__ = [
 ###############################################################################
 
 
-# todo: more consistent nameing
+# TODO: more consistent nameing
 
 def input_layer(shape, *args, **kwargs):
     return keras.layers.Input(shape=shape[1:], *args, **kwargs)
@@ -57,7 +62,7 @@ def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
     current_layer = layer_in
     for i in range(n_conv):
         conv = conv_layer(current_layer, filters=n_filter,
-                          kernel_size=(3, 3), strides=(1, 1), padding="same", 
+                          kernel_size=(3, 3), strides=(1, 1), padding="same",
                           kernel_initializer="glorot_uniform", **kwargs)
         current_layer = conv
         ret[conv_prefix % i] = conv
@@ -281,3 +286,4 @@ def cnn_3convb_3dense(input_shape, output_n, activation=None,
         "output_n": output_n,
     })
     return net
+

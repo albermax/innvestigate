@@ -1,0 +1,48 @@
+1) AddLayer und AVeragePooling als ReverseLayer (ohne weight copy)
+
+2) (redacted) Refactor ReverseLayer [...]
+2.1) updated: ReverseLayer classes for layers without weight kernels.
+2.1.0) refactor special ReverseLayer code. Add secondary SpecialREverseLayer class, feeding of alternate rule dictionary.
+2.1.1) BatchNormalization: Support for eps / alpha beta / flat type rules.
+2.1.3) Add type layers: Support for eps / alpha beta / flat type rules.
+2.1.4) !! Nonlinearities and activation layers (handle non-zero-centered fxns. they break things. Exceptins!)
+2.1.5) Pooling type layers : Support for eps / alpha beta / flat type rules.
+
+3) allow conditioned rule mappings to depend on layer index, e.g. for selecting layers for FlatRule
+4) allow selection class to LRP-decompose based on class index #TODO: write issue: implement fxn go over keras graph and return a list of layers so the indexing of layers is known/correct
+5) numerical testing for supported layers:
+5.1) Activation
+5.2) Add
+5.3) [Global]AveragePooling[1-3]D
+5.4) [Global]MaxPooling[1-3]D
+5.5) BatchNormalization
+5.*)
+6) numerical testing for rule types on layers with kernels and pooling layers.
+6.*)
+
+7) Parameter tuning for LRP and
+7.1) resnet50
+7.2) inception_v3
+7.3) *
+
+9) ipython notebooks showing analyzer setup and influence of parameters
+10) add (custom) pretrained models from our publications with ongoing work
+
+
+============================================================================================================================
+NOTE(Max): It's time to conclude, thus it would be great if we do thing by thing and finish part by part.
+Important Stuff to deal with:
++ One of the application networks uses Lambda-Layers. Probably needs special treatment.
+
++ create all methods notebook mit +1-2 lrp methoden. !!! all_methods !!! LRP für input indices (index)
+   - primär support für vgg16. für andere models, exception werfen und schwarzes bild returnen wenn irgendwas supported ist.
+   - in welchem format werden bilder erwartet
++ create training code für PLOS mnist-models:
+   - use data loader from imagenet example to add transformation to data
++ ipython notebook: networks vs methods grid
++ py2/py3 kümmert max. auch install.
+
++ add notebook looping over single methods (one tf session each) for memory intensive methods.
+
+
++ clean up unused imports

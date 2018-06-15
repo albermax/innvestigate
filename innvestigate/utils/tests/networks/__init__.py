@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 import fnmatch
 import os
 
@@ -29,32 +30,22 @@ from . import imagenet
 ###############################################################################
 
 
-def iterator():
+def iterator(network_filter="*", clear_sessions=False):
     """
     Iterator over various networks.
     """
 
-    # TODO: change environment variable name.
-    # TODO: make this more transparent! use attributes/tags of unittests
-    # Default test only for one network. To test all put "*"
-    #name_filter = "mnist.log_reg"
-    name_filter = "*"
-    if "NNPATTERNS_TEST_FILTER" in os.environ:
-        name_filter = os.environ["NNPATTERNS_TEST_FILTER"]
-
     def fetch_networks(module_name, module):
         ret = [
             ("%s.%s" % (module_name, name),
-             getattr(module, name)())
+             (module, name))
             for name in module.__all__
-            if (fnmatch.fnmatch(name, name_filter) or
-                fnmatch.fnmatch("%s.%s" % (module_name, name), name_filter))
+            if any((fnmatch.fnmatch(name, one_filter) or
+                    fnmatch.fnmatch("%s.%s" % (module_name, name), one_filter))
+                   for one_filter in network_filter.split(":"))
         ]
 
-        for name, network in ret:
-            network["name"] = name
-
-        return [x[1] for x in sorted(ret)]
+        return [x for x in sorted(ret)]
 
     networks = (
         fetch_networks("trivia", trivia) +
@@ -63,5 +54,10 @@ def iterator():
         fetch_networks("imagenet", imagenet)
     )
 
-    for network in networks:
+    for module_name, (module, name) in networks:
+        if clear_sessions:
+            K.clear_session()
+
+        network = getattr(module, name)()
+        network["name"] = module_name
         yield network

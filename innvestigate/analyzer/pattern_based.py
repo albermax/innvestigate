@@ -16,9 +16,14 @@ import six
 
 import keras.activations
 import keras.backend as K
+import keras.engine.topology
+import keras.layers
+import keras.layers.core
+import keras.layers.pooling
 import keras.models
 import keras
 import numpy as np
+import warnings
 
 
 from . import base
@@ -26,6 +31,7 @@ from .. import layers as ilayers
 from .. import utils
 from .. import tools as itools
 from ..utils import keras as kutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -40,31 +46,107 @@ __all__ = [
 ###############################################################################
 
 
+SUPPORTED_LAYER_PATTERNNET = (
+    keras.engine.topology.InputLayer,
+    keras.layers.convolutional.Conv2D,
+    keras.layers.core.Dense,
+    keras.layers.core.Dropout,
+    keras.layers.core.Flatten,
+    keras.layers.core.Masking,
+    keras.layers.core.Permute,
+    keras.layers.core.Reshape,
+    keras.layers.Concatenate,
+    keras.layers.pooling.GlobalMaxPooling1D,
+    keras.layers.pooling.GlobalMaxPooling2D,
+    keras.layers.pooling.GlobalMaxPooling3D,
+    keras.layers.pooling.MaxPooling1D,
+    keras.layers.pooling.MaxPooling2D,
+    keras.layers.pooling.MaxPooling3D,
+)
+
+
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
+    """PatternNet analyzer.
 
-    properties = {
-        "name": "PatternNet",
-        # todo: set right value
-        "show_as": "rgb",
-    }
+    Applies the "PatternNet" algorithm to analyze the model.
 
-    def __init__(self, *args, patterns=None, **kwargs):
+    :param model: A Keras model.
+    :param patterns: Pattern computed by
+      :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
+      to be called.
+    :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    """
+
+    def __init__(self,
+                 model,
+                 patterns=None,
+                 allow_lambda_layers=False,
+                 **kwargs):
         self._model_checks = [
-            (lambda layer: not kgraph.is_relu_convnet_layer(layer),
-             "PatternNet is only well defined for "
-             "convolutional neural networks with non-relu activations."),
             # todo: Check for non-linear output in general.
-            (lambda layer: kgraph.contains_activation(layer,
-                                                      activation="softmax"),
-             "Model should not contain a softmax.")
+            {
+                "check":
+                lambda layer: kchecks.contains_activation(
+                    layer,
+                    activation="softmax"),
+                "type": "exception",
+                "message": "Model should not contain a softmax.",
+            },
+            {
+                "check": lambda layer: not kchecks.only_relu_activation(layer),
+                "type": "warning",
+                "message": ("PatternNet is not well defined for "
+                            "networks with non-ReLU activations."),
+            },
+            {
+                "check":
+                lambda layer: not kchecks.is_convnet_layer(layer),
+                "type": "warning",
+                "message": ("PatternNet is only well defined for "
+                            "convolutional neural networks."),
+            },
+            # Clear cut, only support layers the method is developed for now.
+            {
+                "check":
+                lambda layer: not isinstance(layer, SUPPORTED_LAYER_PATTERNNET),
+                "type": "exception",
+                "message": ("PatternNet is only well defined for "
+                            "conv2d/max-pooling/dense layers."),
+            },
+            {
+                "check":
+                lambda layer: kchecks.is_average_pooling(layer),
+                "type": "exception",
+                "message": ("PatternNet is only well defined for "
+                            "max-pooling pooling layers."),
+            },
+            {
+                "check":
+                lambda layer: (not allow_lambda_layers and
+                               isinstance(layer, keras.layers.core.Lambda)),
+                "type": "exception",
+                "message": ("Lamda layers are not allowed. "
+                            "To allow use allow_lambda_layers kw."),
+            },
         ]
 
         self._patterns = patterns
         if self._patterns is not None:
             # copy pattern references
             self._patterns = list(patterns)
+        self._allow_lambda_layers = allow_lambda_layers
 
-        return super(PatternNet, self).__init__(*args, **kwargs)
+        # Pattern projections can lead to +-inf value with long networks.
+        # We are only interested in the direction, therefore it is save to
+        # Prevent this by projecting the values in bottleneck layers to +-1.
+        if not kwargs.get("reverse_project_bottleneck_layers", True):
+            warnings.warn("The standard setting for "
+                          "'reverse_project_bottleneck_layers' "
+                          "is overwritten.")
+        else:
+            kwargs["reverse_project_bottleneck_layers"] = True
+
+        super(PatternNet, self).__init__(model, **kwargs)
 
     def _prepare_pattern(self, layer, state, pattern):
         return pattern
@@ -102,7 +184,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     activation,
                     name="reversed_act_%s" % config["name"])
 
-                self._kernel_layer = kgraph.get_layer_wo_activation(
+                self._kernel_layer = kgraph.copy_layer_wo_activation(
                     layer, name_template="reversed_kernel_%s")
 
                 # replace kernel weights with pattern weights
@@ -113,15 +195,15 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                 if np.sum(tmp) != 1:
                     raise Exception("Cannot match pattern to kernel.")
                 pattern_weights[np.argmax(tmp)] = pattern
-                self._pattern_layer = kgraph.get_layer_wo_activation(
+                self._pattern_layer = kgraph.copy_layer_wo_activation(
                     layer,
                     name_template="reversed_pattern_%s",
                     weights=pattern_weights)
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
-                act_Xs = kutils.easy_apply(self._kernel_layer, Xs)
-                act_Ys = kutils.easy_apply(self._act_layer, act_Xs)
-                pattern_Ys = kutils.easy_apply(self._pattern_layer, Xs)
+                act_Xs = kutils.apply(self._kernel_layer, Xs)
+                act_Ys = kutils.apply(self._act_layer, act_Xs)
+                pattern_Ys = kutils.apply(self._pattern_layer, Xs)
 
                 grad_act = ilayers.GradientWRT(len(act_Xs))
                 grad_pattern = ilayers.GradientWRT(len(Xs))
@@ -131,18 +213,16 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     tmp = reversed_Ys
                 else:
                     # if linear activation this behaves strange
-                    tmp = utils.listify(grad_act(act_Xs+act_Ys+reversed_Ys))
+                    tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
 
                 return grad_pattern(Xs+pattern_Ys+tmp)
 
         self._conditional_mappings = [
-            (kgraph.contains_kernel, ReverseLayer),
+            (kchecks.contains_kernel, ReverseLayer),
         ]
 
         ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
-        if len(tmp_pattern_idx_stack) == 0:
-            del tmp_pattern_idx_stack
-        else:
+        if len(tmp_pattern_idx_stack) != 0:
             raise Exception("Not all patterns consumed. Something is wrong.")
 
         return ret
@@ -174,28 +254,34 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             workers=workers,
             use_multiprocessing=use_multiprocessing,
             verbose=verbose)
-        pass
 
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
         state.update({"patterns": self._patterns})
+        state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         patterns = state.pop("patterns")
+        allow_lambda_layers = state.pop("allow_lambda_layers")
         kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
-        kwargs.update({"patterns": patterns})
+        kwargs.update({"patterns": patterns,
+                       "allow_lambda_layers": allow_lambda_layers})
         return kwargs
 
 
 class PatternAttribution(PatternNet):
+    """PatternAttribution analyzer.
 
-    properties = {
-        "name": "PatternAttribution",
-        # todo: set right value
-        "show_as": "rgb",
-    }
+    Applies the "PatternAttribution" algorithm to analyze the model.
+
+    :param model: A Keras model.
+    :param patterns: Pattern computed by
+      :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
+      to be called.
+    :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    """
 
     def _prepare_pattern(self, layer, state, pattern):
         weights = layer.get_weights()

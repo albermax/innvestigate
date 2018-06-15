@@ -15,23 +15,28 @@ import six
 ###############################################################################
 
 
-import keras.applications.resnet50
-import keras.applications.vgg16
-import keras.applications.vgg19
-import keras.applications.inception_v3
-import keras.applications.inception_resnet_v2
+import keras.backend as K
 import keras.layers
 import numpy as np
+import warnings
 
 from . import base
+from . import mnist
 from ...keras import graph as kgraph
+from ....applications import imagenet
 
 __all__ = [
+    "vgg16_custom",
     "vgg16",
-    #"vgg19",
-    #"resnet50",
-    #"inception_v3",
-    #"inception_resnet_v2",
+    "vgg19",
+    "resnet50",
+    "inception_v3",
+    "inception_resnet_v2",
+    "densenet121",
+    "densenet169",
+    "densenet201",
+    "nasnet_large",
+    "nasnet_mobile",
 ]
 
 
@@ -40,26 +45,13 @@ __all__ = [
 ###############################################################################
 
 
-def _prepare_keras_net(clazz, input_shape, output_n, weights=None):
-    model = clazz(weights=None)
-    net = {}
-    net["in"] = model.inputs
-    net["sm_out"] = model.outputs
-    net["out"] = kgraph.pre_softmax_tensors(model.outputs)
-    net["input_shape"] = input_shape
-    net["output_n"] = output_n
-    return net
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 VGG16_OFFSET = np.array([103.939, 116.779, 123.68])
 
 
-def vgg16_preprocess(X):
+def vgg16_custom_preprocess(X):
+    import innvestigate.utils.visualizations as ivis
+    X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
+
     if X.shape[1] == 3:
         shape = [1, 3, 1, 1]
     else:
@@ -71,38 +63,14 @@ def vgg16_preprocess(X):
     return X
 
 
-def vgg16_preprocess(X):
-    return keras.applications.vgg16.preprocess_input(X)
-
-
-def vgg16(activation=None, weights=None):
-    return _prepare_keras_net(
-        keras.applications.vgg16.VGG16,
-        [None, 3, 224, 224],
-        1000,
-        weights=weights)
-
-
-VGG16_OFFSET = np.array([103.939, 116.779, 123.68])
-
-
-def vgg16_preprocess(X):
-    if X.shape[1] == 3:
-        shape = [1, 3, 1, 1]
-    else:
-        shape = [1, 1, 1, 3]
-
-    offset = VGG16_OFFSET.reshape(shape)
-    # Remove pixel-wise mean.
-    X -= offset
-    return X
-
-
-def vgg16(activation=None):
+def vgg16_custom(activation=None):
     if activation is None:
         activation = "relu"
 
-    input_shape = [None, 3, 224, 224]
+    if K.image_data_format() == "channels_first":
+        input_shape = [None, 3, 224, 224]
+    else:
+        input_shape = [None, 224, 224, 3]
     output_n = 1000
 
     net = {}
@@ -111,32 +79,22 @@ def vgg16(activation=None):
     net.update(base.conv_pool(
         net["in"], 2, "conv_1", 64,
         activation=activation,
-        # todo: take care of theano to keras port:
-        # flip_filters=False))
     ))
     net.update(base.conv_pool(
         net["conv_1_pool"], 2, "conv_2", 128,
         activation=activation,
-        # todo: take care of theano to keras port:
-        # flip_filters=False))
     ))
     net.update(base.conv_pool(
         net["conv_2_pool"], 3, "conv_3", 256,
         activation=activation,
-        # todo: take care of theano to keras port:
-        # flip_filters=False))
     ))
     net.update(base.conv_pool(
         net["conv_3_pool"], 3, "conv_4", 512,
         activation=activation,
-        # todo: take care of theano to keras port:
-        # flip_filters=False))
     ))
     net.update(base.conv_pool(
         net["conv_4_pool"], 3, "conv_5", 512,
         activation=activation,
-        # todo: take care of theano to keras port:
-        # flip_filters=False))
     ))
 
     net["conv_flat"] = keras.layers.Flatten()(net["conv_5_pool"])
@@ -154,7 +112,7 @@ def vgg16(activation=None):
 
     net.update({
         "input_shape": input_shape,
-
+        "preprocess_f": vgg16_custom_preprocess,
         "output_n": output_n,
     })
     return net
@@ -165,33 +123,16 @@ def vgg16(activation=None):
 ###############################################################################
 
 
-def vgg19_preprocess(X):
-    return keras.applications.vgg19.preprocess_input(X)
+def vgg16():
+    ret = imagenet.vgg16()
+    ret["output_n"] = 1000
+    return ret
 
 
-def vgg19(activation=None, weights=None):
-    return _prepare_keras_net(
-        keras.applications.vgg19.VGG19,
-        [None, 3, 224, 224],
-        1000,
-        weights=weights)
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def resnet50_preprocess(X):
-    return keras.applications.resnet50.preprocess_input(X)
-
-
-def resnet50(activation=None, weights=None):
-    return _prepare_keras_net(
-        keras.applications.resnet50.ResNet50,
-        [None, 3, 224, 224],
-        1000,
-        weights=weights)
+def vgg19():
+    ret = imagenet.vgg19()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -199,16 +140,10 @@ def resnet50(activation=None, weights=None):
 ###############################################################################
 
 
-def inception_v3_preprocess(X):
-    return keras.applications.inception_v3.preprocess_input(X)
-
-
-def inception_v3(activation=None, weights=None):
-    return _prepare_keras_net(
-        keras.applications.inception_v3.InceptionV3,
-        [None, 3, 299, 299],
-        1000,
-        weights=weights)
+def resnet50():
+    ret = imagenet.resnet50()
+    ret["output_n"] = 1000
+    return ret
 
 
 ###############################################################################
@@ -216,13 +151,68 @@ def inception_v3(activation=None, weights=None):
 ###############################################################################
 
 
-def inception_resnet_v2_preprocess(X):
-    return keras.applications.inception_resnet_v2.preprocess_input(X)
+def inception_v3():
+    ret = imagenet.inception_v3()
+    ret["output_n"] = 1000
+    return ret
 
 
-def inception_resnet_v2(activation=None, weights=None):
-    return _prepare_keras_net(
-        keras.applications.inception_resnet_v2.InceptionResNetV2,
-        [None, 3, 299, 299],
-        1000,
-        weights=weights)
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def inception_resnet_v2():
+    ret = imagenet.inception_resnet_v2()
+    ret["output_n"] = 1000
+    return ret
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def densenet121():
+    ret = imagenet.densenet121()
+    ret["output_n"] = 1000
+    return ret
+
+
+def densenet169():
+    ret = imagenet.densenet169()
+    ret["output_n"] = 1000
+    return ret
+
+
+def densenet201():
+    ret = imagenet.densenet201()
+    ret["output_n"] = 1000
+    return ret
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def nasnet_large():
+    if K.image_data_format() == "channels_first":
+        warnings.warn("NASNet is not available for channels first. "
+                      "Return dummy net.")
+        return mnist.log_reg()
+
+    ret = imagenet.nasnet_large()
+    ret["output_n"] = 1000
+    return ret
+
+
+def nasnet_mobile():
+    if K.image_data_format() == "channels_first":
+        warnings.warn("NASNet is not available for channels first. "
+                      "Return dummy net.")
+        return mnist.log_reg()
+
+    ret = imagenet.nasnet_mobile()
+    ret["output_n"] = 1000
+    return ret

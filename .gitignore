@@ -100,6 +100,8 @@ ENV/
 # mypy
 .mypy_cache/
 
+# pytest
+.pytest_cache
 
 # alber development ignores.
 *~
@@ -109,3 +111,12 @@ nosetests.cfg
 
 *.pdf
 *.npz
+
+
+# lapuschkin development ignores
+gamma_test.py
+.vscode
+*.h5
+*.png
+examples/logs
+examples/gpu-logs

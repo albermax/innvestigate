@@ -2,12 +2,22 @@ import os
 import setuptools
 
 
-# TODO: update
-requirements = [
+install_requirements = [
+    "future",
+    "h5py",
+    "keras==2.1.6",
     "numpy",
+    "pillow",
+    "pytest",
     "scipy",
-    "keras",
-    "future"
+]
+
+setup_requirements = [
+    "pytest-runner",
+]
+
+test_requirements = [
+    "pytest"
 ]
 
 
@@ -30,15 +40,17 @@ def setup():
             "Intended Audience :: Science/Research",
             "Operating System :: POSIX :: Linux",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: 3.5",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber,Pieter-Jan Kindermans",
+        author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans",
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="MIT",
-        packages=["innvestigate"],
-        install_requires=requirements,
+        packages=setuptools.find_packages(),
+        install_requires=install_requirements,
+        setup_requires=setup_requirements,
+        tests_require=test_requirements,
         include_package_data=True,
         zip_safe=False,
     )
