@@ -58,26 +58,15 @@ def get_imagenet_data(size=224):
 
 
 def plot_image_grid(grid,
-                    row_labels,
+                    row_labels_left,
+                    row_labels_right,
                     col_labels,
                     file_name=None,
-                    row_label_offset=0,
-                    col_label_offset=0,
-					is_fontsize_adaptive=True,
-                    usetex=False,
                     dpi=224):
     n_rows = len(grid)
     n_cols = len(grid[0])
-    shape_per_image = grid[0][0].shape[:2]
-    n_padding = shape_per_image[0]//5
-    shape_per_image_padded = [s + 2 * n_padding for s in shape_per_image]
-    if is_fontsize_adaptive:
-        fontsize = shape_per_image[1]//2  #TODO: what is the best way to scale this?
-    else:
-        fontsize = 10
 
     plt.clf()
-    plt.rc("text", usetex=usetex)
     plt.rc("font", family="sans-serif")
 
     plt.figure(figsize = (n_cols, n_rows)) #TODO figsize
@@ -88,33 +77,32 @@ def plot_image_grid(grid,
             ax.set_xticks([])
             ax.set_yticks([])
 
-            ax2 = ax.twinx()
-            ax2.set_xticks([])
-            ax2.set_yticks([])
+            if not r: #column labels
+                if col_labels != []:
+                    ax.set_title(col_labels[c],
+                                 rotation=22.5,
+                                 horizontalalignment='left',
+                                 verticalalignment='bottom')
 
-            if not r: #method names
-                ax.set_title(col_labels[c],
-                             rotation=22.5,
-                             horizontalalignment='left',
-                             verticalalignment='bottom')
-            if not c: #label + prediction info
-                lbl, presm, prob, yhat = row_labels[r]
-                txt = 'label: {}\n'.format(lbl)
-                txt += 'pred: {}'.format(yhat)
-                #txt += '{} {}'.format(presm, prob)
-                ax.set_ylabel(txt,
+            if not c: #row labels
+                if row_labels_left != []:
+                    txt_left = [l+'\n' for l in row_labels_left[r]]
+                ax.set_ylabel(''.join(txt_left),
                               rotation=0,
                               verticalalignment='center',
-                              horizontalalignment='right'
+                              horizontalalignment='right',
                               )
             if c == n_cols-1:
-                txt_right = 'logit:{}\n'.format(presm)
-                txt_right += 'prob: {}'.format(prob)
-                ax2.set_ylabel(txt_right,
-                              rotation=0,
-                              verticalalignment='center',
-                              horizontalalignment='left'
-                               )
+                if row_labels_right != []:
+                    txt_right = [l+'\n' for l in row_labels_right[r]]
+                    ax2 = ax.twinx()
+                    ax2.set_xticks([])
+                    ax2.set_yticks([])
+                    ax2.set_ylabel(''.join(txt_right),
+                                  rotation=0,
+                                  verticalalignment='center',
+                                  horizontalalignment='left'
+                                   )
 
     if file_name is None:
         plt.show()
