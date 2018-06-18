@@ -119,8 +119,8 @@ if __name__ == "__main__":
         ("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
         ("lrp.z",                 {},                       mutils.heatmap,         "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           mutils.heatmap,         "LRP-Epsilon"),
-        ("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
-        ("lrp.composite_b",       {"epsilon": 1},           mutils.heatmap,         "LRP-CompositeB"),
+        ("lrp.sequential_preset_a",{},                      mutils.heatmap,         "LRP-PresetA"),
+        ("lrp.sequential_preset_b",{"epsilon": 1},          mutils.heatmap,         "LRP-PresetB"),
     ]
 
     # Create analyzers.
