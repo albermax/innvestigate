@@ -15,6 +15,7 @@ import warnings
 import time
 
 import keras
+import keras.backend as K
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
@@ -138,6 +139,9 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
+        if K.image_data_format() == "channels_last":
+            x = np.moveaxis(x, 3, 1)
+            analysis = np.moveaxis(analysis, 3, 1)
         if not self.in_place:
             x = np.copy(x)
         assert analysis.shape == x.shape, analysis.shape
@@ -162,6 +166,10 @@ class Perturbation:
             x_perturbated = x_perturbated[:, :, pad_shape_before_x[0]:pad_shape_before_x[0] + original_shape[2],
                             pad_shape_before_x[1]:pad_shape_before_x[1] + original_shape[3]]
 
+        if K.image_data_format() == "channels_last":
+            x_perturbated = np.moveaxis(x_perturbated, 1, 3)
+            x = np.moveaxis(x, 1, 3)
+            analysis = np.moveaxis(analysis, 1, 3)
         return x_perturbated
 
 
