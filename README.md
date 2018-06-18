@@ -22,7 +22,8 @@ TODO: Add link to SW paper.
 ## Installation
 
 iNNvestigate can be installed with the following commands.
-The library is based on Keras and therefore requires a supported [Keras-backend](https://keras.io/backend/):
+The library is based on Keras and therefore requires a supported [Keras-backend](https://keras.io/backend/)
+(Currently only Python 3.5, Tensorflow 1.8 and Cuda 9.x are supported.):
 
 ```bash
 pip install git+https://github.com/albermax/innvestigate
@@ -43,8 +44,7 @@ cd innvestigate
 python setup.py test
 ```
 
-The library was developed and tested on a Linux platform with Python 3.5 and Cuda 9.x.
-Currently only Python 3.5 and the Keras Tensorflow == 1.8 backend are supported.
+The library was developed and tested on a Linux platform with Python 3.5, Tensorflow 1.8 and Cuda 9.x.
 
 ## Usage and Examples
 
