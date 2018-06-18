@@ -1,7 +1,6 @@
-## Version 0.1-alpha
+## Version 1.0.0
 
 Includes the following functionality:
 
 * Analyzers: Gradient, SmoothGrad, IntegratedGradients, PatternNet, PatternAttribution, Input, Random.
-* Perturbation analysis.
 * Pattern computer.
