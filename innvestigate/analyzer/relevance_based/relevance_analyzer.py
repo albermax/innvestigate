@@ -64,14 +64,11 @@ __all__ = [
     "LRPZPlus",
     "LRPZPlusFast",
 
-    "LRPCompositeA",
-    "LRPCompositeB",
+    "LRPSequentialPresetA",
+    "LRPSequentialPresetB",
 
-    "LRPCompositeAFlat",
-    "LRPCompositeBFlat",
-
-    "LRPCompositeAWSquare",
-    "LRPCompositeBWSquare",
+    "LRPSequentialPresetAFlat",
+    "LRPSequentialPresetBFlat",
 ]
 
 
@@ -750,7 +747,7 @@ class LRPZPlusFast(_LRPFixedParams):
                                        rule="ZPlusFast", **kwargs)
 
 
-class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
+class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
         self._model_checks = [
         # TODO: Check for non-linear output in general.
@@ -781,13 +778,13 @@ class LRPCompositeA(_LRPFixedParams): #for the lack of a better name
                              (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
                             ]
 
-        super(LRPCompositeA, self).__init__(model,
+        super(LRPSequentialPresetA, self).__init__(model,
                                             *args,
                                             rule = conditional_rules,
                                             **kwargs )
 
 
-class LRPCompositeB(_LRPFixedParams):
+class LRPSequentialPresetB(_LRPFixedParams):
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
         self._model_checks = [
         # TODO: Check for non-linear output in general.
@@ -817,7 +814,7 @@ class LRPCompositeB(_LRPFixedParams):
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
                              (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
                             ]
-        super(LRPCompositeB, self).__init__(model,
+        super(LRPSequentialPresetB, self).__init__(model,
                                             *args,
                                             rule = conditional_rules,
                                             **kwargs )
@@ -827,9 +824,9 @@ class LRPCompositeB(_LRPFixedParams):
 
 
 #TODO: allow to pass input layer identification by index or id.
-class LRPCompositeAFlat(LRPCompositeA):
+class LRPSequentialPresetAFlat(LRPSequentialPresetA):
     def __init__(self, model, *args, **kwargs):
-        super(LRPCompositeAFlat, self).__init__(model,
+        super(LRPSequentialPresetAFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule=rrule.FlatRule,
                                                 **kwargs)
@@ -837,28 +834,10 @@ class LRPCompositeAFlat(LRPCompositeA):
 
 
 #TODO: allow to pass input layer identification by index or id.
-class LRPCompositeBFlat(LRPCompositeB):
+class LRPSequentialPresetBFlat(LRPSequentialPresetB):
     def __init__(self, model, *args, **kwargs):
-        super(LRPCompositeBFlat, self).__init__(model,
+        super(LRPSequentialPresetBFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
-
-#TODO: allow to pass input layer identification by index or id.
-class LRPCompositeAWSquare(LRPCompositeA):
-    def __init__(self, model, *args, **kwargs):
-        super(LRPCompositeAWSquare, self).__init__(model,
-                                                   *args,
-                                                   input_layer_rule=rrule.WSquareRule,
-                                                   **kwargs)
-
-
-
-#TODO: allow to pass input layer identification by index or id.
-class LRPCompositeBWSquare(LRPCompositeB):
-    def __init__(self, model, *args, **kwargs):
-        super(LRPCompositeBWSquare, self).__init__(model,
-                                                   *args,
-                                                   input_layer_rule="WSquare",
-                                                   **kwargs)

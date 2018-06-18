@@ -95,8 +95,8 @@ if __name__ == "__main__":
         ("lrp.z_baseline",        {},                       in_utils.heatmap,       "Gradient*Input"),
         ("lrp.z",                 {},                       in_utils.heatmap,       "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap,       "LRP-Epsilon"),
-        ("lrp.composite_a_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeAFlat"),
-        ("lrp.composite_b_flat",  {"epsilon": 1},           in_utils.heatmap,       "LRP-CompositeBFlat"),
+        ("lrp.sequential_preset_a_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetAFlat"),
+        ("lrp.sequential_preset_b_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetBFlat"),
     ]
 
 
