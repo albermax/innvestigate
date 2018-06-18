@@ -155,9 +155,7 @@ if __name__ == "__main__":
     # Plot the analysis.
     grid = [[analysis_all[i][j] for j in range(len(methods))]
                  for i in range(n_nets)]
-    row_labels = []
-    col_labels = [method[3] for method in methods]
+    row_labels_left = row_labels_left = [(n,'') for n in netnames]
+    col_labels = [''.join(method[3]) for method in methods]
 
-    eutils.plot_image_grid(grid,
-                    row_labels,
-                    col_labels)
+    eutils.plot_image_grid(grid, row_labels_left, [], col_labels)
