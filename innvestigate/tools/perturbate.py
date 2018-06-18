@@ -354,8 +354,8 @@ class PerturbationAnalysis:
                 print("Perturbed all regions after {} steps, stopping now.".format(step))
                 break
             if self.verbose:
-                print("Step {} of {}: {:.0f}% of pixels perturbated.".format(step + 1, self.steps,
-                                                                             100.0 * self.perturbation.ratio), end=" ")
+                print("Step {} of {}: {:.0f}% of input components perturbed.".format(step + 1, self.steps,
+                                                                                     100.0 * self.perturbation.ratio), end=" ")
             scores.append(self.evaluate_generator(self.generator))
             toc = time.time()
             if self.verbose:
