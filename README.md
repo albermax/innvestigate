@@ -1,17 +1,17 @@
 # iNNvestigate neural networks!
 
+![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
+
 ## Note: The library is alpha-state and you might encounter issues using it. We are working on the next release. Please let us know if you find any bugs.
 
 ## Introduction
 
 In the recent years neural networks furthered the state of the art in many domains like, e.g., object detection and speech recognition.
 Despite the success neural networks are typically still treated as black boxes. Their internal workings are not fully understood and the basis for their predictions is unclear.
-In the attempt to understand neural networks better several methods were proposed, a.i, Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntergratedGradients, LRP, PatternNet\&-Attribution.
-None of the methods fully solves the stated problems and due to the lack of a reference implementations comparing them is a major effort.
+In the attempt to understand neural networks better several methods were proposed, e.g., Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntergratedGradients, LRP, PatternNet\&-Attribution.
+Due to the lack of a reference implementations comparing them is a major effort.
 This library addresses this by providing a common interface and out-of-the-box implementation for many analysis methods.
-Our goal is to make analyzing neural network's predictions easy!
-
-![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
+Our goal is to make analyzing neural networks' predictions easy!
 
 
 **If you use this code please star the repository and cite the following paper:**
@@ -43,8 +43,8 @@ cd innvestigate
 python setup.py test
 ```
 
-The library was developed and tested on a Linux platform with Python 3.5 and Cuda 8.x.
-Currently only Python 3 and the Keras Tensorflow backend are supported.
+The library was developed and tested on a Linux platform with Python 3.5 and Cuda 9.x.
+Currently only Python 3.5 and the Keras Tensorflow == 1.8 backend are supported.
 
 ## Usage and Examples
 
@@ -60,7 +60,7 @@ The iNNvestigate library contains implementations for the following methods:
   * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598)
 * *interaction:*
   * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
-  * **lrp.\*:** *coming soon* [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+  * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
@@ -116,6 +116,6 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 If you would like to add your analysis method please get in touch with us!
 
-## Version history
+## Releases
 
 [Can be found here.](https://github.com/albermax/innvestigate/blob/master/VERSION.md)

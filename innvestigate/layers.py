@@ -297,7 +297,8 @@ class Project(_Map):
             return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
 
         absmax = K.max(K.abs(x),
-                       axis=tuple(range(1, len(x.shape))))
+                       axis=tuple(range(1, len(x.shape))),
+                       keepdims=True)
         x = safe_divide(x, absmax)
 
         if self._output_range not in (False, True):  # True = (-1, +1)
