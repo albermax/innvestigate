@@ -121,7 +121,7 @@ if __name__ == "__main__":
         for aidx, analyzer in enumerate(analyzers):
             # Measure execution time
             t_start = time.time()
-            print('{} '.format(''.join(methods[aidx][-1])), end='', flush=True)
+            print('{} '.format(''.join(methods[aidx][-1])), end='')
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 print("Analyzer not available for this model.")
 
             t_elapsed = time.time() - t_start
-            print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
+            print('({:.4f}s) '.format(t_elapsed), end='')
 
             # Postprocess.
             if not np.all(np.isfinite(a)):

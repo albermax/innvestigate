@@ -62,7 +62,8 @@ class BaseLayerTestCase(unittest.TestCase):
 
     _network_filter = "trivia.*"
 
-    def __init__(self, *args, network_filter=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        network_filter = kwargs.pop("network_filter", None)
         if network_filter is not None:
             self._network_filter = network_filter
         super(BaseLayerTestCase, self).__init__(*args, **kwargs)
@@ -90,7 +91,8 @@ class BaseLayerTestCase(unittest.TestCase):
 
 class AnalyzerTestCase(BaseLayerTestCase):
 
-    def __init__(self, *args, method=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        method = kwargs.pop("method", None)
         if method is not None:
             self._method = method
         super(AnalyzerTestCase, self).__init__(*args, **kwargs)
@@ -126,7 +128,8 @@ def test_analyzer(method, network_filter):
 
 class AnalyzerTrainTestCase(BaseLayerTestCase):
 
-    def __init__(self, *args, method=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        method = kwargs.pop("method", None)
         if method is not None:
             self._method = method
         super(AnalyzerTrainTestCase, self).__init__(*args, **kwargs)
@@ -165,7 +168,9 @@ def test_train_analyzer(method, network_filter):
 
 class EqualAnalyzerTestCase(BaseLayerTestCase):
 
-    def __init__(self, *args, method1=None, method2=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        method1 = kwargs.pop("method1", None)
+        method2 = kwargs.pop("method2", None)
         if method1 is not None:
             self._method1 = method1
         if method2 is not None:
@@ -225,7 +230,8 @@ def test_equal_analyzer(method1, method2, network_filter):
 # its only half the test.
 class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
-    def __init__(self, *args, method=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        method = kwargs.pop("method", None)
         if method is not None:
             self._method = method
         super(SerializeAnalyzerTestCase, self).__init__(*args, **kwargs)
@@ -270,7 +276,8 @@ def test_serialize_analyzer(method, network_filter):
 
 class PatternComputerTestCase(BaseLayerTestCase):
 
-    def __init__(self, *args, method=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        method = kwargs.pop("method", None)
         if method is not None:
             self._method = method
         super(PatternComputerTestCase, self).__init__(*args, **kwargs)

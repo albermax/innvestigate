@@ -143,7 +143,7 @@ if __name__ == "__main__":
     analysis = np.zeros([len(images), len(analyzers), 28, 28, 3])
     text = []
     for i, (image, y) in enumerate(images):
-        print ('Image {}: '.format(i), end='', flush=True)
+        print ('Image {}: '.format(i), end='')
         image = image[None, :, :, :]
         # Predict label.
         x = mutils.preprocess(image, input_range)
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         for aidx, analyzer in enumerate(analyzers):
             #measure execution time
             t_start = time.time()
-            print('{} '.format(methods[aidx][-1]), end='', flush=True)
+            print('{} '.format(methods[aidx][-1]), end='')
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 a = analyzer.analyze(x)
 
             t_elapsed = time.time() - t_start
-            print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
+            print('({:.4f}s) '.format(t_elapsed), end='')
 
             # Postprocess.
             if not is_input_analyzer:
