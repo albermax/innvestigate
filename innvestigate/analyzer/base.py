@@ -96,7 +96,7 @@ class AnalyzerBase(object):
                     else:
                         raise NotImplementedError()
 
-    def fit(self, *args, disable_no_training_warning=False, **kwargs):
+    def fit(self, *args, **kwargs):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -104,14 +104,15 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
+        disable_no_training_warning = kwargs.pop("disable_no_training_warning",
+                                                 False)
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
             warnings.warn("This analyzer does not need to be trained."
                           " Still fit() is called.", RuntimeWarning)
 
-    def fit_generator(self, *args,
-                      disable_no_training_warning=False, **kwargs):
+    def fit_generator(self, *args, **kwargs):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -119,6 +120,8 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
+        disable_no_training_warning = kwargs.pop("disable_no_training_warning",
+                                                 False)
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -261,11 +264,12 @@ class OneEpochTrainerMixin(TrainerMixin):
         """
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, *args, steps=None, **kwargs):
+    def fit_generator(self, *args, **kwargs):
         """
         Same interface as :func:`fit_generator` of :class:`TrainerMixin` except that
         the parameter epoch is fixed to 1.
         """
+        steps = kwargs.pop("steps", None)
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
