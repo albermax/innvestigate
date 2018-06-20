@@ -163,14 +163,12 @@ if __name__ == "__main__":
 
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
-            neuronmap = np.zeros_like(presm)
-            neuronmap[...,neuron_analysis_idx] = 1
-            #neuronmap = neuron_analysis_idx
-            #neuronmap = np.array([neuron_analysis_idx])
             if is_input_analyzer:
-                a = analyzer.analyze(image, neuron_selection=neuronmap)
-            elif isinstance(analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
-                a = analyzer.analyze(x, neuron_selection=neuronmap)
+                a = analyzer.analyze(
+                    image, neuron_selection=neuron_analysis_idx)
+            elif isinstance(
+                    analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
+                a = analyzer.analyze(x, neuron_selection=neuron_analysis_idx)
             else:
                 a = analyzer.analyze(x)
 
