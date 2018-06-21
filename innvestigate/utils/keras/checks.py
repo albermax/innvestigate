@@ -48,7 +48,7 @@ __all__ = [
     "contains_activation",
     "contains_kernel",
     "only_relu_activation",
-    "is_container",
+    "is_network",
     "is_convnet_layer",
     "is_relu_convnet_layer",
     "is_average_pooling",
@@ -246,8 +246,11 @@ def only_relu_activation(layer):
             contains_activation(layer, "relu"))
 
 
-def is_container(layer):
-    return isinstance(layer, keras.engine.topology.Container)
+def is_network(layer):
+    """
+    Is network in network?
+    """
+    return isinstance(layer, keras.engine.topology.Network)
 
 
 def is_conv_layer(layer, *args, **kwargs):
