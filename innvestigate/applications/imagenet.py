@@ -70,11 +70,11 @@ __all__ = [
 PATTERNS = {
     "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
         "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
-        "hash": ""
+        "hash": "847a05e1cb2d689d56170cc1998a2d042d5624c6e58f19ac916b5d70555c41ad0",
     },
     "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
         "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
-        "hash": ""
+        "hash": "d75e4607a36b73a83816a206571a529e2b5b6fd405a602fa48106acb7496b951",
     },
 }
 
@@ -137,9 +137,8 @@ def _prepare_keras_net(netname,
                 pattern_info["file_name"],
                 pattern_info["url"],
                 cache_subdir="innvestigate_patterns",
-                # TODO: add check for hash.
-                file_hash=None,#pattern_info["hash"],
-                hash_algorithm="md5")
+                hash_algorithm="sha256",
+                file_hash=pattern_info["hash"])
             patterns_file = np.load(patterns_path)
             patterns = [patterns_file["arr_%i" % i]
                         for i in range(len(patterns_file.keys()))]
