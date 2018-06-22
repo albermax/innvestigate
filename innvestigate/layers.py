@@ -269,6 +269,11 @@ class _Map(keras.layers.Layer):
         raise NotImplementedError()
 
 
+class Identity(_Map):
+    def _apply_map(self, x):
+        return K.identity(x)
+
+
 class Square(_Map):
     def _apply_map(self, x):
         return K.square(x)
