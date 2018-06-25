@@ -126,79 +126,11 @@ if __name__ == "__main__":
 
 
 
-    ###########################################################################
-    # Analysis 1: fixed output neuron, multiple input images.
-    ###########################################################################
-    # Select neural network output neuron index for analysis
-    neuron_analysis_idx = 9
-
-
-    # Create analysis.
-    analysis = np.zeros([len(images), len(analyzers), 28, 28, 3])
-    text = []
-    for i, (image, y) in enumerate(images):
-        print ('Image {}: '.format(i), end='')
-        image = image[None, :, :, :]
-        # Predict label.
-        x = mutils.preprocess(image, input_range)
-        presm = model.predict_on_batch(x)[0]
-        prob = modelp.predict_on_batch(x)[0]
-        y_hat = prob.argmax()
-
-        text.append((r"%s" % label_to_class_name[y],
-                     r"%.2f" % presm.max(),
-                     r"%.2f" % prob.max(),
-                     r"%s" % label_to_class_name[y_hat]))
-
-        for aidx, analyzer in enumerate(analyzers):
-            #measure execution time
-            t_start = time.time()
-            print('{} '.format(methods[aidx][-1]), end='')
-
-            is_input_analyzer = methods[aidx][0] == "input"
-            # Analyze.
-            if is_input_analyzer:
-                a = analyzer.analyze(image, neuron_analysis_idx)
-            elif isinstance(
-                    analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
-                a = analyzer.analyze(x, neuron_analysis_idx)
-            else:
-                a = analyzer.analyze(x)
-
-            t_elapsed = time.time() - t_start
-            print('({:.4f}s) '.format(t_elapsed), end='')
-
-            # Postprocess.
-            if not is_input_analyzer:
-                a = mutils.postprocess(a)
-            a = methods[aidx][2](a)
-            analysis[i, aidx] = a[0]
-        print('')
 
     ###########################################################################
-    # Plot this analysis.
+    # Analysis  fixed input image, iterate over output neurons.
     ###########################################################################
-
-    grid = [[analysis[i, j] for j in range(analysis.shape[1])]
-            for i in range(analysis.shape[0])]
-    label, presm, prob, pred = zip(*text)
-    row_labels_left = [('label: {}'.format(label[i]), 'pred: {}'.format(pred[i])) for i in range(len(label))]
-    row_labels_right = [('logit: {}'.format(presm[i]), 'prob: {}'.format(prob[i])) for i in range(len(label))]
-    col_labels = [''.join(method[3]) for method in methods]
-
-    eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
-                           file_name="mnist_fixed_output_neuron_{}_{}.pdf".format(neuron_analysis_idx, modelname))
-
-
-
-
-
-
-
-    ###########################################################################
-    # Analysis 2: fixed input image, iterate over output neurons.
-    ###########################################################################
-    # Select neural network output neuron index for analysis
+    # Select and fix image index for analysis
     input_image_idx = 1
     image, y = images[input_image_idx]
     image = image[None, :, :, :]
@@ -230,11 +162,9 @@ if __name__ == "__main__":
             # Analyze.
             if is_input_analyzer:
                 a = analyzer.analyze(image, i)
-            elif isinstance(
-                    analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
-                a = analyzer.analyze(x, i)
             else:
-                a = analyzer.analyze(x)
+                a = analyzer.analyze(x, i)
+
 
             t_elapsed = time.time() - t_start
             print('({:.4f}s) '.format(t_elapsed), end='')
@@ -253,7 +183,7 @@ if __name__ == "__main__":
     grid = [[analysis[i, j] for j in range(analysis.shape[1])]
             for i in range(analysis.shape[0])]
     label, presm, prob, pred = zip(*text)
-    row_labels_left = [('label: {}'.format(label[i]), 'pred: {}'.format(pred[i])) for i in range(len(label))]
+    row_labels_left = [('label: {}'.format(label[i]), 'neuron: {}'.format(pred[i])) for i in range(len(label))]
     row_labels_right = [('logit: {}'.format(presm[i]), 'prob: {}'.format(prob[i])) for i in range(len(label))]
     col_labels = [''.join(method[3]) for method in methods]
 
