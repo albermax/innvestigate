@@ -69,8 +69,6 @@ if __name__ == "__main__":
     input_range, n_epochs, kwargs = models[modelname]
 
 
-
-
     ###########################################################################
     # Get Data / Set Parameters
     ###########################################################################
@@ -92,39 +90,26 @@ if __name__ == "__main__":
     model.set_weights(modelp.get_weights())
 
 
-
-
-    ###########################################################################
-    # Analysis.
-    ###########################################################################
-    # Select neural network output neuron index for analysis
-    #neuron_analysis_idx = np.array([9])
-    neuron_analysis_idx = 9
-
     # Analysis methods and properties
     methods = [
         # NAME                    OPT.PARAMS               POSTPROC FXN            TITLE
 
         # Show input.
-        #("input",                 {},                       mutils.image,          "Input"),
+        ("input",                 {},                       mutils.image,          "Input"),
 
         # Function
-        #("gradient",              {},                       mutils.graymap,        "Gradient"),
-        #("smoothgrad",            {"noise_scale": 50},      mutils.graymap,        "SmoothGrad"),
-        #("integrated_gradients",  {},                       mutils.graymap,        "Integrated Gradients"),
+        ("gradient",              {},                       mutils.graymap,        "Gradient"),
 
         # Signal
-        #("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
-        #("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
-        #("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
+        ("deconvnet",             {},                       mutils.bk_proj,        "Deconvnet"),
+        ("guided_backprop",       {},                       mutils.bk_proj,        "Guided Backprop",),
+        ("pattern.net",           {},                       mutils.bk_proj,        "PatternNet"),
 
         # Interaction
-        #("lrp.z_baseline",        {},                       mutils.heatmap,         "Gradient*Input"),
         ("lrp.z",                 {},                       mutils.heatmap,         "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           mutils.heatmap,         "LRP-Epsilon"),
-       #("lrp.composite_a",       {},                       mutils.heatmap,         "LRP-CompositeA"),
-       #("lrp.composite_b",       {"epsilon": 1},           mutils.heatmap,         "LRP-CompositeB"),
     ]
+
 
 
     # Create analyzers.
@@ -138,6 +123,15 @@ if __name__ == "__main__":
                      batch_size=256, verbose=1)
 
         analyzers.append(analyzer)
+
+
+
+    ###########################################################################
+    # Analysis 1: fixed output neuron, multiple input images.
+    ###########################################################################
+    # Select neural network output neuron index for analysis
+    neuron_analysis_idx = 9
+
 
     # Create analysis.
     analysis = np.zeros([len(images), len(analyzers), 28, 28, 3])
@@ -164,11 +158,10 @@ if __name__ == "__main__":
             is_input_analyzer = methods[aidx][0] == "input"
             # Analyze.
             if is_input_analyzer:
-                a = analyzer.analyze(
-                    image, neuron_selection=neuron_analysis_idx)
+                a = analyzer.analyze(image, neuron_analysis_idx)
             elif isinstance(
                     analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
-                a = analyzer.analyze(x, neuron_selection=neuron_analysis_idx)
+                a = analyzer.analyze(x, neuron_analysis_idx)
             else:
                 a = analyzer.analyze(x)
 
@@ -183,7 +176,7 @@ if __name__ == "__main__":
         print('')
 
     ###########################################################################
-    # Plot the analysis.
+    # Plot this analysis.
     ###########################################################################
 
     grid = [[analysis[i, j] for j in range(analysis.shape[1])]
@@ -194,7 +187,79 @@ if __name__ == "__main__":
     col_labels = [''.join(method[3]) for method in methods]
 
     eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
-                           file_name="mnist_select_neuron_{}_{}.pdf".format(neuron_analysis_idx, modelname))
+                           file_name="mnist_fixed_output_neuron_{}_{}.pdf".format(neuron_analysis_idx, modelname))
+
+
+
+
+
+
+
+    ###########################################################################
+    # Analysis 2: fixed input image, iterate over output neurons.
+    ###########################################################################
+    # Select neural network output neuron index for analysis
+    input_image_idx = 1
+    image, y = images[input_image_idx]
+    image = image[None, :, :, :]
+
+    # Create analysis.
+    analysis = np.zeros([10, len(analyzers), 28, 28, 3])
+    text = []
+    for i in range(10):
+        print ('Output Neuron {}: '.format(i), end='')
+        # Predict label.
+
+        x = mutils.preprocess(image, input_range) #prediction is the same for every iteration below
+        presm = model.predict_on_batch(x)[0]
+        prob = modelp.predict_on_batch(x)[0]
+        y_hat = prob.argmax()
+
+
+        text.append((r"%s" % label_to_class_name[y],
+                     r"%.2f" % presm[i],
+                     r"%.2f" % prob[i],
+                     r"%s" % label_to_class_name[i]))
+
+        for aidx, analyzer in enumerate(analyzers):
+            #measure execution time
+            t_start = time.time()
+            print('{} '.format(methods[aidx][-1]), end='')
+
+            is_input_analyzer = methods[aidx][0] == "input"
+            # Analyze.
+            if is_input_analyzer:
+                a = analyzer.analyze(image, i)
+            elif isinstance(
+                    analyzer, innvestigate.analyzer.AnalyzerNetworkBase):
+                a = analyzer.analyze(x, i)
+            else:
+                a = analyzer.analyze(x)
+
+            t_elapsed = time.time() - t_start
+            print('({:.4f}s) '.format(t_elapsed), end='')
+
+            # Postprocess.
+            if not is_input_analyzer:
+                a = mutils.postprocess(a)
+            a = methods[aidx][2](a)
+            analysis[i, aidx] = a[0]
+        print('')
+
+    ###########################################################################
+    # Plot this analysis.
+    ###########################################################################
+
+    grid = [[analysis[i, j] for j in range(analysis.shape[1])]
+            for i in range(analysis.shape[0])]
+    label, presm, prob, pred = zip(*text)
+    row_labels_left = [('label: {}'.format(label[i]), 'pred: {}'.format(pred[i])) for i in range(len(label))]
+    row_labels_right = [('logit: {}'.format(presm[i]), 'prob: {}'.format(prob[i])) for i in range(len(label))]
+    col_labels = [''.join(method[3]) for method in methods]
+
+    eutils.plot_image_grid(grid, row_labels_left, row_labels_right, col_labels,
+                           file_name="mnist_fixed_input_image_{}_{}.pdf".format(input_image_idx, modelname))
+
 
     #clean shutdown for tf.
     if K.backend() == 'tensorflow':
