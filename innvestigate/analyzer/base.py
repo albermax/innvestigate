@@ -96,7 +96,7 @@ class AnalyzerBase(object):
                     else:
                         raise NotImplementedError()
 
-    def fit(self, *args, disable_no_training_warning=False, **kwargs):
+    def fit(self, *args, **kwargs):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -104,14 +104,15 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
+        disable_no_training_warning = kwargs.pop("disable_no_training_warning",
+                                                 False)
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
             warnings.warn("This analyzer does not need to be trained."
                           " Still fit() is called.", RuntimeWarning)
 
-    def fit_generator(self, *args,
-                      disable_no_training_warning=False, **kwargs):
+    def fit_generator(self, *args, **kwargs):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -119,6 +120,8 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
+        disable_no_training_warning = kwargs.pop("disable_no_training_warning",
+                                                 False)
         if not disable_no_training_warning:
             # issue warning if not training is foreseen,
             # but is fit is still called.
@@ -261,11 +264,12 @@ class OneEpochTrainerMixin(TrainerMixin):
         """
         return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, *args, steps=None, **kwargs):
+    def fit_generator(self, *args, **kwargs):
         """
         Same interface as :func:`fit_generator` of :class:`TrainerMixin` except that
         the parameter epoch is fixed to 1.
         """
+        steps = kwargs.pop("steps", None)
         return super(OneEpochTrainerMixin, self).fit_generator(
             *args,
             steps_per_epoch=steps,
@@ -387,6 +391,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
+            neuron_selection = np.asarray(neuron_selection)
+            if neuron_selection.size == 1:
+                # Need an index for each sample, broadcast.
+                neuron_selection = np.repeat(neuron_selection, X.shape[0])
             ret = self._analyzer_model.predict_on_batch([X, neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
@@ -472,17 +480,21 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             reverse_reapply_on_copied_layers)
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
+    def _gradient_reverse_mapping(
+            self, Xs, Ys, reversed_Ys, reverse_state, mask=None):
+        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
+
     def _reverse_mapping(self, layer):
         if isinstance(layer, (ilayers.Max, ilayers.Gather)):
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.
             if isinstance(layer, ilayers.Max):
-                return self._default_reverse_mapping
+                return self._gradient_reverse_mapping
             if isinstance(layer, ilayers.Gather):
                 # Gather second paramter is an index and has no gradient.
                 def ignored_index_gradient(*args):
-                    ret = self._default_reverse_mapping(*args,
-                                                        mask=[True, False])
+                    ret = self._gradient_reverse_mapping(*args,
+                                                         mask=[True, False])
                     return iutils.to_list(ret)+[None]
 
                 return ignored_index_gradient
@@ -492,11 +504,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 return reverse_f
         return None
 
-    def _default_reverse_mapping(self,
-                                 Xs, Ys, reversed_Ys, reverse_state,
-                                 mask=None):
-        # The gradient.
-        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
+    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        return self._gradient_reverse_mapping(
+            Xs, Ys, reversed_Ys, reverse_state)
 
     def _head_mapping(self, X):
         return X

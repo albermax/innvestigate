@@ -33,7 +33,11 @@ import keras.layers.recurrent
 import keras.layers.wrappers
 import keras.legacy.layers
 
-from ..keras import graph as kgraph
+
+# Prevents circular imports.
+def get_kgraph():
+    from . import graph as kgraph
+    return kgraph
 
 
 __all__ = [
@@ -44,7 +48,7 @@ __all__ = [
     "contains_activation",
     "contains_kernel",
     "only_relu_activation",
-    "is_container",
+    "is_network",
     "is_convnet_layer",
     "is_relu_convnet_layer",
     "is_average_pooling",
@@ -242,8 +246,11 @@ def only_relu_activation(layer):
             contains_activation(layer, "relu"))
 
 
-def is_container(layer):
-    return isinstance(layer, keras.engine.topology.Container)
+def is_network(layer):
+    """
+    Is network in network?
+    """
+    return isinstance(layer, keras.engine.topology.Network)
 
 
 def is_conv_layer(layer, *args, **kwargs):
@@ -339,7 +346,6 @@ def is_convnet_layer(layer):
     return isinstance(layer, CONVNET_LAYERS)
 
 
-
 def is_relu_convnet_layer(layer):
     return (is_convnet_layer(layer) and only_relu_activation(layer))
 
@@ -361,6 +367,7 @@ def is_input_layer(layer, ignore_reshape_layers=True):
     # to a Keras input layer object.
     # Note: In the sequential api the Sequential object
     # adds the Input layer if the user does not.
+    kgraph = get_kgraph()
 
     layer_inputs = kgraph.get_input_layers(layer)
     # We ignore certain layers, that do not modify

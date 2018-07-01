@@ -33,7 +33,7 @@ __all__ = ["Random", "Input"]
 class Input(AnalyzerNetworkBase):
 
     def _create_analysis(self, model):
-        return model.inputs
+        return [ilayers.Identity()(x) for x in iutils.to_list(model.inputs)]
 
 
 class Random(AnalyzerNetworkBase):

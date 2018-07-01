@@ -115,7 +115,7 @@ if __name__ == "__main__":
     analysis = np.zeros([len(images), len(analyzers)]+net["image_shape"]+[3])
     text = []
     for i, (image, y) in enumerate(images):
-        print ('Image {}: '.format(i), end='', flush=True)
+        print ('Image {}: '.format(i), end='')
         image = image[None, :, :, :]
         # Predict label.
         x = in_utils.preprocess(image, net)
@@ -134,12 +134,12 @@ if __name__ == "__main__":
             if analyzer:
                 # Measure execution time
                 t_start = time.time()
-                print('{} '.format(methods[aidx][-1]), end='', flush=True)
+                print('{} '.format(methods[aidx][-1]), end='')
 
                 a = analyzer.analyze(image if is_input_analyzer else x)
 
                 t_elapsed = time.time() - t_start
-                print('({:.4f}s) '.format(t_elapsed), end='', flush=True)
+                print('({:.4f}s) '.format(t_elapsed), end='')
 
                 # Postprocess.
                 if not np.all(np.isfinite(a)):

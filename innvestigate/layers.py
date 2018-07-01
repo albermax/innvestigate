@@ -269,6 +269,11 @@ class _Map(keras.layers.Layer):
         raise NotImplementedError()
 
 
+class Identity(_Map):
+    def _apply_map(self, x):
+        return K.identity(x)
+
+
 class Square(_Map):
     def _apply_map(self, x):
         return K.square(x)
@@ -388,7 +393,8 @@ class Divide(keras.layers.Layer):
 
 class SafeDivide(keras.layers.Layer):
 
-    def __init__(self, *args, factor=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        factor = kwargs.pop("factor", None)
         if factor is None:
             factor = K.epsilon()
         self._factor = factor

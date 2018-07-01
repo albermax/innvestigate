@@ -100,7 +100,7 @@ Given a data set with train and test data, this can be done in the following way
 ```python
 import innvestigate
 
-analyzer = innvestigate.create_analyzer("pattern.net")
+analyzer = innvestigate.create_analyzer("pattern.net", model)
 analyzer.fit(X_train)
 analysis = analyzer.analyze(X_test)
 ```

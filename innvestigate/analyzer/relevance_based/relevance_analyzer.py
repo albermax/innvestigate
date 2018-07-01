@@ -238,11 +238,9 @@ class LRP(base.ReverseAnalyzerBase):
     :param input_layer_rule: either a Rule object, atuple of (low, high) the min/max pixel values of the inputs
     """
 
-    def __init__(self,
-                 model, *args,
-                 rule=None,
-                 input_layer_rule=None,
-                 **kwargs):
+    def __init__(self, model, *args, **kwargs):
+        rule = kwargs.pop("rule", None)
+        input_layer_rule = kwargs.pop("input_layer_rule", None)
         self._model_checks = [
             # TODO: Check for non-linear output in general.
             {

@@ -77,8 +77,8 @@ class WrapperBase(base.AnalyzerBase):
 
 class AugmentReduceBase(WrapperBase):
 
-    def __init__(self, subanalyzer, *args, augment_by_n=2, **kwargs):
-        self._augment_by_n = augment_by_n
+    def __init__(self, subanalyzer, *args, **kwargs):
+        self._augment_by_n = kwargs.pop("augment_by_n", 2)
         super(AugmentReduceBase, self).__init__(subanalyzer,
                                                 *args, **kwargs)
 
@@ -87,7 +87,6 @@ class AugmentReduceBase(WrapperBase):
             # Take the keras analyzer model and
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
-
 
     def compile_analyzer(self):
         if not self._keras_based_augment_reduce:
@@ -188,8 +187,8 @@ class AugmentReduceBase(WrapperBase):
 
 class GaussianSmoother(AugmentReduceBase):
 
-    def __init__(self, subanalyzer, *args, noise_scale=1, **kwargs):
-        self._noise_scale = noise_scale
+    def __init__(self, subanalyzer, *args, **kwargs):
+        self._noise_scale = kwargs.pop("noise_scale", 1)
         super(GaussianSmoother, self).__init__(subanalyzer,
                                                *args, **kwargs)
 
@@ -224,14 +223,14 @@ class GaussianSmoother(AugmentReduceBase):
 
 class PathIntegrator(AugmentReduceBase):
 
-    def __init__(self, subanalyzer, *args,
-                 reference_inputs=0, steps=16, **kwargs):
-        self._reference_inputs = reference_inputs
+    def __init__(self, subanalyzer, *args, **kwargs):
+        steps = kwargs.pop("steps", 16)
+        self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._keras_constant_inputs = None
         super(PathIntegrator, self).__init__(subanalyzer,
                                              *args,
-                                              augment_by_n=steps,
-                                              **kwargs)
+                                             augment_by_n=steps,
+                                             **kwargs)
 
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:

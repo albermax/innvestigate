@@ -1,4 +1,3 @@
-
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
 from __future__ import\
@@ -322,7 +321,7 @@ def get_model_layers(model):
         for layer in container.layers:
             assert layer not in ret
             ret.append(layer)
-            if kchecks.is_container(layer):
+            if kchecks.is_network(layer):
                 collect_layers(layer)
     collect_layers(model)
 
@@ -373,7 +372,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 
     # Check if some layers are containers.
     # Ignoring the outermost container, i.e. the passed model.
-    contains_container = any([((l is not model) and kchecks.is_container(l))
+    contains_container = any([((l is not model) and kchecks.is_network(l))
                               for l in layers])
 
     # If so rebuild the graph, otherwise recycle computations,
@@ -838,7 +837,7 @@ def reverse_model(model, reverse_mappings,
         if isinstance(layer, keras.layers.InputLayer):
             # Special case. Do nothing.
             pass
-        elif kchecks.is_container(layer):
+        elif kchecks.is_network(layer):
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
