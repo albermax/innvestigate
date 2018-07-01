@@ -35,7 +35,7 @@ def apply(layer, inputs):
     Apply a layer to input[s].
 
     A flexible apply that tries to fit input to layers expected input.
-    This is useful when one doesn´t know if a layer expects a single tensor
+    This is useful when one doesn't know if a layer expects a single tensor
     or many.
     """
 

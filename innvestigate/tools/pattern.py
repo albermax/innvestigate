@@ -353,8 +353,8 @@ class PatternComputer(object):
         for layer_id, layer in enumerate(layers):
             # This does not work with containers!
             # They should be replaced by trace_model_execution.
-            if kchecks.is_container(layer):
-                raise Exception("Container in container is not suppored!")
+            if kchecks.is_network(layer):
+                raise Exception("Network in network is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
                 pinstance = clazz(model, layer,
                                   model_tensors=model_tensors,
