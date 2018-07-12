@@ -327,7 +327,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max()(model_output)
         elif neuron_selection_mode == "index":
-            neuron_indexing = keras.layers.Input(shape=[None], dtype=np.int32)
+            neuron_indexing = keras.layers.Input(shape=[None], dtype=np.int32, name='innvestigate_input_selindex')
             neuron_selection_inputs += [neuron_indexing]
 
             model_output = ilayers.Gather()(model_output+[neuron_indexing])
