@@ -69,6 +69,9 @@ __all__ = [
 
     "LRPSequentialPresetAFlat",
     "LRPSequentialPresetBFlat",
+
+    "DeepTaylor",
+    "BoundedDeepTaylor",
 ]
 
 
@@ -839,3 +842,83 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
+
+class DeepTaylor(LRPAlpha1Beta0):
+
+    def __init__(self, model, *args, **kwargs):
+
+        # TODO(ALBER) This code is mostly copied and should be refactored.
+        class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
+            def __init__(self, layer, state):
+                if isinstance(layer, keras.layers.pooling.MaxPooling1D):
+                    layer_replacement = keras.layers.pooling.AveragePooling1D(
+                        pool_size=layer.pool_size, strides=layer.strides,
+                        padding=layer.padding)
+                elif isinstance(layer, keras.layers.pooling.MaxPooling2D):
+                    layer_replacement = keras.layers.pooling.AveragePooling2D(
+                        pool_size=layer.pool_size, strides=layer.strides,
+                        padding=layer.padding, data_format=layer.data_format)
+                elif isinstance(layer, keras.layers.pooling.MaxPooling3D):
+                    layer_replacement = keras.layers.pooling.AveragePooling3D(
+                        pool_size=layer.pool_size, strides=layer.strides,
+                        padding=layer.padding, data_format=layer.data_format)
+                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling1D):
+                    layer_replacement = keras.layers.pooling.GlobalAveragePooling1D()
+                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling2D):
+                    layer_replacement = keras.layers.pooling.GlobalAveragePooling2D(
+                        data_format=layer.data_format)
+                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling3D):
+                    layer_replacement = keras.layers.pooling.GlobalAveragePooling3D(
+                        data_format=layer.data_format)
+                else:
+                    raise Exception()
+
+                self._layer_wo_act = layer_replacement
+
+                #TODO: implement rule support.
+                #super(AveragePoolingRerseLayer, self).__init__(layer, state)
+
+            def apply(self, Xs, Ys, Rs, reverse_state):
+                # the outputs of the pooling operation at each location is the sum of its inputs.
+                # the forward message must be known in this case, and are the inputs for each pooling thing.
+                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+
+                grad = ilayers.GradientWRT(len(Xs))
+                # Get activations.
+                Zs = kutils.apply(self._layer_wo_act, Xs)
+                # Divide incoming relevance by the activations.
+                tmp = [ilayers.SafeDivide()([a, b])
+                       for a, b in zip(Rs, Zs)]
+
+                # Propagate the relevance to input neurons
+                # using the gradient.
+                tmp = iutils.to_list(grad(Xs+Zs+tmp))
+                # Re-weight relevance with the input values.
+                return [keras.layers.Multiply()([a, b])
+                        for a, b in zip(Xs, tmp)]
+
+        super(DeepTaylor, self).__init__(model, *args, **kwargs)
+
+        # TODO(ALBER) make this conditional more transparent
+
+        self._conditional_mappings += [
+            (kchecks.is_max_pooling, DeepTaylorAveragePoolingRerseLayer),
+        ]
+
+class BoundedDeepTaylor(DeepTaylor):
+
+    def __init__(self, model, *args, low=None, high=None, **kwargs):
+
+        if low is None or high is None:
+            # TODO(ALBER) Put better error message.
+            raise ValueError("The (low, high) value for the Z-B (bounded rule)"
+                             " input rule must be specified.")
+
+        class BoundedProxyRule(rrule.BoundedRule):
+            def __init__(self, *args, **kwargs):
+                super(BoundedProxyRule, self).__init__(
+                    *args, low=low, high=high, **kwargs)
+
+        super(BoundedDeepTaylor, self).__init__(
+            model, *args, input_layer_rule=BoundedProxyRule, **kwargs)

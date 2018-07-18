@@ -30,48 +30,52 @@ from .relevance_based.relevance_analyzer import *
 ###############################################################################
 
 analyzers = {
-        # Utility.
-        "input": Input,
-        "random": Random,
+    # Utility.
+    "input": Input,
+    "random": Random,
 
-        # Gradient based
-        "gradient": Gradient,
-        "gradient.baseline": BaselineGradient,
-        "deconvnet": Deconvnet,
-        "guided_backprop": GuidedBackprop,
-        "integrated_gradients": IntegratedGradients,
-        "smoothgrad": SmoothGrad,
+    # Gradient based
+    "gradient": Gradient,
+    "gradient.baseline": BaselineGradient,
+    "deconvnet": Deconvnet,
+    "guided_backprop": GuidedBackprop,
+    "integrated_gradients": IntegratedGradients,
+    "smoothgrad": SmoothGrad,
 
-        # Relevance based
-        "lrp": LRP,
-        "lrp.z_baseline": BaselineLRPZ,
-        "lrp.z": LRPZ,
-        "lrp.z_IB": LRPZIgnoreBias,
+    # Relevance based
+    "lrp": LRP,
+    "lrp.z_baseline": BaselineLRPZ,
+    "lrp.z": LRPZ,
+    "lrp.z_IB": LRPZIgnoreBias,
 
-        "lrp.epsilon": LRPEpsilon,
-        "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
+    "lrp.epsilon": LRPEpsilon,
+    "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
 
-        "lrp.w_square": LRPWSquare,
-        "lrp.flat": LRPFlat,
+    "lrp.w_square": LRPWSquare,
+    "lrp.flat": LRPFlat,
 
-        "lrp.alpha_beta": LRPAlphaBeta,
+    "lrp.alpha_beta": LRPAlphaBeta,
 
-        "lrp.alpha_2_beta_1": LRPAlpha2Beta1,
-        "lrp.alpha_2_beta_1_IB": LRPAlpha2Beta1IgnoreBias,
-        "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
-        "lrp.alpha_1_beta_0_IB": LRPAlpha1Beta0IgnoreBias,
-        "lrp.z_plus": LRPZPlus,
-        "lrp.z_plus_fast": LRPZPlusFast,
+    "lrp.alpha_2_beta_1": LRPAlpha2Beta1,
+    "lrp.alpha_2_beta_1_IB": LRPAlpha2Beta1IgnoreBias,
+    "lrp.alpha_1_beta_0": LRPAlpha1Beta0,
+    "lrp.alpha_1_beta_0_IB": LRPAlpha1Beta0IgnoreBias,
+    "lrp.z_plus": LRPZPlus,
+    "lrp.z_plus_fast": LRPZPlusFast,
 
-        "lrp.sequential_preset_a": LRPSequentialPresetA,
-        "lrp.sequential_preset_b": LRPSequentialPresetB,
-        "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
-        "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
+    "lrp.sequential_preset_a": LRPSequentialPresetA,
+    "lrp.sequential_preset_b": LRPSequentialPresetB,
+    "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
+    "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
 
-        # Pattern based
-        "pattern.net": PatternNet,
-        "pattern.attribution": PatternAttribution,
-    }
+    # Deep Taylor
+    "deep_taylor": DeepTaylor,
+    "deep_taylor.bounded": BoundedDeepTaylor,
+
+    # Pattern based
+    "pattern.net": PatternNet,
+    "pattern.attribution": PatternAttribution,
+}
 
 # TODO: update LRP, reduce methods, split into LRP and DTD.
 # Some rules do not make sense when used for the full network, which is confusing.
