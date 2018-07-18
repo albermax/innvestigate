@@ -847,6 +847,9 @@ class DeepTaylor(LRPAlpha1Beta0):
 
     def __init__(self, model, *args, **kwargs):
 
+        # TODO(ALBER) make sure that only positive outputs of the final neuron
+        # is considered
+        
         # TODO(ALBER) This code is mostly copied and should be refactored.
         class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
