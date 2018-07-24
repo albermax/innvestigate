@@ -68,6 +68,8 @@ PRETRAINED_MODELS = {"pretrained_plos_long_relu":
 
 
 def _load_pretrained_net(modelname, new_input_shape):
+    #TODO: FIX THIS: model loads with random weights. worked with keras<=2.1.6
+    #NOTE:  https://github.com/keras-team/keras/issues/4875 : save model(s) differently. weights and models in separate files?
     filename = PRETRAINED_MODELS[modelname]["file"]
     urlname = PRETRAINED_MODELS[modelname]["url"]
     #model_path = get_file(filename, urlname) #TODO: FIX! corrupts the file?
