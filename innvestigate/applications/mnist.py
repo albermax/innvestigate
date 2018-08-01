@@ -32,6 +32,7 @@ import numpy as np
 from ..utils.keras import graph as kgraph
 import keras.models
 from keras.models import load_model, clone_model
+#from keras.utils import get_file
 
 
 
@@ -70,9 +71,9 @@ PRETRAINED_MODELS = {"pretrained_plos_long_relu":
 def _load_pretrained_net(modelname, new_input_shape):
     filename = PRETRAINED_MODELS[modelname]["file"]
     urlname = PRETRAINED_MODELS[modelname]["url"]
-    #model_path = get_file(filename, urlname) #TODO: FIX! corrupts the file?
+    #model_path = get_file(fname=filename, origin=urlname) #TODO: FIX! corrupts the file?
     model_path = os.path.expanduser('~') + "/.keras/models/" + filename
-    #print (model_path)
+
 
     #workaround the more elegant, but dysfunctional solution.
     if not os.path.isfile(model_path):
