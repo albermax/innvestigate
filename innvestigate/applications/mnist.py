@@ -32,6 +32,7 @@ import numpy as np
 from ..utils.keras import graph as kgraph
 import keras.models
 from keras.models import load_model, clone_model
+#from keras.utils import get_file
 
 
 
@@ -70,9 +71,9 @@ PRETRAINED_MODELS = {"pretrained_plos_long_relu":
 def _load_pretrained_net(modelname, new_input_shape):
     filename = PRETRAINED_MODELS[modelname]["file"]
     urlname = PRETRAINED_MODELS[modelname]["url"]
-    #model_path = get_file(filename, urlname) #TODO: FIX! corrupts the file?
+    #model_path = get_file(fname=filename, origin=urlname) #TODO: FIX! corrupts the file?
     model_path = os.path.expanduser('~') + "/.keras/models/" + filename
-    #print (model_path)
+
 
     #workaround the more elegant, but dysfunctional solution.
     if not os.path.isfile(model_path):
@@ -90,6 +91,12 @@ def _load_pretrained_net(modelname, new_input_shape):
     model = keras.models.Sequential(layers=model.layers)
 
     model_w_sm = clone_model(model)
+
+    #NOTE: perform forward pass to fix a keras 2.2.0 related issue with improper weight initialization
+    #See: https://github.com/albermax/innvestigate/issues/88
+    x_dummy = np.zeros(new_input_shape)[None, ...]
+    model_w_sm.predict(x_dummy)
+
     model_w_sm.set_weights(model.get_weights())
     model_w_sm.add(keras.layers.Activation("softmax"))
     return model, model_w_sm
