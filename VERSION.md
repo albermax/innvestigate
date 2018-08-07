@@ -2,5 +2,5 @@
 
 Includes the following functionality:
 
-* Analyzers: Gradient, SmoothGrad, IntegratedGradients, PatternNet, PatternAttribution, Input, Random.
+* Analyzers: Gradient, SmoothGrad, IntegratedGradients, PatternNet, PatternAttribution, LRP, DeepTaylor, Input, Random.
 * Pattern computer.
