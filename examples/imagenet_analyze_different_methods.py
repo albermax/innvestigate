@@ -92,8 +92,8 @@ if __name__ == "__main__":
             # Interaction
             ("pattern.attribution", {"patterns": patterns}, imgnetutils.heatmap, ("Pattern", "Attribution"),),
             ("lrp.epsilon", {}, imgnetutils.heatmap, "LRP Epsilon"),
-            ("lrp.sequential_preset_a", {}, imgnetutils.heatmap, ("LRP Sequential", "Preset A")),
-            ("lrp.sequential_preset_b", {}, imgnetutils.heatmap, ("LRP Sequential", "Preset B"))
+            ("lrp.sequential_preset_a_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetAFlat"),
+            ("lrp.sequential_preset_b_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetBFlat"),
         ]
 
         # Create analyzers.
