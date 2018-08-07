@@ -847,9 +847,23 @@ class DeepTaylor(LRPAlpha1Beta0):
 
     def __init__(self, model, *args, **kwargs):
 
+        # TODO(ALBER): this is a bad design pattern and not working.
+        # change model check registering.
+        self._model_checks = [
+            {
+                "check":
+                lambda layer: True,
+                #isinstance(layer,
+                #           keras.layers.normalization.BatchNormalization),
+                "type": "exception",
+                "message": ("DeepTayler (currently) "
+                            "does not handle BatchNormalization.")
+            }
+        ]
+
         # TODO(ALBER) make sure that only positive outputs of the final neuron
         # is considered
-        
+
         # TODO(ALBER) This code is mostly copied and should be refactored.
         class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
             def __init__(self, layer, state):
@@ -908,6 +922,7 @@ class DeepTaylor(LRPAlpha1Beta0):
         self._conditional_mappings += [
             (kchecks.is_max_pooling, DeepTaylorAveragePoolingRerseLayer),
         ]
+
 
 class BoundedDeepTaylor(DeepTaylor):
 
