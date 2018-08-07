@@ -92,8 +92,8 @@ if __name__ == "__main__":
             # Interaction
             ("pattern.attribution", {"patterns": patterns}, imgnetutils.heatmap, ("Pattern", "Attribution"),),
             ("lrp.epsilon", {}, imgnetutils.heatmap, "LRP Epsilon"),
-            ("lrp.composite_a", {}, imgnetutils.heatmap, "LRP CompositeA"),
-            ("lrp.composite_b", {}, imgnetutils.heatmap, "LRP CompositeB")
+            ("lrp.sequential_preset_a", {}, imgnetutils.heatmap, ("LRP Sequential", "Preset A")),
+            ("lrp.sequential_preset_b", {}, imgnetutils.heatmap, ("LRP Sequential", "Preset B"))
         ]
 
         # Create analyzers.
@@ -129,6 +129,7 @@ if __name__ == "__main__":
                 a = analyzer.analyze(image if is_input_analyzer else x)
             else:
                 print("Analyzer not available for this model.")
+                a = np.zeros_like(x)
 
             t_elapsed = time.time() - t_start
             print('({:.4f}s) '.format(t_elapsed), end='')
@@ -158,4 +159,4 @@ if __name__ == "__main__":
     row_labels_left = row_labels_left = [(n,'') for n in netnames]
     col_labels = [''.join(method[3]) for method in methods]
 
-    eutils.plot_image_grid(grid, row_labels_left, [], col_labels)
+    eutils.plot_image_grid(grid, row_labels_left, [], col_labels, file_name="different_methods.pdf")
