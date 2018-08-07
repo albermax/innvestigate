@@ -394,29 +394,37 @@ class BoundedRule(kgraph.ReverseMappingBase):
             weights=negative_weights,
             name_template="reversed_kernel_negative_%s")
 
-    # TODO: check if this is a correct implementation.
+    # TODO: clean up this implementation and add more documentation
     def apply(self, Xs, Ys, Rs, reverse_state):
         grad = ilayers.GradientWRT(len(Xs))
         to_low = keras.layers.Lambda(lambda x: x * 0 + self._low)
         to_high = keras.layers.Lambda(lambda x: x * 0 + self._high)
 
-        def f(Xs):
-            low = [to_low(x) for x in Xs]
-            high = [to_high(x) for x in Xs]
-
-            A = kutils.apply(self._layer_wo_act, Xs)
-            B = kutils.apply(self._layer_wo_act_positive, low)
-            C = kutils.apply(self._layer_wo_act_negative, high)
-            return [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
-                    for a, b, c in zip(A, B, C)]
+        low = [to_low(x) for x in Xs]
+        high = [to_high(x) for x in Xs]
 
         # Get values for the division.
-        Zs = f(Xs)
+        A = kutils.apply(self._layer_wo_act, Xs)
+        B = kutils.apply(self._layer_wo_act_positive, low)
+        C = kutils.apply(self._layer_wo_act_negative, high)
+        Zs = [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
+              for a, b, c in zip(A, B, C)]
+
         # Divide relevances with the value.
         tmp = [ilayers.SafeDivide()([a, b])
                for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
+        tmpA = iutils.to_list(grad(Xs+A+tmp))
+        tmpB = iutils.to_list(grad(low+B+tmp))
+        tmpC = iutils.to_list(grad(high+C+tmp))
+
+        tmpA = [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmpA)]
+        tmpB = [keras.layers.Multiply()([a, b]) for a, b in zip(low, tmpB)]
+        tmpC = [keras.layers.Multiply()([a, b]) for a, b in zip(high, tmpC)]
+
+        tmp = [keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
+               for a, b, c in zip(tmpA, tmpB, tmpC)]
+
         return tmp
 
 
