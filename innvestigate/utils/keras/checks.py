@@ -52,6 +52,7 @@ __all__ = [
     "is_convnet_layer",
     "is_relu_convnet_layer",
     "is_average_pooling",
+    "is_max_pooling",
     "is_input_layer",
     "is_batch_normalization_layer",
 ]
@@ -360,6 +361,18 @@ def is_average_pooling(layer):
         keras.layers.pooling.GlobalAveragePooling3D,
     )
     return isinstance(layer, AVERAGEPOOLING_LAYERS)
+
+
+def is_max_pooling(layer):
+    MAXPOOLING_LAYERS = (
+        keras.layers.pooling.MaxPooling1D,
+        keras.layers.pooling.MaxPooling2D,
+        keras.layers.pooling.MaxPooling3D,
+        keras.layers.pooling.GlobalMaxPooling1D,
+        keras.layers.pooling.GlobalMaxPooling2D,
+        keras.layers.pooling.GlobalMaxPooling3D,
+    )
+    return isinstance(layer, MAXPOOLING_LAYERS)
 
 
 def is_input_layer(layer, ignore_reshape_layers=True):
