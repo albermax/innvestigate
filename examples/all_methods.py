@@ -92,11 +92,13 @@ if __name__ == "__main__":
 
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   in_utils.heatmap,       "PatternAttribution"),
-        ("lrp.z_baseline",        {},                       in_utils.heatmap,       "Gradient*Input"),
         ("lrp.z",                 {},                       in_utils.heatmap,       "LRP-Z"),
         ("lrp.epsilon",           {"epsilon": 1},           in_utils.heatmap,       "LRP-Epsilon"),
         ("lrp.sequential_preset_a_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetAFlat"),
         ("lrp.sequential_preset_b_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetBFlat"),
+        # TODO(alber): low and high depends on the image processing, make transparent
+        # e.g., VGG16 -128, 128 while ResNet50 uses -1, 1
+        ("deep_taylor.bounded", {"low": -128, "high": 128},                      in_utils.heatmap,         "Deep Taylor"),
     ]
 
 

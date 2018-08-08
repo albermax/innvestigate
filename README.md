@@ -61,7 +61,7 @@ The iNNvestigate library contains implementations for the following methods:
 * *interaction:*
   * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
   * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
-  * **deep_taylor[.bounded]** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
+  * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.

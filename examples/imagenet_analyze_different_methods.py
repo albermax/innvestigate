@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     for i, netname in enumerate(netnames):
         print("Analyse {}.".format(netname))
-
+        keras.backend.clear_session()
         # Build model.
         tmp = getattr(innvestigate.applications.imagenet, netname)
         net = tmp(load_weights=True, load_patterns=pattern_type)
@@ -74,6 +74,13 @@ if __name__ == "__main__":
         # Analysis.
         patterns = net["patterns"]
 
+        smoothgrad_noise_scale = {
+            "vgg16": 50,
+            "resnet50": 50,
+            "inception_v3": 0.1,
+            "nasnet_large": 0.1,
+        }[netname]
+
         methods = [
             # NAME             POSTPROCESSING     TITLE
 
@@ -82,7 +89,8 @@ if __name__ == "__main__":
 
             # Function
             ("gradient", {}, imgnetutils.graymap, "Gradient"),
-            ("integrated_gradients", {}, imgnetutils.graymap, ("Integrated", "Gradients")),
+            ("smoothgrad", {"noise_scale": smoothgrad_noise_scale, "augment_by_n": 32}, imgnetutils.graymap, ("Smoothgrad")),
+            ("integrated_gradients", {"steps": 32}, imgnetutils.graymap, ("Integrated", "Gradients")),
 
             # Signal
             ("deconvnet", {}, imgnetutils.bk_proj, "Deconvnet"),
@@ -91,9 +99,10 @@ if __name__ == "__main__":
 
             # Interaction
             ("pattern.attribution", {"patterns": patterns}, imgnetutils.heatmap, ("Pattern", "Attribution"),),
+            ("deep_taylor.bounded", {"low": -128, "high": 128},                      imgnetutils.heatmap,         "Deep Taylor"),
             ("lrp.epsilon", {}, imgnetutils.heatmap, "LRP Epsilon"),
-            ("lrp.sequential_preset_a_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetAFlat"),
-            ("lrp.sequential_preset_b_flat", {"epsilon": 1},         in_utils.heatmap,         "LRP-PresetBFlat"),
+            ("lrp.sequential_preset_a_flat", {"epsilon": 1},         imgnetutils.heatmap,         "LRP Sequential Preset A"),
+            ("lrp.sequential_preset_b_flat", {"epsilon": 1},         imgnetutils.heatmap,         "LRP Sequential Preset B"),
         ]
 
         # Create analyzers.
@@ -156,6 +165,7 @@ if __name__ == "__main__":
     # Plot the analysis.
     grid = [[analysis_all[i][j] for j in range(len(methods))]
                  for i in range(n_nets)]
+
     row_labels_left = row_labels_left = [(n,'') for n in netnames]
     col_labels = [''.join(method[3]) for method in methods]
 
