@@ -69,10 +69,10 @@ def plot_image_grid(grid,
     plt.clf()
     plt.rc("font", family="sans-serif")
 
-    plt.figure(figsize = (n_cols, n_rows)) #TODO figsize
+    plt.figure(figsize = (n_cols, n_rows+1)) #TODO figsize
     for r in range(n_rows):
         for c in range(n_cols):
-            ax = plt.subplot2grid(shape=[n_rows, n_cols], loc=[r,c])
+            ax = plt.subplot2grid(shape=[n_rows+1, n_cols], loc=[r+1,c])
             ax.imshow(grid[r][c], interpolation='none') #TODO. controlled color mapping wrt all grid entries, or individually. make input param
             ax.set_xticks([])
             ax.set_yticks([])
