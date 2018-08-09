@@ -113,6 +113,8 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 * **[Imagenet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_example.ipynb):** shows how to use the different methods with VGG16 on ImageNet and how the reproduce the analysis grid above. This example uses pre-trained patterns for PatternNet.
 * **[MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_example.ipynb):** shows how to train and use analyzers on MNIST.
 
+**To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
+
 ## Contribution
 
 If you would like to add your analysis method please get in touch with us!

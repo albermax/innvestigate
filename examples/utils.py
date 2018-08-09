@@ -42,18 +42,32 @@ def load_image(path, size):
 
 def get_imagenet_data(size=224):
     base_dir = os.path.dirname(__file__)
-    with open(os.path.join(base_dir, "images", "ground_truth")) as f:
-        ground_truth = {x.split()[0]: int(x.split()[1])
-                        for x in f.readlines() if len(x.strip()) > 0}
+    # ImageNet 2012 validation set images?
+    with open(os.path.join(base_dir, "images", "ground_truth_val2012")) as f:
+        ground_truth_val2012 = {x.split()[0]: int(x.split()[1])
+                                for x in f.readlines() if len(x.strip()) > 0} 
+    with open(os.path.join(base_dir, "images", "synset_id_to_class")) as f:
+        synset_to_class = {x.split()[1]: int(x.split()[0])
+                           for x in f.readlines() if len(x.strip()) > 0} 
     with open(os.path.join(base_dir, "images", "imagenet_label_mapping")) as f:
         image_label_mapping = {int(x.split(":")[0]): x.split(":")[1].strip()
                                for x in f.readlines() if len(x.strip()) > 0}
 
-    images = [(load_image(os.path.join(base_dir, "images", f), size),
-               ground_truth[f])
-              for f in os.listdir(os.path.join(base_dir, "images"))
-              if f.endswith(".JPEG")]
+    def get_class(f):
+        # File from ImageNet 2012 validation set
+        ret = ground_truth_val2012.get(f, None)
+        if ret is None:
+            # File from ImageNet training sets
+            ret = synset_to_class.get(f.split("_")[0], None)
+        if ret is None:
+            # Random JPEG file
+            ret = "--"
+        return ret
 
+    images = [(load_image(os.path.join(base_dir, "images", f), size),
+               get_class(f))
+              for f in os.listdir(os.path.join(base_dir, "images"))
+              if f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")]
     return images, image_label_mapping
 
 
