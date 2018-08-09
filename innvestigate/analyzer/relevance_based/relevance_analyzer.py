@@ -926,7 +926,7 @@ class DeepTaylor(LRPAlpha1Beta0):
 
 class BoundedDeepTaylor(DeepTaylor):
 
-    def __init__(self, model, *args, low=None, high=None, **kwargs):
+    def __init__(self, model, low=None, high=None, **kwargs):
 
         if low is None or high is None:
             # TODO(ALBER) Put better error message.
@@ -939,4 +939,4 @@ class BoundedDeepTaylor(DeepTaylor):
                     *args, low=low, high=high, **kwargs)
 
         super(BoundedDeepTaylor, self).__init__(
-            model, *args, input_layer_rule=BoundedProxyRule, **kwargs)
+            model, input_layer_rule=BoundedProxyRule, **kwargs)
