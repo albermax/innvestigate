@@ -10,8 +10,7 @@ Welcome to iNNvestigate's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-Explain here what this is.
-
+This is the API documentation for the iNNvestigate library.
 
 API reference
 =============
