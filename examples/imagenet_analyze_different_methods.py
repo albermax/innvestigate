@@ -95,7 +95,7 @@ if __name__ == "__main__":
             # Signal
             ("deconvnet", {}, imgnetutils.bk_proj, "Deconvnet"),
             ("guided_backprop", {}, imgnetutils.bk_proj, ("Guided", "Backprop"),),
-            ("pattern.net", {"patterns": patterns}, imgnetutils.bk_proj, "PatterNet"),
+            ("pattern.net", {"patterns": patterns}, imgnetutils.bk_proj, "PatternNet"),
 
             # Interaction
             ("pattern.attribution", {"patterns": patterns}, imgnetutils.heatmap, ("Pattern", "Attribution"),),
