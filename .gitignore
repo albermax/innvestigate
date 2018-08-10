@@ -111,7 +111,8 @@ nosetests.cfg
 
 *.pdf
 *.npz
-
+*.jpg
+*.jpeg
 
 # lapuschkin development ignores
 gamma_test.py
