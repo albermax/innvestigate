@@ -2,8 +2,6 @@
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 
-## Note: The library is alpha-state and you might encounter issues using it. We are working on the next release. Please let us know if you find any bugs.
-
 ## Introduction
 
 In the recent years neural networks furthered the state of the art in many domains like, e.g., object detection and speech recognition.
@@ -14,7 +12,7 @@ This library addresses this by providing a common interface and out-of-the-box i
 Our goal is to make analyzing neural networks' predictions easy!
 
 
-**If you use this code please star the repository and cite the following paper:**
+### If you use this code please star the repository and cite the following paper:
 
 **["iNNvestigate neural networks!"](http://arxiv.org/abs/1808.04260)([http://arxiv.org/abs/1808.04260](http://arxiv.org/abs/1808.04260)) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans**
 
