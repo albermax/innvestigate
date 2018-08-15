@@ -15,10 +15,9 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 
 **If you use this code please star the repository and cite the following paper:**
-```
-iNNvestigate neural networks!
+
 Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans
-```
+**"iNNvestigate neural networks!"**
 [http://arxiv.org/abs/1808.04260](http://arxiv.org/abs/1808.04260)
 
 ## Installation
