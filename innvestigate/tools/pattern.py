@@ -44,6 +44,16 @@ __all__ = [
 def _get_active_neuron_io(layer, active_node_indices,
                           return_i=True, return_o=True,
                           do_activation_search=False):
+    """
+    Returns the neuron-wise input output for the passed layer.
+    This is done while taking care of only considering layer nodes that
+    are listed as active.
+
+    Starting from the passed layer this functions
+    returns the first layer with an activation upstream in the model,
+    if do_activation_search is an execution list.
+    Otherwise the current layer's output is returned.
+    """
 
     def contains_activation(layer):
         return (kchecks.contains_activation(layer) and
@@ -57,8 +67,8 @@ def _get_active_neuron_io(layer, active_node_indices,
 
         if(do_activation_search is not False and
            not contains_activation(layer)):
-            # walk along execution graph until we find an activation function
-            # if current layer has not.
+            # Walk along execution graph until we find an activation function,
+            # if current layer has none.
             execution_list = do_activation_search
 
             # First find current node.
@@ -91,6 +101,7 @@ def _get_active_neuron_io(layer, active_node_indices,
 
         return ret
 
+    # Get neuron-wise io for active layer nodes.
     tmp = [kgraph.get_layer_neuronwise_io(layer, Xs=get_Xs(i), Ys=get_Ys(i),
                                           return_i=return_i, return_o=return_o)
            for i in active_node_indices]
@@ -116,6 +127,13 @@ def _get_active_neuron_io(layer, active_node_indices,
 
 
 class BasePattern(object):
+    """
+    Interface for pattern objects used to compute patterns by the
+    PatternComputer class.
+
+    The basic work-flow is that a pattern computes statistics for the
+    passed layer, which are then used to compute the final pattern.
+    """
 
     def __init__(self,
                  model,
@@ -132,6 +150,14 @@ class BasePattern(object):
         self._active_node_indices = self._get_active_node_indices()
 
     def _get_active_node_indices(self):
+        """
+        A layer can be applied in several models.
+        This functions returns a list with all nodes of the given
+        layer that are active/used in the current model.
+
+        If no model_tensors are passed to the pattern,
+        it is assumed all nodes are active.
+        """
         n_nodes = kgraph.get_layer_inbound_count(self.layer)
         if self.model_tensors is None:
             return list(range(n_nodes))
@@ -149,13 +175,23 @@ class BasePattern(object):
         return kchecks.contains_kernel(self.layer)
 
     def stats_from_batch(self):
+        """
+        Creates statistics while the PatternComputer passes the
+        dataset once.
+        """
         raise NotImplementedError()
 
     def compute_pattern(self):
+        """
+        Computes the pattern after computing the statistics.
+        """
         raise NotImplementedError()
 
 
 class DummyPattern(BasePattern):
+    """
+    Computes a dummy pattern for test purposes.
+    """
 
     def get_stats_from_batch(self):
         Xs, Ys = _get_active_neuron_io(self.layer,
@@ -177,6 +213,9 @@ class DummyPattern(BasePattern):
 class LinearPattern(BasePattern):
 
     def _get_neuron_mask(self):
+        """
+        Select which neurons are considered for the pattern computation.
+        """
         Ys = _get_active_neuron_io(self.layer,
                                    self._active_node_indices,
                                    return_i=False, return_o=True)
@@ -184,6 +223,7 @@ class LinearPattern(BasePattern):
         return ilayers.OnesLike()(Ys[0])
 
     def get_stats_from_batch(self):
+        # Get the neuron-wise I/O for this layer.
         layer = kgraph.copy_layer_wo_activation(self.layer,
                                                 keep_bias=False,
                                                 reuse_symbolic_tensors=False)
@@ -195,6 +235,7 @@ class LinearPattern(BasePattern):
             raise ValueError("Assume that kernel layer have only one output.")
         X, Y = Xs[0], Ys[0]
 
+        # Create layers that keep a running mean for the desired stats.
         self.mean_x = ilayers.RunningMeans()
         self.mean_y = ilayers.RunningMeans()
         self.mean_xy = ilayers.RunningMeans()
@@ -227,7 +268,7 @@ class LinearPattern(BasePattern):
         return ilayers.Sum(axis=None)(dummy)
 
     def compute_pattern(self):
-
+        """Computes the patterns according to the formula in the paper."""
         def safe_divide(a, b):
             return a / (b + (b == 0))
 
@@ -315,13 +356,15 @@ class PatternComputer(object):
                  gpus=None):
         self.model = model
 
+        # Break cyclic import.
         import innvestigate.analyzer.pattern_based
-        supported_layers = innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET
+        supported_layers = (
+            innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET)
         for layer in self.model.layers:
             if not isinstance(layer, supported_layers):
                 raise Exception("Model contains not supported layer: %s"
                                 % layer)
-        
+
         pattern_types = iutils.to_list(pattern_type)
         self.pattern_types = {k: get_pattern_class(k)
                               for k in pattern_types}
@@ -331,32 +374,45 @@ class PatternComputer(object):
         if self.compute_layers_in_parallel is False:
             raise NotImplementedError("Not supported.")
 
-        # create pattern instances and collect keras outputs
-        self._work_sequence = []
-        self._pattern_instances = {k: [] for k in self.pattern_types}
-        computer_outputs = []
-        # Broadcaster has shape (mb, 1)
-        # Todod: does not work for tensors
-        reduce_axes = list(range(len(K.int_shape(model.inputs[0]))))[1:]
+    def _create_computers(self):
+        """
+        Creates pattern objects and Keras models that are used to collect
+        statistics and compute patterns.
+
+        We compute the patterns by first computing statistics within
+        the Keras framework, which are then used to compute the patterns.
+
+        This is based on a workaround. We connect the stats computation
+        via dummy outputs to a model's output and then iterate over the
+        dataset to compute statistics.
+        """
+        # Create a broadcasting function that is used to connect
+        # the dummy outputs.
+        # Broadcaster has shape (mini_batch_size, 1)
+        reduce_axes = list(range(len(K.int_shape(self.model.inputs[0]))))[1:]
         dummy_broadcaster = ilayers.Sum(axis=reduce_axes,
-                                        keepdims=True)(model.inputs[0])
+                                        keepdims=True)(self.model.inputs[0])
 
         def broadcast(x):
             return ilayers.Broadcast()([dummy_broadcaster, x])
 
-        layers, execution_list, _ = kgraph.trace_model_execution(model)
+        # Collect all tensors that are part of a model's execution.
+        layers, execution_list, _ = kgraph.trace_model_execution(self.model)
         model_tensors = set()
         for _, input_tensors, output_tensors in execution_list:
             for t in input_tensors+output_tensors:
                 model_tensors.add(t)
 
+        # Create pattern instances and collect the dummy outputs.
+        self._pattern_instances = {k: [] for k in self.pattern_types}
+        computer_outputs = []
         for layer_id, layer in enumerate(layers):
             # This does not work with containers!
             # They should be replaced by trace_model_execution.
             if kchecks.is_network(layer):
                 raise Exception("Network in network is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
-                pinstance = clazz(model, layer,
+                pinstance = clazz(self.model, layer,
                                   model_tensors=model_tensors,
                                   execution_list=execution_list)
                 if pinstance.has_pattern() is False:
@@ -366,26 +422,25 @@ class PatternComputer(object):
                 # Broadcast dummy_output to right shape.
                 computer_outputs += iutils.to_list(broadcast(dummy_output))
 
-        # initialize the keras outputs
+        # Now we create one or more Keras models to train the patterns.
         self._n_computer_outputs = len(computer_outputs)
         if self.compute_layers_in_parallel is True:
             self._computers = [
-                keras.models.Model(inputs=model.inputs,
+                keras.models.Model(inputs=self.model.inputs,
                                    outputs=computer_outputs)
             ]
         else:
             self._computers = [
-                keras.models.Model(inputs=model.inputs,
+                keras.models.Model(inputs=self.model.inputs,
                                    outputs=computer_output)
                 for computer_output in computer_outputs
             ]
 
-        # distribute computation on more gpus
+        # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
             self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
                                for tmp in self._computers]
-        # todo: model compiling?
 
     def compute(self, X, batch_size=32, verbose=0):
         """
@@ -405,15 +460,14 @@ class PatternComputer(object):
         :param generator: Data to compute patterns.
         :param kwargs: Same as for keras model.fit_generator.
         """
-        if not hasattr(self, "_computers"):
-            raise Exception("One shot computer. Already used.")
+        self._create_computers()
 
         # We don't do gradient updates.
         class NoOptimizer(keras.optimizers.Optimizer):
             def get_updates(self, *args, **kwargs):
                 return []
         optimizer = NoOptimizer()
-        # We only go over the training data once.
+        # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
             raise ValueError("Pattern are computed with "
                              "a closed form solution. "
@@ -448,17 +502,15 @@ class PatternComputer(object):
 
         # Compute pattern statistics.
         for computer in self._computers:
-
             computer.fit_generator(generator, **kwargs)
 
-        # retrieve the actual patterns
+        # Compute and retrieve the actual patterns.
         pis = self._pattern_instances
         patterns = {ptype: [tmp.compute_pattern() for tmp in pis[ptype]]
                     for ptype in self.pattern_types}
 
-        # free memory
+        # Free memory.
         del self._computers
-        del self._work_sequence
         del self._pattern_instances
 
         if len(self.pattern_types) == 1:
