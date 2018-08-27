@@ -30,7 +30,7 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.0rc1",
+        version="1.0.2",
         description=("A toolbox to innvestigate neural networks decisions."),
         long_description=readme(),
         classifiers=[

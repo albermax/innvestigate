@@ -68,13 +68,15 @@ SUPPORTED_LAYER_PATTERNNET = (
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     """PatternNet analyzer.
 
-    Applies the "PatternNet" algorithm to analyze the model.
+    Applies the "PatternNet" algorithm to analyze the model's predictions.
 
     :param model: A Keras model.
     :param patterns: Pattern computed by
       :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
       to be called.
     :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    :param reverse_project_bottleneck_layers: Project the analysis vector into
+      range [-1, +1]. (default: True)
     """
 
     def __init__(self,
@@ -83,7 +85,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                  allow_lambda_layers=False,
                  **kwargs):
         self._model_checks = [
-            # todo: Check for non-linear output in general.
+            # TODO(alber): Check for non-linear output in general.
             {
                 "check":
                 lambda layer: kchecks.contains_activation(
@@ -108,7 +110,8 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             # Clear cut, only support layers the method is developed for now.
             {
                 "check":
-                lambda layer: not isinstance(layer, SUPPORTED_LAYER_PATTERNNET),
+                lambda layer: not isinstance(layer,
+                                             SUPPORTED_LAYER_PATTERNNET),
                 "type": "exception",
                 "message": ("PatternNet is only well defined for "
                             "conv2d/max-pooling/dense layers."),
@@ -149,33 +152,37 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         super(PatternNet, self).__init__(model, **kwargs)
 
     def _prepare_pattern(self, layer, state, pattern):
+        """""Prepares a pattern before it is set in the back-ward pass."""
         return pattern
 
     def _create_analysis(self, *args, **kwargs):
         # shared information among the created reverse mappings
-        # todo: make this more flexible.
+        # TODO(alber): make this more flexible.
         tmp_pattern_idx_stack = list(range(len(self._patterns)))
 
         def get_pattern(layer, state):
             if self._patterns is None:
-                raise Exception("Patterns are required. "
-                                "Either train them or "
-                                "pass them to the constructor.")
+                raise ValueError("Patterns are required. "
+                                 "Either train them or "
+                                 "pass them to the constructor.")
 
             pattern = self._patterns[tmp_pattern_idx_stack.pop(0)]
             return self._prepare_pattern(layer, state, pattern)
 
         class ReverseLayer(kgraph.ReverseMappingBase):
+            """
+            PatternNet backward mapping for layers with kernels.
+
+            Applies the (filter) weights on the forward pass and
+            on the backward pass applies the gradient computation
+            where the filter weights are replaced with the patterns.
+            """
 
             def __init__(self, layer, state):
-                # we want to apply the filter weights on the forward pass
-                # on the backward pass we want copy the gradient computation
-                # except that using the pattern weights instead of the filter w
-                # i.e. we need to revert the activation with the forward
-                # activations to keep the relu patterns of the gradient comp.
-                # this is the reason for splitting the gradient mimicking:
                 config = layer.get_config()
 
+                # Layer can contain a kernel and an activation.
+                # Split layers in a kernel layer and an activation layer.
                 activation = None
                 if "activation" in config:
                     activation = config["activation"]
@@ -183,31 +190,35 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                 self._act_layer = keras.layers.Activation(
                     activation,
                     name="reversed_act_%s" % config["name"])
+                self._filter_layer = kgraph.copy_layer_wo_activation(
+                    layer, name_template="reversed_filter_%s")
 
-                self._kernel_layer = kgraph.copy_layer_wo_activation(
-                    layer, name_template="reversed_kernel_%s")
-
-                # replace kernel weights with pattern weights
-                pattern_weights = layer.get_weights()
+                # Replace filter/kernel weights with patterns.
+                filter_weights = layer.get_weights()
                 pattern = get_pattern(layer, state)
-                # assume that only one matches
-                tmp = [pattern.shape == x.shape for x in pattern_weights]
+                # Assume that only one weight has a corresponding pattern.
+                # E.g., biases have no pattern.
+                tmp = [pattern.shape == x.shape for x in filter_weights]
                 if np.sum(tmp) != 1:
-                    raise Exception("Cannot match pattern to kernel.")
-                pattern_weights[np.argmax(tmp)] = pattern
+                    raise Exception("Cannot match pattern to filter.")
+                filter_weights[np.argmax(tmp)] = pattern
                 self._pattern_layer = kgraph.copy_layer_wo_activation(
                     layer,
                     name_template="reversed_pattern_%s",
-                    weights=pattern_weights)
+                    weights=filter_weights)
 
             def apply(self, Xs, Ys, reversed_Ys, reverse_state):
-                act_Xs = kutils.apply(self._kernel_layer, Xs)
+                # Reapply the prepared layers.
+                act_Xs = kutils.apply(self._filter_layer, Xs)
                 act_Ys = kutils.apply(self._act_layer, act_Xs)
                 pattern_Ys = kutils.apply(self._pattern_layer, Xs)
 
+                # Layers that apply the backward pass.
                 grad_act = ilayers.GradientWRT(len(act_Xs))
                 grad_pattern = ilayers.GradientWRT(len(Xs))
 
+                # First step: propagate through the activation layer.
+                # Workaround for linear activations.
                 linear_activations = [None, keras.activations.get("linear")]
                 if self._act_layer.activation in linear_activations:
                     tmp = reversed_Ys
@@ -215,8 +226,10 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                     # if linear activation this behaves strange
                     tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
 
+                # Second step: propagate through the pattern layer.
                 return grad_pattern(Xs+pattern_Ys+tmp)
 
+        # Apply the pattern mapping on all layers that contain a kernel.
         self._conditional_mappings = [
             (kchecks.contains_kernel, ReverseLayer),
         ]
@@ -236,12 +249,12 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                        use_multiprocessing=False,
                        verbose=0,
                        disable_no_training_warning=None,
-                       pattern_type="linear",
+                       pattern_type="relu",
                        **kwargs):
 
         if isinstance(pattern_type, (list, tuple)):
             raise ValueError("Only one pattern type allowed. "
-                             "Please pass string.")
+                             "Please pass a string.")
 
         computer = itools.PatternComputer(self._model,
                                           pattern_type=pattern_type,
@@ -274,13 +287,15 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 class PatternAttribution(PatternNet):
     """PatternAttribution analyzer.
 
-    Applies the "PatternAttribution" algorithm to analyze the model.
+    Applies the "PatternNet" algorithm to analyze the model's predictions.
 
     :param model: A Keras model.
     :param patterns: Pattern computed by
       :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
       to be called.
     :param allow_lambda_layers: Approximate lambda layers with the gradient.
+    :param reverse_project_bottleneck_layers: Project the analysis vector into
+      range [-1, +1]. (default: True)
     """
 
     def _prepare_pattern(self, layer, state, pattern):

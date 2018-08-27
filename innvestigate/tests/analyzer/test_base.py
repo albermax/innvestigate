@@ -90,22 +90,6 @@ def test_fast__AnalyzerNetworkBase_neuron_selection_index():
     class CustomAnalyzer(Gradient):
 
         def analyze(self, X):
-            index = 0 * np.ones((X.shape[0],), np.int32)
-            return super(CustomAnalyzer, self).analyze(X, index)
-
-    def method(model):
-        return CustomAnalyzer(model, neuron_selection_mode="index")
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__AnalyzerNetworkBase_neuron_selection_index_2():
-
-    class CustomAnalyzer(Gradient):
-
-        def analyze(self, X):
             index = 0
             return super(CustomAnalyzer, self).analyze(X, index)
 
@@ -116,13 +100,17 @@ def test_fast__AnalyzerNetworkBase_neuron_selection_index_2():
 
 
 @pytest.mark.precommit
+@pytest.mark.filterwarnings("ignore")
 def test_precommit__AnalyzerNetworkBase_neuron_selection_index():
 
     class CustomAnalyzer(Gradient):
 
         def analyze(self, X):
-            index = 3 * np.ones((X.shape[0],), np.int32)
-            return super(CustomAnalyzer, self).analyze(X, index)
+            index = (3, 3)
+            ret = super(CustomAnalyzer, self).analyze(X, index)
+            ret2 = super(CustomAnalyzer, self).analyze(X, 3)
+            assert np.allclose(ret, 2 * ret2)
+            return ret
 
     def method(model):
         return CustomAnalyzer(model, neuron_selection_mode="index")
