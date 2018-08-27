@@ -375,7 +375,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Same interface as :class:`Analyzer` besides
 
         :param neuron_selection: If neuron_selection_mode is 'index' this
-          should be the indices for the chosen neuron(s).
+          should be an integer with the index for the chosen neuron.
         """
         if not hasattr(self, "_analyzer_model"):
             self.compile_analyzer()
@@ -391,10 +391,13 @@ class AnalyzerNetworkBase(AnalyzerBase):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
-            neuron_selection = np.asarray(neuron_selection)
-            if neuron_selection.size == 1:
-                # Need an index for each sample, broadcast.
-                neuron_selection = np.repeat(neuron_selection, X.shape[0])
+            neuron_selection = np.asarray(neuron_selection).flatten()
+            if neuron_selection.size != 1:
+                # The code allows to select multiple neurons.
+                warnings.warn(
+                    "Multiple neurons are selected. Most analysis methods "
+                    "do theoretically not support multi-neuron analysis. "
+                    "Consider using a Sum layer.")
             ret = self._analyzer_model.predict_on_batch([X, neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
