@@ -42,6 +42,12 @@ __all__ = [
     "Max",
     "Greater",
     "Less",
+    "GreaterThanZero",
+    "LessThanZero",
+    "GreaterEqual",
+    "LessEqual",
+    "GreaterEqualThanZero",
+    "LessEqualThanZero",
     "Sum",
     "Mean",
     "CountNonZero",
@@ -352,6 +358,28 @@ class LessThanZero(keras.layers.Layer):
         return K.less(x, K.constant(0))
 
 
+class GreaterEqual(keras.layers.Layer):
+    def call(self, x):
+        a, b = x
+        return K.greater_equal(a, b)
+
+
+class LessEqual(keras.layers.Layer):
+    def call(self, x):
+        a, b = x
+        return K.less_equal(a, b)
+
+
+class GreaterEqualThanZero(keras.layers.Layer):
+    def call(self, x):
+        return K.greater_equal(x, K.constant(0))
+
+
+class LessEqualThanZero(keras.layers.Layer):
+    def call(self, x):
+        return K.less_equal(x, K.constant(0))
+
+
 class Transpose(keras.layers.Layer):
 
     def __init__(self, axes=None, **kwargs):
@@ -602,4 +630,4 @@ class Gather(keras.layers.Layer):
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], 1)
+        return (input_shapes[0][0], input_shapes[1][0])

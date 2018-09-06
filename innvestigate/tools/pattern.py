@@ -31,7 +31,15 @@ from ..utils.keras import graph as kgraph
 
 
 __all__ = [
+    "get_active_neuron_io",
+    "get_pattern_class",
+
     "BasePattern",
+    "DummyPattern",
+    "LinearPattern",
+    "ReLUPositivePattern",
+    "ReLUNegativePattern",
+
     "PatternComputer",
 ]
 
@@ -41,9 +49,9 @@ __all__ = [
 ###############################################################################
 
 
-def _get_active_neuron_io(layer, active_node_indices,
-                          return_i=True, return_o=True,
-                          do_activation_search=False):
+def get_active_neuron_io(layer, active_node_indices,
+                         return_i=True, return_o=True,
+                         do_activation_search=False):
     """
     Returns the neuron-wise input output for the passed layer.
     This is done while taking care of only considering layer nodes that
@@ -64,7 +72,6 @@ def _get_active_neuron_io(layer, active_node_indices,
 
     def get_Ys(node_index):
         ret = iutils.to_list(layer.get_output_at(node_index))
-
         if(do_activation_search is not False and
            not contains_activation(layer)):
             # Walk along execution graph until we find an activation function,
@@ -194,8 +201,8 @@ class DummyPattern(BasePattern):
     """
 
     def get_stats_from_batch(self):
-        Xs, Ys = _get_active_neuron_io(self.layer,
-                                       self._active_node_indices)
+        Xs, Ys = get_active_neuron_io(self.layer,
+                                      self._active_node_indices)
         self.mean_x = ilayers.RunningMeans()
 
         count = ilayers.CountNonZero(axis=0)(Ys[0])
@@ -216,9 +223,9 @@ class LinearPattern(BasePattern):
         """
         Select which neurons are considered for the pattern computation.
         """
-        Ys = _get_active_neuron_io(self.layer,
-                                   self._active_node_indices,
-                                   return_i=False, return_o=True)
+        Ys = get_active_neuron_io(self.layer,
+                                  self._active_node_indices,
+                                  return_i=False, return_o=True)
 
         return ilayers.OnesLike()(Ys[0])
 
@@ -230,7 +237,7 @@ class LinearPattern(BasePattern):
         # Readjust the layer nodes.
         for i in range(kgraph.get_layer_inbound_count(self.layer)):
             layer(self.layer.get_input_at(i))
-        Xs, Ys = _get_active_neuron_io(layer, self._active_node_indices)
+        Xs, Ys = get_active_neuron_io(layer, self._active_node_indices)
         if len(Ys) != 1:
             raise ValueError("Assume that kernel layer have only one output.")
         X, Y = Xs[0], Ys[0]
@@ -275,9 +282,9 @@ class LinearPattern(BasePattern):
         W = kgraph.get_kernel(self.layer)
         W2D = W.reshape((-1, W.shape[-1]))
 
-        mean_x = self.mean_x.get_weights()[0]
-        mean_y = self.mean_y.get_weights()[0]
-        mean_xy = self.mean_xy.get_weights()[0]
+        mean_x, cnt_x = self.mean_x.get_weights()
+        mean_y, cnt_y = self.mean_y.get_weights()
+        mean_xy, cnt_xy = self.mean_xy.get_weights()
 
         ExEy = mean_x * mean_y
         cov_xy = mean_xy - ExEy
@@ -298,24 +305,24 @@ class LinearPattern(BasePattern):
         return A.reshape(W.shape)
 
 
-class ReluPositivePattern(LinearPattern):
+class ReLUPositivePattern(LinearPattern):
 
     def _get_neuron_mask(self):
-        Ys = _get_active_neuron_io(self.layer,
-                                   self._active_node_indices,
-                                   return_i=False, return_o=True,
-                                   do_activation_search=self.execution_list)
+        Ys = get_active_neuron_io(self.layer,
+                                  self._active_node_indices,
+                                  return_i=False, return_o=True,
+                                  do_activation_search=self.execution_list)
         return ilayers.GreaterThanZero()(Ys[0])
 
 
-class ReluNegativePattern(LinearPattern):
+class ReLUNegativePattern(LinearPattern):
 
     def _get_neuron_mask(self):
-        Ys = _get_active_neuron_io(self.layer,
-                                   self._active_node_indices,
-                                   return_i=False, return_o=True,
-                                   do_activation_search=self.execution_list)
-        return ilayers.LessThanZero()(Ys[0])
+        Ys = get_active_neuron_io(self.layer,
+                                  self._active_node_indices,
+                                  return_i=False, return_o=True,
+                                  do_activation_search=self.execution_list)
+        return ilayers.LessEqualThanZero()(Ys[0])
 
 
 def get_pattern_class(pattern_type):
@@ -323,9 +330,9 @@ def get_pattern_class(pattern_type):
         "dummy": DummyPattern,
 
         "linear": LinearPattern,
-        "relu": ReluPositivePattern,
-        "relu.positive": ReluPositivePattern,
-        "relu.negative": ReluNegativePattern,
+        "relu": ReLUPositivePattern,
+        "relu.positive": ReLUPositivePattern,
+        "relu.negative": ReLUNegativePattern,
     }.get(pattern_type, pattern_type)
 
 
