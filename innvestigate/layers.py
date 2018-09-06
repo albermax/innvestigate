@@ -630,4 +630,4 @@ class Gather(keras.layers.Layer):
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], 1)
+        return (input_shapes[0][0], input_shapes[1][0])
