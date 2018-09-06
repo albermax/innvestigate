@@ -42,6 +42,12 @@ __all__ = [
     "Max",
     "Greater",
     "Less",
+    "GreaterThanZero",
+    "LessThanZero",
+    "GreaterEqual",
+    "LessEqual",
+    "GreaterEqualThanZero",
+    "LessEqualThanZero",
     "Sum",
     "Mean",
     "CountNonZero",
@@ -350,6 +356,28 @@ class GreaterThanZero(keras.layers.Layer):
 class LessThanZero(keras.layers.Layer):
     def call(self, x):
         return K.less(x, K.constant(0))
+
+
+class GreaterEqual(keras.layers.Layer):
+    def call(self, x):
+        a, b = x
+        return K.greater_equal(a, b)
+
+
+class LessEqual(keras.layers.Layer):
+    def call(self, x):
+        a, b = x
+        return K.less_equal(a, b)
+
+
+class GreaterEqualThanZero(keras.layers.Layer):
+    def call(self, x):
+        return K.greater_equal(x, K.constant(0))
+
+
+class LessEqualThanZero(keras.layers.Layer):
+    def call(self, x):
+        return K.less_equal(x, K.constant(0))
 
 
 class Transpose(keras.layers.Layer):
