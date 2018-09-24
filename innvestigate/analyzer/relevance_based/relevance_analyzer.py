@@ -846,11 +846,18 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
 
 
 class DeepTaylor(LRPAlpha1Beta0):
+    """
+    This class implements the DeepTaylor algorithm for neural networks with
+    ReLU activation and unbounded input ranges.
+
+    Currently no batch-norm layers are supported.
+    """
 
     def __init__(self, model, *args, **kwargs):
 
         # TODO(ALBER): this is a bad design pattern and not working.
         # change model check registering.
+        # TODO(albermax): add check that only relu activations are used!
         self._model_checks = [
             {
                 "check":
@@ -862,9 +869,6 @@ class DeepTaylor(LRPAlpha1Beta0):
                             "does not handle BatchNormalization.")
             }
         ]
-
-        # TODO(ALBER) make sure that only positive outputs of the final neuron
-        # is considered
 
         # TODO(ALBER) This code is mostly copied and should be refactored.
         class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
@@ -925,8 +929,26 @@ class DeepTaylor(LRPAlpha1Beta0):
             (kchecks.is_max_pooling, DeepTaylorAveragePoolingRerseLayer),
         ]
 
+    def _prepare_model(self, model):
+        """
+        To be theoretically sound Deep-Taylor expects only positive outputs.
+        """
+
+        positive_outputs = [keras.layers.ReLU()(x) for x in model.outputs]
+        model_with_positive_output = keras.models.Model(
+            inputs=model.inputs, outputs=positive_outputs)
+
+        return super(DeepTaylor, self)._prepare_model(
+            model_with_positive_output)
+
 
 class BoundedDeepTaylor(DeepTaylor):
+    """
+    This class implements the DeepTaylor algorithm for neural networks with
+    ReLU activation and bounded input ranges.
+
+    Currently no batch-norm layers are supported.
+    """
 
     def __init__(self, model, low=None, high=None, **kwargs):
 

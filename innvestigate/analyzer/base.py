@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import keras.backend as K
 import keras.layers
 import keras.models
 import numpy as np
@@ -310,21 +311,25 @@ class AnalyzerNetworkBase(AnalyzerBase):
             raise ValueError("neuron_selection parameter is not valid.")
         self._neuron_selection_mode = neuron_selection_mode
 
-    def create_analyzer_model(self):
+    def _prepare_model(self, model):
         """
-        Creates the analyze functionality. If not called beforehand
-        it will be called by :func:`analyze`.
-        """
-        model = self._model
-        neuron_selection_mode = self._neuron_selection_mode
+        Prepares the model to analyze before it gets actually analyzed.
 
-        model_inputs, model_output = model.inputs, model.outputs
+        This class adds the code to select a specific output neuron.
+        """
+        neuron_selection_mode = self._neuron_selection_mode
+        model_inputs = model.inputs
+
+        model_output = model.outputs
         if len(model_output) > 1:
             raise ValueError("Only models with one output tensor are allowed.")
         analysis_inputs = []
         stop_analysis_at_tensors = []
 
-        # TODO Flatten the output before proceeding.
+        # Flatten to form (batch_size, other_dimensions):
+        if K.ndim(model_output[0]) > 2:
+            model_output = keras.layers.Flatten()(model_output)
+
         if neuron_selection_mode == "max_activation":
             model_output = ilayers.Max(name="iNNvestigate_max")(model_output)
         elif neuron_selection_mode == "index":
@@ -343,6 +348,17 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         model = keras.models.Model(inputs=model_inputs+analysis_inputs,
                                    outputs=model_output)
+        return model, analysis_inputs, stop_analysis_at_tensors
+
+    def create_analyzer_model(self):
+        """
+        Creates the analyze functionality. If not called beforehand
+        it will be called by :func:`analyze`.
+        """
+        model_inputs = self._model.inputs
+        tmp = self._prepare_model(self._model)
+        model, analysis_inputs, stop_analysis_at_tensors = tmp
+
         tmp = self._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors)
         if isinstance(tmp, tuple):
