@@ -305,7 +305,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 def model_wo_softmax(model):
     return keras.model.Model(inputs=model.inputs,
-                             outputs=pre_softmax_tensor(model.outputs),
+                             outputs=pre_softmax_tensors(model.outputs),
                              name=model.name)
 
 
