@@ -82,62 +82,33 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     def __init__(self,
                  model,
                  patterns=None,
-                 allow_lambda_layers=False,
                  **kwargs):
-        self._model_checks = [
-            # TODO(alber): Check for non-linear output in general.
-            {
-                "check":
-                lambda layer: kchecks.contains_activation(
-                    layer,
-                    activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
-            },
-            {
-                "check": lambda layer: not kchecks.only_relu_activation(layer),
-                "type": "warning",
-                "message": ("PatternNet is not well defined for "
-                            "networks with non-ReLU activations."),
-            },
-            {
-                "check":
-                lambda layer: not kchecks.is_convnet_layer(layer),
-                "type": "warning",
-                "message": ("PatternNet is only well defined for "
-                            "convolutional neural networks."),
-            },
-            # Clear cut, only support layers the method is developed for now.
-            {
-                "check":
-                lambda layer: not isinstance(layer,
-                                             SUPPORTED_LAYER_PATTERNNET),
-                "type": "exception",
-                "message": ("PatternNet is only well defined for "
-                            "conv2d/max-pooling/dense layers."),
-            },
-            {
-                "check":
-                lambda layer: kchecks.is_average_pooling(layer),
-                "type": "exception",
-                "message": ("PatternNet is only well defined for "
-                            "max-pooling pooling layers."),
-            },
-            {
-                "check":
-                lambda layer: (not allow_lambda_layers and
-                               isinstance(layer, keras.layers.core.Lambda)),
-                "type": "exception",
-                "message": ("Lamda layers are not allowed. "
-                            "To allow use allow_lambda_layers kw."),
-            },
-        ]
+
+        self._add_model_softmax_check()
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            ("PatternNet is not well defined for "
+             "networks with non-ReLU activations."),
+            check_type="warning",
+        )
+        self._add_model_check(
+            lambda layer: not kchecks.is_convnet_layer(layer),
+            ("PatternNet is only well defined for "
+             "convolutional neural networks."),
+            check_type="warning",
+        )
+        self._add_model_check(
+            lambda layer: not isinstance(layer,
+                                         SUPPORTED_LAYER_PATTERNNET),
+            ("PatternNet is only well defined for "
+             "conv2d/max-pooling/dense layers."),
+            check_type="exception",
+        )
 
         self._patterns = patterns
         if self._patterns is not None:
             # copy pattern references
             self._patterns = list(patterns)
-        self._allow_lambda_layers = allow_lambda_layers
 
         # Pattern projections can lead to +-inf value with long networks.
         # We are only interested in the direction, therefore it is save to
@@ -271,16 +242,13 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
         state.update({"patterns": self._patterns})
-        state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         patterns = state.pop("patterns")
-        allow_lambda_layers = state.pop("allow_lambda_layers")
         kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
-        kwargs.update({"patterns": patterns,
-                       "allow_lambda_layers": allow_lambda_layers})
+        kwargs.update({"patterns": patterns})
         return kwargs
 
 

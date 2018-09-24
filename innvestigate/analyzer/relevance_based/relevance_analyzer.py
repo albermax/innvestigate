@@ -88,11 +88,9 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
     LRP-Z collapses into the stated formula.
 
     :param model: A Keras model.
-    :param allow_lambda_layers: Approximate lambda layers with the
-      gradient.
     """
 
-    def __init__(self, model, allow_lambda_layers=False, **kwargs):
+    def __init__(self, model, **kwargs):
         # Inside function to not break import if Keras changes.
         BASELINELRPZ_LAYERS = (
             keras.engine.topology.InputLayer,
@@ -145,39 +143,17 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
             keras.layers.pooling.MaxPooling3D,
         )
 
-        self._model_checks = [
-            # todo: Check for non-linear output in general.
-            {
-                "check": lambda layer: kchecks.contains_activation(
-                    layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
-            },
-            {
-                "check":
-                lambda layer: not kchecks.only_relu_activation(layer),
-                "type": "exception",
-                "message": ("BaselineLRPZ is not working for "
-                            "networks with non-ReLU activations."),
-            },
-            {
-                "check":
-                lambda layer: not isinstance(layer, BASELINELRPZ_LAYERS),
-                "type": "exception",
-                "message": ("BaselineLRPZ is only defined for "
-                            "certain layers."),
-            },
-            {
-                "check":
-                lambda layer: (not allow_lambda_layers and
-                               isinstance(layer, keras.layers.core.Lambda)),
-                "type": "exception",
-                "message": ("Lamda layers are not allowed. "
-                            "To allow use allow_lambda_layers kw."),
-            },
-        ]
-
-        self._allow_lambda_layers = allow_lambda_layers
+        self._add_model_softmax_check()
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            "BaselineLRPZ only works with  ReLU activations.",
+            check_type="exception",
+        )
+        self._add_model_check(
+            lambda layer: not isinstance(layer, BASELINELRPZ_LAYERS),
+            "BaselineLRPZ only works with a predefined set of layers.",
+            check_type="exception",
+        )
 
         super(BaselineLRPZ, self).__init__(model, **kwargs)
 
@@ -188,18 +164,6 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
             tensors_to_analyze+[model.outputs[0]]))
         return [keras.layers.Multiply()([i, g])
                 for i, g in zip(tensors_to_analyze, gradients)]
-
-    def _get_state(self):
-        state = super(BaselineLRPZ, self)._get_state()
-        state.update({"allow_lambda_layers": self._allow_lambda_layers})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        allow_lambda_layers = state.pop("allow_lambda_layers")
-        kwargs = super(BaselineLRPZ, clazz)._state_to_kwargs(state)
-        kwargs.update({"allow_lambda_layers": allow_lambda_layers})
-        return kwargs
 
 
 ###############################################################################
@@ -246,22 +210,13 @@ class LRP(base.ReverseAnalyzerBase):
     def __init__(self, model, *args, **kwargs):
         rule = kwargs.pop("rule", None)
         input_layer_rule = kwargs.pop("input_layer_rule", None)
-        self._model_checks = [
-            # TODO: Check for non-linear output in general.
-            {
-                "check": lambda layer: kchecks.contains_activation(
-                    layer, activation="softmax"),
-                "type": "exception",
-                "message": "Model should not contain a softmax.",
-            },
-            {
-                "check": lambda layer: not kchecks.is_convnet_layer(layer),
-                "type": "warning",
-                "message": ("LRP is only tested for "
-                            "convolutional neural networks."),
-            },
-        ]
 
+        self._add_model_softmax_check()
+        self._add_model_check(
+            lambda layer: not kchecks.is_convnet_layer(layer),
+            "LRP is only tested for convolutional neural networks.",
+            check_type="warning",
+        )
 
         # check if rule was given explicitly.
         # rule can be a string, a list (of strings) or a list of conditions [(Condition, Rule), ... ] for each layer.
@@ -752,22 +707,14 @@ class LRPZPlusFast(_LRPFixedParams):
 
 class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
-        self._model_checks = [
-        # TODO: Check for non-linear output in general.
-        {
-            "check": lambda layer: kchecks.contains_activation(
-                layer, activation="softmax"),
-            "type": "exception",
-            "message": "Model should not contain a softmax.",
-        },
-        {
-            "check":
+
+        self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
-            "type": "warning",
-            "message": (" is not advised for "
-                        "networks with non-ReLU activations.") #TODO: fix. specify. extend.
-        }
-        ]
+            #TODO: fix. specify. extend.
+            ("LRPSequentialPresetA is not advised "
+             "for networks with non-ReLU activations."),
+            check_type="warning",
+        )
 
         class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
@@ -789,22 +736,13 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
 
 class LRPSequentialPresetB(_LRPFixedParams):
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
-        self._model_checks = [
-        # TODO: Check for non-linear output in general.
-        {
-            "check": lambda layer: kchecks.contains_activation(
-                layer, activation="softmax"),
-            "type": "exception",
-            "message": "Model should not contain a softmax.",
-        },
-        {
-            "check":
+        self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
-            "type": "warning",
-            "message": (" is not advised for "
-                        "networks with non-ReLU activations.") #TODO: fix. specify. extend.
-        }
-        ]
+            #TODO: fix. specify. extend.
+            ("LRPSequentialPresetB is not advised "
+             "for networks with non-ReLU activations."),
+            check_type="warning",
+        )
 
         class EpsilonProxyRule(rrule.EpsilonRule):
             def __init__(self, *args, **kwargs):
@@ -855,20 +793,16 @@ class DeepTaylor(LRPAlpha1Beta0):
 
     def __init__(self, model, *args, **kwargs):
 
-        # TODO(ALBER): this is a bad design pattern and not working.
-        # change model check registering.
-        # TODO(albermax): add check that only relu activations are used!
-        self._model_checks = [
-            {
-                "check":
-                lambda layer: True,
-                #isinstance(layer,
-                #           keras.layers.normalization.BatchNormalization),
-                "type": "exception",
-                "message": ("DeepTayler (currently) "
-                            "does not handle BatchNormalization.")
-            }
-        ]
+        self._add_model_check(
+            lambda layer: kchecks.is_batch_normalization_layer(layer),
+            "DeepTaylor (currently) does not support BachNormalization layer.",
+            check_type="exception",
+        )
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            "This DeepTaylor implementation only supports ReLU activations.",
+            check_type="exception",
+        )
 
         # TODO(ALBER) This code is mostly copied and should be refactored.
         class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
@@ -948,14 +882,16 @@ class BoundedDeepTaylor(DeepTaylor):
     ReLU activation and bounded input ranges.
 
     Currently no batch-norm layers are supported.
+
+    :param low: Lowest value of the input range. See Z_B rule.
+    :param high: Highest value of the input range. See Z_B rule.
     """
 
     def __init__(self, model, low=None, high=None, **kwargs):
 
         if low is None or high is None:
-            # TODO(ALBER) Put better error message.
-            raise ValueError("The (low, high) value for the Z-B (bounded rule)"
-                             " input rule must be specified.")
+            raise ValueError("The low or high parameter is missing."
+                             " Z-B (bounded rule) require both values.")
 
         class BoundedProxyRule(rrule.BoundedRule):
             def __init__(self, *args, **kwargs):

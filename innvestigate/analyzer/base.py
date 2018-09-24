@@ -24,6 +24,7 @@ import warnings
 
 from .. import layers as ilayers
 from .. import utils as iutils
+from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
 
@@ -71,31 +72,52 @@ class AnalyzerBase(object):
       :class:`AnalyzerNetworkBase`.
     """
 
-    # Should be specified by the base class.
-    _model_checks = []
-
     def __init__(self, model, disable_model_checks=False):
         self._model = model
         self._disable_model_checks = disable_model_checks
 
-        if not self._disable_model_checks and len(self._model_checks) > 0:
-            checks = [x["check"] for x in self._model_checks]
-            types = [x.get("type", "exception") for x in self._model_checks]
-            messages = [x["message"] for x in self._model_checks]
+        self._do_model_checks()
 
-            checked = kgraph.model_contains(self._model, checks,
-                                            return_only_counts=True)
+    def _add_model_check(self, check, message, check_type="exception"):
+        if getattr(self, "_model_check_done", False):
+            raise Exception("Cannot add model check anymore."
+                            " Check was already performed.")
+
+        if not hasattr(self, "_model_checks"):
+            self._model_checks = []
+
+        check_instance = {
+            "check": check,
+            "message": message,
+            "type": check_type,
+        }
+        self._model_checks.append(check_instance)
+
+    def _do_model_checks(self):
+        model_checks = getattr(self, "_model_checks", [])
+
+        if not self._disable_model_checks and len(model_checks) > 0:
+            check = [x["check"] for x in model_checks]
+            types = [x["type"] for x in model_checks]
+            messages = [x["message"] for x in model_checks]
+
+            checked = kgraph.model_contains(self._model, check)
             tmp = zip(iutils.to_list(checked), messages, types)
-            for check_count, message, check_type in tmp:
-                if check_count > 0:
+
+            for checked_layers, message, check_type in tmp:
+                if len(checked_layers) > 0:
+                    tmp_message = ("%s\nCheck triggerd by layers: %s" %
+                                   (message, checked_layers))
+
                     if check_type == "exception":
-                        raise NotAnalyzeableModelException(message)
+                        raise NotAnalyzeableModelException(tmp_message)
                     elif check_type == "warning":
-                        # TODO: fix only first warning is showed.
-                        # but all should be.
-                        warnings.warn(message)
+                        # TODO(albermax) only the first warning will be shown
+                        warnings.warn(tmp_message)
                     else:
                         raise NotImplementedError()
+
+        self._model_check_done = True
 
     def fit(self, *args, **kwargs):
         """
@@ -300,16 +322,38 @@ class AnalyzerNetworkBase(AnalyzerBase):
     :param neuron_selection_mode: How to select the neuron to analyze.
       Possible values are 'max_activation', 'index' for the neuron
       (expects indices at :func:`analyze` calls), 'all' take all neurons.
+    :param allow_lambda_layers: Allow the model to contain lambda layers.
     """
 
     def __init__(self, model,
                  neuron_selection_mode="max_activation",
+                 allow_lambda_layers=False,
                  **kwargs):
-        super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
-
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
             raise ValueError("neuron_selection parameter is not valid.")
         self._neuron_selection_mode = neuron_selection_mode
+
+        self._allow_lambda_layers = allow_lambda_layers
+        self._add_model_check(
+            lambda layer: (not self._allow_lambda_layers and
+                           isinstance(layer, keras.layers.core.Lambda)),
+            ("Lamda layers are not allowed. "
+             "To force use set allow_lambda_layers parameter."),
+            check_type="exception",
+        )
+
+        super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
+
+    def _add_model_softmax_check(self):
+        """
+        Adds check that prevents models from containing a softmax.
+        """
+        self._add_model_check(
+            lambda layer: kchecks.contains_activation(
+                layer, activation="softmax"),
+            "This analysis method does not support softmax layers.",
+            check_type="exception",
+        )
 
     def _prepare_model(self, model):
         """
@@ -457,13 +501,18 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _get_state(self):
         state = super(AnalyzerNetworkBase, self)._get_state()
         state.update({"neuron_selection_mode": self._neuron_selection_mode})
+        state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         neuron_selection_mode = state.pop("neuron_selection_mode")
+        allow_lambda_layers = state.pop("allow_lambda_layers")
         kwargs = super(AnalyzerNetworkBase, clazz)._state_to_kwargs(state)
-        kwargs.update({"neuron_selection_mode": neuron_selection_mode})
+        kwargs.update({
+            "neuron_selection_mode": neuron_selection_mode,
+            "allow_lambda_layers": allow_lambda_layers
+        })
         return kwargs
 
 
