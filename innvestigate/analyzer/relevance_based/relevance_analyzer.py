@@ -181,11 +181,13 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
         super(BaselineLRPZ, self).__init__(model, **kwargs)
 
-    def _create_analysis(self, model):
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
+                              if x not in stop_analysis_at_tensors]
         gradients = iutils.to_list(ilayers.Gradient()(
-            model.inputs+[model.outputs[0], ]))
+            tensors_to_analyze+[model.outputs[0]]))
         return [keras.layers.Multiply()([i, g])
-                for i, g in zip(model.inputs, gradients)]
+                for i, g in zip(tensors_to_analyze, gradients)]
 
     def _get_state(self):
         state = super(BaselineLRPZ, self)._get_state()

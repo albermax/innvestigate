@@ -310,25 +310,30 @@ class AnalyzerNetworkBase(AnalyzerBase):
             raise ValueError("neuron_selection parameter is not valid.")
         self._neuron_selection_mode = neuron_selection_mode
 
-    def compile_analyzer(self):
+    def create_analyzer_model(self):
         """
-        Compiles the analyze functionality. If not called beforehand
+        Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
         model = self._model
         neuron_selection_mode = self._neuron_selection_mode
 
-        neuron_selection_inputs = []
         model_inputs, model_output = model.inputs, model.outputs
         if len(model_output) > 1:
             raise ValueError("Only models with one output tensor are allowed.")
+        analysis_inputs = []
+        stop_analysis_at_tensors = []
 
         # TODO Flatten the output before proceeding.
         if neuron_selection_mode == "max_activation":
-            model_output = ilayers.Max()(model_output)
+            model_output = ilayers.Max(name="iNNvestigate_max")(model_output)
         elif neuron_selection_mode == "index":
-            neuron_indexing = keras.layers.Input(shape=[None], dtype=np.int32, name='innvestigate_input_selindex')
-            neuron_selection_inputs += [neuron_indexing]
+            neuron_indexing = keras.layers.Input(
+                shape=[None], dtype=np.int32,
+                name='iNNvestigate_neuron_indexing')
+            analysis_inputs.append(neuron_indexing)
+            # The indexing tensor should not be analyzed.
+            stop_analysis_at_tensors.append(neuron_indexing)
 
             model_output = ilayers.Gather()(model_output+[neuron_indexing])
         elif neuron_selection_mode == "all":
@@ -336,35 +341,58 @@ class AnalyzerNetworkBase(AnalyzerBase):
         else:
             raise NotImplementedError()
 
-        model = keras.models.Model(inputs=model_inputs+neuron_selection_inputs,
+        model = keras.models.Model(inputs=model_inputs+analysis_inputs,
                                    outputs=model_output)
-        tmp = self._create_analysis(model)
+        tmp = self._create_analysis(
+            model, stop_analysis_at_tensors=stop_analysis_at_tensors)
         if isinstance(tmp, tuple):
             if len(tmp) == 3:
                 analysis_outputs, debug_outputs, constant_inputs = tmp
             elif len(tmp) == 2:
                 analysis_outputs, debug_outputs = tmp
                 constant_inputs = list()
+            elif len(tmp) == 1:
+                analysis_outputs = iutils.to_list(tmp[0])
+                constant_inputs, debug_outputs = list(), list()
             else:
                 raise Exception("Unexpected output from _create_analysis.")
         else:
-            analysis_outputs = iutils.to_list(tmp)
+            analysis_outputs = tmp
             constant_inputs, debug_outputs = list(), list()
 
-        if neuron_selection_mode == "index":
-            # Drop index, don't want to analyze that input.
-            analysis_outputs = analysis_outputs[:-1]
+        analysis_outputs = iutils.to_list(analysis_outputs)
+        debug_outputs = iutils.to_list(debug_outputs)
+        constant_inputs = iutils.to_list(constant_inputs)
 
         self._n_data_input = len(model_inputs)
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
         self._analyzer_model = keras.models.Model(
-            inputs=model_inputs+neuron_selection_inputs+constant_inputs,
+            inputs=model_inputs+analysis_inputs+constant_inputs,
             outputs=analysis_outputs+debug_outputs)
-        #self._analyzer_model.compile(optimizer="sgd", loss="mse")
 
-    def _create_analysis(self, model):
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+        """
+        Interface that needs to be implemented by a derived class.
+
+        This function is expected to create a Keras graph that creates
+        a custom analysis for the model inputs given the model outputs.
+
+        :param model: Target of analysis.
+        :param stop_analysis_at_tensors: A list of tensors where to stop the
+          analysis. Similar to stop_gradient arguments when computing the
+          gradient of a graph.
+        :return: Either one-, two- or three-tuple of lists of tensors.
+          * The first list of tensors represents the analysis for each
+            model input tensor. Tensors present in stop_analysis_at_tensors
+            should be omitted.
+          * The second list, if present, is a list of debug tensors that will
+            be passed to :function:`_handle_debug_output` after the analysis
+            is executed.
+          * The third list, if present, is a list of constant input tensors
+            added to the analysis model.
+        """
         raise NotImplementedError()
 
     def _handle_debug_output(self, debug_values):
@@ -378,7 +406,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
           should be an integer with the index for the chosen neuron.
         """
         if not hasattr(self, "_analyzer_model"):
-            self.compile_analyzer()
+            self.create_analyzer_model()
 
         # todo: update all interfaces, X can be a list.
         if(neuron_selection is not None and
@@ -483,24 +511,15 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             reverse_reapply_on_copied_layers)
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
-    def _gradient_reverse_mapping(
-            self, Xs, Ys, reversed_Ys, reverse_state, mask=None):
+    def _gradient_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        mask = [x not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
         return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
 
     def _reverse_mapping(self, layer):
         if isinstance(layer, (ilayers.Max, ilayers.Gather)):
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.
-            if isinstance(layer, ilayers.Max):
-                return self._gradient_reverse_mapping
-            if isinstance(layer, ilayers.Gather):
-                # Gather second paramter is an index and has no gradient.
-                def ignored_index_gradient(*args):
-                    ret = self._gradient_reverse_mapping(*args,
-                                                         mask=[True, False])
-                    return iutils.to_list(ret)+[None]
-
-                return ignored_index_gradient
+            return self._gradient_reverse_mapping
 
         for condition, reverse_f in self._conditional_mappings:
             if condition(layer):
@@ -514,7 +533,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _head_mapping(self, X):
         return X
 
-    def _create_analysis(self, model):
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         return_all_reversed_tensors = (
             self._reverse_check_min_max_values or
             self._reverse_check_finite
@@ -524,6 +543,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
             head_mapping=self._head_mapping,
+            stop_mapping_at_tensors=stop_analysis_at_tensors,
             verbose=self._reverse_verbose,
             clip_all_reversed_tensors=self._reverse_clip_values,
             project_bottleneck_tensors=self._reverse_project_bottleneck_layers,

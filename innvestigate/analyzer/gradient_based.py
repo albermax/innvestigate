@@ -71,7 +71,7 @@ class BaselineGradient(base.AnalyzerNetworkBase):
 
         super(BaselineGradient, self).__init__(model, **kwargs)
 
-    def _create_analysis(self, model):
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
 
 

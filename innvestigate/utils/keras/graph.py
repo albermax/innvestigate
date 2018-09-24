@@ -682,6 +682,7 @@ class ReverseMappingBase(object):
 def reverse_model(model, reverse_mappings,
                   default_reverse_mapping=None,
                   head_mapping=None,
+                  stop_mapping_at_tensors=[],
                   verbose=False,
                   return_all_reversed_tensors=False,
                   clip_all_reversed_tensors=False,
@@ -699,6 +700,8 @@ def reverse_model(model, reverse_mappings,
       which no mapping was given by param "reverse_mappings".
     :param head_mapping: Map output tensors to new values before passing
       them into the reverted nework.
+    :param stop_mapping_at_tensors: Tensors at which to stop the mapping.
+      Similar to stop_gradient parameters for gradient computation.
     :param verbose: Print what's going on.
     :param return_all_reversed_tensors: Return all reverted tensors in addition
       to reverted model input tensors.
@@ -742,6 +745,10 @@ def reverse_model(model, reverse_mappings,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, X, reversed_X):
+            # Do not keep tensors that should stop the mapping.
+            if X in stop_mapping_at_tensors:
+                return
+
             if X not in reversed_tensors:
                 reversed_tensors[X] = {"id": (nid, i),
                                        "tensor": reversed_X}
@@ -844,9 +851,14 @@ def reverse_model(model, reverse_mappings,
             if not all([ys in reversed_tensors for ys in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
+                # Potentially this node is also not part of the
+                # reversed tensor set because it depends on a tensor
+                # that is listed in stop_mapping_at_tensors.
                 continue
             reversed_Ys = [get_reversed_tensor(ys)
                            for ys in Ys]
+            local_stop_mapping_at_tensors = [x for x in Xs
+                                             if x in stop_mapping_at_tensors]
 
             _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
             reverse_mapping = initialized_reverse_mappings[layer]
@@ -856,13 +868,15 @@ def reverse_model(model, reverse_mappings,
                     "nid": nid,
                     "model": model,
                     "layer": layer,
+                    "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
                 })
             reversed_Xs = iutils.to_list(reversed_Xs)
             add_reversed_tensors(nid, Xs, reversed_Xs)
 
     # Return requested values #################################################
     reversed_input_tensors = [get_reversed_tensor(tmp)
-                              for tmp in model.inputs]
+                              for tmp in model.inputs
+                              if tmp not in stop_mapping_at_tensors]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:
