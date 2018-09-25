@@ -26,7 +26,7 @@ author = 'Maximilian Alber'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.1alpha'
+release = 'not set'
 
 
 # -- General configuration ---------------------------------------------------
