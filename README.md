@@ -112,6 +112,10 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 **To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
 
+## More documentation
+
+... can be found here: [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
+
 ## Contribution
 
 If you would like to add your analysis method please get in touch with us!
