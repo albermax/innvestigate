@@ -35,6 +35,10 @@ if __name__ == "__main__":
     notebook_dir = os.path.join(os.path.dirname(__file__), "notebooks")
     notebooks = [x for x in os.listdir(notebook_dir) if x.endswith(".ipynb")]
 
+    output_dir = os.path.join(os.path.dirname(__file__), "nbconvert_tmp")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     parser = argparse.ArgumentParser(
         description="Script to handle the example notebooks via command line.")
     parser.add_argument(
@@ -53,6 +57,7 @@ if __name__ == "__main__":
 
             call = [
                 jupyter_executable, "nbconvert",
+                "--output-dir='%s'" % output_dir,
                 "--ExecutePreprocessor.timeout=-1",
                 "--to", "notebook", "--execute",
                 os.path.join(notebook_dir, notebook)
@@ -62,7 +67,6 @@ if __name__ == "__main__":
         for notebook in notebooks:
             print("Convert notebook:", notebook)
             input_file = os.path.join(notebook_dir, notebook)
-            output_dir = os.path.dirname(__file__)
             output_file = os.path.join(
                 output_dir, notebook.replace(".ipynb", ".py"))
 

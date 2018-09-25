@@ -121,3 +121,6 @@ gamma_test.py
 *.png
 examples/logs
 examples/gpu-logs
+
+# ignore nbconvert script output
+examples/nbconvert_tmp
