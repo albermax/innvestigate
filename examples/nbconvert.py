@@ -92,6 +92,7 @@ if __name__ == "__main__":
                 f.write("\n".join(fixed_lines))
 
             if args.command == "to_script_and_execute":
-                subprocess.check_call([sys.executable, output_file])
+                subprocess.check_call(
+                    [sys.executable, output_file], cwd=output_dir)
     else:
         raise ValueError("Command not recognized")
