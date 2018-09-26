@@ -194,6 +194,129 @@ LRP_RULES = {
     "Bounded": rrule.BoundedRule,
 }
 
+
+class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
+    def __init__(self, layer, state):
+        ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+        config = layer.get_config()
+
+        self._center = config['center']
+        self._scale = config['scale']
+        self._axis = config['axis']
+
+        self._mean = layer.moving_mean
+        self._std = layer.moving_variance
+        if self._center:
+            self._beta = layer.beta
+
+        #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
+        #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
+        # how to do this:
+        # super.__init__ calls select_rule and sets a self._rule class
+        # check if isinstance(self_rule, EpsiloneRule), then reroute
+        # to BatchNormEpsilonRule. Not pretty, but should work.
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        ##print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
+
+        input_shape = [K.int_shape(x) for x in Xs]
+        if len(input_shape) != 1:
+            #extend below lambda layers towards multiple parameters.
+            raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(len(Xs)))
+        input_shape = input_shape[0]
+
+        # prepare broadcasting shape for layer parameters
+        broadcast_shape = [1] * len(input_shape)
+        broadcast_shape[self._axis] = input_shape[self._axis]
+        broadcast_shape[0] =  -1
+
+        #reweight relevances as
+        #        x * (y - beta)     R
+        # Rin = ---------------- * ----
+        #           x - mu          y
+        # batch norm can be considered as 3 distinct layers of subtraction,
+        # multiplication and then addition. The multiplicative scaling layer
+        # has no effect on LRP and functions as a linear activation layer
+
+        minus_mu = keras.layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
+        minus_beta = keras.layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
+        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+
+
+        x_minus_mu = kutils.apply(minus_mu, Xs)
+        if self._center:
+            y_minus_beta = kutils.apply(minus_beta, Ys)
+        else:
+            y_minus_beta = Ys
+
+        numerator = [keras.layers.Multiply()([x, ymb, r])
+                     for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
+        denominator = [keras.layers.Multiply()([xmm, y])
+                       for xmm, y in zip(x_minus_mu, Ys)]
+
+        return [ilayers.SafeDivide()([n, prepare_div(d)])
+                for n, d in zip(numerator, denominator)]
+
+
+class AddReverseLayer(kgraph.ReverseMappingBase):
+    def __init__(self, layer, state):
+        ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             name_template="reversed_kernel_%s")
+
+        #TODO: implement rule support.
+        #super(AddReverseLayer, self).__init__(layer, state)
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        # the outputs of the pooling operation at each location is the sum of its inputs.
+        # the forward message must be known in this case, and are the inputs for each pooling thing.
+        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+        grad = ilayers.GradientWRT(len(Xs))
+        # Get activations.
+        Zs = kutils.apply(self._layer_wo_act, Xs)
+        # Divide incoming relevance by the activations.
+        tmp = [ilayers.SafeDivide()([a, b])
+               for a, b in zip(Rs, Zs)]
+
+        # Propagate the relevance to input neurons
+        # using the gradient.
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
+        return [keras.layers.Multiply()([a, b])
+                for a, b in zip(Xs, tmp)]
+
+
+class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
+    def __init__(self, layer, state):
+        ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             name_template="reversed_kernel_%s")
+
+        #TODO: implement rule support.
+        #super(AveragePoolingRerseLayer, self).__init__(layer, state)
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        # the outputs of the pooling operation at each location is the sum of its inputs.
+        # the forward message must be known in this case, and are the inputs for each pooling thing.
+        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+
+        grad = ilayers.GradientWRT(len(Xs))
+        # Get activations.
+        Zs = kutils.apply(self._layer_wo_act, Xs)
+        # Divide incoming relevance by the activations.
+        tmp = [ilayers.SafeDivide()([a, b])
+               for a, b in zip(Rs, Zs)]
+
+        # Propagate the relevance to input neurons
+        # using the gradient.
+        tmp = iutils.to_list(grad(Xs+Zs+tmp))
+        # Re-weight relevance with the input values.
+        return [keras.layers.Multiply()([a, b])
+                for a, b in zip(Xs, tmp)]
+
+
 class LRP(base.ReverseAnalyzerBase):
     """
     Base class for LRP-based model analyzers
@@ -272,178 +395,64 @@ class LRP(base.ReverseAnalyzerBase):
             else:
                 rules.insert(0, input_layer_rule)
 
-
-
-
-
-        ####################################################################
-        ### Functionality responible for backwards rule selection below ####
-        ####################################################################
-
-        def select_rule(layer, reverse_state):
-            ##print("in select_rule:", layer.__class__.__name__ , end='->') #debug
-            if use_conditions is True:
-                for condition, rule in rules:
-                    if condition(layer, reverse_state):
-                        ##print(str(rule)) #debug
-                        return rule
-                raise Exception("No rule applies to layer: %s" % layer)
-            else:
-                ##print(str(rules[0]), '(via pop)') #debug
-                return rules.pop()
-
-
-        # default backward hook
-        class ReverseLayer(kgraph.ReverseMappingBase):
-            def __init__(self, layer, state):
-                rule_class = select_rule(layer, state) #NOTE: this prevents refactoring.
-                ##print("in ReverseLayer.init:",layer.__class__.__name__,"->" , rule_class if isinstance(rule_class, six.string_types) else rule_class.__name__) #debug
-                if isinstance(rule_class, six.string_types):
-                    rule_class = LRP_RULES[rule_class]
-                self._rule = rule_class(layer, state)
-
-            def apply(self, Xs, Ys, Rs, reverse_state):
-                ##print("    in ReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']) ,  '-> {}.apply'.format(self._rule.__class__.__name__))
-                return self._rule.apply(Xs, Ys, Rs, reverse_state)
-
-
-        #specialized backward hooks. TODO: add ReverseLayer class handling layers Without kernel: Add and AvgPool
-        class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
-            def __init__(self, layer, state):
-                ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                config = layer.get_config()
-
-                self._center = config['center']
-                self._scale = config['scale']
-                self._axis = config['axis']
-
-                self._mean = layer.moving_mean
-                self._std = layer.moving_variance
-                if self._center:
-                    self._beta = layer.beta
-
-                #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
-                #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
-                # how to do this:
-                # super.__init__ calls select_rule and sets a self._rule class
-                # check if isinstance(self_rule, EpsiloneRule), then reroute
-                # to BatchNormEpsilonRule. Not pretty, but should work.
-
-            def apply(self, Xs, Ys, Rs, reverse_state):
-                ##print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
-
-                input_shape = [K.int_shape(x) for x in Xs]
-                if len(input_shape) != 1:
-                    #extend below lambda layers towards multiple parameters.
-                    raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(len(Xs)))
-                input_shape = input_shape[0]
-
-                # prepare broadcasting shape for layer parameters
-                broadcast_shape = [1] * len(input_shape)
-                broadcast_shape[self._axis] = input_shape[self._axis]
-                broadcast_shape[0] =  -1
-
-                #reweight relevances as
-                #        x * (y - beta)     R
-                # Rin = ---------------- * ----
-                #           x - mu          y
-                # batch norm can be considered as 3 distinct layers of subtraction,
-                # multiplication and then addition. The multiplicative scaling layer
-                # has no effect on LRP and functions as a linear activation layer
-
-                minus_mu = keras.layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
-                minus_beta = keras.layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
-                prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
-
-
-                x_minus_mu = kutils.apply(minus_mu, Xs)
-                if self._center:
-                    y_minus_beta = kutils.apply(minus_beta, Ys)
-                else:
-                    y_minus_beta = Ys
-
-                numerator = [keras.layers.Multiply()([x, ymb, r])
-                             for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
-                denominator = [keras.layers.Multiply()([xmm, y])
-                             for xmm, y in zip(x_minus_mu, Ys)]
-
-                return [ilayers.SafeDivide()([n, prepare_div(d)])
-                        for n, d in zip(numerator, denominator)]
-
-        class AddReverseLayer(kgraph.ReverseMappingBase):
-            def __init__(self, layer, state):
-                ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
-                                                                     name_template="reversed_kernel_%s")
-
-                #TODO: implement rule support.
-                #super(AddReverseLayer, self).__init__(layer, state)
-
-            def apply(self, Xs, Ys, Rs, reverse_state):
-                # the outputs of the pooling operation at each location is the sum of its inputs.
-                # the forward message must be known in this case, and are the inputs for each pooling thing.
-                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-                grad = ilayers.GradientWRT(len(Xs))
-                # Get activations.
-                Zs = kutils.apply(self._layer_wo_act, Xs)
-                # Divide incoming relevance by the activations.
-                tmp = [ilayers.SafeDivide()([a, b])
-                       for a, b in zip(Rs, Zs)]
-
-                # Propagate the relevance to input neurons
-                # using the gradient.
-                tmp = iutils.to_list(grad(Xs+Zs+tmp))
-                # Re-weight relevance with the input values.
-                return [keras.layers.Multiply()([a, b])
-                        for a, b in zip(Xs, tmp)]
-
-
-
-        class AveragePoolingRerseLayer(kgraph.ReverseMappingBase):
-            def __init__(self, layer, state):
-                ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
-                self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
-                                                                     name_template="reversed_kernel_%s")
-
-                #TODO: implement rule support.
-                #super(AveragePoolingRerseLayer, self).__init__(layer, state)
-
-            def apply(self, Xs, Ys, Rs, reverse_state):
-                # the outputs of the pooling operation at each location is the sum of its inputs.
-                # the forward message must be known in this case, and are the inputs for each pooling thing.
-                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-
-                grad = ilayers.GradientWRT(len(Xs))
-                # Get activations.
-                Zs = kutils.apply(self._layer_wo_act, Xs)
-                # Divide incoming relevance by the activations.
-                tmp = [ilayers.SafeDivide()([a, b])
-                       for a, b in zip(Rs, Zs)]
-
-                # Propagate the relevance to input neurons
-                # using the gradient.
-                tmp = iutils.to_list(grad(Xs+Zs+tmp))
-                # Re-weight relevance with the input values.
-                return [keras.layers.Multiply()([a, b])
-                        for a, b in zip(Xs, tmp)]
-
-
-
-
-
-        # conditional mappings layer_criterion -> ReverseLayer on how to handle backward passes through layers.
-        self._conditional_mappings = [
-            (kchecks.contains_kernel, ReverseLayer),
-            (kchecks.is_batch_normalization_layer, BatchNormalizationReverseLayer),
-            (kchecks.is_average_pooling, AveragePoolingRerseLayer),
-            (kchecks.is_add_layer, AddReverseLayer),
-        ]
+        self._rules_use_conditions = use_conditions
+        self._rules = rules
 
         # FINALIZED constructor.
         super(LRP, self).__init__(model, *args, **kwargs)
 
+    def create_rule_mapping(self, layer, reverse_state):
+        ##print("in select_rule:", layer.__class__.__name__ , end='->') #debug
+        rule_class = None
+        if self._rules_use_conditions is True:
+            for condition, rule in self._rules:
+                if condition(layer, reverse_state):
+                    ##print(str(rule)) #debug
+                    rule_class = rule
+        else:
+            ##print(str(rules[0]), '(via pop)') #debug
+            rule_class = self._rules.pop()
+
+        if rule_class is None:
+            raise Exception("No rule applies to layer: %s" % layer)
+
+        if isinstance(rule_class, six.string_types):
+            rule_class = LRP_RULES[rule_class]
+        rule = rule_class(layer, reverse_state)
+
+        return rule.apply
+
+    def _create_analysis(self, *args, **kwargs):
+        ####################################################################
+        ### Functionality responible for backwards rule selection below ####
+        ####################################################################
+
+        # default backward hook
+        self._add_conditional_reverse_mapping(
+            kchecks.contains_kernel,
+            self.create_rule_mapping,
+            name="lrp_layer_with_kernel_mapping",
+        )
+
+        #specialized backward hooks. TODO: add ReverseLayer class handling layers Without kernel: Add and AvgPool
+        self._add_conditional_reverse_mapping(
+            kchecks.is_batch_normalization_layer,
+            BatchNormalizationReverseLayer,
+            name="lrp_batch_norm_mapping",
+        )
+        self._add_conditional_reverse_mapping(
+            kchecks.is_average_pooling,
+            AveragePoolingReverseLayer,
+            name="lrp_average_pooling_mapping",
+        )
+        self._add_conditional_reverse_mapping(
+            kchecks.is_add_layer,
+            AddReverseLayer,
+            name="lrp_add_layer_mapping",
+        )
+
+        # FINALIZED constructor.
+        return super(LRP, self)._create_analysis(*args, **kwargs)
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
@@ -460,15 +469,14 @@ class LRP(base.ReverseAnalyzerBase):
         else:
             # This branch covers:
             # MaxPooling
-            # Average Pooling
             # Max
             # Flatten
             # Reshape
             # Concatenate
             # Cropping
             ##print('ilayers.GradientWRT')
-            return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
-
+            return self._gradient_reverse_mapping(
+                Xs, Ys, reversed_Ys, reverse_state)
 
     ########################################
     ### End of Rule Selection Business. ####
@@ -489,27 +497,6 @@ class LRP(base.ReverseAnalyzerBase):
         kwargs.update({"rule": rule,
                        "input_layer_rule": input_layer_rule})
         return kwargs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ###############################################################################
@@ -783,6 +770,34 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
                                                 **kwargs)
 
 
+class DeepTaylorAveragePoolingRerseLayer(AveragePoolingReverseLayer):
+    def __init__(self, layer, state):
+        if isinstance(layer, keras.layers.pooling.MaxPooling1D):
+            layer_replacement = keras.layers.pooling.AveragePooling1D(
+                pool_size=layer.pool_size, strides=layer.strides,
+                padding=layer.padding)
+        elif isinstance(layer, keras.layers.pooling.MaxPooling2D):
+            layer_replacement = keras.layers.pooling.AveragePooling2D(
+                pool_size=layer.pool_size, strides=layer.strides,
+                padding=layer.padding, data_format=layer.data_format)
+        elif isinstance(layer, keras.layers.pooling.MaxPooling3D):
+            layer_replacement = keras.layers.pooling.AveragePooling3D(
+                pool_size=layer.pool_size, strides=layer.strides,
+                padding=layer.padding, data_format=layer.data_format)
+        elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling1D):
+            layer_replacement = keras.layers.pooling.GlobalAveragePooling1D()
+        elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling2D):
+            layer_replacement = keras.layers.pooling.GlobalAveragePooling2D(
+                data_format=layer.data_format)
+        elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling3D):
+            layer_replacement = keras.layers.pooling.GlobalAveragePooling3D(
+                data_format=layer.data_format)
+        else:
+            raise Exception()
+
+        self._layer_wo_act = layer_replacement
+
+
 class DeepTaylor(LRPAlpha1Beta0):
     """
     This class implements the DeepTaylor algorithm for neural networks with
@@ -804,64 +819,17 @@ class DeepTaylor(LRPAlpha1Beta0):
             check_type="exception",
         )
 
-        # TODO(ALBER) This code is mostly copied and should be refactored.
-        class DeepTaylorAveragePoolingRerseLayer(kgraph.ReverseMappingBase):
-            def __init__(self, layer, state):
-                if isinstance(layer, keras.layers.pooling.MaxPooling1D):
-                    layer_replacement = keras.layers.pooling.AveragePooling1D(
-                        pool_size=layer.pool_size, strides=layer.strides,
-                        padding=layer.padding)
-                elif isinstance(layer, keras.layers.pooling.MaxPooling2D):
-                    layer_replacement = keras.layers.pooling.AveragePooling2D(
-                        pool_size=layer.pool_size, strides=layer.strides,
-                        padding=layer.padding, data_format=layer.data_format)
-                elif isinstance(layer, keras.layers.pooling.MaxPooling3D):
-                    layer_replacement = keras.layers.pooling.AveragePooling3D(
-                        pool_size=layer.pool_size, strides=layer.strides,
-                        padding=layer.padding, data_format=layer.data_format)
-                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling1D):
-                    layer_replacement = keras.layers.pooling.GlobalAveragePooling1D()
-                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling2D):
-                    layer_replacement = keras.layers.pooling.GlobalAveragePooling2D(
-                        data_format=layer.data_format)
-                elif isinstance(layer, keras.layers.pooling.GlobalMaxPooling3D):
-                    layer_replacement = keras.layers.pooling.GlobalAveragePooling3D(
-                        data_format=layer.data_format)
-                else:
-                    raise Exception()
-
-                self._layer_wo_act = layer_replacement
-
-                #TODO: implement rule support.
-                #super(AveragePoolingRerseLayer, self).__init__(layer, state)
-
-            def apply(self, Xs, Ys, Rs, reverse_state):
-                # the outputs of the pooling operation at each location is the sum of its inputs.
-                # the forward message must be known in this case, and are the inputs for each pooling thing.
-                # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-                # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-
-                grad = ilayers.GradientWRT(len(Xs))
-                # Get activations.
-                Zs = kutils.apply(self._layer_wo_act, Xs)
-                # Divide incoming relevance by the activations.
-                tmp = [ilayers.SafeDivide()([a, b])
-                       for a, b in zip(Rs, Zs)]
-
-                # Propagate the relevance to input neurons
-                # using the gradient.
-                tmp = iutils.to_list(grad(Xs+Zs+tmp))
-                # Re-weight relevance with the input values.
-                return [keras.layers.Multiply()([a, b])
-                        for a, b in zip(Xs, tmp)]
-
         super(DeepTaylor, self).__init__(model, *args, **kwargs)
 
-        # TODO(ALBER) make this conditional more transparent
+    def _create_analysis(self, *args, **kwargs):
 
-        self._conditional_mappings += [
-            (kchecks.is_max_pooling, DeepTaylorAveragePoolingRerseLayer),
-        ]
+        self._add_conditional_reverse_mapping(
+            kcheck.is_max_pooling,
+            DeepTaylorAveragePoolingReverseLayer,
+            name="deep_taylor_max_to_average_pooling",
+        )
+
+        return super(DeepTaylor, self)._create_analysis(*args, **kwargs)
 
     def _prepare_model(self, model):
         """

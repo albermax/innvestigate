@@ -65,6 +65,66 @@ SUPPORTED_LAYER_PATTERNNET = (
 )
 
 
+class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
+    """
+    PatternNet backward mapping for layers with kernels.
+
+    Applies the (filter) weights on the forward pass and
+    on the backward pass applies the gradient computation
+    where the filter weights are replaced with the patterns.
+    """
+
+    def __init__(self, layer, state, pattern):
+        config = layer.get_config()
+
+        # Layer can contain a kernel and an activation.
+        # Split layers in a kernel layer and an activation layer.
+        activation = None
+        if "activation" in config:
+            activation = config["activation"]
+            config["activation"] = None
+        self._act_layer = keras.layers.Activation(
+            activation,
+            name="reversed_act_%s" % config["name"])
+        self._filter_layer = kgraph.copy_layer_wo_activation(
+            layer, name_template="reversed_filter_%s")
+
+        # Replace filter/kernel weights with patterns.
+        filter_weights = layer.get_weights()
+        # Assume that only one weight has a corresponding pattern.
+        # E.g., biases have no pattern.
+        tmp = [pattern.shape == x.shape for x in filter_weights]
+        if np.sum(tmp) != 1:
+            raise Exception("Cannot match pattern to filter.")
+        filter_weights[np.argmax(tmp)] = pattern
+        self._pattern_layer = kgraph.copy_layer_wo_activation(
+            layer,
+            name_template="reversed_pattern_%s",
+            weights=filter_weights)
+
+    def apply(self, Xs, Ys, reversed_Ys, reverse_state):
+        # Reapply the prepared layers.
+        act_Xs = kutils.apply(self._filter_layer, Xs)
+        act_Ys = kutils.apply(self._act_layer, act_Xs)
+        pattern_Ys = kutils.apply(self._pattern_layer, Xs)
+
+        # Layers that apply the backward pass.
+        grad_act = ilayers.GradientWRT(len(act_Xs))
+        grad_pattern = ilayers.GradientWRT(len(Xs))
+
+        # First step: propagate through the activation layer.
+        # Workaround for linear activations.
+        linear_activations = [None, keras.activations.get("linear")]
+        if self._act_layer.activation in linear_activations:
+            tmp = reversed_Ys
+        else:
+            # if linear activation this behaves strange
+            tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
+
+        # Second step: propagate through the pattern layer.
+        return grad_pattern(Xs+pattern_Ys+tmp)
+
+
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     """PatternNet analyzer.
 
@@ -122,94 +182,31 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
         super(PatternNet, self).__init__(model, **kwargs)
 
+    def _get_pattern_for_layer(self, layer, state):
+        layers = [l for l in kgraph.get_model_layers(self._model)
+                  if kchecks.contains_kernel(l)]
+
+        return self._patterns[layers.index(layer)]
+
     def _prepare_pattern(self, layer, state, pattern):
         """""Prepares a pattern before it is set in the back-ward pass."""
         return pattern
 
     def _create_analysis(self, *args, **kwargs):
-        # shared information among the created reverse mappings
-        # TODO(alber): make this more flexible.
-        tmp_pattern_idx_stack = list(range(len(self._patterns)))
-
-        def get_pattern(layer, state):
-            if self._patterns is None:
-                raise ValueError("Patterns are required. "
-                                 "Either train them or "
-                                 "pass them to the constructor.")
-
-            pattern = self._patterns[tmp_pattern_idx_stack.pop(0)]
-            return self._prepare_pattern(layer, state, pattern)
-
-        class ReverseLayer(kgraph.ReverseMappingBase):
-            """
-            PatternNet backward mapping for layers with kernels.
-
-            Applies the (filter) weights on the forward pass and
-            on the backward pass applies the gradient computation
-            where the filter weights are replaced with the patterns.
-            """
-
-            def __init__(self, layer, state):
-                config = layer.get_config()
-
-                # Layer can contain a kernel and an activation.
-                # Split layers in a kernel layer and an activation layer.
-                activation = None
-                if "activation" in config:
-                    activation = config["activation"]
-                    config["activation"] = None
-                self._act_layer = keras.layers.Activation(
-                    activation,
-                    name="reversed_act_%s" % config["name"])
-                self._filter_layer = kgraph.copy_layer_wo_activation(
-                    layer, name_template="reversed_filter_%s")
-
-                # Replace filter/kernel weights with patterns.
-                filter_weights = layer.get_weights()
-                pattern = get_pattern(layer, state)
-                # Assume that only one weight has a corresponding pattern.
-                # E.g., biases have no pattern.
-                tmp = [pattern.shape == x.shape for x in filter_weights]
-                if np.sum(tmp) != 1:
-                    raise Exception("Cannot match pattern to filter.")
-                filter_weights[np.argmax(tmp)] = pattern
-                self._pattern_layer = kgraph.copy_layer_wo_activation(
-                    layer,
-                    name_template="reversed_pattern_%s",
-                    weights=filter_weights)
-
-            def apply(self, Xs, Ys, reversed_Ys, reverse_state):
-                # Reapply the prepared layers.
-                act_Xs = kutils.apply(self._filter_layer, Xs)
-                act_Ys = kutils.apply(self._act_layer, act_Xs)
-                pattern_Ys = kutils.apply(self._pattern_layer, Xs)
-
-                # Layers that apply the backward pass.
-                grad_act = ilayers.GradientWRT(len(act_Xs))
-                grad_pattern = ilayers.GradientWRT(len(Xs))
-
-                # First step: propagate through the activation layer.
-                # Workaround for linear activations.
-                linear_activations = [None, keras.activations.get("linear")]
-                if self._act_layer.activation in linear_activations:
-                    tmp = reversed_Ys
-                else:
-                    # if linear activation this behaves strange
-                    tmp = utils.to_list(grad_act(act_Xs+act_Ys+reversed_Ys))
-
-                # Second step: propagate through the pattern layer.
-                return grad_pattern(Xs+pattern_Ys+tmp)
 
         # Apply the pattern mapping on all layers that contain a kernel.
-        self._conditional_mappings = [
-            (kchecks.contains_kernel, ReverseLayer),
-        ]
+        def create_kernel_layer_mapping(layer, state):
+            pattern = self._get_pattern_for_layer(layer, state)
+            pattern = self._prepare_pattern(layer, state, pattern)
+            mapping_obj = PatternNetReverseKernelLayer(layer, state, pattern)
+            return mapping_obj.apply
+        self._add_conditional_reverse_mapping(
+            kchecks.contains_kernel,
+            create_kernel_layer_mapping,
+            name="patternnet_kernel_layer_mapping"
+        )
 
-        ret = super(PatternNet, self)._create_analysis(*args, **kwargs)
-        if len(tmp_pattern_idx_stack) != 0:
-            raise Exception("Not all patterns consumed. Something is wrong.")
-
-        return ret
+        return super(PatternNet, self)._create_analysis(*args, **kwargs)
 
     def _fit_generator(self,
                        generator,

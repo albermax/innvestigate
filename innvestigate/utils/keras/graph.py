@@ -808,13 +808,13 @@ def reverse_model(model, reverse_mappings,
         # Allow to share a ReverMappingBase for each layer instance
         # in order to reduce the overhead.
 
-        reverse_mapping = reverse_mappings(layer)
-        if reverse_mapping is None:
+        meta_reverse_mapping = reverse_mappings(layer)
+        if meta_reverse_mapping is None:
             reverse_mapping = default_reverse_mapping
-
-        if(inspect.isclass(reverse_mapping) and
-           issubclass(reverse_mapping, ReverseMappingBase)):
-            reverse_mapping_obj = reverse_mapping(
+        elif(inspect.isclass(meta_reverse_mapping) and
+             issubclass(meta_reverse_mapping, ReverseMappingBase)):
+            # Mapping is a class
+            reverse_mapping_obj = meta_reverse_mapping(
                 layer,
                 {
                     "model": model,
@@ -822,6 +822,19 @@ def reverse_model(model, reverse_mappings,
                 }
             )
             reverse_mapping = reverse_mapping_obj.apply
+        elif(callable(meta_reverse_mapping) and
+             len(inspect.signature(meta_reverse_mapping).parameters) == 2):
+            # Function that returns mapping
+            reverse_mapping = meta_reverse_mapping(
+                layer,
+                {
+                    "model": model,
+                    "layer": layer,
+                }
+            )
+        else:
+            # Nothing meta here
+            reverse_mapping = meta_reverse_mapping
 
         initialized_reverse_mappings[layer] = reverse_mapping
 

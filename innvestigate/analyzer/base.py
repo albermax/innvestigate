@@ -525,6 +525,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     The deriving classes should specify how the graph should be reverted
     by implementing the following functions:
 
+    # TODO(ALBER) update interface documentation!
     * :func:`_reverse_mapping(layer)` given a layer this function
       returns a reverse mapping for the layer as specified in
       :func:`innvestigate.utils.keras.graph.reverse_model` or None.
@@ -553,10 +554,6 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       :func:`innvestigate.utils.keras.graph.reverse_model`.
     """
 
-
-    # Should be specified by the base class.
-    _conditional_mappings = []
-
     def __init__(self,
                  model,
                  reverse_verbose=False,
@@ -581,14 +578,41 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
 
     def _reverse_mapping(self, layer):
-        if isinstance(layer, (ilayers.Max, ilayers.Gather)):
+        if(isinstance(layer, (ilayers.Max, ilayers.Gather)) and
+           layer.name.startswith("iNNvestigate")):
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.
             return self._gradient_reverse_mapping
 
-        for condition, reverse_f in self._conditional_mappings:
-            if condition(layer):
-                return reverse_f
+        return self._apply_conditional_reverse_mappings(layer)
+
+    def _add_conditional_reverse_mapping(
+            self, condition, mapping, priority=-1, name=None):
+        if getattr(self, "_reverse_mapping_applied", False):
+            raise Exception("Cannot add conditional mapping "
+                            "after first application.")
+
+        if not hasattr(self, "_conditional_reverse_mappings"):
+            self._conditional_reverse_mappings = {}
+
+        if priority not in self._conditional_reverse_mappings:
+            self._conditional_reverse_mappings[priority] = []
+
+        tmp = {"condition": condition, "mapping": mapping, "name": name}
+        self._conditional_reverse_mappings[priority].append(tmp)
+
+    def _apply_conditional_reverse_mappings(self, layer):
+        mappings = getattr(self, "_conditional_reverse_mappings", {})
+        self._reverse_mapping_applied = True
+
+        # Search for mapping. First consider ones with highest priority,
+        # inside priority in order of adding.
+        sorted_keys = sorted(mappings.keys())[::-1]
+        for key in sorted_keys:
+            for mapping in mappings[key]:
+                if mapping["condition"](layer):
+                    return mapping["mapping"]
+
         return None
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
