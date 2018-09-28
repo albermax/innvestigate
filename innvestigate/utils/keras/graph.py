@@ -292,7 +292,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
         if kchecks.contains_activation(layer, activation="softmax"):
             softmax_found = True
             if isinstance(layer, keras.layers.Activation):
-                ret.append(layer.get_input_at(node_index)[0])
+                ret.append(layer.get_input_at(node_index))
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
                 ret.append(layer_wo_act(layer.get_input_at(node_index)))
@@ -304,9 +304,9 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 
 def model_wo_softmax(model):
-    return keras.model.Model(inputs=model.inputs,
-                             outputs=pre_softmax_tensors(model.outputs),
-                             name=model.name)
+    return keras.models.Model(inputs=model.inputs,
+                              outputs=pre_softmax_tensors(model.outputs),
+                              name=model.name)
 
 
 ###############################################################################
