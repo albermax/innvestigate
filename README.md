@@ -103,12 +103,16 @@ analyzer.fit(X_train)
 analysis = analyzer.analyze(X_test)
 ```
 
-#### Examples
+### Tutorials
 
 In the directory [examples](https://github.com/albermax/innvestigate/blob/master/examples/) one can find different examples as Python scripts and as Jupyter notebooks:
 
-* **[Imagenet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_example.ipynb):** shows how to use the different methods with VGG16 on ImageNet and how the reproduce the analysis grid above. This example uses pre-trained patterns for PatternNet.
-* **[MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_example.ipynb):** shows how to train and use analyzers on MNIST.
+* **[Comparing methods on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to train and compare analyzers on MNIST.
+* **[Comparing output neurons on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to analyze the prediction of different classes on MNIST.
+* **[Comparing methods on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to compare analyzers on ImageNet.
+* **[Comparing networks on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to compare analyzes for different networks on ImageNet.
+
+---
 
 **To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
 

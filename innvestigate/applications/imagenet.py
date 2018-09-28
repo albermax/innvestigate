@@ -100,6 +100,7 @@ def _prepare_keras_net(netname,
                        clazz,
                        image_shape,
                        preprocess_f,
+                       preprocess_mode=None,
                        color_coding="RGB",
                        load_weights=False,
                        load_patterns=False):
@@ -125,6 +126,12 @@ def _prepare_keras_net(netname,
 
     net["color_coding"] = color_coding
     net["preprocess_f"] = preprocess_f
+    net["input_range"] = {
+        None: (-128, 128),
+        "caffe": (-128, 128),
+        "tf": (-1, 1),
+        "torch": (-3, 3),
+    }[preprocess_mode]
 
     net["patterns"] = None
     if load_patterns is not False:
@@ -157,6 +164,7 @@ def vgg16(load_weights=False, load_patterns=False):
         keras.applications.vgg16.VGG16,
         [224, 224],
         preprocess_f=keras.applications.vgg16.preprocess_input,
+        preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -168,6 +176,7 @@ def vgg19(load_weights=False, load_patterns=False):
         keras.applications.vgg19.VGG19,
         [224, 224],
         preprocess_f=keras.applications.vgg19.preprocess_input,
+        preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -184,6 +193,7 @@ def resnet50(load_weights=False, load_patterns=False):
         keras.applications.resnet50.ResNet50,
         [224, 224],
         preprocess_f=keras.applications.resnet50.preprocess_input,
+        preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -200,6 +210,7 @@ def inception_v3(load_weights=False, load_patterns=False):
         keras.applications.inception_v3.InceptionV3,
         [299, 299],
         preprocess_f=keras.applications.inception_v3.preprocess_input,
+        preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -215,6 +226,7 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
         keras.applications.inception_resnet_v2.InceptionResNetV2,
         [299, 299],
         preprocess_f=keras.applications.inception_resnet_v2.preprocess_input,
+        preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -230,6 +242,7 @@ def densenet121(load_weights=False, load_patterns=False):
         keras.applications.densenet.DenseNet121,
         [224, 224],
         preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -240,6 +253,7 @@ def densenet169(load_weights=False, load_patterns=False):
         keras.applications.densenet.DenseNet169,
         [224, 224],
         preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -250,6 +264,7 @@ def densenet201(load_weights=False, load_patterns=False):
         keras.applications.densenet.DenseNet201,
         [224, 224],
         preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -269,6 +284,7 @@ def nasnet_large(load_weights=False, load_patterns=False):
         [331, 331],
         color_coding="BGR",
         preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
@@ -283,5 +299,6 @@ def nasnet_mobile(load_weights=False, load_patterns=False):
         [224, 224],
         color_coding="BGR",
         preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)

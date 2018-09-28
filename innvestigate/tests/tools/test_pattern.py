@@ -284,9 +284,9 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
-        analyzer = innvestigate.create_analyzer("pattern.net", model)
-        analyzer.fit(data[0], pattern_type="linear",
-                     batch_size=256, verbose=0)
+        analyzer = innvestigate.create_analyzer("pattern.net", model,
+                                                pattern_type="linear")
+        analyzer.fit(data[0], batch_size=256, verbose=0)
 
         patterns = analyzer._patterns
         W = model.get_weights()[0]
@@ -324,9 +324,9 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
-        analyzer = innvestigate.create_analyzer("pattern.net", model)
-        analyzer.fit(data[0], pattern_type="relu",
-                     batch_size=256, verbose=0)
+        analyzer = innvestigate.create_analyzer("pattern.net", model,
+                                                pattern_type="relu")
+        analyzer.fit(data[0], batch_size=256, verbose=0)
         patterns = analyzer._patterns
         W, b = model.get_weights()[:2]
         W2D = W.reshape((-1, W.shape[-1]))

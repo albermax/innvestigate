@@ -142,6 +142,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     def __init__(self,
                  model,
                  patterns=None,
+                 pattern_type=None,
                  **kwargs):
 
         self._add_model_softmax_check()
@@ -169,6 +170,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         if self._patterns is not None:
             # copy pattern references
             self._patterns = list(patterns)
+        self._pattern_type = pattern_type
 
         # Pattern projections can lead to +-inf value with long networks.
         # We are only interested in the direction, therefore it is save to
@@ -217,8 +219,11 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
                        use_multiprocessing=False,
                        verbose=0,
                        disable_no_training_warning=None,
-                       pattern_type="relu",
                        **kwargs):
+
+        pattern_type = self._pattern_type
+        if pattern_type is None:
+            pattern_type = "relu"
 
         if isinstance(pattern_type, (list, tuple)):
             raise ValueError("Only one pattern type allowed. "
@@ -238,14 +243,17 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
 
     def _get_state(self):
         state = super(PatternNet, self)._get_state()
-        state.update({"patterns": self._patterns})
+        state.update({"patterns": self._patterns,
+                      "pattern_type": self._pattern_type})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
         patterns = state.pop("patterns")
+        pattern_type = state.pop("pattern_type")
         kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
-        kwargs.update({"patterns": patterns})
+        kwargs.update({"patterns": patterns,
+                       "pattern_type": pattern_type})
         return kwargs
 
 
