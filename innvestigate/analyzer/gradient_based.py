@@ -194,7 +194,13 @@ class IntegratedGradients(wrapper.PathIntegrator):
     """
 
     def __init__(self, model, steps=64, **kwargs):
-        subanalyzer = Gradient(model)
+        subanalyzer_kwargs = {}
+        kwargs_keys = ["neuron_selection_mode"]
+        for key in kwargs_keys:
+            if key in kwargs:
+                subanalyzer_kwargs[key] = kwargs.pop(key)
+        subanalyzer = Gradient(model, **subanalyzer_kwargs)
+
         super(IntegratedGradients, self).__init__(subanalyzer,
                                                   steps=steps,
                                                   **kwargs)
@@ -215,7 +221,13 @@ class SmoothGrad(wrapper.GaussianSmoother):
     """
 
     def __init__(self, model, augment_by_n=64, **kwargs):
-        subanalyzer = Gradient(model)
+        subanalyzer_kwargs = {}
+        kwargs_keys = ["neuron_selection_mode"]
+        for key in kwargs_keys:
+            if key in kwargs:
+                subanalyzer_kwargs[key] = kwargs.pop(key)
+        subanalyzer = Gradient(model, **subanalyzer_kwargs)
+
         super(SmoothGrad, self).__init__(subanalyzer,
                                          augment_by_n=augment_by_n,
                                          **kwargs)
