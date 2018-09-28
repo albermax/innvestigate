@@ -211,7 +211,7 @@ def test_fast__DeepTaylor():
 def test_fast__BoundedDeepTaylor():
 
     def method(model):
-        return BoundedDeepTaylor(model)
+        return BoundedDeepTaylor(model, low=-1, high=1)
 
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
