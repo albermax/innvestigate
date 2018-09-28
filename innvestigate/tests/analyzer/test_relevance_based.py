@@ -196,6 +196,26 @@ def test_fast__LRPAlpha1Beta0IgnoreBias():
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__DeepTaylor():
+
+    def method(model):
+        return DeepTaylor(model)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BoundedDeepTaylor():
+
+    def method(model):
+        return BoundedDeepTaylor(model)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################

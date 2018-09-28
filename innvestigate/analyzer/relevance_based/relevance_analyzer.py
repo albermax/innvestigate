@@ -770,7 +770,7 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
                                                 **kwargs)
 
 
-class DeepTaylorAveragePoolingRerseLayer(AveragePoolingReverseLayer):
+class DeepTaylorAveragePoolingReverseLayer(AveragePoolingReverseLayer):
     def __init__(self, layer, state):
         if isinstance(layer, keras.layers.pooling.MaxPooling1D):
             layer_replacement = keras.layers.pooling.AveragePooling1D(
@@ -824,7 +824,7 @@ class DeepTaylor(LRPAlpha1Beta0):
     def _create_analysis(self, *args, **kwargs):
 
         self._add_conditional_reverse_mapping(
-            kcheck.is_max_pooling,
+            kchecks.is_max_pooling,
             DeepTaylorAveragePoolingReverseLayer,
             name="deep_taylor_max_to_average_pooling",
         )
