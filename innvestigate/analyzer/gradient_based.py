@@ -59,14 +59,43 @@ class BaselineGradient(base.AnalyzerNetworkBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, postprocess=None, **kwargs):
+
+        if postprocess not in [None, "abs", "square"]:
+            raise ValueError("Parameter 'postprocess' must be either "
+                             "None, 'abs', or 'square'.")
+        self._postprocess = postprocess
 
         self._add_model_softmax_check()
 
         super(BaselineGradient, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        return ilayers.Gradient()(model.inputs+[model.outputs[0], ])
+        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
+                              if x not in stop_analysis_at_tensors]
+        ret = iutils.to_list(ilayers.Gradient()(
+            tensors_to_analyze+[model.outputs[0]]))
+
+        if self._postprocess == "abs":
+            ret = ilayers.Abs()(ret)
+        elif self._postprocess == "square":
+            ret = ilayers.Square()(ret)
+
+        return iutils.to_list(ret)
+
+    def _get_state(self):
+        state = super(BaselineGradient, self)._get_state()
+        state.update({"postprocess": self._postprocess})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        postprocess = state.pop("postprocess")
+        kwargs = super(BaselineGradient, clazz)._state_to_kwargs(state)
+        kwargs.update({
+            "postprocess": postprocess,
+        })
+        return kwargs
 
 
 class Gradient(base.ReverseAnalyzerBase):
@@ -78,7 +107,12 @@ class Gradient(base.ReverseAnalyzerBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, postprocess=None, **kwargs):
+
+        if postprocess not in [None, "abs", "square"]:
+            raise ValueError("Parameter 'postprocess' must be either "
+                             "None, 'abs', or 'square'.")
+        self._postprocess = postprocess
 
         self._add_model_softmax_check()
 
@@ -86,6 +120,30 @@ class Gradient(base.ReverseAnalyzerBase):
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
+
+    def _postprocess_analysis(self, X):
+        ret = super(Gradient, self)._postprocess_analysis(X)
+
+        if self._postprocess == "abs":
+            ret = ilayers.Abs()(ret)
+        elif self._postprocess == "square":
+            ret = ilayers.Square()(ret)
+
+        return iutils.to_list(ret)
+
+    def _get_state(self):
+        state = super(Gradient, self)._get_state()
+        state.update({"postprocess": self._postprocess})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(clazz, state):
+        postprocess = state.pop("postprocess")
+        kwargs = super(Gradient, clazz)._state_to_kwargs(state)
+        kwargs.update({
+            "postprocess": postprocess,
+        })
+        return kwargs
 
 
 ###############################################################################
@@ -223,7 +281,7 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
     def __init__(self, model, steps=64, **kwargs):
         subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode"]
+        kwargs_keys = ["neuron_selection_mode", "postprocess"]
         for key in kwargs_keys:
             if key in kwargs:
                 subanalyzer_kwargs[key] = kwargs.pop(key)
@@ -250,7 +308,7 @@ class SmoothGrad(wrapper.GaussianSmoother):
 
     def __init__(self, model, augment_by_n=64, **kwargs):
         subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode"]
+        kwargs_keys = ["neuron_selection_mode", "postprocess"]
         for key in kwargs_keys:
             if key in kwargs:
                 subanalyzer_kwargs[key] = kwargs.pop(key)

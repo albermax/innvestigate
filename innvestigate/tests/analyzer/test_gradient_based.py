@@ -70,6 +70,44 @@ def test_imagenet__BaselineGradient():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+def test_fast__BaselineGradient_pp_None():
+
+    def method(model):
+        return BaselineGradient(model, postprocess=None)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__BaselineGradient_pp_None():
+
+    def method(model):
+        return BaselineGradient(model, postprocess=None)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__BaselineGradient_pp_square():
+
+    def method(model):
+        return BaselineGradient(model, postprocess="square")
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__BaselineGradient_pp_square():
+
+    def method(model):
+        return BaselineGradient(model, postprocess="square")
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
 def test_fast__Gradient():
 
     def method(model):
@@ -96,6 +134,44 @@ def test_imagenet__Gradient():
         return Gradient(model)
 
     dryrun.test_analyzer(method, "imagenet.*")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Gradient_pp_None():
+
+    def method(model):
+        return Gradient(model, postprocess=None)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__Gradient_pp_None():
+
+    def method(model):
+        return Gradient(model, postprocess=None)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__Gradient_pp_square():
+
+    def method(model):
+        return Gradient(model, postprocess="square")
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__Gradient_pp_square():
+
+    def method(model):
+        return Gradient(model, postprocess="square")
+
+    dryrun.test_analyzer(method, "mnist.*")
 
 
 ###############################################################################

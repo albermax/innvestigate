@@ -622,6 +622,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _head_mapping(self, X):
         return X
 
+    def _postprocess_analysis(self, X):
+        return X
+
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         return_all_reversed_tensors = (
             self._reverse_check_min_max_values or
@@ -637,6 +640,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             clip_all_reversed_tensors=self._reverse_clip_values,
             project_bottleneck_tensors=self._reverse_project_bottleneck_layers,
             return_all_reversed_tensors=return_all_reversed_tensors)
+
+        if return_all_reversed_tensors:
+            ret = (self._postprocess_analysis(ret[0]), ret[1])
+        else:
+            ret = self._postprocess_analysis(ret)
 
         if return_all_reversed_tensors:
             debug_tensors = []
