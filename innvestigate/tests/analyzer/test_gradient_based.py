@@ -23,6 +23,8 @@ from innvestigate.utils.tests import dryrun
 from innvestigate.analyzer import BaselineGradient
 from innvestigate.analyzer import Gradient
 
+from innvestigate.analyzer import InputTimesGradient
+
 from innvestigate.analyzer import Deconvnet
 from innvestigate.analyzer import GuidedBackprop
 
@@ -92,6 +94,41 @@ def test_imagenet__Gradient():
 
     def method(model):
         return Gradient(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__InputTimesGradient():
+
+    def method(model):
+        return InputTimesGradient(model)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__InputTimesGradient():
+
+    def method(model):
+        return InputTimesGradient(model)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_imagenet__InputTimesGradient():
+
+    def method(model):
+        return InputTimesGradient(model)
 
     dryrun.test_analyzer(method, "imagenet.*")
 

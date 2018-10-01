@@ -33,6 +33,8 @@ __all__ = [
     "BaselineGradient",
     "Gradient",
 
+    "InputTimesGradient",
+
     "Deconvnet",
     "GuidedBackprop",
 
@@ -84,6 +86,32 @@ class Gradient(base.ReverseAnalyzerBase):
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+class InputTimesGradient(Gradient):
+    """Input*Gradient analyzer.
+
+    :param model: A Keras model.
+    """
+
+    def __init__(self, model, **kwargs):
+
+        self._add_model_softmax_check()
+
+        super(InputTimesGradient, self).__init__(model, **kwargs)
+
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
+                              if x not in stop_analysis_at_tensors]
+        gradients = super(InputTimesGradient, self)._create_analysis(
+            model, stop_analysis_at_tensors=stop_analysis_at_tensors)
+        return [keras.layers.Multiply()([i, g])
+                for i, g in zip(tensors_to_analyze, gradients)]
 
 
 ###############################################################################
