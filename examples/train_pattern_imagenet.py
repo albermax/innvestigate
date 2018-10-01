@@ -193,8 +193,6 @@ if __name__ == "__main__":
 
         # Function
         ("gradient",              {},                       graymap, "Gradient"),
-        ("smoothgrad",            {"noise_scale": 50},      graymap, "SmoothGrad"),
-        ("integrated_gradients",  {},                       graymap, ("Integrated", "Gradients")),
 
         # Signal
         ("deconvnet",             {},                       bk_proj, "Deconvnet"),
@@ -204,7 +202,6 @@ if __name__ == "__main__":
         # Interaction
         ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
         ("lrp.z",                 {},                       heatmap, "LRP-Z"),
-        ("lrp.composite_a_flat",  {},                       heatmap, "LRP-CompositeAFlat"),
     ]
 
     # Create analyzers.
