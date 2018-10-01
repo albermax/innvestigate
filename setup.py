@@ -5,7 +5,7 @@ import setuptools
 install_requirements = [
     "future",
     "h5py",
-    "keras==2.2.0",
+    "keras==2.2.2",
     "numpy",
     "pillow",
     "pytest",
