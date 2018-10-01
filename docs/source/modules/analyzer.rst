@@ -19,7 +19,7 @@ Gradient methods
 Layer-wise relevance propagation
 --------------------------------
 
-.. automodule:: innvestigate.analyzer.relevance_based
+.. automodule:: innvestigate.analyzer.relevance_based.relevance_analyzer
    :members:
    :undoc-members:
 
