@@ -525,10 +525,15 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     The deriving classes should specify how the graph should be reverted
     by implementing the following functions:
 
-    # TODO(ALBER) update interface documentation!
     * :func:`_reverse_mapping(layer)` given a layer this function
       returns a reverse mapping for the layer as specified in
       :func:`innvestigate.utils.keras.graph.reverse_model` or None.
+
+      This function can be implemented, but it is encouraged to
+      implement a default mapping and add additional changes with
+      the function :func:`_add_conditional_reverse_mapping` (see below).
+      * The default behavior is find a conditional mapping (see below),
+        if none is found, :func:`_default_reverse_mapping` is applied.
     * :func:`_default_reverse_mapping` defines the default
       reverse mapping.
     * :func:`_head_mapping` defines how the outputs of the model
@@ -550,6 +555,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       :func:`analyze` is called.
     :param reverse_check_finite: Check if values passed along the
       reverse network are finite.
+    :param reverse_keep_tensors: Keeps the tensors created in the
+      backward pass and stores them in the attribute
+      :attr:`_reversed_tensors`.
     :param reverse_reapply_on_copied_layers: See
       :func:`innvestigate.utils.keras.graph.reverse_model`.
     """
@@ -578,6 +586,21 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
 
     def _reverse_mapping(self, layer):
+        """
+        This function should return a reverse mapping for the passed layer.
+
+        If this function returns None, :func:`_default_reverse_mapping`
+        is applied.
+
+        :param layer: The layer for which a mapping should be returned.
+        :return: The mapping can be of the following forms:
+          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
+            that maps reversed_Ys to reversed_Xs (which should contain
+            tensors of the same shape and type).
+          * A function of form f(B) f(layer, reverse_state) that returns
+            a function of form (A).
+          * A :class:`ReverseMappingBase` subclass.
+        """
         if(isinstance(layer, (ilayers.Max, ilayers.Gather)) and
            layer.name.startswith("iNNvestigate")):
             # Special layers added by AnalyzerNetworkBase
@@ -588,6 +611,25 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     def _add_conditional_reverse_mapping(
             self, condition, mapping, priority=-1, name=None):
+        """
+        This function should return a reverse mapping for the passed layer.
+
+        If this function returns None, :func:`_default_reverse_mapping`
+        is applied.
+
+        :param condition: Condition when this mapping should be applied.
+          Form: f(layer) -> bool
+        :param mapping: The mapping can be of the following forms:
+          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
+            that maps reversed_Ys to reversed_Xs (which should contain
+            tensors of the same shape and type).
+          * A function of form f(B) f(layer, reverse_state) that returns
+            a function of form (A).
+          * A :class:`ReverseMappingBase` subclass.
+        :param priority: The higher the earlier the condition gets
+          evaluated.
+        :param name: An identifying name.
+        """
         if getattr(self, "_reverse_mapping_applied", False):
             raise Exception("Cannot add conditional mapping "
                             "after first application.")
@@ -616,10 +658,18 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return None
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        """
+        Fallback function to map reversed_Ys to reversed_Xs
+        (which should contain tensors of the same shape and type).
+        """
         return self._gradient_reverse_mapping(
             Xs, Ys, reversed_Ys, reverse_state)
 
     def _head_mapping(self, X):
+        """
+        Map output tensors to new values before passing
+        them into the reverted network.
+        """
         return X
 
     def _postprocess_analysis(self, X):
