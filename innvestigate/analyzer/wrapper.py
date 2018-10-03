@@ -88,11 +88,11 @@ class AugmentReduceBase(WrapperBase):
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
 
-    def compile_analyzer(self):
+    def create_analyzer_model(self):
         if not self._keras_based_augment_reduce:
             return
 
-        self._subanalyzer.compile_analyzer()
+        self._subanalyzer.create_analyzer_model()
 
         if self._subanalyzer._n_debug_output > 0:
             raise Exception("No debug output at subanalyzer is supported.")
@@ -114,20 +114,19 @@ class AugmentReduceBase(WrapperBase):
                             "with this wrapper.")
 
         new_inputs = iutils.to_list(self._keras_based_augment(inputs))
-        tmp = iutils.to_list(model(new_inputs))
+        tmp = iutils.to_list(model(new_inputs+extra_inputs))
         new_outputs = iutils.to_list(self._keras_based_reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
         new_model = keras.models.Model(
             inputs=inputs+extra_inputs+new_constant_inputs,
             outputs=new_outputs+extra_outputs)
-        new_model.compile(optimizer="sgd", loss="mse")
         self._subanalyzer._analyzer_model = new_model
 
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:
             if not hasattr(self._subanalyzer, "_analyzer_model"):
-                self.compile_analyzer()
+                self.create_analyzer_model()
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
             # todo: remove python based code.

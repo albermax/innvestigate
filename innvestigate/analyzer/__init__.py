@@ -37,6 +37,7 @@ analyzers = {
     # Gradient based
     "gradient": Gradient,
     "gradient.baseline": BaselineGradient,
+    "input_t_gradient": InputTimesGradient,
     "deconvnet": Deconvnet,
     "guided_backprop": GuidedBackprop,
     "integrated_gradients": IntegratedGradients,
@@ -44,7 +45,6 @@ analyzers = {
 
     # Relevance based
     "lrp": LRP,
-    "lrp.z_baseline": BaselineLRPZ,
     "lrp.z": LRPZ,
     "lrp.z_IB": LRPZIgnoreBias,
 

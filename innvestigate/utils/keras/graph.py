@@ -292,7 +292,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
         if kchecks.contains_activation(layer, activation="softmax"):
             softmax_found = True
             if isinstance(layer, keras.layers.Activation):
-                ret.append(layer.get_input_at(node_index)[0])
+                ret.append(layer.get_input_at(node_index))
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
                 ret.append(layer_wo_act(layer.get_input_at(node_index)))
@@ -304,9 +304,9 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 
 def model_wo_softmax(model):
-    return keras.model.Model(inputs=model.inputs,
-                             outputs=pre_softmax_tensor(model.outputs),
-                             name=model.name)
+    return keras.models.Model(inputs=model.inputs,
+                              outputs=pre_softmax_tensors(model.outputs),
+                              name=model.name)
 
 
 ###############################################################################
@@ -682,6 +682,7 @@ class ReverseMappingBase(object):
 def reverse_model(model, reverse_mappings,
                   default_reverse_mapping=None,
                   head_mapping=None,
+                  stop_mapping_at_tensors=[],
                   verbose=False,
                   return_all_reversed_tensors=False,
                   clip_all_reversed_tensors=False,
@@ -694,11 +695,17 @@ def reverse_model(model, reverse_mappings,
     :param model: A Keras model.
     :param reverse_mappings: Either a callable that matches layers to
       mappings or a dictionary with layers as keys and mappings as values.
-      Allowed as mappings are function or ReverseMappingBase subclasses.
+      Allowed as mapping forms are:
+          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state).
+          * A function of form f(B) f(layer, reverse_state) that returns
+            a function of form (A).
+          * A :class:`ReverseMappingBase` subclass.
     :param default_reverse_mapping: A function that reverses layers for
       which no mapping was given by param "reverse_mappings".
     :param head_mapping: Map output tensors to new values before passing
-      them into the reverted nework.
+      them into the reverted network.
+    :param stop_mapping_at_tensors: Tensors at which to stop the mapping.
+      Similar to stop_gradient parameters for gradient computation.
     :param verbose: Print what's going on.
     :param return_all_reversed_tensors: Return all reverted tensors in addition
       to reverted model input tensors.
@@ -742,6 +749,10 @@ def reverse_model(model, reverse_mappings,
                              reversed_tensors_list):
 
         def add_reversed_tensor(i, X, reversed_X):
+            # Do not keep tensors that should stop the mapping.
+            if X in stop_mapping_at_tensors:
+                return
+
             if X not in reversed_tensors:
                 reversed_tensors[X] = {"id": (nid, i),
                                        "tensor": reversed_X}
@@ -801,13 +812,13 @@ def reverse_model(model, reverse_mappings,
         # Allow to share a ReverMappingBase for each layer instance
         # in order to reduce the overhead.
 
-        reverse_mapping = reverse_mappings(layer)
-        if reverse_mapping is None:
+        meta_reverse_mapping = reverse_mappings(layer)
+        if meta_reverse_mapping is None:
             reverse_mapping = default_reverse_mapping
-
-        if(inspect.isclass(reverse_mapping) and
-           issubclass(reverse_mapping, ReverseMappingBase)):
-            reverse_mapping_obj = reverse_mapping(
+        elif(inspect.isclass(meta_reverse_mapping) and
+             issubclass(meta_reverse_mapping, ReverseMappingBase)):
+            # Mapping is a class
+            reverse_mapping_obj = meta_reverse_mapping(
                 layer,
                 {
                     "model": model,
@@ -815,6 +826,19 @@ def reverse_model(model, reverse_mappings,
                 }
             )
             reverse_mapping = reverse_mapping_obj.apply
+        elif(callable(meta_reverse_mapping) and
+             len(inspect.signature(meta_reverse_mapping).parameters) == 2):
+            # Function that returns mapping
+            reverse_mapping = meta_reverse_mapping(
+                layer,
+                {
+                    "model": model,
+                    "layer": layer,
+                }
+            )
+        else:
+            # Nothing meta here
+            reverse_mapping = meta_reverse_mapping
 
         initialized_reverse_mappings[layer] = reverse_mapping
 
@@ -844,9 +868,14 @@ def reverse_model(model, reverse_mappings,
             if not all([ys in reversed_tensors for ys in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
+                # Potentially this node is also not part of the
+                # reversed tensor set because it depends on a tensor
+                # that is listed in stop_mapping_at_tensors.
                 continue
             reversed_Ys = [get_reversed_tensor(ys)
                            for ys in Ys]
+            local_stop_mapping_at_tensors = [x for x in Xs
+                                             if x in stop_mapping_at_tensors]
 
             _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
             reverse_mapping = initialized_reverse_mappings[layer]
@@ -856,13 +885,15 @@ def reverse_model(model, reverse_mappings,
                     "nid": nid,
                     "model": model,
                     "layer": layer,
+                    "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
                 })
             reversed_Xs = iutils.to_list(reversed_Xs)
             add_reversed_tensors(nid, Xs, reversed_Xs)
 
     # Return requested values #################################################
     reversed_input_tensors = [get_reversed_tensor(tmp)
-                              for tmp in model.inputs]
+                              for tmp in model.inputs
+                              if tmp not in stop_mapping_at_tensors]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:

@@ -52,7 +52,11 @@ __all__ = [
     "Mean",
     "CountNonZero",
 
+    "Identity",
+    "Abs",
     "Square",
+    "Clip",
+    "Project",
     "Print",
 
     "Transpose",
@@ -266,6 +270,8 @@ class CountNonZero(_Reduce):
 class _Map(keras.layers.Layer):
 
     def call(self, x):
+        if isinstance(x, list) and len(x) == 1:
+            x = x[0]
         return self._apply_map(x)
 
     def compute_output_shape(self, input_shape):
@@ -278,6 +284,11 @@ class _Map(keras.layers.Layer):
 class Identity(_Map):
     def _apply_map(self, x):
         return K.identity(x)
+
+
+class Abs(_Map):
+    def _apply_map(self, x):
+        return K.abs(x)
 
 
 class Square(_Map):

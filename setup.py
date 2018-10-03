@@ -5,7 +5,7 @@ import setuptools
 install_requirements = [
     "future",
     "h5py",
-    "keras==2.2.0",
+    "keras==2.2.2",
     "numpy",
     "pillow",
     "pytest",
@@ -23,14 +23,14 @@ test_requirements = [
 
 def readme():
     base_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(base_dir, 'README.md')) as f:
+    with open(os.path.join(base_dir, 'README.md'), 'r', encoding='utf-8') as f:
         return f.read()
 
 
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.2",
+        version="1.0.3",
         description=("A toolbox to innvestigate neural networks decisions."),
         long_description=readme(),
         classifiers=[
