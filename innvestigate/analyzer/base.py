@@ -569,6 +569,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                  reverse_project_bottleneck_layers=False,
                  reverse_check_min_max_values=False,
                  reverse_check_finite=False,
+                 reverse_keep_tensors=False,
                  reverse_reapply_on_copied_layers=False,
                  **kwargs):
         self._reverse_verbose = reverse_verbose
@@ -577,6 +578,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             reverse_project_bottleneck_layers)
         self._reverse_check_min_max_values = reverse_check_min_max_values
         self._reverse_check_finite = reverse_check_finite
+        self._reverse_keep_tensors = reverse_keep_tensors
         self._reverse_reapply_on_copied_layers = (
             reverse_reapply_on_copied_layers)
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
@@ -678,7 +680,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         return_all_reversed_tensors = (
             self._reverse_check_min_max_values or
-            self._reverse_check_finite
+            self._reverse_check_finite or
+            self._reverse_keep_tensors
         )
         ret = kgraph.reverse_model(
             model,
@@ -725,6 +728,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                     len(debug_tensors)+len(tmp))
                 debug_tensors += tmp
 
+            if self._reverse_keep_tensors:
+                self._debug_tensors_indices["keep"] = (
+                    len(debug_tensors),
+                    len(debug_tensors)+len(tensors))
+                debug_tensors += tensors
+
             ret = (ret[0], debug_tensors)
         return ret
 
@@ -756,6 +765,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 print("Not finite values found in following nodes: "
                       "(NodeID, TensorID) - {}".format(nfinite_tensors))
 
+        if self._reverse_keep_tensors:
+            indices = self._debug_tensors_indices["keep"]
+            tmp = debug_values[indices[0]:indices[1]]
+            tmp = sorted([(self._reverse_tensors_mapping[i], v)
+                          for i, v in enumerate(tmp)])
+            self._reversed_tensors = tmp
+
     def _get_state(self):
         state = super(ReverseAnalyzerBase, self)._get_state()
         state.update({"reverse_verbose": self._reverse_verbose})
@@ -765,6 +781,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         state.update({"reverse_check_min_max_values":
                       self._reverse_check_min_max_values})
         state.update({"reverse_check_finite": self._reverse_check_finite})
+        state.update({"reverse_keep_tensors": self._reverse_keep_tensors})
         state.update({"reverse_reapply_on_copied_layers":
                       self._reverse_reapply_on_copied_layers})
         return state
@@ -778,6 +795,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reverse_check_min_max_values = (
             state.pop("reverse_check_min_max_values"))
         reverse_check_finite = state.pop("reverse_check_finite")
+        reverse_keep_tensors = state.pop("reverse_keep_tensors")
         reverse_reapply_on_copied_layers = (
             state.pop("reverse_reapply_on_copied_layers"))
         kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
@@ -788,6 +806,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                        "reverse_check_min_max_values":
                        reverse_check_min_max_values,
                        "reverse_check_finite": reverse_check_finite,
+                       "reverse_keep_tensors": reverse_keep_tensors,
                        "reverse_reapply_on_copied_layers":
                        reverse_reapply_on_copied_layers})
         return kwargs
