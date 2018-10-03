@@ -695,11 +695,15 @@ def reverse_model(model, reverse_mappings,
     :param model: A Keras model.
     :param reverse_mappings: Either a callable that matches layers to
       mappings or a dictionary with layers as keys and mappings as values.
-      Allowed as mappings are function or ReverseMappingBase subclasses.
+      Allowed as mapping forms are:
+          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state).
+          * A function of form f(B) f(layer, reverse_state) that returns
+            a function of form (A).
+          * A :class:`ReverseMappingBase` subclass.
     :param default_reverse_mapping: A function that reverses layers for
       which no mapping was given by param "reverse_mappings".
     :param head_mapping: Map output tensors to new values before passing
-      them into the reverted nework.
+      them into the reverted network.
     :param stop_mapping_at_tensors: Tensors at which to stop the mapping.
       Similar to stop_gradient parameters for gradient computation.
     :param verbose: Print what's going on.
