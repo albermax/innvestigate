@@ -114,6 +114,7 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 * **[Comparing output neurons on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to analyze the prediction of different classes on MNIST.
 * **[Comparing methods on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to compare analyzers on ImageNet.
 * **[Comparing networks on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to compare analyzes for different networks on ImageNet.
+* **[Sentiment Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/sentiment_analysis.ipynb)**.
 
 ---
 
