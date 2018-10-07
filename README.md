@@ -64,7 +64,7 @@ The iNNvestigate library contains implementations for the following methods:
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
 
-**The intention behind iNNvestigate is to make it easy to use analysis methods, but it is not to explain the underlying concepts and assumptions. Please, read the according publication(s) when using a certain method and when publishing please cite the according paper(s) (as well as the [iNNvestigate paper](https://arxiv.org/abs/1808.04260)). Thank you!**)])))
+**The intention behind iNNvestigate is to make it easy to use analysis methods, but it is not to explain the underlying concepts and assumptions. Please, read the according publication(s) when using a certain method and when publishing please cite the according paper(s) (as well as the [iNNvestigate paper](https://arxiv.org/abs/1808.04260)). Thank you!**
 
 All the available methods have in common that they try to analyze the output of a specific neuron with respect to input to the neural network.
 Typically one analyses the neuron with the largest activation in the output layer.
