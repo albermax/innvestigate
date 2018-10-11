@@ -35,7 +35,7 @@ class Perturbation:
     :type pad_mode: str or function or callable
     :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified."""
 
-    def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
+    def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
                  aggregation_function=np.mean, pad_mode="reflect", in_place=False):
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
@@ -55,7 +55,7 @@ class Perturbation:
         else:
             raise TypeError("Cannot handle perturbation function of type {}.".format(type(perturbation_function)))
 
-        self.ratio = ratio
+        self.num_perturbed_regions = num_perturbed_regions
         self.region_shape = region_shape
         self.reduce_function = reduce_function
         self.aggregation_function = aggregation_function
@@ -65,11 +65,11 @@ class Perturbation:
         self.in_place = in_place
 
     @staticmethod
-    def compute_perturbation_mask(aggregated_regions, ratio):
-        # Get indices and values
-        thresholds = np.percentile(aggregated_regions, math.ceil(100.0 * (1.0 - ratio)), axis=(1, 2, 3), keepdims=True)
-        perturbation_mask_regions = aggregated_regions >= thresholds
-
+    def compute_perturbation_mask(aggregated_regions, num_perturbated_regions):
+        # 0 means highest scoring region
+        order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
+        ranks = order.argsort().reshape(aggregated_regions.shape)
+        perturbation_mask_regions = ranks <= num_perturbated_regions - 1
         return perturbation_mask_regions
 
     def expand_regions_to_pixels(self, regions):
@@ -157,7 +157,7 @@ class Perturbation:
         aggregated_regions = self.aggregate_regions(analysis)
 
         # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
-        perturbation_mask_regions = self.compute_perturbation_mask(aggregated_regions, self.ratio)
+        perturbation_mask_regions = self.compute_perturbation_mask(aggregated_regions, self.num_perturbed_regions)
         # Perturbate each region
         x_perturbated = self.perturbate_regions(x, perturbation_mask_regions)
 
@@ -187,23 +187,23 @@ class PerturbationAnalysis:
     :type perturbation: innvestigate.tools.Perturbation
     :param steps: Number of perturbation steps.
     :type steps: int
-    :param ratio: Ratio of pixels to be perturbed per step.
-    :type ratio: float
+    :param regions_per_step: Number of regions that are perturbed per step.
+    :type regions_per_step: float
     :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
     :type recompute_analysis: bool
     :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, steps=1, ratio=0.05, recompute_analysis=True,
+    def __init__(self, analyzer, model, generator, perturbation, steps=1, regions_per_step=1, recompute_analysis=True,
                  verbose=False):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
         self.perturbation = perturbation
-        if not isinstance(perturbation, Perturbation):
-            raise TypeError(type(perturbation))
+        # if not isinstance(perturbation, Perturbation):
+        #     raise TypeError(type(perturbation))
         self.steps = steps
-        self.ratio = ratio
+        self.regions_per_step = regions_per_step
         self.recompute_analysis = recompute_analysis
 
         if not self.recompute_analysis:
@@ -220,9 +220,6 @@ class PerturbationAnalysis:
         :type x: numpy.ndarray
         """
         a = self.analyzer.analyze(x)
-
-        # Increase perturbation ratio
-        self.perturbation.ratio += min(self.ratio, 1.0)
 
         x_perturbated = self.perturbation.perturbate_on_batch(x, a)
         if return_analysis:
@@ -346,16 +343,13 @@ class PerturbationAnalysis:
         scores = list()
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
-        self.perturbation.ratio = 0  # Reset ratio of Perturbation
+        self.perturbation.num_perturbed_regions = 0
         time_start = time.time()
         for step in range(self.steps):
             tic = time.time()
-            if self.perturbation.ratio >= 1:
-                print("Perturbed all regions after {} steps, stopping now.".format(step))
-                break
+            self.perturbation.num_perturbed_regions += self.regions_per_step
             if self.verbose:
-                print("Step {} of {}: {:.0f}% of input components perturbed.".format(step + 1, self.steps,
-                                                                                     100.0 * self.perturbation.ratio), end=" ")
+                print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps, self.perturbation.num_perturbed_regions), end=" ")
             scores.append(self.evaluate_generator(self.generator))
             toc = time.time()
             if self.verbose:
@@ -366,6 +360,6 @@ class PerturbationAnalysis:
             print("Time elapsed for {} steps: {:.3f} seconds.".format(step + 1,
                                                                       time_end - time_start))  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
 
-        self.perturbation.ratio = self.ratio  # Reset to original value
+        self.perturbation.num_perturbed_regions = 0  # Reset to original value
         assert len(scores) == self.steps + 1
         return scores
