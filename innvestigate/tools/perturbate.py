@@ -42,8 +42,8 @@ class Perturbation:
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
             elif perturbation_function == "gaussian":
-                self.perturbation_function = lambda x: x + np.random.normal(loc=0.0, scale=0.3,
-                                                                            size=x.shape)  # TODO scale?
+                # If scale = 1/3, most of the values will be between -1 and 1
+                self.perturbation_function = lambda x: np.random.normal(loc=0.0, scale=0.3, size=x.shape)
             elif perturbation_function == "mean":
                 self.perturbation_function = np.mean
             elif perturbation_function == "invert":
