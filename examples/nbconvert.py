@@ -79,7 +79,7 @@ if __name__ == "__main__":
             subprocess.check_call(call)
 
             # Fix magic lines
-            with open(output_file, "r") as f:
+            with open(output_file, "r", encoding="utf-8") as f:
                 script_content = f.read()
 
             fixed_lines = []
@@ -88,7 +88,7 @@ if __name__ == "__main__":
                     line = "# %s" % line
                 fixed_lines.append(line)
 
-            with open(output_file, "w") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(fixed_lines))
 
             if args.command == "to_script_and_execute":
