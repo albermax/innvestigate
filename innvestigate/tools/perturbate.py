@@ -19,6 +19,8 @@ import keras.backend as K
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
+import innvestigate.utils
+
 
 class Perturbation:
     """Perturbation of pixels based on analysis result.
@@ -70,6 +72,7 @@ class Perturbation:
         order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
         ranks = order.argsort().reshape(aggregated_regions.shape)
         perturbation_mask_regions = ranks <= num_perturbated_regions - 1
+        assert np.all(np.sum(perturbation_mask_regions, axis=(2, 3)) == num_perturbated_regions), perturbation_mask_regions
         return perturbation_mask_regions
 
     def expand_regions_to_pixels(self, regions):
@@ -194,7 +197,7 @@ class PerturbationAnalysis:
     :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, steps=1, regions_per_step=1, recompute_analysis=True,
+    def __init__(self, analyzer, model, generator, perturbation, steps=1, regions_per_step=1, recompute_analysis=False,
                  verbose=False):
         self.analyzer = analyzer
         self.model = model
@@ -207,27 +210,38 @@ class PerturbationAnalysis:
         self.recompute_analysis = recompute_analysis
 
         if not self.recompute_analysis:
-            raise NotImplementedError(
-                "Not recomputing the analysis is not supported yet.")
-
+            # Compute the analysis once in the beginning
+            analysis = list()
+            x = list()
+            y = list()
+            for xx, yy in self.generator:
+                x.extend(list(xx))
+                y.extend(list(yy))
+                analysis.extend(list(self.analyzer.analyze(xx)))
+            x = np.array(x)
+            y = np.array(y)
+            analysis = np.array(analysis)
+            self.analysis_generator = innvestigate.utils.BatchSequence([x, y, analysis], batch_size=256)
         self.verbose = verbose
 
-    def compute_on_batch(self, x, return_analysis=False):
+    def compute_on_batch(self, x, analysis=None, return_analysis=False):
         """
         Computes the analysis and perturbes the input batch accordingly.
 
         :param x: Samples.
+        :param analysis: Analysis of x. If None, it is recomputed.
         :type x: numpy.ndarray
         """
-        a = self.analyzer.analyze(x)
+        if analysis is None:
+            analysis = self.analyzer.analyze(x)
 
-        x_perturbated = self.perturbation.perturbate_on_batch(x, a)
+        x_perturbated = self.perturbation.perturbate_on_batch(x, analysis)
         if return_analysis:
-            return x_perturbated, a
+            return x_perturbated, analysis
         else:
             return x_perturbated
 
-    def evaluate_on_batch(self, x, y, sample_weight=None):
+    def evaluate_on_batch(self, x, y, analysis=None, sample_weight=None):
         """
         Perturbs the input batch and scores the model on the perturbed batch.
 
@@ -235,6 +249,8 @@ class PerturbationAnalysis:
         :type x: numpy.ndarray
         :param y: Labels.
         :type y: numpy.ndarray
+        :param analysis: Analysis of x.
+        :type analysis: numpy.ndarray
         :param sample_weight: Sample weights.
         :type sample_weight: None
         :return: List of test scores.
@@ -242,7 +258,7 @@ class PerturbationAnalysis:
         """
         if sample_weight is not None:
             raise NotImplementedError("Sample weighting is not supported yet.")  # TODO
-        x_perturbated = self.compute_on_batch(x)
+        x_perturbated = self.compute_on_batch(x, analysis)
         score = self.model.test_on_batch(x_perturbated, y, sample_weight=sample_weight)
         return score
 
@@ -301,15 +317,14 @@ class PerturbationAnalysis:
                                      str(generator_output))
                 if len(generator_output) == 2:
                     x, y = generator_output
-                    sample_weight = None
                 elif len(generator_output) == 3:
-                    x, y, sample_weight = generator_output
+                    x, y, analysis = generator_output
                 else:
                     raise ValueError('Output of generator should be a tuple '
-                                     '(x, y, sample_weight) '
+                                     '(x, y, analysis) '
                                      'or (x, y). Found: ' +
                                      str(generator_output))
-                outs = self.evaluate_on_batch(x, y, sample_weight=sample_weight)
+                outs = self.evaluate_on_batch(x, y, analysis=analysis, sample_weight=None)
 
                 if isinstance(x, list):
                     batch_size = x[0].shape[0]
@@ -343,14 +358,14 @@ class PerturbationAnalysis:
         scores = list()
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
-        self.perturbation.num_perturbed_regions = 0
+        self.perturbation.num_perturbed_regions = 1
         time_start = time.time()
         for step in range(self.steps):
             tic = time.time()
-            self.perturbation.num_perturbed_regions += self.regions_per_step
             if self.verbose:
                 print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps, self.perturbation.num_perturbed_regions), end=" ")
-            scores.append(self.evaluate_generator(self.generator))
+            scores.append(self.evaluate_generator(self.analysis_generator))
+            self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
             if self.verbose:
                 print("Time elapsed: {:.3f} seconds.".format(toc - tic))
@@ -360,6 +375,6 @@ class PerturbationAnalysis:
             print("Time elapsed for {} steps: {:.3f} seconds.".format(step + 1,
                                                                       time_end - time_start))  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
 
-        self.perturbation.num_perturbed_regions = 0  # Reset to original value
+        self.perturbation.num_perturbed_regions = 1  # Reset to original value
         assert len(scores) == self.steps + 1
         return scores
