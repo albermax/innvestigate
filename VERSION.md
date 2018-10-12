@@ -1,4 +1,4 @@
-## Version 1.0.1-1.0.3
+## Version 1.0.1-1.0.4
 
 Adds the following functionality:
 
