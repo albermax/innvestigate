@@ -27,9 +27,15 @@ import subprocess
 
 
 if __name__ == "__main__":
-    # Get jupyter binary that is the same directory as the running python.
-    bin_dir = os.path.dirname(sys.executable)
-    jupyter_executable = os.path.join(bin_dir, "jupyter")
+    try:
+        # Try jupyter binary that is the same directory as the running python.
+        # E.g., useful for python venvs.
+        bin_dir = os.path.dirname(sys.executable)
+        jupyter_executable = os.path.join(bin_dir, "jupyter")
+    except FileNotFoundError as e:
+        # Fallback to find any jupyter.
+        jupyter_executable = subprocess.check_output(["which jupyter"],
+                                                     shell=True).strip()
 
     # Get all notebooks
     notebook_dir = os.path.join(os.path.dirname(__file__), "notebooks")
