@@ -410,6 +410,7 @@ class LRP(base.ReverseAnalyzerBase):
                 if condition(layer, reverse_state):
                     ##print(str(rule)) #debug
                     rule_class = rule
+                    break
         else:
             ##print(str(rules[0]), '(via pop)') #debug
             rule_class = self._rules.pop()
