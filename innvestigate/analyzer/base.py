@@ -468,7 +468,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
 
-        # todo: update all interfaces, X can be a list.
+        X = iutils.to_list(X)
+
         if(neuron_selection is not None and
            self._neuron_selection_mode != "index"):
             raise ValueError("Only neuron_selection_mode 'index' expects "
@@ -486,7 +487,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                     "Multiple neurons are selected. Most analysis methods "
                     "do theoretically not support multi-neuron analysis. "
                     "Consider using a Sum layer.")
-            ret = self._analyzer_model.predict_on_batch([X, neuron_selection])
+            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
 
