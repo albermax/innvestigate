@@ -35,10 +35,13 @@ class Perturbation:
     :type aggregation_function: function or callable
     :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions. As in numpy.pad.
     :type pad_mode: str or function or callable
-    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified."""
+    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified.
+    :type in_place: bool
+    :param value_range: Minimal and maximal value after perturbation as a tuple: (min_val, max_val). The input is clipped to this range
+    :type value_range: tuple"""
 
     def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
-                 aggregation_function=np.mean, pad_mode="reflect", in_place=False):
+                 aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
@@ -65,6 +68,7 @@ class Perturbation:
         self.pad_mode = pad_mode  # numpy.pad
 
         self.in_place = in_place
+        self.value_range = value_range
 
     @staticmethod
     def compute_perturbation_mask(ranks, num_perturbated_regions):
@@ -135,6 +139,10 @@ class Perturbation:
             if region_mask:
                 x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :] = self.perturbation_function(
                     region)
+
+                if self.value_range is not None:
+                    np.clip(x_perturbated, *self.value_range, x_perturbated)
+                    assert x_perturbated.min(), x_perturbated.max() == self.value_range
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 
