@@ -27,8 +27,8 @@ class Perturbation:
 
     :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
     :type perturbation_function: function or callable or str
-    :param ratio: Ratio of pixels to be perturbed.
-    :type ratio: float
+    :param num_perturbed_regions: Number of regions to be perturbed.
+    :type num_perturbed_regions: int
     :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
     :type reduce_function: function or callable
     :param aggregation_function: Function to aggregate the analysis over subregions.
@@ -67,13 +67,18 @@ class Perturbation:
         self.in_place = in_place
 
     @staticmethod
-    def compute_perturbation_mask(aggregated_regions, num_perturbated_regions):
+    def compute_perturbation_mask(ranks, num_perturbated_regions):
+        perturbation_mask_regions = ranks <= num_perturbated_regions - 1
+        assert np.all(
+            np.sum(perturbation_mask_regions, axis=(2, 3)) == num_perturbated_regions), perturbation_mask_regions
+        return perturbation_mask_regions
+
+    @staticmethod
+    def compute_region_ordering(aggregated_regions):
         # 0 means highest scoring region
         order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
         ranks = order.argsort().reshape(aggregated_regions.shape)
-        perturbation_mask_regions = ranks <= num_perturbated_regions - 1
-        assert np.all(np.sum(perturbation_mask_regions, axis=(2, 3)) == num_perturbated_regions), perturbation_mask_regions
-        return perturbation_mask_regions
+        return ranks
 
     def expand_regions_to_pixels(self, regions):
         # Resize to pixels (repeat values).
@@ -160,7 +165,8 @@ class Perturbation:
         aggregated_regions = self.aggregate_regions(analysis)
 
         # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
-        perturbation_mask_regions = self.compute_perturbation_mask(aggregated_regions, self.num_perturbed_regions)
+        ranks = self.compute_region_ordering(aggregated_regions)
+        perturbation_mask_regions = self.compute_perturbation_mask(ranks, self.num_perturbed_regions)
         # Perturbate each region
         x_perturbated = self.perturbate_regions(x, perturbation_mask_regions)
 
@@ -317,6 +323,7 @@ class PerturbationAnalysis:
                                      str(generator_output))
                 if len(generator_output) == 2:
                     x, y = generator_output
+                    analysis = None
                 elif len(generator_output) == 3:
                     x, y, analysis = generator_output
                 else:
@@ -363,7 +370,8 @@ class PerturbationAnalysis:
         for step in range(self.steps):
             tic = time.time()
             if self.verbose:
-                print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps, self.perturbation.num_perturbed_regions), end=" ")
+                print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps,
+                                                                    self.perturbation.num_perturbed_regions), end=" ")
             scores.append(self.evaluate_generator(self.analysis_generator))
             self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
