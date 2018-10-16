@@ -142,7 +142,6 @@ class Perturbation:
 
                 if self.value_range is not None:
                     np.clip(x_perturbated, *self.value_range, x_perturbated)
-                    assert x_perturbated.min(), x_perturbated.max() == self.value_range
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 
