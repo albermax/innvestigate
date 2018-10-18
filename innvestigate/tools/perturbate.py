@@ -19,31 +19,36 @@ import keras.backend as K
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
 
+import innvestigate.utils
+
 
 class Perturbation:
     """Perturbation of pixels based on analysis result.
 
     :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
     :type perturbation_function: function or callable or str
-    :param ratio: Ratio of pixels to be perturbed.
-    :type ratio: float
+    :param num_perturbed_regions: Number of regions to be perturbed.
+    :type num_perturbed_regions: int
     :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
     :type reduce_function: function or callable
     :param aggregation_function: Function to aggregate the analysis over subregions.
     :type aggregation_function: function or callable
     :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions. As in numpy.pad.
     :type pad_mode: str or function or callable
-    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified."""
+    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified.
+    :type in_place: bool
+    :param value_range: Minimal and maximal value after perturbation as a tuple: (min_val, max_val). The input is clipped to this range
+    :type value_range: tuple"""
 
-    def __init__(self, perturbation_function, ratio=0.05, region_shape=(9, 9), reduce_function=np.mean,
-                 aggregation_function=np.mean, pad_mode="reflect", in_place=False):
+    def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
+                 aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
         if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
             elif perturbation_function == "gaussian":
-                self.perturbation_function = lambda x: x + np.random.normal(loc=0.0, scale=0.3,
-                                                                            size=x.shape)  # TODO scale?
+                # If scale = 1/3, most of the values will be between -1 and 1
+                self.perturbation_function = lambda x: np.random.normal(loc=0.0, scale=0.3, size=x.shape)
             elif perturbation_function == "mean":
                 self.perturbation_function = np.mean
             elif perturbation_function == "invert":
@@ -55,7 +60,7 @@ class Perturbation:
         else:
             raise TypeError("Cannot handle perturbation function of type {}.".format(type(perturbation_function)))
 
-        self.ratio = ratio
+        self.num_perturbed_regions = num_perturbed_regions
         self.region_shape = region_shape
         self.reduce_function = reduce_function
         self.aggregation_function = aggregation_function
@@ -63,14 +68,19 @@ class Perturbation:
         self.pad_mode = pad_mode  # numpy.pad
 
         self.in_place = in_place
+        self.value_range = value_range
 
     @staticmethod
-    def compute_perturbation_mask(aggregated_regions, ratio):
-        # Get indices and values
-        thresholds = np.percentile(aggregated_regions, math.ceil(100.0 * (1.0 - ratio)), axis=(1, 2, 3), keepdims=True)
-        perturbation_mask_regions = aggregated_regions >= thresholds
-
+    def compute_perturbation_mask(ranks, num_perturbated_regions):
+        perturbation_mask_regions = ranks <= num_perturbated_regions - 1
         return perturbation_mask_regions
+
+    @staticmethod
+    def compute_region_ordering(aggregated_regions):
+        # 0 means highest scoring region
+        order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
+        ranks = order.argsort().reshape(aggregated_regions.shape)
+        return ranks
 
     def expand_regions_to_pixels(self, regions):
         # Resize to pixels (repeat values).
@@ -127,6 +137,9 @@ class Perturbation:
             if region_mask:
                 x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :] = self.perturbation_function(
                     region)
+
+                if self.value_range is not None:
+                    np.clip(x_perturbated, *self.value_range, x_perturbated)
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 
@@ -157,7 +170,8 @@ class Perturbation:
         aggregated_regions = self.aggregate_regions(analysis)
 
         # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
-        perturbation_mask_regions = self.compute_perturbation_mask(aggregated_regions, self.ratio)
+        ranks = self.compute_region_ordering(aggregated_regions)
+        perturbation_mask_regions = self.compute_perturbation_mask(ranks, self.num_perturbed_regions)
         # Perturbate each region
         x_perturbated = self.perturbate_regions(x, perturbation_mask_regions)
 
@@ -187,50 +201,58 @@ class PerturbationAnalysis:
     :type perturbation: innvestigate.tools.Perturbation
     :param steps: Number of perturbation steps.
     :type steps: int
-    :param ratio: Ratio of pixels to be perturbed per step.
-    :type ratio: float
+    :param regions_per_step: Number of regions that are perturbed per step.
+    :type regions_per_step: float
     :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
     :type recompute_analysis: bool
     :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, steps=1, ratio=0.05, recompute_analysis=True,
+    def __init__(self, analyzer, model, generator, perturbation, steps=1, regions_per_step=1, recompute_analysis=False,
                  verbose=False):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
         self.perturbation = perturbation
-        if not isinstance(perturbation, Perturbation):
-            raise TypeError(type(perturbation))
+        # if not isinstance(perturbation, Perturbation):
+        #     raise TypeError(type(perturbation))
         self.steps = steps
-        self.ratio = ratio
+        self.regions_per_step = regions_per_step
         self.recompute_analysis = recompute_analysis
 
         if not self.recompute_analysis:
-            raise NotImplementedError(
-                "Not recomputing the analysis is not supported yet.")
-
+            # Compute the analysis once in the beginning
+            analysis = list()
+            x = list()
+            y = list()
+            for xx, yy in self.generator:
+                x.extend(list(xx))
+                y.extend(list(yy))
+                analysis.extend(list(self.analyzer.analyze(xx)))
+            x = np.array(x)
+            y = np.array(y)
+            analysis = np.array(analysis)
+            self.analysis_generator = innvestigate.utils.BatchSequence([x, y, analysis], batch_size=256)
         self.verbose = verbose
 
-    def compute_on_batch(self, x, return_analysis=False):
+    def compute_on_batch(self, x, analysis=None, return_analysis=False):
         """
         Computes the analysis and perturbes the input batch accordingly.
 
         :param x: Samples.
+        :param analysis: Analysis of x. If None, it is recomputed.
         :type x: numpy.ndarray
         """
-        a = self.analyzer.analyze(x)
+        if analysis is None:
+            analysis = self.analyzer.analyze(x)
 
-        # Increase perturbation ratio
-        self.perturbation.ratio += min(self.ratio, 1.0)
-
-        x_perturbated = self.perturbation.perturbate_on_batch(x, a)
+        x_perturbated = self.perturbation.perturbate_on_batch(x, analysis)
         if return_analysis:
-            return x_perturbated, a
+            return x_perturbated, analysis
         else:
             return x_perturbated
 
-    def evaluate_on_batch(self, x, y, sample_weight=None):
+    def evaluate_on_batch(self, x, y, analysis=None, sample_weight=None):
         """
         Perturbs the input batch and scores the model on the perturbed batch.
 
@@ -238,6 +260,8 @@ class PerturbationAnalysis:
         :type x: numpy.ndarray
         :param y: Labels.
         :type y: numpy.ndarray
+        :param analysis: Analysis of x.
+        :type analysis: numpy.ndarray
         :param sample_weight: Sample weights.
         :type sample_weight: None
         :return: List of test scores.
@@ -245,7 +269,7 @@ class PerturbationAnalysis:
         """
         if sample_weight is not None:
             raise NotImplementedError("Sample weighting is not supported yet.")  # TODO
-        x_perturbated = self.compute_on_batch(x)
+        x_perturbated = self.compute_on_batch(x, analysis)
         score = self.model.test_on_batch(x_perturbated, y, sample_weight=sample_weight)
         return score
 
@@ -304,15 +328,15 @@ class PerturbationAnalysis:
                                      str(generator_output))
                 if len(generator_output) == 2:
                     x, y = generator_output
-                    sample_weight = None
+                    analysis = None
                 elif len(generator_output) == 3:
-                    x, y, sample_weight = generator_output
+                    x, y, analysis = generator_output
                 else:
                     raise ValueError('Output of generator should be a tuple '
-                                     '(x, y, sample_weight) '
+                                     '(x, y, analysis) '
                                      'or (x, y). Found: ' +
                                      str(generator_output))
-                outs = self.evaluate_on_batch(x, y, sample_weight=sample_weight)
+                outs = self.evaluate_on_batch(x, y, analysis=analysis, sample_weight=None)
 
                 if isinstance(x, list):
                     batch_size = x[0].shape[0]
@@ -346,17 +370,15 @@ class PerturbationAnalysis:
         scores = list()
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
-        self.perturbation.ratio = 0  # Reset ratio of Perturbation
+        self.perturbation.num_perturbed_regions = 1
         time_start = time.time()
         for step in range(self.steps):
             tic = time.time()
-            if self.perturbation.ratio >= 1:
-                print("Perturbed all regions after {} steps, stopping now.".format(step))
-                break
             if self.verbose:
-                print("Step {} of {}: {:.0f}% of input components perturbed.".format(step + 1, self.steps,
-                                                                                     100.0 * self.perturbation.ratio), end=" ")
-            scores.append(self.evaluate_generator(self.generator))
+                print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps,
+                                                                    self.perturbation.num_perturbed_regions), end=" ")
+            scores.append(self.evaluate_generator(self.analysis_generator))
+            self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
             if self.verbose:
                 print("Time elapsed: {:.3f} seconds.".format(toc - tic))
@@ -366,6 +388,6 @@ class PerturbationAnalysis:
             print("Time elapsed for {} steps: {:.3f} seconds.".format(step + 1,
                                                                       time_end - time_start))  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
 
-        self.perturbation.ratio = self.ratio  # Reset to original value
+        self.perturbation.num_perturbed_regions = 1  # Reset to original value
         assert len(scores) == self.steps + 1
         return scores
