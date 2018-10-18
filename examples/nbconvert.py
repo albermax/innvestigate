@@ -99,6 +99,7 @@ if __name__ == "__main__":
 
             if args.command == "to_script_and_execute":
                 subprocess.check_call(
-                    [sys.executable, output_file], cwd=output_dir)
+                    [sys.executable, notebook.replace(".ipynb", ".py")],
+                    cwd=output_dir)
     else:
         raise ValueError("Command not recognized")
