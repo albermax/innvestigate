@@ -73,8 +73,6 @@ class Perturbation:
     @staticmethod
     def compute_perturbation_mask(ranks, num_perturbated_regions):
         perturbation_mask_regions = ranks <= num_perturbated_regions - 1
-        assert np.all(
-            np.sum(perturbation_mask_regions, axis=(2, 3)) == num_perturbated_regions), perturbation_mask_regions
         return perturbation_mask_regions
 
     @staticmethod
