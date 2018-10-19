@@ -78,15 +78,17 @@ def plot_image_grid(grid,
                     row_labels_right,
                     col_labels,
                     file_name=None,
+                    figsize=None,
                     dpi=224):
     n_rows = len(grid)
     n_cols = len(grid[0])
+    if figsize is None:
+        figsize = (n_cols, n_rows+1)
 
     plt.clf()
     plt.rc("font", family="sans-serif")
 
-    # TODO figsize
-    plt.figure(figsize=(n_cols, n_rows+1))
+    plt.figure(figsize=figsize)
     for r in range(n_rows):
         for c in range(n_cols):
             ax = plt.subplot2grid(shape=[n_rows+1, n_cols], loc=[r+1, c])
