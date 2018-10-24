@@ -546,7 +546,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     be changed by setting the according parameters of the
     init function:
 
-    :param reverse_verbose: Be print information on the reverse process.
+    :param reverse_verbose: Print information on the reverse process.
     :param reverse_clip_values: Clip the values that are passed along
       the reverted network. Expects tuple (min, max).
     :param reverse_project_bottleneck_layers: Project the value range
