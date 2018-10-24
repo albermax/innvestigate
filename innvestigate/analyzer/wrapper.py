@@ -234,7 +234,7 @@ class PathIntegrator(AugmentReduceBase):
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:
             reference_inputs = iutils.to_list(self._reference_inputs)
-            difference = [ri-x for ri, x in zip(reference_inputs, X)]
+            difference = [x-ri for x, ri in zip(X, reference_inputs)]
             self._difference = difference
         return self._difference
 
@@ -292,8 +292,8 @@ class PathIntegrator(AugmentReduceBase):
             self._keras_set_constant_inputs(tmp)
 
         reference_inputs = self._keras_get_constant_inputs()
-        return [keras.layers.Subtract()([ri, x])
-                for ri, x in zip(reference_inputs, X)]
+        return [keras.layers.Subtract()([x, ri])
+                for x, ri in zip(X, reference_inputs)]
 
     def _keras_based_augment(self, X):
         tmp = super(PathIntegrator, self)._keras_based_augment(X)

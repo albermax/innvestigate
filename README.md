@@ -50,7 +50,6 @@ The iNNvestigate library contains implementations for the following methods:
 * *function:*
   * **gradient:** The gradient of the output neuron with respect to the input.
   * **smoothgrad:** [SmoothGrad](https://arxiv.org/abs/1706.03825)
-  * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365)
 * *signal:*
   * **deconvnet:** [DeConvNet](https://arxiv.org/abs/1311.2901)
   * **guided:** [Guided BackProp](https://arxiv.org/abs/1412.6806)
@@ -58,8 +57,9 @@ The iNNvestigate library contains implementations for the following methods:
 * *attribution:*
   * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
   * **input_t_gradient:** Input \* Gradient
-  * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+  * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365)
   * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
+  * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
