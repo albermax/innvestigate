@@ -55,6 +55,7 @@ __all__ = [
     "is_max_pooling",
     "is_input_layer",
     "is_batch_normalization_layer",
+    "is_embedding_layer"
 ]
 
 
@@ -267,6 +268,8 @@ def is_conv_layer(layer, *args, **kwargs):
     )
     return isinstance(layer, CONV_LAYERS)
 
+def is_embedding_layer(layer, *args, **kwargs):
+    return isinstance(layer, keras.layers.Embedding)
 
 def is_batch_normalization_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.normalization.BatchNormalization)

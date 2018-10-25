@@ -10,8 +10,12 @@ model.add(GlobalMaxPooling1D())
 model.add(Dense(16, activation='relu'))
 model.add(Dense(2, activation=None))
 
+# print(model.layers[0].get_weights()[0].shape)
+# exit()
+
 #test
-model.predict(np.random.randint(1,219, (1,100)))  # [[0.04913538 0.04234646]]
+model.predict(np.random.randint(1, 219, (1,100)))  # [[0.04913538 0.04234646]]
 
 analyzer = innvestigate.create_analyzer('lrp.epsilon', model, neuron_selection_mode='max_activation', **{'epsilon': 1})
-analyzer.analyze(np.random.randint(1, 219, (1,100)))
+a = analyzer.analyze(np.random.randint(1, 219, (1,100)))
+print(a[0], a[0].shape)

@@ -196,6 +196,24 @@ LRP_RULES = {
 }
 
 
+class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
+    def __init__(self, layer, state):
+        print("in EmbeddingReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+        #TODO: implement rule support.
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        # the embedding layer outputs for an (indexed) input a vector.
+        # thus, in the relevance backward pass, the embedding layer receives
+        # relevances Rs corresponding to those vectors.
+        # Due to the 1:1 relationship between input index and output mapping vector,
+        # the relevance backward pass can be realized by pooling relevances
+        # over the vector axis.
+
+        #relevances are given shaped [batch_size, sequence_length, embedding_dims]
+        print(Rs)
+        pool_relevance = keras.layers.Lambda(lambda x: keras.backend.sum(x, axis=-1))
+        return [pool_relevance(r) for r in Rs]
+
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
     def __init__(self, layer, state):
         ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
@@ -451,6 +469,11 @@ class LRP(base.ReverseAnalyzerBase):
             kchecks.is_add_layer,
             AddReverseLayer,
             name="lrp_add_layer_mapping",
+        )
+        self._add_conditional_reverse_mapping(
+            kchecks.is_embedding_layer,
+            EmbeddingReverseLayer,
+            name="lrp_embedding_mapping"
         )
 
         # FINALIZED constructor.
