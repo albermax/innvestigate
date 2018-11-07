@@ -1,6 +1,10 @@
+## Version 1.0.5
+
+Treat IntegratedGradients as attribution method and bugfixes.
+
 ## Version 1.0.1-1.0.4
 
-Adds the following functionality:
+Added the following functionality:
 
 * Additional notebooks.
 * Analyzers: Input\*Gradient
