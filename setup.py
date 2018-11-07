@@ -5,7 +5,7 @@ import setuptools
 install_requirements = [
     "future",
     "h5py",
-    "keras==2.2.2",
+    "keras==2.2.4",
     "numpy",
     "pillow",
     "pytest",
@@ -30,7 +30,7 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.4",
+        version="1.0.5",
         description=("A toolbox to innvestigate neural networks decisions."),
         long_description=readme(),
         classifiers=[
@@ -44,9 +44,9 @@ def setup():
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, and more",
+        author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, and others",
         author_email="workDoTalberDoTmaximilian@gmail.com",
-        license="MIT",
+        license="BSD-2",
         packages=setuptools.find_packages(),
         install_requires=install_requirements,
         setup_requires=setup_requirements,
