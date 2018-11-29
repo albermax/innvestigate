@@ -378,13 +378,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model_output = ilayers.Max(name="iNNvestigate_max")(model_output)
         elif neuron_selection_mode == "index":
             neuron_indexing = keras.layers.Input(
-                shape=[None], dtype=np.int32,
+                batch_shape=[None, None], dtype=np.int32,
                 name='iNNvestigate_neuron_indexing')
             analysis_inputs.append(neuron_indexing)
             # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            model_output = ilayers.Gather()(model_output+[neuron_indexing])
+            model_output = ilayers.GatherND(
+                name="iNNvestigate_gather_nd")(model_output+[neuron_indexing])
         elif neuron_selection_mode == "all":
             pass
         else:
@@ -481,12 +482,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         if self._neuron_selection_mode == "index":
             neuron_selection = np.asarray(neuron_selection).flatten()
-            if neuron_selection.size != 1:
-                # The code allows to select multiple neurons.
-                warnings.warn(
-                    "Multiple neurons are selected. Most analysis methods "
-                    "do theoretically not support multi-neuron analysis. "
-                    "Consider using a Sum layer.")
+            if neuron_selection.size == 1:
+                neuron_selection = np.repeat(neuron_selection, len(X[0]))
+
+            # Add first axis indices for gather_nd
+            neuron_selection = np.hstack(
+                (np.arange(len(neuron_selection)).reshape((-1, 1)),
+                 neuron_selection.reshape((-1, 1)))
+            )
             ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
@@ -546,7 +549,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     be changed by setting the according parameters of the
     init function:
 
-    :param reverse_verbose: Be print information on the reverse process.
+    :param reverse_verbose: Print information on the reverse process.
     :param reverse_clip_values: Clip the values that are passed along
       the reverted network. Expects tuple (min, max).
     :param reverse_project_bottleneck_layers: Project the value range
@@ -604,7 +607,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             a function of form (A).
           * A :class:`ReverseMappingBase` subclass.
         """
-        if(isinstance(layer, (ilayers.Max, ilayers.Gather)) and
+        special_layers = (keras.layers.InputLayer, ilayers.Max, ilayers.Gather)
+        if(isinstance(layer, special_layers) and
            layer.name.startswith("iNNvestigate")):
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.

@@ -23,7 +23,8 @@ __all__ = [
     "gradients",
     "is_not_finite",
     "extract_conv2d_patches",
-    "index",
+    "gather",
+    "gather_nd",
 ]
 
 
@@ -133,6 +134,21 @@ def gather(x, axis, indices):
         import tensorflow
 
         return tensorflow.gather(x, indices, axis=axis)
+    else:
+        # todo: add cntk
+        raise NotImplementedError()
+
+
+def gather_nd(x, indices):
+    backend = K.backend()
+    if backend == "theano":
+        # todo: add theano function.
+        raise NotImplementedError()
+    elif backend == "tensorflow":
+        # no global import => do not break if module is not present
+        import tensorflow
+
+        return tensorflow.gather_nd(x, indices)
     else:
         # todo: add cntk
         raise NotImplementedError()

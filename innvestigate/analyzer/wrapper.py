@@ -79,6 +79,10 @@ class AugmentReduceBase(WrapperBase):
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._augment_by_n = kwargs.pop("augment_by_n", 2)
+        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+        if self._neuron_selection_mode != "all":
+            # TODO: this is not transparent, find a better way.
+            subanalyzer._neuron_selection_mode = "index"
         super(AugmentReduceBase, self).__init__(subanalyzer,
                                                 *args, **kwargs)
 
@@ -127,6 +131,22 @@ class AugmentReduceBase(WrapperBase):
         if self._keras_based_augment_reduce is True:
             if not hasattr(self._subanalyzer, "_analyzer_model"):
                 self.create_analyzer_model()
+
+            ns_mode = self._neuron_selection_mode
+            if ns_mode in ["max_activation", "index"]:
+                if ns_mode == "max_activation":
+                    tmp = self._subanalyzer._model.predict(X)
+                    indices = np.argmax(tmp, axis=1)
+                else:
+                    if len(args):
+                        indices = args.pop(0)
+                    else:
+                        indices = kwargs.pop("neuron_selection")
+
+                # broadcast to match augmented samples.
+                indices = np.repeat(indices, self._augment_by_n)
+
+                kwargs["neuron_selection"] = indices
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
             # todo: remove python based code.
@@ -234,7 +254,7 @@ class PathIntegrator(AugmentReduceBase):
     def _python_based_compute_difference(self, X):
         if getattr(self, "_difference", None) is None:
             reference_inputs = iutils.to_list(self._reference_inputs)
-            difference = [ri-x for ri, x in zip(reference_inputs, X)]
+            difference = [x-ri for x, ri in zip(X, reference_inputs)]
             self._difference = difference
         return self._difference
 
@@ -292,8 +312,8 @@ class PathIntegrator(AugmentReduceBase):
             self._keras_set_constant_inputs(tmp)
 
         reference_inputs = self._keras_get_constant_inputs()
-        return [keras.layers.Subtract()([ri, x])
-                for ri, x in zip(reference_inputs, X)]
+        return [keras.layers.Subtract()([x, ri])
+                for x, ri in zip(X, reference_inputs)]
 
     def _keras_based_augment(self, X):
         tmp = super(PathIntegrator, self)._keras_based_augment(X)

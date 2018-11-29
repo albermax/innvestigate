@@ -70,6 +70,8 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
+    "Gather",
+    "GatherND",
 ]
 
 
@@ -641,4 +643,14 @@ class Gather(keras.layers.Layer):
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[1][0])
+        return (input_shapes[0][0], input_shapes[1][0])+input_shapes[0][2:]
+
+
+class GatherND(keras.layers.Layer):
+
+    def call(self, inputs):
+        x, indices = inputs
+        return iK.gather_nd(x, indices)
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes[1][:2]+input_shapes[0][2:]
