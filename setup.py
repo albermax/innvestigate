@@ -45,7 +45,7 @@ def setup():
         ],
         url="https://github.com/albermax/innvestigate",
         author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, and others",
-c        author_email="workDoTalberDoTmaximilian@gmail.com",
+        author_email="workDoTalberDoTmaximilian@gmail.com",
         license="BSD-2",
         packages=setuptools.find_packages(),
         install_requires=install_requirements,
