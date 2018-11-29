@@ -342,6 +342,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
+        self._special_helper_layers = []
+
         super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
     def _add_model_softmax_check(self):
@@ -375,17 +377,22 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model_output = keras.layers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
-            model_output = ilayers.Max(name="iNNvestigate_max")(model_output)
+            l = ilayers.Max(name="iNNvestigate_max")
+            model_output = l(model_output)
+            self._special_helper_layers.append(l)
         elif neuron_selection_mode == "index":
             neuron_indexing = keras.layers.Input(
                 batch_shape=[None, None], dtype=np.int32,
                 name='iNNvestigate_neuron_indexing')
+            self._special_helper_layers.append(
+                neuron_indexing._keras_history[0])
             analysis_inputs.append(neuron_indexing)
             # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            model_output = ilayers.GatherND(
-                name="iNNvestigate_gather_nd")(model_output+[neuron_indexing])
+            l = ilayers.GatherND(name="iNNvestigate_gather_nd")
+            model_output = l(model_output+[neuron_indexing])
+            self._special_helper_layers.append(l)
         elif neuron_selection_mode == "all":
             pass
         else:
@@ -403,6 +410,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         model_inputs = self._model.inputs
         tmp = self._prepare_model(self._model)
         model, analysis_inputs, stop_analysis_at_tensors = tmp
+        self._analysis_inputs = analysis_inputs
+        self._prepared_model = model
 
         tmp = self._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors)
@@ -481,6 +490,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
+            print(neuron_selection)
             neuron_selection = np.asarray(neuron_selection).flatten()
             if neuron_selection.size == 1:
                 neuron_selection = np.repeat(neuron_selection, len(X[0]))
@@ -490,6 +500,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 (np.arange(len(neuron_selection)).reshape((-1, 1)),
                  neuron_selection.reshape((-1, 1)))
             )
+            print(neuron_selection)
             ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
@@ -607,9 +618,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             a function of form (A).
           * A :class:`ReverseMappingBase` subclass.
         """
-        special_layers = (keras.layers.InputLayer, ilayers.Max, ilayers.Gather)
-        if(isinstance(layer, special_layers) and
-           layer.name.startswith("iNNvestigate")):
+        if layer in self._special_helper_layers:
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.
             return self._gradient_reverse_mapping
@@ -682,13 +691,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _postprocess_analysis(self, X):
         return X
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        return_all_reversed_tensors = (
-            self._reverse_check_min_max_values or
-            self._reverse_check_finite or
-            self._reverse_keep_tensors
-        )
-        ret = kgraph.reverse_model(
+    def _reverse_model(self,
+                       model,
+                       stop_analysis_at_tensors=[],
+                       return_all_reversed_tensors=False):
+        return kgraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
@@ -697,6 +704,17 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             verbose=self._reverse_verbose,
             clip_all_reversed_tensors=self._reverse_clip_values,
             project_bottleneck_tensors=self._reverse_project_bottleneck_layers,
+            return_all_reversed_tensors=return_all_reversed_tensors)
+
+    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+        return_all_reversed_tensors = (
+            self._reverse_check_min_max_values or
+            self._reverse_check_finite or
+            self._reverse_keep_tensors
+        )
+        ret = self._reverse_model(
+            model,
+            stop_analysis_at_tensors=stop_analysis_at_tensors,
             return_all_reversed_tensors=return_all_reversed_tensors)
 
         if return_all_reversed_tensors:

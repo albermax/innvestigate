@@ -16,12 +16,16 @@ import six
 
 
 import keras.activations
+import keras.backend as K
+import numpy as np
+
 
 from ... import utils as iutils
 
 
 __all__ = [
     "apply",
+    "broadcast_np_tensors_to_keras_tensors",
 ]
 
 
@@ -51,3 +55,20 @@ def apply(layer, inputs):
         ret = layer(inputs[0])
 
     return iutils.to_list(ret)
+
+
+def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
+    def none_to_one(tmp):
+        return [1 if x is None else x for x in tmp]
+
+    keras_tensors = iutils.to_list(keras_tensors)
+
+    if isinstance(np_tensors, list):
+        ret = [np.broadcast_to(ri, none_to_one(K.int_shape(x)))
+               for x, ri in zip(keras_tensors, np_tensors)]
+    else:
+        ret = [np.broadcast_to(np_tensors,
+                               none_to_one(K.int_shape(x)))
+               for x in keras_tensors]
+
+    return ret

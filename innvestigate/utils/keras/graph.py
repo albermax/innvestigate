@@ -48,6 +48,9 @@ __all__ = [
     "get_model_execution_graph",
     "print_model_execution_graph",
 
+    "get_bottleneck_nodes",
+    "get_bottleneck_tensors",
+
     "ReverseMappingBase",
     "reverse_model",
 ]
@@ -523,10 +526,10 @@ def get_model_execution_trace(model,
     for nid, l, Xs, Ys in execution_trace:
         if isinstance(l, keras.layers.InputLayer):
             # The nids that created or receive the tensors.
-            Xs_nids = [] # Input layer does not receive.
+            Xs_nids = []  # Input layer does not receive.
             Ys_nids = [inputs_to_node[id(Y)] for Y in Ys]
             # The layers that created or receive the tensors.
-            Xs_layers = [] # Input layer does not receive.
+            Xs_layers = []  # Input layer does not receive.
             Ys_layers = [[nid_to_nodes[Ynid][1] for Ynid in Ynids2]
                          for Ynids2 in Ys_nids]
         else:
@@ -578,8 +581,8 @@ def get_model_execution_graph(model, keep_input_layers=False):
     * Ys_layers: the layers using the according output tensor.
     """
     trace = get_model_execution_trace(model,
-                                       keep_input_layers=keep_input_layers,
-                                       reapply_on_copied_layers=False)
+                                      keep_input_layers=keep_input_layers,
+                                      reapply_on_copied_layers=False)
 
     input_layers = [tmp for tmp in trace if tmp["nid"] is None]
     graph = {tmp["nid"]: tmp for tmp in trace}
@@ -601,7 +604,6 @@ def print_model_execution_graph(graph):
                node["layer"].name,
                nids_as_str(node["Xs_nids"]),
                nids_as_str(node["Ys_nids"]),))
-        
 
     if None in graph:
         print("Graph input layers:")
@@ -615,11 +617,11 @@ def print_model_execution_graph(graph):
         print_node(graph[nid])
 
 
-def get_bottleneck_tensors(inputs, outputs, execution_list):
+def get_bottleneck_nodes(inputs, outputs, execution_list):
     """
-    Given an execution list this function returns all tensors that
+    Given an execution list this function returns all nodes that
     are a bottleneck in the network, i.e., "all information" must pass
-    through this tensor.
+    through this node.
     """
 
     forward_connections = {}
@@ -639,7 +641,7 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
         for fw_c in forward_connections[x]:
             open_connections[fw_c] = True
 
-    ret = set()
+    ret = list()
     for l, Xs, Ys in execution_list:
         if isinstance(l, keras.layers.InputLayer):
             # Special case, do nothing.
@@ -652,16 +654,35 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
             del open_connections[y]
 
         if len(open_connections) == 0:
-            if len(Xs) == 1:
-                ret.add(Xs[0])
-            if len(Xs) == 1:
-                ret.add(Ys[0])
+            ret.append((l, (Xs, Ys)))
 
         for y in Ys:
             if y not in outputs:
                 for fw_c in forward_connections[y]:
                     open_connections[fw_c] = True
 
+    return ret
+
+
+def get_bottleneck_tensors(inputs, outputs, execution_list):
+    """
+    Given an execution list this function returns all tensors that
+    are a bottleneck in the network, i.e., "all information" must pass
+    through this tensor.
+    """
+
+    nodes = get_bottleneck_nodes(inputs, outputs, execution_list)
+
+    ret = list()
+    for l, (Xs, Ys) in nodes:
+        for tensor_list in (Xs, Ys):
+            if len(tensor_list) == 1:
+                tensor = tensor_list[0]
+                if tensor not in ret:
+                    ret.append(tensor)
+            else:
+                # TODO(albermax): put warning here?
+                pass
     return ret
 
 
@@ -687,6 +708,7 @@ def reverse_model(model, reverse_mappings,
                   return_all_reversed_tensors=False,
                   clip_all_reversed_tensors=False,
                   project_bottleneck_tensors=False,
+                  execution_trace=None,
                   reapply_on_copied_layers=False):
     """
     Reverses a Keras model based on the given reverse functions.
@@ -796,9 +818,11 @@ def reverse_model(model, reverse_mappings,
     _print("Reverse model: {}".format(model))
 
     # Create a list with nodes in reverse execution order.
-    layers, execution_list, outputs = trace_model_execution(
-        model,
-        reapply_on_copied_layers=reapply_on_copied_layers)
+    if execution_trace is None:
+        execution_trace = trace_model_execution(
+            model,
+            reapply_on_copied_layers=reapply_on_copied_layers)
+    layers, execution_list, outputs = execution_trace
     len_execution_list = len(execution_list)
     num_input_layers = len([_ for l, _, _ in execution_list
                             if isinstance(l, keras.layers.InputLayer)])

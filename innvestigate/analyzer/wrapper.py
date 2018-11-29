@@ -80,6 +80,7 @@ class AugmentReduceBase(WrapperBase):
     def __init__(self, subanalyzer, *args, **kwargs):
         self._augment_by_n = kwargs.pop("augment_by_n", 2)
         self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+
         if self._neuron_selection_mode != "all":
             # TODO: this is not transparent, find a better way.
             subanalyzer._neuron_selection_mode = "index"
@@ -187,6 +188,11 @@ class AugmentReduceBase(WrapperBase):
         return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
 
     def _get_state(self):
+        if self._neuron_selection_mode != "all":
+            # TODO: this is not transparent, find a better way.
+            # revert the tempering in __init__
+            tmp = self._neuron_selection_mode
+            self._subanalyzer._neuron_selection_mode = tmp
         state = super(AugmentReduceBase, self)._get_state()
         state.update({"augment_by_n": self._augment_by_n})
         return state
@@ -299,16 +305,8 @@ class PathIntegrator(AugmentReduceBase):
 
     def _keras_based_compute_difference(self, X):
         if self._keras_constant_inputs is None:
-            def none_to_one(tmp):
-                return [1 if x is None else x for x in tmp]
-
-            if isinstance(self._reference_inputs, list):
-                tmp = [np.broadcast_to(ri, none_to_one(K.int_shape(x)))
-                       for x, ri in zip(X, self._reference_inputs)]
-            else:
-                tmp = [np.broadcast_to(self._reference_inputs,
-                                       none_to_one(K.int_shape(x)))
-                       for x in X]
+            tmp = kutils.broadcast_np_tensors_to_keras_tensors(
+                X, self._reference_inputs)
             self._keras_set_constant_inputs(tmp)
 
         reference_inputs = self._keras_get_constant_inputs()

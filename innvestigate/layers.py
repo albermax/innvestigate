@@ -16,8 +16,10 @@ import six
 
 import keras
 import keras.backend as K
+import keras.constraints
 from keras.engine.topology import Layer
 import keras.layers
+import keras.regularizers
 from keras.utils import conv_utils
 import numpy as np
 
@@ -70,6 +72,7 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
+    "TrainableDifference",
     "Gather",
     "GatherND",
 ]
@@ -634,6 +637,29 @@ class Broadcast(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[0]
+
+
+class TrainableDifference(keras.layers.Layer):
+
+    def __init__(self, *args, regularizer=None, constraint=None, **kwargs):
+        self.stateful = True
+        self.regularizer = keras.regularizers.get(regularizer)
+        self.constraint = keras.constraints.get(constraint)
+        super(TrainableDifference, self).__init__(*args, **kwargs)
+
+    def build(self, input_shape):
+        self.difference = self.add_weight(shape=input_shape,
+                                          initializer="zeros",
+                                          name="difference",
+                                          regularizer=self.regularizer,
+                                          trainable=True)
+        self.built = True
+
+    def call(self, x):
+        return x+self.difference
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 
 class Gather(keras.layers.Layer):

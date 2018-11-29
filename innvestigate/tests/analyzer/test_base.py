@@ -100,17 +100,13 @@ def test_fast__AnalyzerNetworkBase_neuron_selection_index():
 
 
 @pytest.mark.precommit
-@pytest.mark.filterwarnings("ignore")
 def test_precommit__AnalyzerNetworkBase_neuron_selection_index():
 
     class CustomAnalyzer(Gradient):
 
         def analyze(self, X):
-            index = (3, 3)
-            ret = super(CustomAnalyzer, self).analyze(X, index)
-            ret2 = super(CustomAnalyzer, self).analyze(X, 3)
-            assert np.allclose(ret, 2 * ret2)
-            return ret
+            index = 3
+            return super(CustomAnalyzer, self).analyze(X, index)
 
     def method(model):
         return CustomAnalyzer(model, neuron_selection_mode="index")
@@ -140,6 +136,7 @@ def test_precommit__BaseReverseNetwork_reverse_debug():
         return Gradient(model, reverse_verbose=True)
 
     dryrun.test_analyzer(method, "mnist.*")
+
 
 @pytest.mark.fast
 @pytest.mark.precommit
