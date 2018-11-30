@@ -266,7 +266,8 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
             self._deeplift_module = importlib.import_module("deeplift")
         except ImportError:
             raise ImportError("To use DeepLIFTWrapper please install "
-                              "the python module 'deeplift'.")
+                              "the python module 'deeplift', e.g.: "
+                              "'pip install deeplift'")
 
         super(DeepLIFTWrapper, self).__init__(model, **kwargs)
 
