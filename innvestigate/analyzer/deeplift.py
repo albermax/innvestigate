@@ -50,7 +50,7 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
         else:
             def rescale_f(x):
                 a, dx, dy, _ = x
-                return a*(dy/dx)
+                return a*(dy/(dx + K.epsilon()))
 
         grad = ilayers.GradientWRT(len(Xs))
         rescale = keras.layers.Lambda(rescale_f)
