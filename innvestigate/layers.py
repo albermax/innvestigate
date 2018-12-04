@@ -323,8 +323,17 @@ class Project(_Map):
         def safe_divide(a, b):
             return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
 
+        dims = K.int_shape(x)
+        n_dim = len(dims)
+        axes = tuple(range(1, n_dim))
+        if len(axes) == 1:
+            # TODO(albermax): this is only the case when the dimension in this
+            # axis is 1, fix this.
+            # Cannot reduce
+            return x
+
         absmax = K.max(K.abs(x),
-                       axis=tuple(range(1, len(x.shape))),
+                       axis=axes,
                        keepdims=True)
         x = safe_divide(x, absmax)
 
