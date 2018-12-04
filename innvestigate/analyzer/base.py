@@ -490,7 +490,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
                              "the neuron_selection parameter.")
 
         if self._neuron_selection_mode == "index":
-            print(neuron_selection)
             neuron_selection = np.asarray(neuron_selection).flatten()
             if neuron_selection.size == 1:
                 neuron_selection = np.repeat(neuron_selection, len(X[0]))
@@ -500,7 +499,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 (np.arange(len(neuron_selection)).reshape((-1, 1)),
                  neuron_selection.reshape((-1, 1)))
             )
-            print(neuron_selection)
             ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)
