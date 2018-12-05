@@ -1,3 +1,8 @@
+## Version 1.0.6
+
+* Add beta version of DeepLIFT (as in Ancona et.al.) and wrapper for DeepLIFT package.
+* Updating readme and bugfixes.
+
 ## Version 1.0.5
 
 Treat IntegratedGradients as attribution method and bugfixes.
