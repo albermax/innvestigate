@@ -210,6 +210,22 @@ def contains_activation(layer, activation=None):
             return layer.activation == keras.activations.get(activation)
         else:
             return True
+    elif isinstance(layer, keras.layers.ReLU):
+        if activation is not None:
+            return (keras.activations.get("relu") ==
+                    keras.activations.get(activation))
+        else:
+            return True
+    elif isinstance(layer, (
+            keras.layers.advanced_activations.ELU,
+            keras.layers.advanced_activations.LeakyReLU,
+            keras.layers.advanced_activations.PReLU,
+            keras.layers.advanced_activations.Softmax,
+            keras.layers.advanced_activations.ThresholdedReLU)):
+        if activation is not None:
+            raise Exception("Cannot detect activation type.")
+        else:
+            return True
     else:
         return False
 

@@ -18,16 +18,19 @@ import six
 from .base import *
 from .wrapper import *
 
+from .deeplift import *
 from .gradient_based import *
 from .misc import *
 from .pattern_based import *
 from .relevance_based.relevance_analyzer import *
+from .deeptaylor import *
 
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
 
 analyzers = {
     # Utility.
@@ -72,13 +75,16 @@ analyzers = {
     "deep_taylor": DeepTaylor,
     "deep_taylor.bounded": BoundedDeepTaylor,
 
+    # DeepLIFT
+    "deep_lift": DeepLIFT,
+    "deep_lift.wrapper": DeepLIFTWrapper,
+
     # Pattern based
     "pattern.net": PatternNet,
     "pattern.attribution": PatternAttribution,
 }
 
-# TODO: update LRP, reduce methods, split into LRP and DTD.
-# Some rules do not make sense when used for the full network, which is confusing.
+
 def create_analyzer(name, model, **kwargs):
     """ Convenience interface to create analyzers.
 

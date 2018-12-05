@@ -1,6 +1,20 @@
-# iNNvestigate neural networks!
+# [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
+
+
+[![GitHub package version](https://img.shields.io/badge/Version-v1.0.6-green.svg)](https://github.com/albermax/innvestigate)
+[![Keras package version](https://img.shields.io/badge/KerasVersion-v2.2.4-green.svg)](https://github.com/albermax/innvestigate)
+[![License: BSD-2](https://img.shields.io/badge/License-BSD--2-blue.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
+
+## Table of contents
+
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Usage and Examples](#usage-and-examples)
+* [More documentation](#more-documentation)
+* [Contributing](#contributing)
+* [Releases](#releases)
 
 ## Introduction
 
@@ -20,7 +34,7 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 iNNvestigate can be installed with the following commands.
 The library is based on Keras and therefore requires a supported [Keras-backend](https://keras.io/backend/)
-(Currently only Python 3.5, Tensorflow 1.12 and Cuda 9.x are supported.):
+o(Currently only the Tensorflow backend is supported. We test with Python 3.6, Tensorflow 1.12 and Cuda 9.x.):
 
 ```bash
 pip install git+https://github.com/albermax/innvestigate
@@ -54,10 +68,13 @@ The iNNvestigate library contains implementations for the following methods:
   * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598)
 * *attribution:*
   * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
+  * **occlusion:** (Coming soon.)
   * **input_t_gradient:** Input \* Gradient
   * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365)
   * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
   * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
+  * **deeplift:** [DeepLIFT (Beta) (as propsoed by Ancona et. al.)](https://openreview.net/forum?id=Sy21R9JAW)
+  * **deeplift.wrapper:** [DeepLIFT (wrapper around original code, slower)](http://proceedings.mlr.press/v70/shrikumar17a.html)
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
@@ -115,6 +132,7 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 * **[Comparing networks on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_networks.ipynb):** shows how to compare analyzes for different networks on ImageNet.
 * **[Sentiment Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/sentiment_analysis.ipynb)**.
 * **[Development with iNNvestigate](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/introduction_development.ipynb):** shows how to develop with **iNNvestigate**.
+* **[Perturbation Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_perturbation.ipynb)**.
 ---
 
 **To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
@@ -123,9 +141,9 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ... can be found here: [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
 
-## Contribution
+## Contributing
 
-If you would like to add your analysis method please get in touch with us!
+If you would like to contribute or add your analysis method please get in touch with us!
 
 ## Releases
 

@@ -16,8 +16,10 @@ import six
 
 import keras
 import keras.backend as K
+import keras.constraints
 from keras.engine.topology import Layer
 import keras.layers
+import keras.regularizers
 from keras.utils import conv_utils
 import numpy as np
 
@@ -70,6 +72,9 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
+    "TrainableDifference",
+    "Gather",
+    "GatherND",
 ]
 
 
@@ -318,8 +323,17 @@ class Project(_Map):
         def safe_divide(a, b):
             return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
 
+        dims = K.int_shape(x)
+        n_dim = len(dims)
+        axes = tuple(range(1, n_dim))
+        if len(axes) == 1:
+            # TODO(albermax): this is only the case when the dimension in this
+            # axis is 1, fix this.
+            # Cannot reduce
+            return x
+
         absmax = K.max(K.abs(x),
-                       axis=tuple(range(1, len(x.shape))),
+                       axis=axes,
                        keepdims=True)
         x = safe_divide(x, absmax)
 
@@ -634,6 +648,29 @@ class Broadcast(keras.layers.Layer):
         return input_shapes[0]
 
 
+class TrainableDifference(keras.layers.Layer):
+
+    def __init__(self, *args, regularizer=None, constraint=None, **kwargs):
+        self.stateful = True
+        self.regularizer = keras.regularizers.get(regularizer)
+        self.constraint = keras.constraints.get(constraint)
+        super(TrainableDifference, self).__init__(*args, **kwargs)
+
+    def build(self, input_shape):
+        self.difference = self.add_weight(shape=input_shape,
+                                          initializer="zeros",
+                                          name="difference",
+                                          regularizer=self.regularizer,
+                                          trainable=True)
+        self.built = True
+
+    def call(self, x):
+        return x+self.difference
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
 class Gather(keras.layers.Layer):
 
     def call(self, inputs):
@@ -641,4 +678,14 @@ class Gather(keras.layers.Layer):
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[1][0])
+        return (input_shapes[0][0], input_shapes[1][0])+input_shapes[0][2:]
+
+
+class GatherND(keras.layers.Layer):
+
+    def call(self, inputs):
+        x, indices = inputs
+        return iK.gather_nd(x, indices)
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes[1][:2]+input_shapes[0][2:]
