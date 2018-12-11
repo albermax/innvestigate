@@ -157,9 +157,12 @@ class WSquareRule(kgraph.ReverseMappingBase):
     def __init__(self, layer, state, copy_weights=False):
         # W-square rule works with squared weights and no biases.
         if copy_weights:
-            weights = [x**2 for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
         else:
-            weights = [x**2 for x in layer.weights[:-1]]
+            weights = layer.weights
+        if layer.use_bias:
+            weights = weights[:-1]
+        weights = [x**2 for x in weights]
 
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
             layer,
@@ -191,9 +194,15 @@ class FlatRule(WSquareRule):
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
-            weights = [np.ones_like(x) for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [np.ones_like(x) for x in weights]
         else:
-            weights = [K.ones_like(x) for x in layer.weights[:-1]]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [K.ones_like(x) for x in weights]
 
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
             layer,
@@ -239,13 +248,13 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         # and negative preactivations z in apply_accordingly.
         if copy_weights:
             weights = layer.get_weights()
-            if not bias:
+            if not bias and layers.use_bias:
                 weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
             weights = layer.weights
-            if not bias:
+            if not bias and layer.use_bias:
                 weights = weights[:-1]
             positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
             negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
@@ -371,11 +380,15 @@ class BoundedRule(kgraph.ReverseMappingBase):
         # One is the original form and two with only the positive or
         # negative weights.
         if copy_weights:
-            weights = layer.get_weights()[:-1]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
-            weights = layer.weights[:-1]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
             positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
             negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
 
@@ -454,11 +467,15 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
         # no biases.
         #TODO: assert that layer inputs are always >= 0
         if copy_weights:
-            weights = [x * iK.to_floatx(x > 0)
-                       for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [x * (x > 0) for x in weights]
         else:
-            weights = [x * iK.to_floatx(x > 0)
-                       for x in layer.weights[:-1]]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [x * iK.to_floatx(x > 0) for x in weights]
 
         self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
             layer,

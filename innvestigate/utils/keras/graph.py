@@ -253,7 +253,7 @@ def copy_layer_wo_activation(layer,
         config["name"] = name_template % config["name"]
     if kchecks.contains_activation(layer):
         config["activation"] = None
-    if keep_bias is False and config.get("use_bias", False):
+    if keep_bias is False and config.get("use_bias", True):
         config["use_bias"] = False
         if weights is None:
             if reuse_symbolic_tensors:
@@ -275,7 +275,7 @@ def copy_layer(layer,
         config["name"] = None
     else:
         config["name"] = name_template % config["name"]
-    if keep_bias is False and config.get("use_bias", False):
+    if keep_bias is False and config.get("use_bias", True):
         config["use_bias"] = False
         if weights is None:
             if reuse_symbolic_tensors:
