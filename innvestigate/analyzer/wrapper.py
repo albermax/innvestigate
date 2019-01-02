@@ -119,6 +119,7 @@ class AugmentReduceBase(WrapperBase):
                             "with this wrapper.")
 
         new_inputs = iutils.to_list(self._keras_based_augment(inputs))
+        print(type(new_inputs), type(extra_inputs))
         tmp = iutils.to_list(model(new_inputs+extra_inputs))
         new_outputs = iutils.to_list(self._keras_based_reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()

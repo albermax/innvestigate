@@ -1,3 +1,4 @@
+import io
 import os
 import setuptools
 
@@ -23,14 +24,15 @@ test_requirements = [
 
 def readme():
     base_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(base_dir, 'README.md'), 'r', encoding='utf-8') as f:
+    with io.open(
+            os.path.join(base_dir, 'README.md'), 'r', encoding='utf-8') as f:
         return f.read()
 
 
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.6",
+        version="1.0.7",
         description=("A toolbox to innvestigate neural networks decisions."),
         long_description=readme(),
         classifiers=[

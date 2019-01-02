@@ -850,19 +850,35 @@ def reverse_model(model, reverse_mappings,
                 }
             )
             reverse_mapping = reverse_mapping_obj.apply
-        elif(callable(meta_reverse_mapping) and
-             len(inspect.signature(meta_reverse_mapping).parameters) == 2):
-            # Function that returns mapping
-            reverse_mapping = meta_reverse_mapping(
-                layer,
-                {
-                    "model": model,
-                    "layer": layer,
-                }
-            )
         else:
-            # Nothing meta here
-            reverse_mapping = meta_reverse_mapping
+            def parameter_count(func):
+                if hasattr(inspect, "signature"):
+                    ret = len(inspect.signature(func).parameters)
+                else:
+                    spec = inspect.getargspec(func)
+                    ret = len(spec.args)
+                    if spec.varargs is not None:
+                        ret += len(spec.varargs)
+                    if spec.keywords is not None:
+                        ret += len(spec.keywords)
+                    if ret == 3:
+                        # assume class function with self
+                        ret -= 1
+                return ret
+
+            if(callable(meta_reverse_mapping) and
+               parameter_count(meta_reverse_mapping) == 2):
+                # Function that returns mapping
+                reverse_mapping = meta_reverse_mapping(
+                    layer,
+                    {
+                        "model": model,
+                        "layer": layer,
+                    }
+                )
+            else:
+                # Nothing meta here
+                reverse_mapping = meta_reverse_mapping
 
         initialized_reverse_mappings[layer] = reverse_mapping
 
