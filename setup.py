@@ -1,3 +1,4 @@
+import io
 import os
 import setuptools
 
@@ -23,7 +24,8 @@ test_requirements = [
 
 def readme():
     base_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(base_dir, 'README.md'), 'r', encoding='utf-8') as f:
+    with io.open(
+            os.path.join(base_dir, 'README.md'), 'r', encoding='utf-8') as f:
         return f.read()
 
 

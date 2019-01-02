@@ -78,7 +78,8 @@ class Perturbation:
     @staticmethod
     def compute_region_ordering(aggregated_regions):
         # 0 means highest scoring region
-        order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
+        new_shape = tuple(aggregated_regions.shape[:2]) + (-1,)
+        order = np.argsort(-aggregated_regions.reshape(new_shape), axis=-1)
         ranks = order.argsort().reshape(aggregated_regions.shape)
         return ranks
 
@@ -139,7 +140,10 @@ class Perturbation:
                     region)
 
                 if self.value_range is not None:
-                    np.clip(x_perturbated, *self.value_range, x_perturbated)
+                    np.clip(x_perturbated,
+                            self.value_range[0],
+                            self.value_range[1],
+                            x_perturbated)
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 
