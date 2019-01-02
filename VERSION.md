@@ -1,3 +1,9 @@
+## Version 1.0.7
+
+Add Python 2 compatibility again.
+
+Bugfixes.
+
 ## Version 1.0.6
 
 * Add beta version of DeepLIFT (as in Ancona et.al.) and wrapper for DeepLIFT package.
