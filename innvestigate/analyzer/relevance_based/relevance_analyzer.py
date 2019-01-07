@@ -78,12 +78,12 @@ __all__ = [
 
 
 class BaselineLRPZ(base.AnalyzerNetworkBase):
-    """LRPZ analyzer.
+    """LRPZ analyzer - for testing purpose only.
 
     Applies the "LRP-Z" algorithm to analyze the model.
     Based on the gradient times the input formula.
-    This formula holds only for ReLU/MaxPooling networks, for which
-    LRP-Z collapses into the stated formula.
+    **This formula holds only for ReLU/MaxPooling networks, for which
+    LRP-Z collapses into the stated formula.**
 
     :param model: A Keras model.
     """
