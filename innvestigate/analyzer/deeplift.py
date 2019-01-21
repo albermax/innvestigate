@@ -20,6 +20,7 @@ import keras.backend as K
 import keras.layers
 import numpy as np
 import tempfile
+import warnings
 
 
 from . import base
@@ -120,6 +121,7 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
 class DeepLIFT(base.ReverseAnalyzerBase):
 
     def __init__(self, model, *args, **kwargs):
+        warnings.warn("This implementation is buggy.")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._approximate_gradient = kwargs.pop(
             "approximate_gradient", True)
@@ -138,7 +140,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
         self._reference_activations = {}
 
-        # Create and inputs.
+        # Create references and graph inputs.
         tmp = kutils.broadcast_np_tensors_to_keras_tensors(
             model.inputs, self._reference_inputs)
         tmp = [K.variable(x) for x in tmp]
@@ -333,22 +335,32 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                 raise ValueError("One neuron can be selected with DeepLIFT.")
 
             neuron_idx = neuron_selection[0]
-            analysis = self._analyze_with_deeplift(X, neuron_idx, len(X))
+            analysis = self._analyze_with_deeplift(X, neuron_idx, len(X[0]))
+
+            # Parse the output.
+            ret = []
+            for x, analysis_for_x in zip(X, analysis):
+                tmp = np.stack([a for a in analysis_for_x])
+                tmp = tmp.reshape(x.shape)
+                ret.append(tmp)
         elif self._neuron_selection_mode == "max_activation":
             neuron_idx = np.argmax(self._model.predict_on_batch(X), axis=1)
 
             analysis = []
+            # run for each batch with its respective max activated neuron
             for i, ni in enumerate(neuron_idx):
-                analysis.append(self._analyze_with_deeplift(X[i:i+1], ni, 1))
+                # slice input tensors
+                tmp = [x[i:i+1] for x in X]
+                analysis.append(self._analyze_with_deeplift(tmp, ni, 1))
+
+            # Parse the output.
+            ret = []
+            for i, x in enumerate(X):
+                tmp = np.stack([a[i] for a in analysis]).reshape(x.shape)
+                ret.append(tmp)
         else:
             raise ValueError("Only neuron_selection_mode index or "
                              "max_activation are supported.")
-
-        # Parse the output.
-        ret = []
-        for i, x in enumerate(X):
-            tmp = np.stack([a[i] for a in analysis]).reshape(x.shape)
-            ret.append(tmp)
 
         if isinstance(ret, list) and len(ret) == 1:
             ret = ret[0]

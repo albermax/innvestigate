@@ -76,7 +76,7 @@ analyzers = {
     "deep_taylor.bounded": BoundedDeepTaylor,
 
     # DeepLIFT
-    "deep_lift": DeepLIFT,
+    #"deep_lift": DeepLIFT,
     "deep_lift.wrapper": DeepLIFTWrapper,
 
     # Pattern based

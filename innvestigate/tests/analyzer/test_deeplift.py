@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import numpy as np
 import pytest
 try:
     import deeplift
@@ -34,6 +35,7 @@ from innvestigate.analyzer import DeepLIFTWrapper
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_fast__DeepLIFT():
 
     def method(model):
@@ -43,6 +45,7 @@ def test_fast__DeepLIFT():
 
 
 @pytest.mark.precommit
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_precommit__DeepLIFT():
 
     def method(model):
@@ -52,6 +55,7 @@ def test_precommit__DeepLIFT():
 
 
 @pytest.mark.precommit
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_precommit__DeepLIFT_neuron_selection_index():
 
     class CustomAnalyzer(DeepLIFT):
@@ -66,9 +70,43 @@ def test_precommit__DeepLIFT_neuron_selection_index():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@pytest.mark.precommit
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
+def test_precommit__DeepLIFT_larger_batch_size():
+
+    class CustomAnalyzer(DeepLIFT):
+
+        def analyze(self, X):
+            X = np.concatenate((X, X), axis=0)
+            return super(CustomAnalyzer, self).analyze(X)[0:1]
+
+    def method(model):
+        return CustomAnalyzer(model)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.precommit
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
+def test_precommit__DeepLIFT_larger_batch_size_with_index():
+
+    class CustomAnalyzer(DeepLIFT):
+
+        def analyze(self, X):
+            index = 0
+            X = np.concatenate((X, X), axis=0)
+            return super(CustomAnalyzer, self).analyze(X, index)[0:1]
+
+    def method(model):
+        return CustomAnalyzer(model, neuron_selection_mode="index")
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
+@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_imagenet__DeepLIFT():
 
     def method(model):
@@ -117,6 +155,37 @@ def test_precommit__DeepLIFTWrapper_neuron_selection_index():
         def analyze(self, X):
             index = 0
             return super(CustomAnalyzer, self).analyze(X, index)
+
+    def method(model):
+        return CustomAnalyzer(model, neuron_selection_mode="index")
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.precommit
+def test_precommit__DeepLIFTWrapper_larger_batch_size():
+
+    class CustomAnalyzer(DeepLIFTWrapper):
+
+        def analyze(self, X):
+            X = np.concatenate((X, X), axis=0)
+            return super(CustomAnalyzer, self).analyze(X)[0:1]
+
+    def method(model):
+        return CustomAnalyzer(model)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.precommit
+def test_precommit__DeepLIFTWrapper_larger_batch_size_with_index():
+
+    class CustomAnalyzer(DeepLIFTWrapper):
+
+        def analyze(self, X):
+            index = 0
+            X = np.concatenate((X, X), axis=0)
+            return super(CustomAnalyzer, self).analyze(X, index)[0:1]
 
     def method(model):
         return CustomAnalyzer(model, neuron_selection_mode="index")

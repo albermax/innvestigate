@@ -73,7 +73,6 @@ The iNNvestigate library contains implementations for the following methods:
   * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365)
   * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
   * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
-  * **deeplift:** [DeepLIFT (Beta) (as propsoed by Ancona et. al.)](https://openreview.net/forum?id=Sy21R9JAW)
   * **deeplift.wrapper:** [DeepLIFT (wrapper around original code, slower)](http://proceedings.mlr.press/v70/shrikumar17a.html)
 * *miscellaneous:*
   * **input:** Returns the input.
