@@ -1,14 +1,8 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import zip
 import six
-# End: Python 2/3 compatability header small
-
 
 ###############################################################################
 ###############################################################################
@@ -26,7 +20,6 @@ import keras.layers.local
 import keras.layers.noise
 import keras.layers.normalization
 import keras.layers.pooling
-import numpy as np
 
 
 from .. import base
@@ -456,7 +449,7 @@ class LRP(base.ReverseAnalyzerBase):
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         ##print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
-        default_return_layers = [keras.layers.Activation]# TODO extend
+        #default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
            isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):

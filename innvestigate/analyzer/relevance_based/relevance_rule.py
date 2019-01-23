@@ -1,20 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import zip
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-import inspect
 import keras
 import keras.backend as K
 import keras.engine.topology
@@ -29,12 +22,10 @@ import keras.layers.pooling
 import numpy as np
 
 
-from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import backend as iK
-from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
 
@@ -248,7 +239,7 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         # and negative preactivations z in apply_accordingly.
         if copy_weights:
             weights = layer.get_weights()
-            if not bias and layers.use_bias:
+            if not bias and layer.use_bias:
                 weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]

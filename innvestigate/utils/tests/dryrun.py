@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
 import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -25,7 +19,6 @@ from . import networks
 
 
 __all__ = [
-    "BaseTestCase",
     "AnalyzerTestCase",
     "EqualAnalyzerTestCase",
     "PatternComputerTestCase",
@@ -293,7 +286,7 @@ class PatternComputerTestCase(BaseLayerTestCase):
         computer = self._method(model)
         # Dryrun.
         x = np.random.rand(10, *(network["input_shape"][1:]))
-        patterns = computer.compute(x)
+        computer.compute(x)
 
 
 def test_pattern_computer(method, network_filter):

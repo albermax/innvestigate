@@ -1,26 +1,14 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import range
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-import os
 import keras.layers
-from keras.utils.data_utils import get_file
-from keras.models import load_model, clone_model
-from keras.models import Sequential
-
-
 
 
 __all__ = [

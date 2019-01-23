@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import zip
 
 
 ###############################################################################
@@ -112,7 +106,7 @@ class AugmentReduceBase(WrapperBase):
         inputs = model.inputs[:self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
         # todo: check this, index seems not right.
-        outputs = model.outputs[:self._subanalyzer._n_data_input]
+        #outputs = model.outputs[:self._subanalyzer._n_data_input]
         extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
 
         if len(extra_outputs) > 0:
