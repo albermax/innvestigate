@@ -107,6 +107,39 @@ analyzer = innvestigate.create_analyzer("gradient",
 analysis = analyzer.analyze(inputs, i)
 ```
 
+Let's look at an example ([code](https://github.com/albermax/innvestigate/blob/master/examples/readme_code_snippet.py)) with VGG16 and this image:
+
+![Input image.](https://github.com/albermax/innvestigate/raw/master/examples/images/readme_example_input.png)
+
+
+```python
+import innvestigate
+import innvestigate.utils
+import keras.applications.vgg16 as vgg16
+
+# Get model
+model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
+# Strip softmax layer
+model = innvestigate.utils.model_wo_softmax(model)
+
+# Create analyzer
+analyzer = innvestigate.create_analyzer("deep_taylor", model)
+
+# Add batch axis and preprocess
+x = preprocess(image[None])
+# Apply analyzer w.r.t. maximum activated output-neuron
+a = analyzer.analyze(x)
+
+# Aggregate along color channels and normalize to [-1, 1]
+a = a.sum(axis=np.argmax(np.asarray(a.shape) == 3))
+a /= np.max(np.abs(a))
+# Plot
+plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
+```
+
+![Analysis image.](https://github.com/albermax/innvestigate/raw/master/examples/images/readme_example_analysis.png)
+
+
 #### Trainable methods
 
 Some methods like PatternNet and PatternAttribution are data-specific and need to be trained.

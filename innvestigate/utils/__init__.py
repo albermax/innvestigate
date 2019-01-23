@@ -21,6 +21,7 @@ import math
 
 
 __all__ = [
+    "model_wo_softmax",
     "to_list",
 
     "BatchSequence",
@@ -29,6 +30,18 @@ __all__ = [
     "preprocess_images",
     "postprocess_images",
 ]
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def model_wo_softmax(*args, **kwargs):
+    # Break cyclic import
+    from .keras.graph import model_wo_softmax
+
+    return model_wo_softmax(*args, **kwargs)
 
 
 ###############################################################################
