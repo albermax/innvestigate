@@ -167,7 +167,7 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 * **[Perturbation Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_perturbation.ipynb)**.
 ---
 
-**To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
+**To use the ImageNet examples please download the example images first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
 
 ## More documentation
 
