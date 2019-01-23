@@ -34,15 +34,15 @@ Pattern methods
 Deep Taylor
 ---------------
 
-.. automodule:: innvestigate.analyzer.deep_taylor
+.. automodule:: innvestigate.analyzer.deeptaylor
    :members:
    :undoc-members:
 
 DeepLIFT
 ---------------
 
-.. automodule:: innvestigate.analyzer.deep_lift
-   :members:
+.. automodule:: innvestigate.analyzer.deeplift
+   :members: DeepLIFTWrapper
    :undoc-members:
 
 Misc

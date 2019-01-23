@@ -11,3 +11,4 @@ Visualizations
 .. automodule:: innvestigate.utils.visualizations
    :members:
    :undoc-members:
+
