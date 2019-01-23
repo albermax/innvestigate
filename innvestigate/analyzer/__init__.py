@@ -7,6 +7,9 @@ from __future__ import\
 ###############################################################################
 ###############################################################################
 
+from .base import NotAnalyzeableModelException
+# Disable pyflaks warnings:
+assert NotAnalyzeableModelException
 
 #from .deeplift import DeepLIFT
 from .deeplift import DeepLIFTWrapper
