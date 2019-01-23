@@ -26,7 +26,6 @@ from .relevance_based.relevance_analyzer import *
 from .deeptaylor import *
 
 
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -86,14 +85,24 @@ analyzers = {
 
 
 def create_analyzer(name, model, **kwargs):
-    """ Convenience interface to create analyzers.
+    """Instantiates the analyzer with the name 'name'
 
-    This function is a convenient interface to create analyzer.
-    It allows to address analyzers via names instead of classes.
+    This convenience function takes an analyzer name
+    creates the respective analyzer.
+
+    Alternatively analyzers can be created directly by
+    instantiating the respective classes.
 
     :param name: Name of the analyzer.
-    :param model: The model to analyze.
-    :param kwargs: Parameters for the analyzer's init function.
+    :param model: The model to analyze, passed to the analyzer's __init__.
+    :param kwargs: Additional parameters for the analyzer's .
     :return: An instance of the chosen analyzer.
+    :raise KeyError: If there is no analyzer with the passed name.
     """
-    return analyzers[name](model, **kwargs)
+    try:
+        analyzer_class = analyzers[name]
+    except KeyError as e:
+        raise KeyError(
+            "No analyzer with the name '%s' could be found."
+            " All possible names are: %s" % (name, list(analyzers.keys())))
+    return analyzer_class(model, **kwargs)
