@@ -545,8 +545,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       This function can be implemented, but it is encouraged to
       implement a default mapping and add additional changes with
       the function :func:`_add_conditional_reverse_mapping` (see below).
-      * The default behavior is find a conditional mapping (see below),
-        if none is found, :func:`_default_reverse_mapping` is applied.
+
+      The default behavior is finding a conditional mapping (see below),
+      if none is found, :func:`_default_reverse_mapping` is applied.
     * :func:`_default_reverse_mapping` defines the default
       reverse mapping.
     * :func:`_head_mapping` defines how the outputs of the model
