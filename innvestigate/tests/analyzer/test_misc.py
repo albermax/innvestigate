@@ -47,3 +47,18 @@ def test_fast__Random():
         return Random(model)
 
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__SerializeRandom():
+
+    def method(model):
+        return Random(model)
+
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

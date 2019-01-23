@@ -15,6 +15,7 @@ import six
 ###############################################################################
 
 
+import keras.models
 import numpy as np
 import pytest
 
@@ -57,6 +58,41 @@ def test_precommit__BasicGraphReversal():
     dryrun.test_equal_analyzer(method1,
                                method2,
                                "mnist.*")
+
+
+# @pytest.mark.fast
+# @pytest.mark.precommit
+# def test_fast__ContainerGraphReversal():
+
+#     def method1(model):
+#         return Gradient(model)
+
+#     def method2(model):
+#         Create container execution
+#         model = keras.models.Model(inputs=model.inputs,
+#                                    outputs=model(model.inputs))
+#         return Gradient(model)
+
+#     dryrun.test_equal_analyzer(method1,
+#                                method2,
+#                                "trivia.*:mnist.log_reg")
+
+
+# @pytest.mark.precommit
+# def test_precommit__ContainerGraphReversal():
+
+#     def method1(model):
+#         return Gradient(model)
+
+#     def method2(model):
+#         Create container execution
+#         model = keras.models.Model(inputs=model.inputs,
+#                                    outputs=model(model.inputs))
+#         return Gradient(model)
+
+#     dryrun.test_equal_analyzer(method1,
+#                                method2,
+#                                "mnist.*")
 
 
 ###############################################################################

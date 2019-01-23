@@ -40,10 +40,10 @@ class Input(AnalyzerNetworkBase):
 
 class Random(AnalyzerNetworkBase):
 
-    def __init__(self, model, stddev=1):
+    def __init__(self, model, stddev=1, **kwargs):
         self._stddev = 1
 
-        super(Random, self).__init__(model)
+        super(Random, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         noise = ilayers.TestPhaseGaussianNoise(stddev=1)

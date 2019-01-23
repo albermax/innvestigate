@@ -15,6 +15,8 @@ import six
 ###############################################################################
 
 
+import keras.layers
+import keras.models
 import numpy as np
 import pytest
 try:
@@ -35,7 +37,6 @@ from innvestigate.analyzer import DeepLIFTWrapper
 
 @pytest.mark.fast
 @pytest.mark.precommit
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_fast__DeepLIFT():
 
     def method(model):
@@ -45,7 +46,6 @@ def test_fast__DeepLIFT():
 
 
 @pytest.mark.precommit
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_precommit__DeepLIFT():
 
     def method(model):
@@ -55,7 +55,23 @@ def test_precommit__DeepLIFT():
 
 
 @pytest.mark.precommit
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
+def test_precommit__DeepLIFT_Rescale():
+
+    def method(model):
+        if keras.backend.image_data_format() == "channels_first":
+            input_shape = (1, 28, 28)
+        else:
+            input_shape = (28, 28, 1)
+        model = keras.models.Sequential([
+            keras.layers.Dense(10, input_shape=input_shape),
+            keras.layers.ReLU(),
+        ])
+        return DeepLIFT(model)
+
+    dryrun.test_analyzer(method, "mnist.log_reg")
+
+
+@pytest.mark.precommit
 def test_precommit__DeepLIFT_neuron_selection_index():
 
     class CustomAnalyzer(DeepLIFT):
@@ -71,7 +87,6 @@ def test_precommit__DeepLIFT_neuron_selection_index():
 
 
 @pytest.mark.precommit
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_precommit__DeepLIFT_larger_batch_size():
 
     class CustomAnalyzer(DeepLIFT):
@@ -86,8 +101,8 @@ def test_precommit__DeepLIFT_larger_batch_size():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@pytest.mark.skip("There is a design issue to be fixed.")
 @pytest.mark.precommit
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_precommit__DeepLIFT_larger_batch_size_with_index():
 
     class CustomAnalyzer(DeepLIFT):
@@ -106,7 +121,6 @@ def test_precommit__DeepLIFT_larger_batch_size_with_index():
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
-@pytest.mark.skip(reason="This DeepLIFT implementation is not supported atm.")
 def test_imagenet__DeepLIFT():
 
     def method(model):
@@ -205,3 +219,30 @@ def test_imagenet__DeepLIFTWrapper():
         return DeepLIFTWrapper(model)
 
     dryrun.test_analyzer(method, "imagenet.*")
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__DeepLIFT_serialize():
+
+    def method(model):
+        return DeepLIFT(model)
+
+    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__DeepLIFTWrapper_serialize():
+
+    def method(model):
+        return DeepLIFTWrapper(model)
+
+    with pytest.raises(AssertionError) as e_info:
+        # Issue in deeplift.
+        dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

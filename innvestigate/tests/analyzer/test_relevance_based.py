@@ -53,6 +53,15 @@ def test_fast__LRPZ():
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_fast__LRPZ_resnet50():
+
+    def method(model):
+        return LRPZ(model)
+
+    dryrun.test_analyzer(method, "imagenet.resnet50")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__LRPZ__equal_BaselineLRPZ():
@@ -112,6 +121,16 @@ def test_fast__LRPZPlus():
 
     def method(model):
         return LRPZPlus(model)
+
+    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_fast__LRPZPlusFast():
+
+    def method(model):
+        return LRPZPlusFast(model)
 
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
@@ -206,6 +225,26 @@ def test_fast__DeepTaylor():
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.precommit
+def test_precommit__DeepTaylor():
+
+    def method(model):
+        return DeepTaylor(model)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_precommit__DeepTaylor():
+
+    def method(model):
+        return DeepTaylor(model)
+
+    dryrun.test_analyzer(method, "imagenet.*")
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BoundedDeepTaylor():
@@ -214,6 +253,26 @@ def test_fast__BoundedDeepTaylor():
         return BoundedDeepTaylor(model, low=-1, high=1)
 
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.precommit
+def test_precommit__DeepTaylor():
+
+    def method(model):
+        return BoundedDeepTaylor(model, low=-1, high=1)
+
+    dryrun.test_analyzer(method, "mnist.*")
+
+
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+def test_precommit__DeepTaylor():
+
+    def method(model):
+        return BoundedDeepTaylor(model, low=-1, high=1)
+
+    dryrun.test_analyzer(method, "imagenet.*")
 
 
 ###############################################################################

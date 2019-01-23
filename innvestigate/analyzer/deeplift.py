@@ -89,6 +89,7 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
         switch = keras.layers.Lambda(switch_f)
 
         Xs_references = [reference_mapping[x] for x in Xs]
+
         Ys_references = [reference_mapping[x] for x in Ys]
 
         Xs_differences = [keras.layers.Subtract()([x, r])
@@ -369,13 +370,19 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
     def _get_state(self):
         state = super(DeepLIFTWrapper, self)._get_state()
         state.update({"nonlinear_mode": self._nonlinear_mode})
+        state.update({"reference_inputs": self._reference_inputs})
+        state.update({"verbose": self._verbose})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("nonlinear_mode")
+        nonlinear_mode = state.pop("nonlinear_mode")
+        reference_inputs = state.pop("reference_inputs")
+        verbose = state.pop("verbose")
         kwargs = super(DeepLIFTWrapper, clazz)._state_to_kwargs(state)
         kwargs.update({
             "nonlinear_mode": nonlinear_mode,
+            "reference_inputs": reference_inputs,
+            "verbose": verbose,
         })
         return kwargs
