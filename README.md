@@ -52,7 +52,7 @@ The library's tests can be executed via:
 ```bash
 git clone https://github.com/albermax/innvestigate.git
 cd innvestigate
-python setup.py test -m precommit
+python setup.py test
 ```
 
 ## Usage and Examples
