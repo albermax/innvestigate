@@ -452,7 +452,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model input tensor. Tensors present in stop_analysis_at_tensors
             should be omitted.
           * The second list, if present, is a list of debug tensors that will
-            be passed to :function:`_handle_debug_output` after the analysis
+            be passed to :func:`_handle_debug_output` after the analysis
             is executed.
           * The third list, if present, is a list of constant input tensors
             added to the analysis model.

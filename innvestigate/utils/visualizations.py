@@ -27,6 +27,17 @@ __all__ = [
 
 
 def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
+    """Projects a tensor into a value range.
+
+    Projects the tensor values into the specified range.
+
+    :param X: A tensor.
+    :param output_range: The output value range.
+    :param absmax: A tensor specifying the absmax used for normalizing.
+      Default the absmax along the first axis.
+    :param input_is_postive_only: Is the input value range only positive.
+    :return: The tensor with the values project into output range.
+    """
 
     if absmax is None:
         absmax = np.max(np.abs(X),
@@ -46,6 +57,18 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
 
 
 def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
+    """Creates a heatmap/color map.
+
+    Create a heatmap or colormap out of the input tensor.
+
+    :param X: A image tensor with 4 axes.
+    :param cmap_type: The color map to use. Default 'seismic'.
+    :param reduce_op: Operation to reduce the color axis.
+      Either 'sum' or 'absmax'.
+    :param reduce_axis: Axis to reduce.
+    :param kwargs: Arguments passed on to :func:`project`
+    :return: The tensor as color-map.
+    """
     cmap = plt.cm.get_cmap(cmap_type)
 
     tmp = X
@@ -73,10 +96,11 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
 
 
 def graymap(X, **kwargs):
+    """Same as :func:`heatmap` but uses a gray colormap."""
     return heatmap(X, cmap_type="gray", **kwargs)
 
 
-def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
+def gamma(X, gamma=0.5, minamp=0, maxamp=None):
     """
     Apply gamma correction to an input array X
     while maintaining the relative order of entries,
