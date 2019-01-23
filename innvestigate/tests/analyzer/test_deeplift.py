@@ -162,6 +162,7 @@ def test_precommit__DeepLIFTWrapper_neuron_selection_index():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@require_deeplift
 @pytest.mark.precommit
 def test_precommit__DeepLIFTWrapper_larger_batch_size():
 
@@ -177,6 +178,7 @@ def test_precommit__DeepLIFTWrapper_larger_batch_size():
     dryrun.test_analyzer(method, "mnist.*")
 
 
+@require_deeplift
 @pytest.mark.precommit
 def test_precommit__DeepLIFTWrapper_larger_batch_size_with_index():
 
