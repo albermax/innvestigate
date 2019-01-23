@@ -78,7 +78,7 @@ def graymap(X, **kwargs):
 
 def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
     """
-    apply gamma correction to an input array X
+    Apply gamma correction to an input array X
     while maintaining the relative order of entries,
     also for negative vs positive values in X.
     the fxn firstly determines the max
@@ -89,12 +89,12 @@ def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
 
     :param gamma: the gamma parameter for gamma scaling
     :param minamp: the smallest absolute value to consider.
-    if not given assumed to be zero (neutral value for relevance,
+        if not given assumed to be zero (neutral value for relevance,
         min value for saliency, ...). values above and below
         minamp are treated separately.
     :param maxamp: the largest absolute value to consider relative
-    to the neutral value minamp
-    if not given determined from the given data.
+        to the neutral value minamp
+        if not given determined from the given data.
     """
 
     #prepare return array
