@@ -26,7 +26,7 @@ __all__ = [
 ###############################################################################
 
 
-def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
+def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
     """Projects a tensor into a value range.
 
     Projects the tensor values into the specified range.
@@ -35,7 +35,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
     :param output_range: The output value range.
     :param absmax: A tensor specifying the absmax used for normalizing.
       Default the absmax along the first axis.
-    :param input_is_postive_only: Is the input value range only positive.
+    :param input_is_positive_only: Is the input value range only positive.
     :return: The tensor with the values project into output range.
     """
 
