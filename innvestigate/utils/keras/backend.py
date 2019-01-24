@@ -37,7 +37,16 @@ def to_floatx(x):
 
 
 def gradients(Xs, Ys, known_Ys):
-    "Partial derivates."
+    """Partial derivatives
+
+    Computes the partial derivatives between Ys and Xs and
+    using the gradients for Ys known_Ys.
+
+    :param Xs: List of input tensors.
+    :param Ys: List of output tensors that depend on Xs.
+    :param known_Ys: Gradients for Ys.
+    :return: Gradients for Xs given known_Ys
+    """
     backend = K.backend()
     if backend == "theano":
         # no global import => do not break if module is not present
@@ -63,6 +72,8 @@ def gradients(Xs, Ys, known_Ys):
 
 
 def is_not_finite(x):
+    """Checks if tensor x is finite, if not throws an exception."""
+
     backend = K.backend()
     if backend == "theano":
         # no global import => do not break if module is not present
@@ -85,6 +96,16 @@ def is_not_finite(x):
 
 
 def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
+    """Extracts conv2d patches like TF function extract_image_patches.
+
+    :param x: Input image.
+    :param kernel_shape: Shape of the Keras conv2d kernel.
+    :param strides: Strides of the Keras conv2d layer.
+    :param rates: Dilation rates of the Keras conv2d layer.
+    :param padding: Paddings of the Keras conv2d layer.
+    :return: The extracted patches.
+    """
+
     backend = K.backend()
     if backend == "theano":
         # todo: add theano function.
@@ -119,6 +140,7 @@ def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
 
 
 def gather(x, axis, indices):
+    """Works as TensorFlow's gather."""
     backend = K.backend()
     if backend == "theano":
         # todo: add theano function.
@@ -134,6 +156,7 @@ def gather(x, axis, indices):
 
 
 def gather_nd(x, indices):
+    """Works as TensorFlow's gather_nd."""
     backend = K.backend()
     if backend == "theano":
         # todo: add theano function.
