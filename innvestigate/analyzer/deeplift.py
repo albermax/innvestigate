@@ -35,7 +35,7 @@ __all__ = [
 ###############################################################################
 
 
-def create_deeplift_rules(reference_mapping, approximate_gradient=True):
+def _create_deeplift_rules(reference_mapping, approximate_gradient=True):
     def RescaleRule(Xs, Ys, As, reverse_state, local_references={}):
         if approximate_gradient:
             def rescale_f(x):
@@ -113,9 +113,18 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
 
 
 class DeepLIFT(base.ReverseAnalyzerBase):
+    """DeepLIFT-rescale algorithm
+
+    This class implements the DeepLIFT algorithm using
+    the rescale rule (as in DeepExplain (Ancona et.al.)).
+
+    WARNING: This implementation contains bugs.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, *args, **kwargs):
-        warnings.warn("This implementation is buggy.")
+        warnings.warn("This implementation contains bugs.")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._approximate_gradient = kwargs.pop(
             "approximate_gradient", True)
@@ -170,7 +179,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
     def _create_analysis(self, model, *args, **kwargs):
         constant_reference_inputs = self._create_reference_activations(model)
 
-        RescaleRule, LinearRule = create_deeplift_rules(
+        RescaleRule, LinearRule = _create_deeplift_rules(
             self._reference_activations, self._approximate_gradient)
 
         # Kernel layers.
@@ -251,6 +260,18 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
 
 class DeepLIFTWrapper(base.AnalyzerNetworkBase):
+    """Wrapper around DeepLIFT package
+
+    This class wraps the DeepLIFT package.
+    For further explanation of the parameters check out:
+    https://github.com/kundajelab/deeplift
+
+    :param model: A Keras model.
+    :param nonlinear_mode: The nonlinear mode parameter.
+    :param reference_inputs: The reference input used for DeepLIFT.
+    :param verbose: Verbosity of the DeepLIFT package.
+    .. note:: Requires the deeplift package.
+    """
 
     def __init__(self, model, **kwargs):
         self._nonlinear_mode = kwargs.pop("nonlinear_mode", "rescale")
@@ -267,7 +288,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
         super(DeepLIFTWrapper, self).__init__(model, **kwargs)
 
-    def create_deep_lift_func(self):
+    def _create_deep_lift_func(self):
         # Store model and load into deeplift format.
         kc = importlib.import_module("deeplift.conversion.kerasapi_conversion")
         modes = self._deeplift_module.layers.NonlinearMxtsMode
@@ -309,7 +330,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
     def analyze(self, X, neuron_selection=None):
         if not hasattr(self, "_deep_lift_func"):
-            self.create_deep_lift_func()
+            self._create_deep_lift_func()
 
         X = iutils.to_list(X)
 

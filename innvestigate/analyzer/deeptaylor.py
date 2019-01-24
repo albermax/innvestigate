@@ -29,6 +29,13 @@ __all__ = [
 
 
 class DeepTaylor(base.ReverseAnalyzerBase):
+    """DeepTaylor for ReLU-networks with unbounded input
+
+    This class implements the DeepTaylor algorithm for neural networks with
+    ReLU activation and unbounded input ranges.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, *args, **kwargs):
 
@@ -148,12 +155,12 @@ class DeepTaylor(base.ReverseAnalyzerBase):
 
 
 class BoundedDeepTaylor(DeepTaylor):
-    """
+    """DeepTaylor for ReLU-networks with bounded input
+
     This class implements the DeepTaylor algorithm for neural networks with
     ReLU activation and bounded input ranges.
 
-    Currently no batch-norm layers are supported.
-
+    :param model: A Keras model.
     :param low: Lowest value of the input range. See Z_B rule.
     :param high: Highest value of the input range. See Z_B rule.
     """

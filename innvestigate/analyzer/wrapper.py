@@ -34,6 +34,12 @@ __all__ = [
 
 
 class WrapperBase(base.AnalyzerBase):
+    """Interface for wrappers around analyzers
+
+    This class is the basic interface for wrappers around analyzers.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._subanalyzer = subanalyzer
@@ -70,6 +76,15 @@ class WrapperBase(base.AnalyzerBase):
 
 
 class AugmentReduceBase(WrapperBase):
+    """Interface for wrappers that augment the input and reduce the analysis.
+
+    This class is an interface for wrappers that:
+    * augment the input to the analyzer by creating new samples.
+    * reduce the returned analysis to match the initial input shapes.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param augment_by_n: Number of samples to create.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._augment_by_n = kwargs.pop("augment_by_n", 2)
@@ -187,6 +202,15 @@ class AugmentReduceBase(WrapperBase):
 
 
 class GaussianSmoother(AugmentReduceBase):
+    """Wrapper that adds noise to the input and averages over analyses
+
+    This wrapper creates new samples by adding Gaussian noise
+    to the input. The final analysis is an average of the returned analyses.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param noise_scale: The stddev of the applied noise.
+    :param augment_by_n: Number of samples to create.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._noise_scale = kwargs.pop("noise_scale", 1)
@@ -217,6 +241,21 @@ class GaussianSmoother(AugmentReduceBase):
 
 
 class PathIntegrator(AugmentReduceBase):
+    """Integrated the analysis along a path
+
+    This analyzer:
+    * creates a path from input to reference image.
+    * creates steps number of intermediate inputs and
+      crests an analysis for them.
+    * sums the analyses and multiplies them with the input-reference_input.
+
+    This wrapper is used to implement Integrated Gradients.
+    We refer to the paper for further information.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param steps: Number of steps for integration.
+    :param reference_inputs: The reference input.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         steps = kwargs.pop("steps", 16)

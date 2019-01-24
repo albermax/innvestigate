@@ -137,6 +137,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
 
 class EpsilonIgnoreBiasRule(EpsilonRule):
+    """Same as EpsilonRule but ignores the bias."""
     def __init__(self, *args, **kwargs):
         super(EpsilonIgnoreBiasRule, self).__init__(*args,
                                                     bias=False,
@@ -145,6 +146,8 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
+    """W**2 rule from Deep Taylor Decomposition"""
+
     def __init__(self, layer, state, copy_weights=False):
         # W-square rule works with squared weights and no biases.
         if copy_weights:
@@ -181,6 +184,8 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
 
 class FlatRule(WSquareRule):
+    """Same as W**2 rule but sets all weights to ones."""
+
     def __init__(self, layer, state, copy_weights=False):
         # The flat rule works with weights equal to one and
         # no biases.
@@ -314,8 +319,9 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
 
 
-
+        
 class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
+    """Same as AlphaBetaRule but ignores biases."""
     def __init__(self, *args, **kwargs):
         super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
                                                       bias=False,
@@ -324,6 +330,7 @@ class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
 
 
 class Alpha2Beta1Rule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=2, beta=1"""
     def __init__(self, *args, **kwargs):
         super(Alpha2Beta1Rule, self).__init__(*args,
                                               alpha=2,
@@ -333,6 +340,7 @@ class Alpha2Beta1Rule(AlphaBetaRule):
 
 
 class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=2, beta=1 and ignores biases"""
     def __init__(self, *args, **kwargs):
         super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
                                                         alpha=2,
@@ -342,6 +350,7 @@ class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
 
 
 class Alpha1Beta0Rule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=1, beta=0"""
     def __init__(self, *args, **kwargs):
         super(Alpha1Beta0Rule, self).__init__(*args,
                                               alpha=1,
@@ -351,6 +360,7 @@ class Alpha1Beta0Rule(AlphaBetaRule):
 
 
 class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=1, beta=0 and ignores biases"""
     def __init__(self, *args, **kwargs):
         super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
                                                         alpha=1,
@@ -361,6 +371,7 @@ class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
 
 
 class BoundedRule(kgraph.ReverseMappingBase):
+    """Z_B rule from the Deep Taylor Decomposition"""
     # TODO: this only works for relu networks, needs to be extended.
     # TODO: check
     def __init__(self, layer, state, low=-1, high=1, copy_weights=False):

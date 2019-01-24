@@ -22,6 +22,12 @@ __all__ = ["Random", "Input"]
 
 
 class Input(AnalyzerNetworkBase):
+    """Returns the input.
+
+    Returns the input as analysis.
+
+    :param model: A Keras model.
+    """
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
@@ -30,6 +36,13 @@ class Input(AnalyzerNetworkBase):
 
 
 class Random(AnalyzerNetworkBase):
+    """Returns noise.
+
+    Returns the Gaussian noise as analysis.
+
+    :param model: A Keras model.
+    :param stddev: The standard deviation of the noise.
+    """
 
     def __init__(self, model, stddev=1, **kwargs):
         self._stddev = 1

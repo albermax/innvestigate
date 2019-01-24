@@ -187,6 +187,8 @@ LRP_RULES = {
 
 
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
+    """Special BN handler that applies the Z-Rule"""
+
     def __init__(self, layer, state):
         ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         config = layer.get_config()
@@ -250,6 +252,8 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
 
 
 class AddReverseLayer(kgraph.ReverseMappingBase):
+    """Special Add layer handler that applies the Z-Rule"""
+
     def __init__(self, layer, state):
         ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
@@ -279,6 +283,8 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
 
 
 class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
+    """Special AveragePooling handler that applies the Z-Rule"""
+
     def __init__(self, layer, state):
         ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
@@ -506,12 +512,14 @@ class _LRPFixedParams(LRP):
 
 
 class LRPZ(_LRPFixedParams):
-
+    """LRP-analyzer that uses the LRP-Z rule"""
+    
     def __init__(self, model, *args, **kwargs):
         super(LRPZ, self).__init__(model, *args, rule="Z", **kwargs)
 
 
 class LRPZIgnoreBias(_LRPFixedParams):
+    """LRP-analyzer that uses the LRP-Z-ignore-bias rule"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPZIgnoreBias, self).__init__(model, *args,
@@ -520,6 +528,7 @@ class LRPZIgnoreBias(_LRPFixedParams):
 
 
 class LRPEpsilon(_LRPFixedParams):
+    """LRP-analyzer that uses the LRP-Epsilon rule"""
 
     def __init__(self, model, epsilon=1e-7, bias=True, *args, **kwargs):
         epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
@@ -543,6 +552,7 @@ class LRPEpsilon(_LRPFixedParams):
 
 
 class LRPEpsilonIgnoreBias(LRPEpsilon):
+    """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
 
     def __init__(self, model, epsilon=1e-7, *args, **kwargs):
         super(LRPEpsilonIgnoreBias, self).__init__(model, *args,
@@ -552,6 +562,7 @@ class LRPEpsilonIgnoreBias(LRPEpsilon):
 
 
 class LRPWSquare(_LRPFixedParams):
+    """LRP-analyzer that uses the DeepTaylor W**2 rule"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPWSquare, self).__init__(model, *args,
@@ -559,6 +570,7 @@ class LRPWSquare(_LRPFixedParams):
 
 
 class LRPFlat(_LRPFixedParams):
+    """LRP-analyzer that uses the LRP-Flat rule"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPFlat, self).__init__(model, *args,
@@ -629,6 +641,7 @@ class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
 
 
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
+    """LRP-analyzer that uses the LRP-alpha-beta rule with a=2,b=1"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPAlpha2Beta1, self).__init__(model, *args,
@@ -639,6 +652,7 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
+    """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=2,b=1"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPAlpha2Beta1IgnoreBias, self).__init__(model, *args,
@@ -649,6 +663,7 @@ class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
+    """LRP-analyzer that uses the LRP-alpha-beta rule with a=1,b=0"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPAlpha1Beta0, self).__init__(model, *args,
@@ -659,6 +674,7 @@ class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
 
 
 class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
+    """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=1,b=0"""
 
     def __init__(self, model, *args, **kwargs):
         super(LRPAlpha1Beta0IgnoreBias, self).__init__(model, *args,
@@ -668,6 +684,7 @@ class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
                                                        **kwargs)
 
 class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
+    """LRP-analyzer that uses the LRP-alpha-beta rule with a=1,b=0"""
     #TODO: assert that layer inputs are always >= 0
     def __init__(self, model, *args, **kwargs):
         super(LRPZPlus, self).__init__(model, *args, **kwargs)
@@ -685,6 +702,8 @@ class LRPZPlusFast(_LRPFixedParams):
 
 
 class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
+    """Special LRP-configuration for ConvNets"""
+
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
 
         self._add_model_check(
@@ -714,6 +733,8 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
 
 
 class LRPSequentialPresetB(_LRPFixedParams):
+    """Special LRP-configuration for ConvNets"""
+
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
@@ -745,6 +766,8 @@ class LRPSequentialPresetB(_LRPFixedParams):
 
 #TODO: allow to pass input layer identification by index or id.
 class LRPSequentialPresetAFlat(LRPSequentialPresetA):
+    """Special LRP-configuration for ConvNets"""
+
     def __init__(self, model, *args, **kwargs):
         super(LRPSequentialPresetAFlat, self).__init__(model,
                                                 *args,
@@ -755,6 +778,8 @@ class LRPSequentialPresetAFlat(LRPSequentialPresetA):
 
 #TODO: allow to pass input layer identification by index or id.
 class LRPSequentialPresetBFlat(LRPSequentialPresetB):
+    """Special LRP-configuration for ConvNets"""
+
     def __init__(self, model, *args, **kwargs):
         super(LRPSequentialPresetBFlat, self).__init__(model,
                                                 *args,
