@@ -48,7 +48,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
     if mask.sum() > 0:
         X[mask] /= absmax[mask]
 
-    if input_is_postive_only is False:
+    if input_is_positive_only is False:
         X = (X+1)/2  # [0, 1]
     X = X.clip(0, 1)
 
