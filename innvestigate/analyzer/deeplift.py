@@ -270,7 +270,8 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
     :param nonlinear_mode: The nonlinear mode parameter.
     :param reference_inputs: The reference input used for DeepLIFT.
     :param verbose: Verbosity of the DeepLIFT package.
-    .. note:: Requires the deeplift package.
+
+    :note: Requires the deeplift package.
     """
 
     def __init__(self, model, **kwargs):
