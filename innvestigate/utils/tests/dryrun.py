@@ -14,7 +14,7 @@ import keras.models
 import numpy as np
 import unittest
 
-from ...analyzer import AnalyzerBase
+from ...analyzer.base import AnalyzerBase
 from . import networks
 
 

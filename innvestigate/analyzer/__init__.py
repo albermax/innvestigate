@@ -8,10 +8,7 @@ from __future__ import\
 ###############################################################################
 
 from .base import NotAnalyzeableModelException
-# Disable pyflaks warnings:
-assert NotAnalyzeableModelException
-
-#from .deeplift import DeepLIFT
+from .deeplift import DeepLIFT
 from .deeplift import DeepLIFTWrapper
 from .gradient_based import BaselineGradient
 from .gradient_based import Gradient
@@ -24,6 +21,7 @@ from .misc import Input
 from .misc import Random
 from .pattern_based import PatternNet
 from .pattern_based import PatternAttribution
+from .relevance_based.relevance_analyzer import BaselineLRPZ
 from .relevance_based.relevance_analyzer import LRP
 from .relevance_based.relevance_analyzer import LRPZ
 from .relevance_based.relevance_analyzer import LRPZIgnoreBias
@@ -44,6 +42,20 @@ from .relevance_based.relevance_analyzer import LRPSequentialPresetAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
 from .deeptaylor import DeepTaylor
 from .deeptaylor import BoundedDeepTaylor
+from .wrapper import WrapperBase
+from .wrapper import AugmentReduceBase
+from .wrapper import GaussianSmoother
+from .wrapper import PathIntegrator
+
+
+# Disable pyflaks warnings:
+assert NotAnalyzeableModelException
+assert DeepLIFT
+assert BaselineLRPZ
+assert WrapperBase
+assert AugmentReduceBase
+assert GaussianSmoother
+assert PathIntegrator
 
 
 ###############################################################################
