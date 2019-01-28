@@ -61,3 +61,41 @@ def test_precommit__PerturbationAnalysis():
 
     expected_scores = np.array([5761600.0, 1654564.0, 182672.0, 21284.0])
     assert np.all(np.isclose(scores, expected_scores))
+
+
+@pytest.mark.precommit
+def test_precommit__Perturbation():
+    if keras.backend.image_data_format() == "channels_first":
+        input_shape = (1, 1, 4, 4)
+    else:
+        input_shape = (1, 4, 4, 1)
+    x = np.arange(1 * 4 * 4).reshape(input_shape)
+
+    perturbation = innvestigate.tools.perturbate.Perturbation("zeros", region_shape=(2, 2), in_place=False)
+
+    analysis = np.zeros((4, 4))
+    analysis[:2, 2:] = 1
+    analysis[2:, :2] = 2
+    analysis[2:, 2:] = 3
+    analysis = analysis.reshape(input_shape)
+
+    if keras.backend.image_data_format() == "channels_last":
+        x = np.moveaxis(x, 3, 1)
+        analysis = np.moveaxis(analysis, 3, 1)
+
+    analysis = perturbation.reduce_function(analysis, axis=1, keepdims=True)
+
+    aggregated_regions = perturbation.aggregate_regions(analysis)
+    assert np.all(np.isclose(aggregated_regions[0, 0, :, :], np.array([[0, 1], [2, 3]])))
+
+    ranks = perturbation.compute_region_ordering(aggregated_regions)
+    assert np.all(np.isclose(ranks[0, 0, :, :], np.array([[3, 2], [1, 0]])))
+
+    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 1)
+    assert np.all(perturbation_mask_regions == np.array([[0, 0], [0, 1]]))
+
+    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 4)
+    assert np.all(perturbation_mask_regions == np.array([[1, 1], [1, 1]]))
+
+    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 0)
+    assert np.all(perturbation_mask_regions == np.array([[0, 0], [0, 0]]))
