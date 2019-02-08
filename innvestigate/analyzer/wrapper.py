@@ -129,7 +129,7 @@ class AugmentReduceBase(WrapperBase):
                             "with this wrapper.")
 
         new_inputs = iutils.to_list(self._augment(inputs))
-        print(type(new_inputs), type(extra_inputs))
+        # print(type(new_inputs), type(extra_inputs))
         tmp = iutils.to_list(model(new_inputs+extra_inputs))
         new_outputs = iutils.to_list(self._reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
@@ -151,6 +151,7 @@ class AugmentReduceBase(WrapperBase):
                     indices = np.argmax(tmp, axis=1)
                 else:
                     if len(args):
+                        args = list(args)
                         indices = args.pop(0)
                     else:
                         indices = kwargs.pop("neuron_selection")
