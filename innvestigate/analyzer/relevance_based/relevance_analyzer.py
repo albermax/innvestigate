@@ -763,10 +763,12 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
                              (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
                             ]
 
-        super(LRPSequentialPresetA, self).__init__(model,
-                                            *args,
-                                            rule = conditional_rules,
-                                            **kwargs )
+        super(LRPSequentialPresetA, self).__init__(
+            model,
+            *args,
+            rule=conditional_rules,
+            bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+            **kwargs)
 
 
 class LRPSequentialPresetB(_LRPFixedParams):
@@ -792,10 +794,12 @@ class LRPSequentialPresetB(_LRPFixedParams):
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
                              (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
                             ]
-        super(LRPSequentialPresetB, self).__init__(model,
-                                            *args,
-                                            rule = conditional_rules,
-                                            **kwargs )
+        super(LRPSequentialPresetB, self).__init__(
+            model,
+            *args,
+            rule=conditional_rules,
+            bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+            **kwargs)
 
 
 
