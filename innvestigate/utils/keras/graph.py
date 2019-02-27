@@ -432,6 +432,108 @@ def model_contains(model, layer_condition, return_only_counts=False):
 ###############################################################################
 
 
+def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
+    """
+    Applies a mapping to a linearized Batch Normalization layer.
+
+    :param mapping: The mapping to be applied.
+      Should take parameters layer and reverse_state and
+      return a mapping function.
+    :param fuse_mode: Either 'one_linear': apply the mapping
+      to a once linearized layer, or
+      'two_linear': apply to twice to a twice linearized layer.
+    """
+    if fuse_mode not in ["one_linear", "two_linear"]:
+        raise ValueError("fuse_mode can only be 'one_linear' or 'two_linear'")
+
+    # todo(alber): remove this workaround and make a proper class
+    def ScaleLayer(kernel, bias):
+        _kernel = kernel
+        _bias = bias
+
+        class ScaleLayer(keras.layers.Layer):
+
+            def __init__(self, **kwargs):
+                self._kernel_to_be = _kernel
+                self._bias_to_be = _bias
+                super(ScaleLayer, self).__init__(**kwargs)
+
+            def build(self, input_shape):
+                self.kernel = self.add_weight(
+                    name='kernel',
+                    shape=K.int_shape(self._kernel_to_be),
+                    initializer=lambda a, b=None: self._kernel_to_be,
+                    trainable=False)
+                self.bias = self.add_weight(
+                    name='bias',
+                    shape=K.int_shape(self._bias_to_be),
+                    initializer=lambda a, b=None: self._bias_to_be,
+                    trainable=False)
+                super(ScaleLayer, self).build(input_shape)
+
+            def call(self, x):
+                return (x * self.kernel) + self.bias
+
+            def compute_output_shape(self, input_shape):
+                return input_shape
+        return ScaleLayer()
+
+    def meta_mapping(layer, reverse_state):
+        # get bn params
+        weights = layer.weights[:]
+        if layer.scale:
+            gamma = weights.pop(0)
+        else:
+            gamma = 1
+        if layer.center:
+            beta = weights.pop(0)
+        else:
+            beta = 0
+        mean, variance = weights
+
+        if fuse_mode == "one_linear":
+            tmp = K.sqrt(variance**2 + layer.epsilon)
+            tmp_k = gamma / tmp
+            tmp_b = -mean / tmp + beta
+
+            inputs = layer.get_input_at(0)
+            surrogate_layer = ScaleLayer(tmp_k, tmp_b)
+            # init layer
+            surrogate_layer(inputs)
+            actual_mapping = mapping(surrogate_layer, reverse_state).apply
+        else:
+            tmp = K.sqrt(variance**2 + layer.epsilon)
+            tmp_k1 = 1 / tmp
+            tmp_b1 = -mean / tmp
+            tmp_k2 = gamma
+            tmp_b2 = beta
+
+            inputs = layer.get_input_at(0)
+            surrogate_layer1 = ScaleLayer(tmp_k1, tmp_b1)
+            surrogate_layer2 = ScaleLayer(tmp_k2, tmp_b2)
+            # init layers
+            surrogate_layer1(inputs)
+            surrogate_layer2(inputs)
+            # todo(alber): update reverse state
+            actual_mapping_1 = mapping(surrogate_layer1, reverse_state).apply
+            actual_mapping_2 = mapping(surrogate_layer2, reverse_state).apply
+
+            def actual_mapping(Xs, Ys, reversed_Ys, reverse_state):
+                from . import apply as kapply
+                X2s = kapply(surrogate_layer1, Xs)
+                # Apply first mapping
+                # todo(alber): update reverse state
+                reversed_X2s = actual_mapping_2(
+                    X2s, Ys, reversed_Ys, reverse_state)
+                return actual_mapping_1(Xs, X2s, reversed_X2s, reverse_state)
+        return actual_mapping
+    return meta_mapping
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 def trace_model_execution(model, reapply_on_copied_layers=False):
     """
     Trace and linearize excecution of a model and it's possible containers.
