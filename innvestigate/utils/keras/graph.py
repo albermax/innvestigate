@@ -310,13 +310,14 @@ def copy_layer_wo_activation(layer,
         config["name"] = name_template % config["name"]
     if kchecks.contains_activation(layer):
         config["activation"] = None
-    if keep_bias is False and config.get("use_bias", True):
-        config["use_bias"] = False
-        if weights is None:
-            if reuse_symbolic_tensors:
-                weights = layer.weights[:-1]
-            else:
-                weights = layer.get_weights()[:-1]
+    if hasattr(layer, "use_bias"):
+        if keep_bias is False and config.get("use_bias", True):
+            config["use_bias"] = False
+            if weights is None:
+                if reuse_symbolic_tensors:
+                    weights = layer.weights[:-1]
+                else:
+                    weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
@@ -345,13 +346,14 @@ def copy_layer(layer,
         config["name"] = None
     else:
         config["name"] = name_template % config["name"]
-    if keep_bias is False and config.get("use_bias", True):
-        config["use_bias"] = False
-        if weights is None:
-            if reuse_symbolic_tensors:
-                weights = layer.weights[:-1]
-            else:
-                weights = layer.get_weights()[:-1]
+    if hasattr(layer, "use_bias"):
+        if keep_bias is False and config.get("use_bias", True):
+            config["use_bias"] = False
+            if weights is None:
+                if reuse_symbolic_tensors:
+                    weights = layer.weights[:-1]
+                else:
+                    weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
