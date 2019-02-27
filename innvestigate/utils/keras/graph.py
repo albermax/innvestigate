@@ -484,11 +484,11 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
         if layer.scale:
             gamma = weights.pop(0)
         else:
-            gamma = 1
+            gamma = K.ones_like(weights[0])
         if layer.center:
             beta = weights.pop(0)
         else:
-            beta = 0
+            beta = K.zeros_like(weights[0])
         mean, variance = weights
 
         if fuse_mode == "one_linear":
