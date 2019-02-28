@@ -762,12 +762,13 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
                              (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
                             ]
+        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
 
         super(LRPSequentialPresetA, self).__init__(
             model,
             *args,
             rule=conditional_rules,
-            bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+            bn_layer_rule=bn_layer_rule,
             **kwargs)
 
 
@@ -790,15 +791,16 @@ class LRPSequentialPresetB(_LRPFixedParams):
                                                        bias=True,
                                                        **kwargs)
 
-
         conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
                              (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
-                            ]
+                         ]
+        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
+
         super(LRPSequentialPresetB, self).__init__(
             model,
             *args,
             rule=conditional_rules,
-            bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+            bn_layer_rule=bn_layer_rule,
             **kwargs)
 
 

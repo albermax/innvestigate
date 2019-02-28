@@ -423,9 +423,10 @@ class AlphaBetaXRule(kgraph.ReverseMappingBase):
         times_alpha1 = keras.layers.Lambda(lambda x: x * self._alpha[1])
         times_beta0 = keras.layers.Lambda(lambda x: x * self._beta[0])
         times_beta1 = keras.layers.Lambda(lambda x: x * self._beta[1])
-        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
-        keep_negatives = keras.layers.Lambda(lambda x: x * K.cast(K.less(x,0), K.floatx()))
-
+        keep_positives = keras.layers.Lambda(
+            lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_negatives = keras.layers.Lambda(
+            lambda x: x * K.cast(K.less(x,0), K.floatx()))
 
         def f(layer, X):
             Zs = kutils.apply(layer, X)
