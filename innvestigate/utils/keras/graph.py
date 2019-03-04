@@ -453,9 +453,10 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
 
         class ScaleLayer(keras.layers.Layer):
 
-            def __init__(self, **kwargs):
+            def __init__(self, use_bias=True, **kwargs):
                 self._kernel_to_be = _kernel
                 self._bias_to_be = _bias
+                self.use_bias = use_bias
                 super(ScaleLayer, self).__init__(**kwargs)
 
             def build(self, input_shape):
@@ -464,18 +465,23 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
                     shape=K.int_shape(self._kernel_to_be),
                     initializer=lambda a, b=None: self._kernel_to_be,
                     trainable=False)
-                self.bias = self.add_weight(
-                    name='bias',
-                    shape=K.int_shape(self._bias_to_be),
-                    initializer=lambda a, b=None: self._bias_to_be,
-                    trainable=False)
+                if self.use_bias:
+                    self.bias = self.add_weight(
+                        name='bias',
+                        shape=K.int_shape(self._bias_to_be),
+                        initializer=lambda a, b=None: self._bias_to_be,
+                        trainable=False)
                 super(ScaleLayer, self).build(input_shape)
 
             def call(self, x):
-                return (x * self.kernel) + self.bias
+                ret = (x * self.kernel)
+                if self.use_bias:
+                    ret += self.bias
+                return ret
 
             def compute_output_shape(self, input_shape):
                 return input_shape
+
         return ScaleLayer()
 
     def meta_mapping(layer, reverse_state):
