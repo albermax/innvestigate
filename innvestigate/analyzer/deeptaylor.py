@@ -57,7 +57,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         self._add_conditional_reverse_mapping(
             lambda l: (kchecks.contains_kernel(l) and
                        kchecks.contains_activation(l)),
-            lrp_rules.Alpha1Beta0Rule,
+            lrp_rules.Alpha1Beta0IgnoreBiasRule,
             name="deep_taylor_kernel_w_relu",
         )
         self._add_conditional_reverse_mapping(
