@@ -52,7 +52,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
     return X
 
 
-def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
+def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=False, **kwargs):
     cmap = plt.cm.get_cmap(cmap_type)
 
     tmp = X
@@ -71,11 +71,14 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
 
     tmp = project(tmp, output_range=(0, 255), **kwargs).astype(np.int64)
 
-    tmp = cmap(tmp.flatten())[:, :3].T
+    if alpha_cmap:
+        tmp = cmap(tmp.flatten()).T
+    else:
+        tmp = cmap(tmp.flatten())[:, :3].T
     tmp = tmp.T
 
     shape = list(shape)
-    shape[reduce_axis] = 3
+    shape[reduce_axis] = 3 + alpha_cmap
     return tmp.reshape(shape).astype(np.float32)
 
 
