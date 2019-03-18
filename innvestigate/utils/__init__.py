@@ -1,13 +1,6 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -21,6 +14,7 @@ import math
 
 
 __all__ = [
+    "model_wo_softmax",
     "to_list",
 
     "BatchSequence",
@@ -36,7 +30,20 @@ __all__ = [
 ###############################################################################
 
 
+def model_wo_softmax(*args, **kwargs):
+    # Break cyclic import
+    from .keras.graph import model_wo_softmax
+
+    return model_wo_softmax(*args, **kwargs)
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 def to_list(l):
+    """ If not list, wraps parameter into a list."""
     if not isinstance(l, list):
         return [l, ]
     else:
@@ -49,6 +56,14 @@ def to_list(l):
 
 
 class BatchSequence(keras.utils.Sequence):
+    """Batch sequence generator.
+
+    Take a (list of) input tensors and a batch size
+    and creates a generators that creates a sequence of batches.
+
+    :param Xs: One or a list of tensors. First axis needs to have same length.
+    :param batch_size: Batch size. Default 32.
+    """
 
     def __init__(self, Xs, batch_size=32):
         self.Xs = to_list(Xs)
@@ -74,6 +89,16 @@ class BatchSequence(keras.utils.Sequence):
 
 
 class TargetAugmentedSequence(keras.utils.Sequence):
+    """Augments a sequence with a target on the fly.
+
+    Takes a sequence/generator and a function that
+    creates on the fly for each batch a target.
+    The generator takes a batch from that sequence,
+    computes the target and returns both.
+
+    :param sequence: A sequence or generator.
+    :param augment_f: Takes a batch and returns a target.
+    """
 
     def __init__(self, sequence, augment_f):
         self.sequence = sequence
@@ -100,6 +125,17 @@ class TargetAugmentedSequence(keras.utils.Sequence):
 
 
 def preprocess_images(images, color_coding=None):
+    """Image preprocessing
+
+    Takes a batch of images and:
+    * Adjust the color axis to the Keras format.
+    * Fixes the color coding.
+
+    :param images: Batch of images with 4 axes.
+    :param color_coding: Determines the color coding.
+      Can be None, 'RGBtoBGR' or 'BGRtoRGB'.
+    :return: The preprocessed batch.
+    """
 
     ret = images
     image_data_format = K.image_data_format()
@@ -121,6 +157,16 @@ def preprocess_images(images, color_coding=None):
 
 
 def postprocess_images(images, color_coding=None, channels_first=None):
+    """Image postprocessing
+
+    Takes a batch of images and reverts the preprocessing.
+
+    :param images: A batch of images with 4 axes.
+    :param color_coding: The initial color coding,
+      see :func:`preprocess_images`.
+    :param channels_first: The output channel format.
+    :return: The postprocessed images.
+    """
 
     ret = images
     image_data_format = K.image_data_format()

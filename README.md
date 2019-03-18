@@ -52,7 +52,7 @@ The library's tests can be executed via:
 ```bash
 git clone https://github.com/albermax/innvestigate.git
 cd innvestigate
-python setup.py test -m precommit
+python setup.py test
 ```
 
 ## Usage and Examples
@@ -61,20 +61,18 @@ The iNNvestigate library contains implementations for the following methods:
 
 * *function:*
   * **gradient:** The gradient of the output neuron with respect to the input.
-  * **smoothgrad:** [SmoothGrad](https://arxiv.org/abs/1706.03825)
+  * **smoothgrad:** [SmoothGrad](https://arxiv.org/abs/1706.03825) averages the gradient over number of inputs with added noise.
 * *signal:*
-  * **deconvnet:** [DeConvNet](https://arxiv.org/abs/1311.2901)
-  * **guided:** [Guided BackProp](https://arxiv.org/abs/1412.6806)
-  * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598)
+  * **deconvnet:** [DeConvNet](https://arxiv.org/abs/1311.2901) applies a ReLU in the gradient computation instead of the gradient of a ReLU.
+  * **guided:** [Guided BackProp](https://arxiv.org/abs/1412.6806) applies a ReLU in the gradient computation additionally to the gradient of a ReLU.
+  * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598) estimates the input signal of the output neuron.
 * *attribution:*
-  * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598)
-  * **occlusion:** (Coming soon.)
   * **input_t_gradient:** Input \* Gradient
-  * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365)
-  * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub)
-  * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140)
-  * **deeplift:** [DeepLIFT (Beta) (as propsoed by Ancona et. al.)](https://openreview.net/forum?id=Sy21R9JAW)
-  * **deeplift.wrapper:** [DeepLIFT (wrapper around original code, slower)](http://proceedings.mlr.press/v70/shrikumar17a.html)
+  * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub) computes for each neuron a rootpoint, that is close to the input, but which's output value is 0, and uses this difference to estimate the attribution of each neuron recursively.
+  * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598) applies Deep Taylor by searching rootpoints along the singal direction of each neuron.
+  * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140) attributes recursively to each neuron's input relevance proportional to its contribution of the neuron output.
+  * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365) integrates the gradient along a path from the input to a reference.
+  * **deeplift.wrapper:** [DeepLIFT (wrapper around original code, slower)](http://proceedings.mlr.press/v70/shrikumar17a.html) computes a backpropagation based on "finite" gradients.
 * *miscellaneous:*
   * **input:** Returns the input.
   * **random:** Returns random Gaussian noise.
@@ -108,6 +106,39 @@ analyzer = innvestigate.create_analyzer("gradient",
 analysis = analyzer.analyze(inputs, i)
 ```
 
+Let's look at an example ([code](https://github.com/albermax/innvestigate/blob/master/examples/readme_code_snippet.py)) with VGG16 and this image:
+
+![Input image.](https://github.com/albermax/innvestigate/raw/master/examples/images/readme_example_input.png)
+
+
+```python
+import innvestigate
+import innvestigate.utils
+import keras.applications.vgg16 as vgg16
+
+# Get model
+model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
+# Strip softmax layer
+model = innvestigate.utils.model_wo_softmax(model)
+
+# Create analyzer
+analyzer = innvestigate.create_analyzer("deep_taylor", model)
+
+# Add batch axis and preprocess
+x = preprocess(image[None])
+# Apply analyzer w.r.t. maximum activated output-neuron
+a = analyzer.analyze(x)
+
+# Aggregate along color channels and normalize to [-1, 1]
+a = a.sum(axis=np.argmax(np.asarray(a.shape) == 3))
+a /= np.max(np.abs(a))
+# Plot
+plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
+```
+
+![Analysis image.](https://github.com/albermax/innvestigate/raw/master/examples/images/readme_example_analysis.png)
+
+
 #### Trainable methods
 
 Some methods like PatternNet and PatternAttribution are data-specific and need to be trained.
@@ -135,7 +166,7 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 * **[Perturbation Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_perturbation.ipynb)**.
 ---
 
-**To use ImageNet examples one must download example pictures first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
+**To use the ImageNet examples please download the example images first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
 
 ## More documentation
 

@@ -1,13 +1,6 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -20,6 +13,7 @@ import keras.backend as K
 import keras.layers
 import numpy as np
 import tempfile
+import warnings
 
 
 from . import base
@@ -41,7 +35,7 @@ __all__ = [
 ###############################################################################
 
 
-def create_deeplift_rules(reference_mapping, approximate_gradient=True):
+def _create_deeplift_rules(reference_mapping, approximate_gradient=True):
     def RescaleRule(Xs, Ys, As, reverse_state, local_references={}):
         if approximate_gradient:
             def rescale_f(x):
@@ -88,6 +82,7 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
         switch = keras.layers.Lambda(switch_f)
 
         Xs_references = [reference_mapping[x] for x in Xs]
+
         Ys_references = [reference_mapping[x] for x in Ys]
 
         Xs_differences = [keras.layers.Subtract()([x, r])
@@ -118,8 +113,18 @@ def create_deeplift_rules(reference_mapping, approximate_gradient=True):
 
 
 class DeepLIFT(base.ReverseAnalyzerBase):
+    """DeepLIFT-rescale algorithm
+
+    This class implements the DeepLIFT algorithm using
+    the rescale rule (as in DeepExplain (Ancona et.al.)).
+
+    WARNING: This implementation contains bugs.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, *args, **kwargs):
+        warnings.warn("This implementation contains bugs.")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._approximate_gradient = kwargs.pop(
             "approximate_gradient", True)
@@ -138,7 +143,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
         self._reference_activations = {}
 
-        # Create and inputs.
+        # Create references and graph inputs.
         tmp = kutils.broadcast_np_tensors_to_keras_tensors(
             model.inputs, self._reference_inputs)
         tmp = [K.variable(x) for x in tmp]
@@ -174,7 +179,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
     def _create_analysis(self, model, *args, **kwargs):
         constant_reference_inputs = self._create_reference_activations(model)
 
-        RescaleRule, LinearRule = create_deeplift_rules(
+        RescaleRule, LinearRule = _create_deeplift_rules(
             self._reference_activations, self._approximate_gradient)
 
         # Kernel layers.
@@ -255,6 +260,19 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
 
 class DeepLIFTWrapper(base.AnalyzerNetworkBase):
+    """Wrapper around DeepLIFT package
+
+    This class wraps the DeepLIFT package.
+    For further explanation of the parameters check out:
+    https://github.com/kundajelab/deeplift
+
+    :param model: A Keras model.
+    :param nonlinear_mode: The nonlinear mode parameter.
+    :param reference_inputs: The reference input used for DeepLIFT.
+    :param verbose: Verbosity of the DeepLIFT package.
+
+    :note: Requires the deeplift package.
+    """
 
     def __init__(self, model, **kwargs):
         self._nonlinear_mode = kwargs.pop("nonlinear_mode", "rescale")
@@ -271,7 +289,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
         super(DeepLIFTWrapper, self).__init__(model, **kwargs)
 
-    def create_deep_lift_func(self):
+    def _create_deep_lift_func(self):
         # Store model and load into deeplift format.
         kc = importlib.import_module("deeplift.conversion.kerasapi_conversion")
         modes = self._deeplift_module.layers.NonlinearMxtsMode
@@ -313,7 +331,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
     def analyze(self, X, neuron_selection=None):
         if not hasattr(self, "_deep_lift_func"):
-            self.create_deep_lift_func()
+            self._create_deep_lift_func()
 
         X = iutils.to_list(X)
 
@@ -333,22 +351,32 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                 raise ValueError("One neuron can be selected with DeepLIFT.")
 
             neuron_idx = neuron_selection[0]
-            analysis = self._analyze_with_deeplift(X, neuron_idx, len(X))
+            analysis = self._analyze_with_deeplift(X, neuron_idx, len(X[0]))
+
+            # Parse the output.
+            ret = []
+            for x, analysis_for_x in zip(X, analysis):
+                tmp = np.stack([a for a in analysis_for_x])
+                tmp = tmp.reshape(x.shape)
+                ret.append(tmp)
         elif self._neuron_selection_mode == "max_activation":
             neuron_idx = np.argmax(self._model.predict_on_batch(X), axis=1)
 
             analysis = []
+            # run for each batch with its respective max activated neuron
             for i, ni in enumerate(neuron_idx):
-                analysis.append(self._analyze_with_deeplift(X[i:i+1], ni, 1))
+                # slice input tensors
+                tmp = [x[i:i+1] for x in X]
+                analysis.append(self._analyze_with_deeplift(tmp, ni, 1))
+
+            # Parse the output.
+            ret = []
+            for i, x in enumerate(X):
+                tmp = np.stack([a[i] for a in analysis]).reshape(x.shape)
+                ret.append(tmp)
         else:
             raise ValueError("Only neuron_selection_mode index or "
                              "max_activation are supported.")
-
-        # Parse the output.
-        ret = []
-        for i, x in enumerate(X):
-            tmp = np.stack([a[i] for a in analysis]).reshape(x.shape)
-            ret.append(tmp)
 
         if isinstance(ret, list) and len(ret) == 1:
             ret = ret[0]
@@ -357,13 +385,19 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
     def _get_state(self):
         state = super(DeepLIFTWrapper, self)._get_state()
         state.update({"nonlinear_mode": self._nonlinear_mode})
+        state.update({"reference_inputs": self._reference_inputs})
+        state.update({"verbose": self._verbose})
         return state
 
     @classmethod
     def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("nonlinear_mode")
+        nonlinear_mode = state.pop("nonlinear_mode")
+        reference_inputs = state.pop("reference_inputs")
+        verbose = state.pop("verbose")
         kwargs = super(DeepLIFTWrapper, clazz)._state_to_kwargs(state)
         kwargs.update({
             "nonlinear_mode": nonlinear_mode,
+            "reference_inputs": reference_inputs,
+            "verbose": verbose,
         })
         return kwargs

@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
 import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -20,12 +14,11 @@ import keras.models
 import numpy as np
 import unittest
 
-from ...analyzer import AnalyzerBase
+from ...analyzer.base import AnalyzerBase
 from . import networks
 
 
 __all__ = [
-    "BaseTestCase",
     "AnalyzerTestCase",
     "EqualAnalyzerTestCase",
     "PatternComputerTestCase",
@@ -90,7 +83,13 @@ class BaseLayerTestCase(unittest.TestCase):
 
 
 class AnalyzerTestCase(BaseLayerTestCase):
+    """TestCase for analyzers execution
 
+    TestCase that applies the method to several networks and
+    runs the analyzer with random data.
+
+    :param method: A function that returns an Analyzer class.
+    """
     def __init__(self, *args, **kwargs):
         method = kwargs.pop("method", None)
         if method is not None:
@@ -117,6 +116,7 @@ class AnalyzerTestCase(BaseLayerTestCase):
 
 
 def test_analyzer(method, network_filter):
+    """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
     test_case = AnalyzerTestCase(method=method,
@@ -127,6 +127,13 @@ def test_analyzer(method, network_filter):
 
 
 class AnalyzerTrainTestCase(BaseLayerTestCase):
+    """TestCase for analyzers execution
+
+    TestCase that applies the method to several networks and
+    trains and runs the analyzer with random data.
+
+    :param method: A function that returns an Analyzer class.
+    """
 
     def __init__(self, *args, **kwargs):
         method = kwargs.pop("method", None)
@@ -157,6 +164,7 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
 
 
 def test_train_analyzer(method, network_filter):
+    """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
     test_case = AnalyzerTrainTestCase(method=method,
@@ -167,6 +175,15 @@ def test_train_analyzer(method, network_filter):
 
 
 class EqualAnalyzerTestCase(BaseLayerTestCase):
+    """TestCase for analyzers execution
+
+    TestCase that applies two method to several networks and
+    runs the analyzer with random data and checks for equality
+    of the results.
+
+    :param method1: A function that returns an Analyzer class.
+    :param method2: A function that returns an Analyzer class.
+    """
 
     def __init__(self, *args, **kwargs):
         method1 = kwargs.pop("method1", None)
@@ -216,6 +233,7 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
 
 
 def test_equal_analyzer(method1, method2, network_filter):
+    """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
     test_case = EqualAnalyzerTestCase(method1=method1,
@@ -229,6 +247,14 @@ def test_equal_analyzer(method1, method2, network_filter):
 # todo: merge with base test case? if we don't run the analysis
 # its only half the test.
 class SerializeAnalyzerTestCase(BaseLayerTestCase):
+    """TestCase for analyzers serialization
+
+    TestCase that applies the method to several networks and
+    runs the analyzer with random data, serializes it, and
+    runs it again.
+
+    :param method: A function that returns an Analyzer class.
+    """
 
     def __init__(self, *args, **kwargs):
         method = kwargs.pop("method", None)
@@ -260,6 +286,7 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
 
 def test_serialize_analyzer(method, network_filter):
+    """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
     test_case = SerializeAnalyzerTestCase(method=method,
@@ -275,6 +302,10 @@ def test_serialize_analyzer(method, network_filter):
 
 
 class PatternComputerTestCase(BaseLayerTestCase):
+    """TestCase pattern computation
+
+    :param method: A function that returns an PatternComputer class.
+    """
 
     def __init__(self, *args, **kwargs):
         method = kwargs.pop("method", None)
@@ -293,10 +324,11 @@ class PatternComputerTestCase(BaseLayerTestCase):
         computer = self._method(model)
         # Dryrun.
         x = np.random.rand(10, *(network["input_shape"][1:]))
-        patterns = computer.compute(x)
+        computer.compute(x)
 
 
 def test_pattern_computer(method, network_filter):
+    """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
     test_case = PatternComputerTestCase(method=method,

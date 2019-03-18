@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import range, zip
 
 
 ###############################################################################
@@ -18,7 +12,6 @@ import six
 import pytest
 
 
-import keras.backend as K
 from keras.datasets import mnist
 import keras.layers
 import keras.models
@@ -148,8 +141,7 @@ class HaufePatternExample(unittest.TestCase):
             [keras.layers.Dense(1, input_shape=(2,), use_bias=True), ]
         )
         model.compile(optimizer=keras.optimizers.Adam(lr=1), loss="mse")
-        history = model.fit(X, y, epochs=20, verbose=0).history
-        #print(history)
+        model.fit(X, y, epochs=20, verbose=0).history
         self.assertTrue(model.evaluate(X, y, verbose=0) < 0.05)
 
         pc = PatternComputer(model, pattern_type="linear")
@@ -211,13 +203,11 @@ def train_model(model, data, epochs=20):
                   optimizer=keras.optimizers.RMSprop(),
                   metrics=['accuracy'])
 
-    history = model.fit(x_train, y_train,
-                        batch_size=batch_size,
-                        epochs=epochs,
-                        verbose=0)
-    score = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
-    #print('Test loss:', score[0])
-    #print('Test accuracy:', score[1])
+    model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=0)
+    model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
 
 
 def extract_2d_patches(X, conv_layer):
@@ -254,7 +244,7 @@ def extract_2d_patches(X, conv_layer):
 
     if True:
         import tensorflow as tf
-        with tf.Session() as sess:
+        with tf.Session():
             tf_ret = tf.extract_image_patches(
                 images=X_in.transpose((0, 2, 3, 1)),
                 ksizes=[1, kernel_shape[0], kernel_shape[1], 1],

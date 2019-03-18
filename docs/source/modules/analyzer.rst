@@ -30,3 +30,24 @@ Pattern methods
 .. automodule:: innvestigate.analyzer.pattern_based
    :members:
    :undoc-members:
+
+Deep Taylor
+---------------
+
+.. automodule:: innvestigate.analyzer.deeptaylor
+   :members:
+   :undoc-members:
+
+DeepLIFT
+---------------
+
+.. automodule:: innvestigate.analyzer.deeplift
+   :members: DeepLIFTWrapper
+   :undoc-members:
+
+Misc
+---------------
+
+.. automodule:: innvestigate.analyzer.misc
+   :members:
+   :undoc-members:

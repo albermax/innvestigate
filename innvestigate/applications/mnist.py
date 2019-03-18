@@ -7,16 +7,9 @@ and http://jmlr.org/papers/v17/15-618.html.
 """
 # TODO: rename in, sm_out, out to input_tensors, output_tensors,
 # TODO: softmax_output_tenors
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -25,11 +18,9 @@ import six
 
 
 import os
-import keras.backend as K
 import keras.utils.data_utils
 import numpy as np
 
-from ..utils.keras import graph as kgraph
 import keras.models
 from keras.models import load_model, clone_model
 #from keras.utils import get_file

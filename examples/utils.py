@@ -38,6 +38,9 @@ def load_image(path, size):
     ret = PIL.Image.open(path)
     ret = ret.resize((size, size))
     ret = np.asarray(ret, dtype=np.uint8).astype(np.float32)
+    if ret.ndim == 2:
+        ret.resize((size, size, 1))
+        ret = np.repeat(ret, 3, axis=-1)
     return ret
 
 

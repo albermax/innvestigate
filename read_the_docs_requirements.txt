@@ -1,2 +1,3 @@
-# Need tensorflow to be installed otherwise package will not load.
+# Need tensorflow to be installed otherwise Keras package will not load.
 tensorflow
+matplotlib

@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import range
 
 
 ###############################################################################
@@ -15,7 +9,6 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -33,7 +26,18 @@ __all__ = [
 ###############################################################################
 
 
-def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
+def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
+    """Projects a tensor into a value range.
+
+    Projects the tensor values into the specified range.
+
+    :param X: A tensor.
+    :param output_range: The output value range.
+    :param absmax: A tensor specifying the absmax used for normalizing.
+      Default the absmax along the first axis.
+    :param input_is_positive_only: Is the input value range only positive.
+    :return: The tensor with the values project into output range.
+    """
 
     if absmax is None:
         absmax = np.max(np.abs(X),
@@ -44,7 +48,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
     if mask.sum() > 0:
         X[mask] /= absmax[mask]
 
-    if input_is_postive_only is False:
+    if input_is_positive_only is False:
         X = (X+1)/2  # [0, 1]
     X = X.clip(0, 1)
 
@@ -53,6 +57,18 @@ def project(X, output_range=(0, 1), absmax=None, input_is_postive_only=False):
 
 
 def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=False, **kwargs):
+    """Creates a heatmap/color map.
+
+    Create a heatmap or colormap out of the input tensor.
+
+    :param X: A image tensor with 4 axes.
+    :param cmap_type: The color map to use. Default 'seismic'.
+    :param reduce_op: Operation to reduce the color axis.
+      Either 'sum' or 'absmax'.
+    :param reduce_axis: Axis to reduce.
+    :param kwargs: Arguments passed on to :func:`project`
+    :return: The tensor as color-map.
+    """
     cmap = plt.cm.get_cmap(cmap_type)
 
     tmp = X
@@ -83,12 +99,13 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=
 
 
 def graymap(X, **kwargs):
+    """Same as :func:`heatmap` but uses a gray colormap."""
     return heatmap(X, cmap_type="gray", **kwargs)
 
 
-def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
+def gamma(X, gamma=0.5, minamp=0, maxamp=None):
     """
-    apply gamma correction to an input array X
+    Apply gamma correction to an input array X
     while maintaining the relative order of entries,
     also for negative vs positive values in X.
     the fxn firstly determines the max
@@ -99,12 +116,12 @@ def gamma(X, gamma = 0.5, minamp=0, maxamp=None):
 
     :param gamma: the gamma parameter for gamma scaling
     :param minamp: the smallest absolute value to consider.
-    if not given assumed to be zero (neutral value for relevance,
+        if not given assumed to be zero (neutral value for relevance,
         min value for saliency, ...). values above and below
         minamp are treated separately.
     :param maxamp: the largest absolute value to consider relative
-    to the neutral value minamp
-    if not given determined from the given data.
+        to the neutral value minamp
+        if not given determined from the given data.
     """
 
     #prepare return array

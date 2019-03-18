@@ -1,0 +1,6 @@
+Todos:
+
+* Run the tests.
+* Check if docs are compilable:
+  `cd docs; make html`
+* Update release in setup.py and button of README.
