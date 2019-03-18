@@ -56,7 +56,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
     return X
 
 
-def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
+def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=False, **kwargs):
     """Creates a heatmap/color map.
 
     Create a heatmap or colormap out of the input tensor.
@@ -66,6 +66,7 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
     :param reduce_op: Operation to reduce the color axis.
       Either 'sum' or 'absmax'.
     :param reduce_axis: Axis to reduce.
+    :param alpha_cmap: Should the alpha component of the cmap be included.
     :param kwargs: Arguments passed on to :func:`project`
     :return: The tensor as color-map.
     """
@@ -87,11 +88,14 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, **kwargs):
 
     tmp = project(tmp, output_range=(0, 255), **kwargs).astype(np.int64)
 
-    tmp = cmap(tmp.flatten())[:, :3].T
+    if alpha_cmap:
+        tmp = cmap(tmp.flatten()).T
+    else:
+        tmp = cmap(tmp.flatten())[:, :3].T
     tmp = tmp.T
 
     shape = list(shape)
-    shape[reduce_axis] = 3
+    shape[reduce_axis] = 3 + alpha_cmap
     return tmp.reshape(shape).astype(np.float32)
 
 
