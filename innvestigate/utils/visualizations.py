@@ -66,6 +66,7 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=
     :param reduce_op: Operation to reduce the color axis.
       Either 'sum' or 'absmax'.
     :param reduce_axis: Axis to reduce.
+    :param alpha_cmap: Should the alpha component of the cmap be included.
     :param kwargs: Arguments passed on to :func:`project`
     :return: The tensor as color-map.
     """
