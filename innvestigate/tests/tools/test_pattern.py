@@ -210,57 +210,6 @@ def train_model(model, data, epochs=20):
     model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
 
 
-def extract_2d_patches(X, conv_layer):
-
-    X_in = X
-    kernel_shape = conv_layer.kernel_size
-    strides = conv_layer.strides
-    rates = conv_layer.dilation_rate
-    padding = conv_layer.padding
-
-    assert all([x == 1 for x in rates])
-    assert all([x == 3 for x in kernel_shape])
-    assert all([x == 1 for x in strides])
-
-    if padding.lower() == "same":
-        tmp = np.ones(list(X.shape[:2])+[x+3 for x in X.shape[2:]],
-                      dtype=X.dtype)
-        tmp[:, :, 1:-2, 1:-2] = X
-        X = tmp
-
-    out_shape = [int(np.ceil((x-k)/s))
-                 for x, k, s in zip(X.shape[2:], kernel_shape, strides)]
-    n_patches = np.prod(list(X.shape[:2])+out_shape)
-    dimensions = X.shape[1]*kernel_shape[0]*kernel_shape[1]
-    ret = np.empty((n_patches, dimensions), dtype=X.dtype)
-
-    i_ret = 0
-    for j in range(X.shape[2]-kernel_shape[0]):
-        for k in range(X.shape[3]-kernel_shape[1]):
-            patches = X[:, :, j:j+kernel_shape[0], k:k+kernel_shape[1]]
-            patches = patches.reshape((-1, dimensions))
-            ret[i_ret:i_ret+X.shape[0]] = patches
-            i_ret += X.shape[0]
-
-    if True:
-        import tensorflow as tf
-        with tf.Session():
-            tf_ret = tf.extract_image_patches(
-                images=X_in.transpose((0, 2, 3, 1)),
-                ksizes=[1, kernel_shape[0], kernel_shape[1], 1],
-                strides=[1, strides[0], strides[1], 1],
-                rates=[1, rates[0], rates[1], 1],
-                padding=padding.upper()).eval()
-
-        tf_ret = tf_ret.reshape((-1, tf_ret.shape[-1]))
-        #print(tf_ret.shape, ret.shape)
-        assert tf_ret.shape == ret.shape
-        #print(tf_ret.mean(), ret.mean())
-        assert tf_ret.mean() == ret.mean()
-    assert i_ret == n_patches
-    return ret
-
-
 @pytest.mark.fast
 @pytest.mark.precommit
 class MnistPatternExample_dense_linear(unittest.TestCase):
@@ -343,6 +292,57 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
         #print(A.sum(), patterns[0].sum())
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
+
+
+# def extract_2d_patches(X, conv_layer):
+
+#     X_in = X
+#     kernel_shape = conv_layer.kernel_size
+#     strides = conv_layer.strides
+#     rates = conv_layer.dilation_rate
+#     padding = conv_layer.padding
+
+#     assert all([x == 1 for x in rates])
+#     assert all([x == 3 for x in kernel_shape])
+#     assert all([x == 1 for x in strides])
+
+#     if padding.lower() == "same":
+#         tmp = np.ones(list(X.shape[:2])+[x+3 for x in X.shape[2:]],
+#                       dtype=X.dtype)
+#         tmp[:, :, 1:-2, 1:-2] = X
+#         X = tmp
+
+#     out_shape = [int(np.ceil((x-k)/s))
+#                  for x, k, s in zip(X.shape[2:], kernel_shape, strides)]
+#     n_patches = np.prod(list(X.shape[:2])+out_shape)
+#     dimensions = X.shape[1]*kernel_shape[0]*kernel_shape[1]
+#     ret = np.empty((n_patches, dimensions), dtype=X.dtype)
+
+#     i_ret = 0
+#     for j in range(X.shape[2]-kernel_shape[0]):
+#         for k in range(X.shape[3]-kernel_shape[1]):
+#             patches = X[:, :, j:j+kernel_shape[0], k:k+kernel_shape[1]]
+#             patches = patches.reshape((-1, dimensions))
+#             ret[i_ret:i_ret+X.shape[0]] = patches
+#             i_ret += X.shape[0]
+
+#     if True:
+#         import tensorflow as tf
+#         with tf.Session():
+#             tf_ret = tf.extract_image_patches(
+#                 images=X_in.transpose((0, 2, 3, 1)),
+#                 ksizes=[1, kernel_shape[0], kernel_shape[1], 1],
+#                 strides=[1, strides[0], strides[1], 1],
+#                 rates=[1, rates[0], rates[1], 1],
+#                 padding=padding.upper()).eval()
+
+#         tf_ret = tf_ret.reshape((-1, tf_ret.shape[-1]))
+#         #print(tf_ret.shape, ret.shape)
+#         assert tf_ret.shape == ret.shape
+#         #print(tf_ret.mean(), ret.mean())
+#         assert tf_ret.mean() == ret.mean()
+#     assert i_ret == n_patches
+#     return ret
 
 
 # class __disabled__MnistPatternExample_conv_linear(unittest.TestCase):

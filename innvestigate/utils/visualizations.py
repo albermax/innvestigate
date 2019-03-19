@@ -17,7 +17,8 @@ __all__ = [
     "project",
     "heatmap",
     "graymap",
-    "gamma"
+    "gamma",
+    "clip_quantile",
 ]
 
 
@@ -146,7 +147,7 @@ def gamma(X, gamma=0.5, minamp=0, maxamp=None):
 
 
 def clip_quantile(X, quantile=1):
-
+    """Clip the values of X into the given quantile."""
     if not isinstance(quantile, (list, tuple)):
         quantile = (quantile, 100-quantile)
 
@@ -156,10 +157,3 @@ def clip_quantile(X, quantile=1):
     X[X > high] = high
 
     return X
-
-
-def batch_flatten(x):
-    # Flattens all but the first dimensions of a numpy array, i.e. flatten each sample in a batch
-    if not isinstance(x, np.ndarray):
-        raise TypeError("Only applicable to Numpy arrays.")
-    return x.reshape(x.shape[0], -1)

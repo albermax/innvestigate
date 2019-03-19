@@ -22,8 +22,9 @@ import innvestigate.utils as iutils
 ###############################################################################
 
 
+@pytest.mark.fast
 @pytest.mark.precommit
-def test_precommit__PerturbationAnalysis():
+def test_fast__PerturbationAnalysis():
     # Some test data
     if keras.backend.image_data_format() == "channels_first":
         input_shape = (2, 1, 4, 4)
@@ -62,8 +63,9 @@ def test_precommit__PerturbationAnalysis():
     assert np.all(np.isclose(scores, expected_scores))
 
 
+@pytest.mark.fast
 @pytest.mark.precommit
-def test_precommit__Perturbation():
+def test_fast__Perturbation():
     if keras.backend.image_data_format() == "channels_first":
         input_shape = (1, 1, 4, 4)
     else:
