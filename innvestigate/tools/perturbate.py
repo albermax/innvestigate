@@ -36,7 +36,6 @@ class Perturbation:
     def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
                  aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
         if isinstance(perturbation_function, six.string_types):
-            perturbation_function = six.u(perturbation_function)
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
