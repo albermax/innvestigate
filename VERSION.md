@@ -1,3 +1,7 @@
+## Version 1.0.8
+
+Bugfixes, increased code covervage, CI.
+
 ## Version 1.0.7
 
 Add Python 2 compatibility again.

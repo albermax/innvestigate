@@ -6,6 +6,8 @@ import setuptools
 install_requirements = [
     "future",
     "h5py",
+    # This package relies on internal interfaces and conventions of Keras.
+    # To ensure best compatibility we only support one(, the newest) version.
     "keras==2.2.4",
     "numpy",
     "pillow",
@@ -32,21 +34,23 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.7",
-        description=("A toolbox to innvestigate neural networks decisions."),
+        version="1.0.8",
+        description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
         classifiers=[
-            "License :: OSI Approved :: ",
-            "Development Status :: 3 - Alpha",
+            "License :: OSI Approved :: BSD License",
+            "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Science/Research",
             "Operating System :: POSIX :: Linux",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
-        author="Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, and others",
+        author=("Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, " +
+                "Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, " +
+                "and others"),
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="BSD-2",
         packages=setuptools.find_packages(),

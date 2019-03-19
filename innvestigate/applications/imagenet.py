@@ -15,16 +15,10 @@ Function parameters\:
 """
 # todo: rename in, sm_out, out to input_tensors, output_tensors,
 # todo: softmax_output_tenors
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import range
 
 
 ###############################################################################
@@ -40,7 +34,6 @@ import keras.applications.inception_v3
 import keras.applications.inception_resnet_v2
 import keras.applications.densenet
 import keras.applications.nasnet
-import keras.backend as K
 import keras.utils.data_utils
 import numpy as np
 import warnings

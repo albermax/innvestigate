@@ -1,13 +1,6 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -36,6 +29,13 @@ __all__ = [
 
 
 class DeepTaylor(base.ReverseAnalyzerBase):
+    """DeepTaylor for ReLU-networks with unbounded input
+
+    This class implements the DeepTaylor algorithm for neural networks with
+    ReLU activation and unbounded input ranges.
+
+    :param model: A Keras model.
+    """
 
     def __init__(self, model, *args, **kwargs):
 
@@ -155,12 +155,12 @@ class DeepTaylor(base.ReverseAnalyzerBase):
 
 
 class BoundedDeepTaylor(DeepTaylor):
-    """
+    """DeepTaylor for ReLU-networks with bounded input
+
     This class implements the DeepTaylor algorithm for neural networks with
     ReLU activation and bounded input ranges.
 
-    Currently no batch-norm layers are supported.
-
+    :param model: A Keras model.
     :param low: Lowest value of the input range. See Z_B rule.
     :param high: Highest value of the input range. See Z_B rule.
     """

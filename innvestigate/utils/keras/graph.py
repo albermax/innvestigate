@@ -1,13 +1,8 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import range, zip
 import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -23,7 +18,6 @@ import keras.models
 import numpy as np
 
 
-from .. import keras as kutils
 from . import checks as kchecks
 from ... import layers as ilayers
 from ... import utils as iutils
@@ -62,12 +56,14 @@ __all__ = [
 
 
 def get_kernel(layer):
+    """Returns the kernel weights of a layer, i.e, w/o biases."""
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
     return ret[0]
 
 
 def get_input_layers(layer):
+    """Returns all layers that created this layer's inputs."""
     ret = set()
 
     for node_index in range(len(layer._inbound_nodes)):
@@ -84,10 +80,12 @@ def get_input_layers(layer):
 
 
 def get_layer_inbound_count(layer):
+    """Returns the number inbound nodes of a layer."""
     return len(layer._inbound_nodes)
 
 
 def get_layer_outbound_count(layer):
+    """Returns the number outbound nodes of a layer."""
     return len(layer.outbound_nodes)
 
 
@@ -97,6 +95,24 @@ def get_layer_neuronwise_io(layer,
                             Ys=None,
                             return_i=True,
                             return_o=True):
+    """Returns the input and output for each neuron in a layer
+
+    Returns the symbolic input and output for each neuron in a layer.
+    For a dense layer this is the input output itself.
+    For convolutional layers this method extracts for each neuron
+    the input output mapping.
+
+    At the moment this function is designed
+    to work with dense and conv2d layers.
+
+    :param layer: The targeted layer.
+    :param node_index: Index of the layer node to use.
+    :param Xs: Ignore the layer's input but use Xs instead.
+    :param Ys: Ignore the layer's output but use Ys instead.
+    :param return_i: Return the inputs.
+    :param return_o: Return the outputs.
+    :return: Inputs and outputs, if specified, for each individual neuron.
+    """
     if not kchecks.contains_kernel(layer):
         raise NotImplementedError()
 
@@ -154,7 +170,14 @@ def get_layer_neuronwise_io(layer,
 
 
 def get_symbolic_weight_names(layer, weights=None):
-    #TODO: documentate.
+    """Attribute names for weights
+
+    Looks up the attribute names of weight tensors.
+
+    :param layer: Targeted layer.
+    :param weights: A list of weight tensors.
+    :return: The attribute names of the weights.
+    """
 
     if weights is None:
         weights = layer.weights
@@ -184,11 +207,17 @@ def get_symbolic_weight_names(layer, weights=None):
 
 
 def update_symbolic_weights(layer, weight_mapping):
-    """
+    """Updates the symbolic tensors of a layer
+
+    Updates the symbolic tensors of a layer by replacing them.
+
     Note this does not update the loss or anything alike!
     Use with caution!
+
+    :param layer: Targeted layer.
+    :param weight_mapping: Dict with attribute name and weight tensors
+      as keys and values.
     """
-    #TODO: documentate.
 
     trainable_weight_ids = [id(x) for x in layer._trainable_weights]
     non_trainable_weight_ids = [id(x) for x in layer._non_trainable_weights]
@@ -211,6 +240,20 @@ def get_layer_from_config(old_layer,
                           new_config,
                           weights=None,
                           reuse_symbolic_tensors=True):
+    """Creates a new layer from a config
+
+    Creates a new layer given a changed config and weights etc.
+
+    :param old_layer: A layer that shall be used as base.
+    :param new_config: The config to create the new layer.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     new_layer = old_layer.__class__.from_config(new_config)
 
     if weights is None:
@@ -246,6 +289,20 @@ def copy_layer_wo_activation(layer,
                              weights=None,
                              reuse_symbolic_tensors=True,
                              **kwargs):
+    """Copy a Keras layer and remove the activations
+
+    Copies a Keras layer but remove potential activations.
+
+    :param layer: A layer that should be copied.
+    :param keep_bias: Keep a potential bias.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     config = layer.get_config()
     if name_template is None:
         config["name"] = None
@@ -269,7 +326,20 @@ def copy_layer(layer,
                weights=None,
                reuse_symbolic_tensors=True,
                **kwargs):
+    """Copy a Keras layer
 
+    Copies a Keras layer.
+
+    :param layer: A layer that should be copied.
+    :param keep_bias: Keep a potential bias.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     config = layer.get_config()
     if name_template is None:
         config["name"] = None
@@ -286,6 +356,7 @@ def copy_layer(layer,
 
 
 def pre_softmax_tensors(Xs, should_find_softmax=True):
+    """Finds the tensors that were preceeding a potential softmax."""
     softmax_found = False
 
     Xs = iutils.to_list(Xs)
@@ -307,6 +378,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 
 def model_wo_softmax(model):
+    """Creates a new model w/o the final softmax activation."""
     return keras.models.Model(inputs=model.inputs,
                               outputs=pre_softmax_tensors(model.outputs),
                               name=model.name)
@@ -318,6 +390,7 @@ def model_wo_softmax(model):
 
 
 def get_model_layers(model):
+    """Returns all layers of a model."""
     ret = []
 
     def collect_layers(container):
@@ -486,6 +559,27 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 def get_model_execution_trace(model,
                               keep_input_layers=False,
                               reapply_on_copied_layers=False):
+    """
+    Returns a list representing the execution graph.
+    Each key is the node's id as it is used by the reverse_model method.
+
+    Each associated value contains a dictionary with the following items:
+
+    * nid: the node id.
+    * layer: the layer creating this node.
+    * Xs: the input tensors (only valid if not in a nested container).
+    * Ys: the output tensors (only valid if not in a nested container).
+    * Xs_nids: the ids of the nodes creating the Xs.
+    * Ys_nids: the ids of nodes using the according output tensor.
+    * Xs_layers: the layer that created the accodring input tensor.
+    * Ys_layers: the layers using the according output tensor.
+
+    :param model: A kera model.
+    :param keep_input_layers: Keep input layers.
+    :param reapply_on_copied_layers: If the execution needs to be linearized,
+      reapply with copied layers. Might be slow. Prevents changes of the
+      original layer's node lists.
+    """
     _, execution_trace, _ = trace_model_execution(
         model,
         reapply_on_copied_layers=reapply_on_copied_layers)
@@ -579,6 +673,9 @@ def get_model_execution_graph(model, keep_input_layers=False):
     * Ys_nids: the ids of nodes using the according output tensor.
     * Xs_layers: the layer that created the accodring input tensor.
     * Ys_layers: the layers using the according output tensor.
+
+    :param model: A kera model.
+    :param keep_input_layers: Keep input layers.
     """
     trace = get_model_execution_trace(model,
                                       keep_input_layers=keep_input_layers,
@@ -593,6 +690,7 @@ def get_model_execution_graph(model, keep_input_layers=False):
 
 
 def print_model_execution_graph(graph):
+    """Pretty print of a model execution graph."""
 
     def nids_as_str(nids):
         return ", ".join(["%s" % nid for nid in nids])

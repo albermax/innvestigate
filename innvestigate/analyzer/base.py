@@ -1,14 +1,8 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import zip
 import six
-# End: Python 2/3 compatability header small
-
 
 ###############################################################################
 ###############################################################################
@@ -458,7 +452,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model input tensor. Tensors present in stop_analysis_at_tensors
             should be omitted.
           * The second list, if present, is a list of debug tensors that will
-            be passed to :function:`_handle_debug_output` after the analysis
+            be passed to :func:`_handle_debug_output` after the analysis
             is executed.
           * The third list, if present, is a list of constant input tensors
             added to the analysis model.
@@ -545,8 +539,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       This function can be implemented, but it is encouraged to
       implement a default mapping and add additional changes with
       the function :func:`_add_conditional_reverse_mapping` (see below).
-      * The default behavior is find a conditional mapping (see below),
-        if none is found, :func:`_default_reverse_mapping` is applied.
+
+      The default behavior is finding a conditional mapping (see below),
+      if none is found, :func:`_default_reverse_mapping` is applied.
     * :func:`_default_reverse_mapping` defines the default
       reverse mapping.
     * :func:`_head_mapping` defines how the outputs of the model

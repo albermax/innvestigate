@@ -1,20 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import \
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import range
 import six
-# End: Python 2/3 compatability header small
 
 import numpy as np
-import math
 import warnings
 import time
 
-import keras
 import keras.backend as K
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
@@ -42,7 +35,7 @@ class Perturbation:
 
     def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
                  aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
-        if isinstance(perturbation_function, str):
+        if isinstance(perturbation_function, six.string_types):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like

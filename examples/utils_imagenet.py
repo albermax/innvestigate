@@ -29,7 +29,7 @@ def bk_proj(X):
 
 
 def heatmap(X):
-    X = ivis.gamma(X, minamp=0, gamma=0.95)
+    #X = ivis.gamma(X, minamp=0, gamma=0.95)
     return ivis.heatmap(X)
 
 

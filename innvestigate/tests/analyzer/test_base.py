@@ -1,13 +1,6 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import \
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -15,7 +8,6 @@ import six
 ###############################################################################
 
 
-import numpy as np
 import pytest
 
 
@@ -57,6 +49,41 @@ def test_precommit__BasicGraphReversal():
     dryrun.test_equal_analyzer(method1,
                                method2,
                                "mnist.*")
+
+
+# @pytest.mark.fast
+# @pytest.mark.precommit
+# def test_fast__ContainerGraphReversal():
+
+#     def method1(model):
+#         return Gradient(model)
+
+#     def method2(model):
+#         Create container execution
+#         model = keras.models.Model(inputs=model.inputs,
+#                                    outputs=model(model.inputs))
+#         return Gradient(model)
+
+#     dryrun.test_equal_analyzer(method1,
+#                                method2,
+#                                "trivia.*:mnist.log_reg")
+
+
+# @pytest.mark.precommit
+# def test_precommit__ContainerGraphReversal():
+
+#     def method1(model):
+#         return Gradient(model)
+
+#     def method2(model):
+#         Create container execution
+#         model = keras.models.Model(inputs=model.inputs,
+#                                    outputs=model(model.inputs))
+#         return Gradient(model)
+
+#     dryrun.test_equal_analyzer(method1,
+#                                method2,
+#                                "mnist.*")
 
 
 ###############################################################################

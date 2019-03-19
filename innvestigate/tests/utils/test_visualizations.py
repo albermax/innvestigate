@@ -8,10 +8,10 @@ from __future__ import\
 ###############################################################################
 
 
+import numpy as np
 import pytest
 
-
-from innvestigate.utils.tests import dryrun
+import innvestigate.utils.visualizations as ivis
 
 
 ###############################################################################
@@ -21,17 +21,12 @@ from innvestigate.utils.tests import dryrun
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__DryRunAnalyzerTestCase():
-    """
-    Sanity test for the TestCase.
-    """
+def test_fast__visualizations():
+    def get_X():
+        return np.random.rand(1, 28, 28, 3)
 
-    def method(output_layer):
-
-        class TestAnalyzer(object):
-            def analyze(self, X):
-                return X
-
-        return TestAnalyzer()
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    ivis.project(get_X())
+    ivis.heatmap(get_X())
+    ivis.graymap(get_X())
+    ivis.gamma(get_X())
+    ivis.clip_quantile(get_X(), 0.95)
