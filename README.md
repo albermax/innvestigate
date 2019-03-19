@@ -4,6 +4,8 @@
 [![GitHub package version](https://img.shields.io/badge/Version-v1.0.6-green.svg)](https://github.com/albermax/innvestigate)
 [![Keras package version](https://img.shields.io/badge/KerasVersion-v2.2.4-green.svg)](https://github.com/albermax/innvestigate)
 [![License: BSD-2](https://img.shields.io/badge/License-BSD--2-blue.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/albermax/innvestigate.svg?branch=master)](https://travis-ci.org/albermax/innvestigate)
+[![Dev-Build Status](https://travis-ci.org/albermax/innvestigate.svg?branch=develop)](https://travis-ci.org/albermax/innvestigate)))]]
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 
