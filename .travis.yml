@@ -9,6 +9,7 @@ install:
   - python setup.py install
   - pip install tensorflow
   - pip install pytest-cov
+  - pip install matplotlib
 script: pytest --cov-report term --cov=innvestigate
 after_success:
     - codecov
