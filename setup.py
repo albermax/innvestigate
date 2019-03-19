@@ -34,8 +34,8 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.7",
-        description=("A toolbox to innvestigate neural networks decisions."),
+        version="1.0.8",
+        description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
         classifiers=[
             "License :: OSI Approved :: BSD License",
