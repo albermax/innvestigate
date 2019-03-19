@@ -1,7 +1,7 @@
 # [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
 
 
-[![GitHub package version](https://img.shields.io/badge/Version-v1.0.6-green.svg)](https://github.com/albermax/innvestigate)
+[![GitHub package version](https://img.shields.io/badge/Version-v1.0.8-green.svg)](https://github.com/albermax/innvestigate)
 [![Keras package version](https://img.shields.io/badge/KerasVersion-v2.2.4-green.svg)](https://github.com/albermax/innvestigate)
 [![License: BSD-2](https://img.shields.io/badge/License-BSD--2-blue.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/albermax/innvestigate.svg?branch=master)](https://travis-ci.org/albermax/innvestigate)
