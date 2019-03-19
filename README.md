@@ -39,7 +39,7 @@ The library is based on Keras and therefore requires a supported [Keras-backend]
 o(Currently only the Tensorflow backend is supported. We test with Python 3.6, Tensorflow 1.12 and Cuda 9.x.):
 
 ```bash
-pip install git+https://github.com/albermax/innvestigate
+pip install innvestigate
 # Installing Keras backend
 pip install [tensorflow | theano | cntk]
 ```
