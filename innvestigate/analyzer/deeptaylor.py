@@ -15,6 +15,7 @@ import keras.models
 from . import base
 from .relevance_based import relevance_rule as lrp_rules
 from ..utils.keras import checks as kchecks
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -56,7 +57,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         self._add_conditional_reverse_mapping(
             lambda l: (kchecks.contains_kernel(l) and
                        kchecks.contains_activation(l)),
-            lrp_rules.Alpha1Beta0Rule,
+            lrp_rules.Alpha1Beta0IgnoreBiasRule,
             name="deep_taylor_kernel_w_relu",
         )
         self._add_conditional_reverse_mapping(
@@ -74,12 +75,17 @@ class DeepTaylor(base.ReverseAnalyzerBase):
             name="deep_taylor_relu",
         )
 
-        # Special layers.
+        # Assume conv layer beforehand -> unbounded
+        bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
+            lrp_rules.WSquareRule,
+            fuse_mode="one_linear",
+        )
         self._add_conditional_reverse_mapping(
             kchecks.is_batch_normalization_layer,
-            do_nothing,
+            bn_mapping,
             name="deep_taylor_batch_norm",
         )
+        # Special layers.
         self._add_conditional_reverse_mapping(
             kchecks.is_max_pooling,
             self._gradient_reverse_mapping,
