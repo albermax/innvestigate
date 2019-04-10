@@ -654,6 +654,7 @@ class LRPAlphaBeta(LRP):
         state["rule"] = None
         kwargs = super(LRPAlphaBeta, clazz)._state_to_kwargs(state)
         del kwargs["rule"]
+        del kwargs["bn_layer_rule"]
         kwargs.update({"alpha": alpha,
                        "beta": beta,
                        "bias": bias})
