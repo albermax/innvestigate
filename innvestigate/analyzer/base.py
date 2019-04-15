@@ -153,78 +153,6 @@ class AnalyzerBase(object):
         """
         raise NotImplementedError()
 
-    def _get_state(self):
-        state = {
-            "model_json": self._model.to_json(),
-            "model_weights": self._model.get_weights(),
-            "disable_model_checks": self._disable_model_checks,
-        }
-        return state
-
-    def save(self):
-        """
-        Save state of analyzer, can be passed to :func:`Analyzer.load`
-        to resemble the analyzer.
-
-        :return: The class name and the state.
-        """
-        state = self._get_state()
-        class_name = self.__class__.__name__
-        return class_name, state
-
-    def save_npz(self, fname):
-        """
-        Save state of analyzer, can be passed to :func:`Analyzer.load_npz`
-        to resemble the analyzer.
-
-        :param fname: The file's name.
-        """
-        class_name, state = self.save()
-        np.savez(fname, **{"class_name": class_name,
-                           "state": state})
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        model_json = state.pop("model_json")
-        model_weights = state.pop("model_weights")
-        disable_model_checks = state.pop("disable_model_checks")
-        assert len(state) == 0
-
-        model = keras.models.model_from_json(model_json)
-        model.set_weights(model_weights)
-        return {"model": model,
-                "disable_model_checks": disable_model_checks}
-
-    @staticmethod
-    def load(class_name, state):
-        """
-        Resembles an analyzer from the state created by
-        :func:`analyzer.save()`.
-
-        :param class_name: The analyzer's class name.
-        :param state: The analyzer's state.
-        """
-        # Todo:do in a smarter way!
-        import innvestigate.analyzer
-        clazz = getattr(innvestigate.analyzer, class_name)
-
-        kwargs = clazz._state_to_kwargs(state)
-        return clazz(**kwargs)
-
-    @staticmethod
-    def load_npz(fname):
-        """
-        Resembles an analyzer from the file created by
-        :func:`analyzer.save_npz()`.
-
-        :param fname: The file's name.
-        """
-        f = np.load(fname)
-
-        class_name = f["class_name"].item()
-        state = f["state"].item()
-        return AnalyzerBase.load(class_name, state)
-
 
 ###############################################################################
 ###############################################################################
@@ -505,23 +433,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
             ret = ret[0]
         return ret
 
-    def _get_state(self):
-        state = super(AnalyzerNetworkBase, self)._get_state()
-        state.update({"neuron_selection_mode": self._neuron_selection_mode})
-        state.update({"allow_lambda_layers": self._allow_lambda_layers})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        neuron_selection_mode = state.pop("neuron_selection_mode")
-        allow_lambda_layers = state.pop("allow_lambda_layers")
-        kwargs = super(AnalyzerNetworkBase, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "neuron_selection_mode": neuron_selection_mode,
-            "allow_lambda_layers": allow_lambda_layers
-        })
-        return kwargs
-
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
@@ -787,42 +698,3 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             tmp = sorted([(self._reverse_tensors_mapping[i], v)
                           for i, v in enumerate(tmp)])
             self._reversed_tensors = tmp
-
-    def _get_state(self):
-        state = super(ReverseAnalyzerBase, self)._get_state()
-        state.update({"reverse_verbose": self._reverse_verbose})
-        state.update({"reverse_clip_values": self._reverse_clip_values})
-        state.update({"reverse_project_bottleneck_layers":
-                      self._reverse_project_bottleneck_layers})
-        state.update({"reverse_check_min_max_values":
-                      self._reverse_check_min_max_values})
-        state.update({"reverse_check_finite": self._reverse_check_finite})
-        state.update({"reverse_keep_tensors": self._reverse_keep_tensors})
-        state.update({"reverse_reapply_on_copied_layers":
-                      self._reverse_reapply_on_copied_layers})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        reverse_verbose = state.pop("reverse_verbose")
-        reverse_clip_values = state.pop("reverse_clip_values")
-        reverse_project_bottleneck_layers = (
-            state.pop("reverse_project_bottleneck_layers"))
-        reverse_check_min_max_values = (
-            state.pop("reverse_check_min_max_values"))
-        reverse_check_finite = state.pop("reverse_check_finite")
-        reverse_keep_tensors = state.pop("reverse_keep_tensors")
-        reverse_reapply_on_copied_layers = (
-            state.pop("reverse_reapply_on_copied_layers"))
-        kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
-        kwargs.update({"reverse_verbose": reverse_verbose,
-                       "reverse_clip_values": reverse_clip_values,
-                       "reverse_project_bottleneck_layers":
-                       reverse_project_bottleneck_layers,
-                       "reverse_check_min_max_values":
-                       reverse_check_min_max_values,
-                       "reverse_check_finite": reverse_check_finite,
-                       "reverse_keep_tensors": reverse_keep_tensors,
-                       "reverse_reapply_on_copied_layers":
-                       reverse_reapply_on_copied_layers})
-        return kwargs

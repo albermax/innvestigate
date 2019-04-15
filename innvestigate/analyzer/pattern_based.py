@@ -233,21 +233,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             use_multiprocessing=use_multiprocessing,
             verbose=verbose)
 
-    def _get_state(self):
-        state = super(PatternNet, self)._get_state()
-        state.update({"patterns": self._patterns,
-                      "pattern_type": self._pattern_type})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        patterns = state.pop("patterns")
-        pattern_type = state.pop("pattern_type")
-        kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
-        kwargs.update({"patterns": patterns,
-                       "pattern_type": pattern_type})
-        return kwargs
-
 
 class PatternAttribution(PatternNet):
     """PatternAttribution analyzer.

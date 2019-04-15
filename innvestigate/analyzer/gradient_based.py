@@ -74,20 +74,6 @@ class BaselineGradient(base.AnalyzerNetworkBase):
 
         return iutils.to_list(ret)
 
-    def _get_state(self):
-        state = super(BaselineGradient, self)._get_state()
-        state.update({"postprocess": self._postprocess})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("postprocess")
-        kwargs = super(BaselineGradient, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "postprocess": postprocess,
-        })
-        return kwargs
-
 
 class Gradient(base.ReverseAnalyzerBase):
     """Gradient analyzer.
@@ -121,20 +107,6 @@ class Gradient(base.ReverseAnalyzerBase):
             ret = ilayers.Square()(ret)
 
         return iutils.to_list(ret)
-
-    def _get_state(self):
-        state = super(Gradient, self)._get_state()
-        state.update({"postprocess": self._postprocess})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("postprocess")
-        kwargs = super(Gradient, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "postprocess": postprocess,
-        })
-        return kwargs
 
 
 ###############################################################################

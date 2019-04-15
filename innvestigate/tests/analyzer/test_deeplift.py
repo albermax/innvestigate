@@ -212,30 +212,3 @@ def test_imagenet__DeepLIFTWrapper():
         return DeepLIFTWrapper(model)
 
     dryrun.test_analyzer(method, "imagenet.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__DeepLIFT_serialize():
-
-    def method(model):
-        return DeepLIFT(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__DeepLIFTWrapper_serialize():
-
-    def method(model):
-        return DeepLIFTWrapper(model)
-
-    with pytest.raises(AssertionError):
-        # Issue in deeplift.
-        dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

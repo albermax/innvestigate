@@ -495,32 +495,6 @@ class LRP(base.ReverseAnalyzerBase):
             return self._gradient_reverse_mapping(
                 Xs, Ys, reversed_Ys, reverse_state)
 
-    ########################################
-    ### End of Rule Selection Business. ####
-    ########################################
-
-
-    def _get_state(self):
-        state = super(LRP, self)._get_state()
-        state.update({"rule": self._rule})
-        state.update({"input_layer_rule": self._input_layer_rule})
-        state.update({"bn_layer_rule": self._bn_layer_rule})
-        state.update({"bn_layer_fuse_mode": self._bn_layer_fuse_mode})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        rule = state.pop("rule")
-        input_layer_rule = state.pop("input_layer_rule")
-        bn_layer_rule = state.pop("bn_layer_rule")
-        bn_layer_fuse_mode = state.pop("bn_layer_fuse_mode")
-        kwargs = super(LRP, clazz)._state_to_kwargs(state)
-        kwargs.update({"rule": rule,
-                       "input_layer_rule": input_layer_rule,
-                       "bn_layer_rule": bn_layer_rule,
-                       "bn_layer_fuse_mode": bn_layer_fuse_mode})
-        return kwargs
-
 
 ###############################################################################
 # ANALYZER CLASSES AND PRESETS ################################################
@@ -528,14 +502,7 @@ class LRP(base.ReverseAnalyzerBase):
 
 
 class _LRPFixedParams(LRP):
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPFixedParams, clazz)._state_to_kwargs(state)
-        del kwargs["rule"]
-        del kwargs["bn_layer_rule"]
-        return kwargs
-
+    pass
 
 class LRPZ(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Z rule"""
@@ -638,42 +605,8 @@ class LRPAlphaBeta(LRP):
                                            bn_layer_rule=AlphaBetaProxyRule,
                                            **kwargs)
 
-    def _get_state(self):
-        state = super(LRPAlphaBeta, self)._get_state()
-        del state["rule"]
-        state.update({"alpha": self._alpha})
-        state.update({"beta": self._beta})
-        state.update({"bias": self._bias})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        alpha = state.pop("alpha")
-        beta = state.pop("beta")
-        bias = state.pop("bias")
-        state["rule"] = None
-        kwargs = super(LRPAlphaBeta, clazz)._state_to_kwargs(state)
-        del kwargs["rule"]
-        del kwargs["bn_layer_rule"]
-        kwargs.update({"alpha": alpha,
-                       "beta": beta,
-                       "bias": bias})
-        return kwargs
-
-
-
-
-
-
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPAlphaBetaFixedParams, clazz)._state_to_kwargs(state)
-        del kwargs["alpha"]
-        del kwargs["beta"]
-        del kwargs["bias"]
-        return kwargs
+    pass
 
 
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):

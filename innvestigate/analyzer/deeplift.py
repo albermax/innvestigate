@@ -238,21 +238,6 @@ class DeepLIFT(base.ReverseAnalyzerBase):
             return_all_reversed_tensors=return_all_reversed_tensors,
             execution_trace=self._model_execution_trace)
 
-    def _get_state(self):
-        state = super(DeepLIFT, self)._get_state()
-        state.update({"reference_inputs": self._reference_inputs})
-        state.update({"approximate_gradient": self._approximate_gradient})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        reference_inputs = state.pop("reference_inputs")
-        approximate_gradient = state.pop("approximate_gradient")
-        kwargs = super(DeepLIFT, clazz)._state_to_kwargs(state)
-        kwargs.update({"reference_inputs": reference_inputs})
-        kwargs.update({"approximate_gradient": approximate_gradient})
-        return kwargs
-
 
 ###############################################################################
 ###############################################################################
@@ -381,23 +366,3 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         if isinstance(ret, list) and len(ret) == 1:
             ret = ret[0]
         return ret
-
-    def _get_state(self):
-        state = super(DeepLIFTWrapper, self)._get_state()
-        state.update({"nonlinear_mode": self._nonlinear_mode})
-        state.update({"reference_inputs": self._reference_inputs})
-        state.update({"verbose": self._verbose})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        nonlinear_mode = state.pop("nonlinear_mode")
-        reference_inputs = state.pop("reference_inputs")
-        verbose = state.pop("verbose")
-        kwargs = super(DeepLIFTWrapper, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "nonlinear_mode": nonlinear_mode,
-            "reference_inputs": reference_inputs,
-            "verbose": verbose,
-        })
-        return kwargs

@@ -244,58 +244,6 @@ def test_equal_analyzer(method1, method2, network_filter):
     assert len(test_result.failures) == 0
 
 
-# todo: merge with base test case? if we don't run the analysis
-# its only half the test.
-class SerializeAnalyzerTestCase(BaseLayerTestCase):
-    """TestCase for analyzers serialization
-
-    TestCase that applies the method to several networks and
-    runs the analyzer with random data, serializes it, and
-    runs it again.
-
-    :param method: A function that returns an Analyzer class.
-    """
-
-    def __init__(self, *args, **kwargs):
-        method = kwargs.pop("method", None)
-        if method is not None:
-            self._method = method
-        super(SerializeAnalyzerTestCase, self).__init__(*args, **kwargs)
-
-    def _method(self, model):
-        raise NotImplementedError("Set in subclass.")
-
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
-        # Get analyzer.
-        analyzer = self._method(model)
-        # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:]))
-
-        class_name, state = analyzer.save()
-        new_analyzer = AnalyzerBase.load(class_name, state)
-
-        analysis = new_analyzer.analyze(x)
-        self.assertEqual(tuple(analysis.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
-        self.assertFalse(np.any(np.isinf(analysis.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis.ravel())))
-
-
-def test_serialize_analyzer(method, network_filter):
-    """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
-    test_case = SerializeAnalyzerTestCase(method=method,
-                                          network_filter=network_filter)
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################

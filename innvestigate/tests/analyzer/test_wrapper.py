@@ -45,16 +45,6 @@ def test_precommit__WrapperBase():
     dryrun.test_analyzer(method, "mnist.*")
 
 
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeWrapperBase():
-
-    def method(model):
-        return WrapperBase(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -77,16 +67,6 @@ def test_precommit__AugmentReduceBase():
         return AugmentReduceBase(Gradient(model))
 
     dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeAugmentReduceBase():
-
-    def method(model):
-        return AugmentReduceBase(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
 
 
 ###############################################################################
@@ -113,16 +93,6 @@ def test_precommit__GaussianSmoother():
     dryrun.test_analyzer(method, "mnist.*")
 
 
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeGaussianSmoother():
-
-    def method(model):
-        return GaussianSmoother(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -145,13 +115,3 @@ def test_precommit__PathIntegrator():
         return PathIntegrator(Gradient(model))
 
     dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializePathIntegrator():
-
-    def method(model):
-        return PathIntegrator(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

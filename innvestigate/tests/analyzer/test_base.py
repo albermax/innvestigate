@@ -203,29 +203,3 @@ def test_precommit__BaseReverseNetwork_reverse_check_finite():
         return Gradient(model, reverse_verbose=True, reverse_check_finite=True)
 
     dryrun.test_analyzer(method, "mnist.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeAnalyzerBase():
-
-    def method(model):
-        return BaselineGradient(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeReverseAnalyzerkBase():
-
-    def method(model):
-        return Gradient(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
- 

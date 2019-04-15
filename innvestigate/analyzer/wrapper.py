@@ -51,24 +51,6 @@ class WrapperBase(base.AnalyzerBase):
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
 
-    def _get_state(self):
-        sa_class_name, sa_state = self._subanalyzer.save()
-
-        state = {}
-        state.update({"subanalyzer_class_name": sa_class_name})
-        state.update({"subanalyzer_state": sa_state})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        sa_class_name = state.pop("subanalyzer_class_name")
-        sa_state = state.pop("subanalyzer_state")
-        assert len(state) == 0
-
-        subanalyzer = base.AnalyzerBase.load(sa_class_name, sa_state)
-        kwargs = {"subanalyzer": subanalyzer}
-        return kwargs
-
 
 ###############################################################################
 ###############################################################################
@@ -179,23 +161,6 @@ class AugmentReduceBase(WrapperBase):
 
         return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
 
-    def _get_state(self):
-        if self._neuron_selection_mode != "all":
-            # TODO: this is not transparent, find a better way.
-            # revert the tempering in __init__
-            tmp = self._neuron_selection_mode
-            self._subanalyzer._neuron_selection_mode = tmp
-        state = super(AugmentReduceBase, self)._get_state()
-        state.update({"augment_by_n": self._augment_by_n})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        augment_by_n = state.pop("augment_by_n")
-        kwargs = super(AugmentReduceBase, clazz)._state_to_kwargs(state)
-        kwargs.update({"augment_by_n": augment_by_n})
-        return kwargs
-
 
 ###############################################################################
 ###############################################################################
@@ -222,18 +187,6 @@ class GaussianSmoother(AugmentReduceBase):
         tmp = super(GaussianSmoother, self)._augment(X)
         noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
         return [noise(x) for x in tmp]
-
-    def _get_state(self):
-        state = super(GaussianSmoother, self)._get_state()
-        state.update({"noise_scale": self._noise_scale})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        noise_scale = state.pop("noise_scale")
-        kwargs = super(GaussianSmoother, clazz)._state_to_kwargs(state)
-        kwargs.update({"noise_scale": noise_scale})
-        return kwargs
 
 
 ###############################################################################
@@ -315,18 +268,3 @@ class PathIntegrator(AugmentReduceBase):
 
         return [keras.layers.Multiply()([x, d])
                 for x, d in zip(tmp, difference)]
-
-    def _get_state(self):
-        state = super(PathIntegrator, self)._get_state()
-        state.update({"reference_inputs": self._reference_inputs})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        reference_inputs = state.pop("reference_inputs")
-        kwargs = super(PathIntegrator, clazz)._state_to_kwargs(state)
-        kwargs.update({"reference_inputs": reference_inputs})
-        # We use steps instead.
-        kwargs.update({"steps": kwargs["augment_by_n"]})
-        del kwargs["augment_by_n"]
-        return kwargs

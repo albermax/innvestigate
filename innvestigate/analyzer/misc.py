@@ -54,15 +54,3 @@ class Random(AnalyzerNetworkBase):
         tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
                               if x not in stop_analysis_at_tensors]
         return [noise(x) for x in tensors_to_analyze]
-
-    def _get_state(self):
-        state = super(Random, self)._get_state()
-        state.update({"stddev": self._stddev})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        stddev = state.pop("stddev")
-        kwargs = super(Random, clazz)._state_to_kwargs(state)
-        kwargs.update({"stddev": stddev})
-        return kwargs

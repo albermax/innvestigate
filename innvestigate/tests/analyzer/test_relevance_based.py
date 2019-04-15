@@ -215,28 +215,3 @@ def test_fast__LRPAlpha1Beta0IgnoreBias():
         return LRPAlpha1Beta0IgnoreBias(model)
 
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeLRPZ():
-
-    def method(model):
-        return LRPZ(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeLRPAlpha2Beta1():
-
-    def method(model):
-        return LRPAlpha2Beta1(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
