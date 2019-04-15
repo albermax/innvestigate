@@ -127,8 +127,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
       :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
       to be called.
     :param allow_lambda_layers: Approximate lambda layers with the gradient.
-    :param reverse_project_bottleneck_layers: Project the analysis vector into
-      range [-1, +1]. (default: True)
     """
 
     def __init__(self,
@@ -163,16 +161,6 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             # copy pattern references
             self._patterns = list(patterns)
         self._pattern_type = pattern_type
-
-        # Pattern projections can lead to +-inf value with long networks.
-        # We are only interested in the direction, therefore it is save to
-        # Prevent this by projecting the values in bottleneck layers to +-1.
-        if not kwargs.get("reverse_project_bottleneck_layers", True):
-            warnings.warn("The standard setting for "
-                          "'reverse_project_bottleneck_layers' "
-                          "is overwritten.")
-        else:
-            kwargs["reverse_project_bottleneck_layers"] = True
 
         super(PatternNet, self).__init__(model, **kwargs)
 
@@ -244,8 +232,6 @@ class PatternAttribution(PatternNet):
       :class:`innvestigate.tools.PatternComputer`. If None :func:`fit` needs
       to be called.
     :param allow_lambda_layers: Approximate lambda layers with the gradient.
-    :param reverse_project_bottleneck_layers: Project the analysis vector into
-      range [-1, +1]. (default: True)
     """
 
     def _prepare_pattern(self, layer, state, pattern):
