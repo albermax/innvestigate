@@ -8,7 +8,6 @@ from __future__ import\
 ###############################################################################
 
 from .base import NotAnalyzeableModelException
-from .deeplift import DeepLIFT
 from .deeplift import DeepLIFTWrapper
 from .gradient_based import BaselineGradient
 from .gradient_based import Gradient
@@ -50,7 +49,6 @@ from .wrapper import PathIntegrator
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
-assert DeepLIFT
 assert BaselineLRPZ
 assert WrapperBase
 assert AugmentReduceBase
@@ -107,7 +105,6 @@ analyzers = {
     "deep_taylor.bounded": BoundedDeepTaylor,
 
     # DeepLIFT
-    #"deep_lift": DeepLIFT,
     "deep_lift.wrapper": DeepLIFTWrapper,
 
     # Pattern based
