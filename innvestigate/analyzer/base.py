@@ -360,9 +360,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
-        self._analyzer_model = keras.models.Model(
-            inputs=model_inputs+analysis_inputs+constant_inputs,
-            outputs=analysis_outputs+debug_outputs)
+
+        inputs = model_inputs+analysis_inputs+constant_inputs
+        outputs = analysis_outputs+debug_outputs
+        outputs = kgraph.fake_keras_layer(inputs, outputs)
+        self._analyzer_model = keras.models.Model(inputs=inputs,
+                                                  outputs=outputs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         """

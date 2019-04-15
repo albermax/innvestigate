@@ -33,6 +33,7 @@ __all__ = [
     "copy_layer",
     "pre_softmax_tensors",
     "model_wo_softmax",
+    "fake_keras_layer",
 
     "get_model_layers",
     "model_contains",
@@ -384,6 +385,21 @@ def model_wo_softmax(model):
     return keras.models.Model(inputs=model.inputs,
                               outputs=pre_softmax_tensors(model.outputs),
                               name=model.name)
+
+
+def fake_keras_layer(inputs, outputs):
+    if not all([hasattr(x, "_keras_history") for x in outputs]):
+        # Fake a layer
+        def f(tensors):
+            return outputs
+        if len(inputs):
+            output_shape = K.int_shape(inputs[0])
+        else:
+            output_shape = None
+        outputs = keras.layers.Lambda(f, output_shape=output_shape)(inputs)
+        outputs = iutils.to_list(outputs)
+
+    return outputs
 
 
 ###############################################################################
@@ -1100,7 +1116,8 @@ def reverse_model(model, reverse_mappings,
     # Initialize the reverse tensor mappings.
     add_reversed_tensors(-1,
                          outputs,
-                         [head_mapping(tmp) for tmp in outputs])
+                         [fake_keras_layer([tmp], [head_mapping(tmp)])[0]
+                          for tmp in outputs])
 
     # Follow the list and revert the graph.
     for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):
@@ -1136,6 +1153,7 @@ def reverse_model(model, reverse_mappings,
                     "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
                 })
             reversed_Xs = iutils.to_list(reversed_Xs)
+            reversed_Xs = fake_keras_layer(Xs+Ys+reversed_Ys, reversed_Xs)
             add_reversed_tensors(nid, Xs, reversed_Xs)
 
     # Return requested values #################################################
