@@ -16,8 +16,8 @@ from . import helper
 
 
 __all__ = [
-    "dot",
-    "skip_connection",
+    "mlp2",
+    "mlp3",
 ]
 
 
@@ -26,7 +26,7 @@ __all__ = [
 ###############################################################################
 
 
-def dot():
+def _mlp(n_layers):
     input_shape = (1, 2)
     data = np.random.rand(*input_shape)
 
@@ -34,7 +34,10 @@ def dot():
         layers = backend.keras.layers
 
         inputs = layers.Input(shape=input_shape[1:])
-        outputs = layers.Dense(units=1, activation="linear")(inputs)
+        tmp = inputs
+        for i in range(n_layers-1):
+            tmp = layers.Dense(units=2, activation="relu")(tmp)
+        outputs = layers.Dense(units=1, activation="linear")(tmp)
         model = helper.build_keras_model(inputs, outputs)
     else:
         raise NotImplementedError()
@@ -42,18 +45,9 @@ def dot():
     return model, data
 
 
-def skip_connection():
-    input_shape = (1, 1)
-    data = np.random.rand(*input_shape)
+def mlp2():
+    return _mlp(2)
 
-    if backend.name() == "tensorflow":
-        layers = backend.keras.layers
 
-        inputs = layers.Input(shape=input_shape[1:])
-        tmp = layers.Dense(units=1, activation="linear")(inputs)
-        outputs = layers.Add()([inputs, tmp])
-        model = helper.build_keras_model(inputs, outputs)
-    else:
-        raise NotImplementedError()
-
-    return model, data
+def mlp3():
+    return _mlp(3)
