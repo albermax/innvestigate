@@ -20,6 +20,10 @@ from .cnn import lc_cnn_1dim_c2_d1
 from .cnn import lc_cnn_2dim_c1_d1
 from .cnn import lc_cnn_2dim_c2_d1
 
+# Special layers
+from .special import batchnorm
+from .special import dropout
+
 
 # Convenience lists of test cases.
 FAST = [
@@ -30,6 +34,9 @@ FAST = [
 
     "cnn_2dim_c1_d1",
     "cnn_2dim_c2_d1",
+
+    "batchnorm",
+    "dropout",
 ]
 
 PRECOMMIT = [
