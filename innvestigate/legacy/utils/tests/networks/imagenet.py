@@ -15,7 +15,7 @@ import warnings
 
 from . import base
 from . import mnist
-from ....applications import imagenet
+from .....applications import imagenet
 
 __all__ = [
     "vgg16_custom",

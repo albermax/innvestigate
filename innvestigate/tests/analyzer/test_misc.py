@@ -11,7 +11,7 @@ from __future__ import\
 import pytest
 
 
-from innvestigate.utils.tests import dryrun
+from innvestigate.legacy.utils.tests import dryrun
 
 from innvestigate.analyzer import Input
 from innvestigate.analyzer import Random

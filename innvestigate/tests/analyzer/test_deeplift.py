@@ -14,7 +14,7 @@ try:
 except ImportError:
     deeplift = None
 
-from innvestigate.utils.tests import dryrun
+from innvestigate.legacy.utils.tests import dryrun
 
 from innvestigate.analyzer import DeepLIFTWrapper
 

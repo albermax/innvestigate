@@ -13,7 +13,7 @@ import pytest
 
 
 from innvestigate.utils.keras import graph as kgraph
-from innvestigate.utils.tests import networks
+from innvestigate.legacy.utils.tests import networks
 
 
 ###############################################################################
