@@ -41,10 +41,18 @@ else:
 if __backend == "tensorflow":
     torch = None
     torch_utils = None
+    # Try to import right Keras implementation.
+    try:
+        import keras
+    except ImportError:
+        import tensorflow.keras as keras
+    K = keras.backend
 else:
     tf = None
     tf_utils = None
+    keras = None
+    K = None
 
 
-def get_name():
+def name():
     return __backend
