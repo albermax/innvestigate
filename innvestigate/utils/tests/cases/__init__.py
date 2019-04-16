@@ -3,15 +3,22 @@
 from .trivia import dot
 from .trivia import skip_connection
 
+# MLPs
 from .mlp import mlp2
 from .mlp import mlp3
 
+# CNNs
 from .cnn import cnn_1dim_c1_d1
 from .cnn import cnn_1dim_c2_d1
 from .cnn import cnn_2dim_c1_d1
 from .cnn import cnn_2dim_c2_d1
 from .cnn import cnn_3dim_c1_d1
 from .cnn import cnn_3dim_c2_d1
+# locally connected CNNs
+from .cnn import lc_cnn_1dim_c1_d1
+from .cnn import lc_cnn_1dim_c2_d1
+from .cnn import lc_cnn_2dim_c1_d1
+from .cnn import lc_cnn_2dim_c2_d1
 
 
 # Convenience lists of test cases.
@@ -32,4 +39,9 @@ PRECOMMIT = [
     "cnn_1dim_c2_d1",
     "cnn_3dim_c1_d1",
     "cnn_3dim_c2_d1",
+
+    "lc_cnn_1dim_c1_d1",
+    "lc_cnn_1dim_c2_d1",
+    "lc_cnn_2dim_c1_d1",
+    "lc_cnn_2dim_c2_d1",
 ]

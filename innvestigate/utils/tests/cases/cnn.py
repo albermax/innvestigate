@@ -22,6 +22,12 @@ __all__ = [
     "cnn_2dim_c2_d1",
     "cnn_3dim_c1_d1",
     "cnn_3dim_c2_d1",
+
+    # locally connected convolutions
+    "lc_cnn_1dim_c1_d1",
+    "lc_cnn_1dim_c2_d1",
+    "lc_cnn_2dim_c1_d1",
+    "lc_cnn_2dim_c2_d1",
 ]
 
 
@@ -30,7 +36,7 @@ __all__ = [
 ###############################################################################
 
 
-def _cnn(dim, n_conv, n_dense):
+def _cnn(dim, n_conv, n_dense, locally_connected=False):
     # Add one additional axis for the channels.
     if dim == 1:
         input_shape = (1, 16, 16)
@@ -48,13 +54,23 @@ def _cnn(dim, n_conv, n_dense):
     if backend.name() == "tensorflow":
         layers = backend.keras.layers
         if dim == 1:
-            Conv = layers.Conv1D
+            if locally_connected:
+                Conv = layers.LocallyConnected1D
+            else:
+                Conv = layers.Conv1D
             Pool = layers.MaxPooling1D
         elif dim == 2:
-            Conv = layers.Conv2D
+            if locally_connected:
+                Conv = layers.LocallyConnected2D
+            else:
+                Conv = layers.Conv2D
             Pool = layers.MaxPooling2D
         elif dim == 3:
-            Conv = layers.Conv3D
+            if locally_connected:
+                raise ValueError("Keras does not support locally connected"
+                                 "3D convolutions.")
+            else:
+                Conv = layers.Conv3D
             Pool = layers.MaxPooling3D
 
         inputs = layers.Input(shape=input_shape[1:])
@@ -94,3 +110,19 @@ def cnn_3dim_c1_d1():
 
 def cnn_3dim_c2_d1():
     return _cnn(3, 2, 1)
+
+
+def lc_cnn_1dim_c1_d1():
+    return _cnn(1, 1, 1, locally_connected=True)
+
+
+def lc_cnn_1dim_c2_d1():
+    return _cnn(1, 2, 1, locally_connected=True)
+
+
+def lc_cnn_2dim_c1_d1():
+    return _cnn(2, 1, 1, locally_connected=True)
+
+
+def lc_cnn_2dim_c2_d1():
+    return _cnn(2, 2, 1, locally_connected=True)
