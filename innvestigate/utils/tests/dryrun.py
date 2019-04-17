@@ -10,6 +10,7 @@ from __future__ import\
 
 import numpy as np
 
+from ...analyzer import NotAnalyzeableModelException
 from ... import backend
 from . import cases
 
@@ -37,7 +38,11 @@ def test_analyzer(case_id, create_analyzer_f):
         raise ValueError("Invalid case_id.")
 
     model, data = case()
-    analyzer = create_analyzer_f(model)
+    try:
+        analyzer = create_analyzer_f(model)
+    except NotAnalyzeableModelException:
+        # Not being able to analyze is ok.
+        return
 
     # Dryrun.
     analyzer.fit(data)
@@ -53,8 +58,8 @@ def test_analyzers_for_same_output(
         case_id, create_analyzer1_f, create_analyzer2_f, rtol=None, atol=None):
     np.random.seed(2349784365)
     # Keras is present close tf session.
-    if K:
-        K.clear_session()
+    if backend.K:
+        backend.K.clear_session()
 
     # Fetch case.
     case = getattr(cases, case_id, None)
@@ -62,8 +67,12 @@ def test_analyzers_for_same_output(
         raise ValueError("Invalid case_id.")
 
     model, data = case()
-    analyzer1 = create_analyzer1_f(model)
-    analyzer2 = create_analyzer2_f(model)
+    try:
+        analyzer1 = create_analyzer1_f(model)
+        analyzer2 = create_analyzer2_f(model)
+    except NotAnalyzeableModelException:
+        # Not being able to analyze is ok.
+        return
 
     # Dryrun.
     analyzer1.fit(data)
