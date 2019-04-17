@@ -11,7 +11,9 @@ from __future__ import \
 import pytest
 
 
-from innvestigate.legacy.utils.tests import dryrun
+from innvestigate import backend
+from innvestigate.utils.tests import cases
+from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradient
 from innvestigate.analyzer import Gradient
@@ -24,66 +26,74 @@ from innvestigate.analyzer import Gradient
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BasicGraphReversal():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__BasicGraphReversal(case_id):
 
-    def method1(model):
+    def create_analyzer1_f(model):
         return BaselineGradient(model)
 
-    def method2(model):
+    def create_analyzer2_f(model):
         return Gradient(model)
 
-    dryrun.test_equal_analyzer(method1,
-                               method2,
-                               "trivia.*:mnist.log_reg")
+    dryrun.test_analyzers_for_same_output(
+        case_id, create_analyzer1_f, create_analyzer2_f)
 
 
 @pytest.mark.precommit
-def test_precommit__BasicGraphReversal():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__BasicGraphReversal(case_id):
 
-    def method1(model):
+    def create_analyzer1_f(model):
         return BaselineGradient(model)
 
-    def method2(model):
+    def create_analyzer2_f(model):
         return Gradient(model)
 
-    dryrun.test_equal_analyzer(method1,
-                               method2,
-                               "mnist.*")
+    dryrun.test_analyzers_for_same_output(
+        case_id, create_analyzer1_f, create_analyzer2_f)
 
 
-# @pytest.mark.fast
-# @pytest.mark.precommit
-# def test_fast__ContainerGraphReversal():
+@pytest.mark.skipif(backend.name() != "tensorflow",
+                    reason="TensorFlow-specific test.")
+# todo(alber): Enable for new TF backend.
+@pytest.mark.xfail(reason="Missing/buggy feature.")
+@pytest.mark.fast
+@pytest.mark.precommit
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__ContainerGraphReversal(case_id):
 
-#     def method1(model):
-#         return Gradient(model)
+    def create_analyzer1_f(model):
+        return Gradient(model)
 
-#     def method2(model):
-#         Create container execution
-#         model = keras.models.Model(inputs=model.inputs,
-#                                    outputs=model(model.inputs))
-#         return Gradient(model)
+    def create_analyzer2_f(model):
+        # Create container execution
+        model = backend.keras.models.Model(inputs=model.inputs,
+                                           outputs=model(model.inputs))
+        return Gradient(model)
 
-#     dryrun.test_equal_analyzer(method1,
-#                                method2,
-#                                "trivia.*:mnist.log_reg")
+    dryrun.test_analyzers_for_same_output(
+        case_id, create_analyzer1_f, create_analyzer2_f)
 
 
-# @pytest.mark.precommit
-# def test_precommit__ContainerGraphReversal():
+@pytest.mark.skipif(backend.name() != "tensorflow",
+                    reason="TensorFlow-specific test.")
+# todo(alber): Enable for new TF backend.
+@pytest.mark.xfail(reason="Missing/buggy feature.")
+@pytest.mark.precommit
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__ContainerGraphReversal(case_id):
 
-#     def method1(model):
-#         return Gradient(model)
+    def create_analyzer1_f(model):
+        return Gradient(model)
 
-#     def method2(model):
-#         Create container execution
-#         model = keras.models.Model(inputs=model.inputs,
-#                                    outputs=model(model.inputs))
-#         return Gradient(model)
+    def create_analyzer2_f(model):
+        # Create container execution
+        model = backend.keras.models.Model(inputs=model.inputs,
+                                           outputs=model(model.inputs))
+        return Gradient(model)
 
-#     dryrun.test_equal_analyzer(method1,
-#                                method2,
-#                                "mnist.*")
+    dryrun.test_analyzers_for_same_output(
+        case_id, create_analyzer1_f, create_analyzer2_f)
 
 
 ###############################################################################
@@ -93,26 +103,29 @@ def test_precommit__BasicGraphReversal():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__AnalyzerNetworkBase_neuron_selection_max():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__AnalyzerNetworkBase_neuron_selection_max(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, neuron_selection_mode="max_activation")
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__AnalyzerNetworkBase_neuron_selection_max():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__AnalyzerNetworkBase_neuron_selection_max(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, neuron_selection_mode="max_activation")
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__AnalyzerNetworkBase_neuron_selection_index():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__AnalyzerNetworkBase_neuron_selection_index(case_id):
 
     class CustomAnalyzer(Gradient):
 
@@ -120,22 +133,23 @@ def test_fast__AnalyzerNetworkBase_neuron_selection_index():
             index = 0
             return super(CustomAnalyzer, self).analyze(X, index)
 
-    def method(model):
+    def create_analyzer_f(model):
         return CustomAnalyzer(model, neuron_selection_mode="index")
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__AnalyzerNetworkBase_neuron_selection_index():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__AnalyzerNetworkBase_neuron_selection_index(case_id):
 
     class CustomAnalyzer(Gradient):
 
         def analyze(self, X):
-            index = 3
+            index = 0
             return super(CustomAnalyzer, self).analyze(X, index)
 
-    def method(model):
+    def create_analyzer_f(model):
         return CustomAnalyzer(model, neuron_selection_mode="index")
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)

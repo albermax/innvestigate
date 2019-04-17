@@ -11,7 +11,8 @@ from __future__ import\
 import pytest
 
 
-from innvestigate.legacy.utils.tests import dryrun
+from innvestigate.utils.tests import cases
+from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import BaselineGradient
 from innvestigate.analyzer import Gradient
@@ -33,138 +34,128 @@ from innvestigate.analyzer import SmoothGrad
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BaselineGradient():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__BaselineGradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__BaselineGradient():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__BaselineGradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__BaselineGradient():
-
-    def method(model):
-        return BaselineGradient(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BaselineGradient_pp_None():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__BaselineGradient_pp_None(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model, postprocess=None)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__BaselineGradient_pp_None():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__BaselineGradient_pp_None(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model, postprocess=None)
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BaselineGradient_pp_square():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__BaselineGradient_pp_square(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model, postprocess="square")
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__BaselineGradient_pp_square():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__BaselineGradient_pp_square(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BaselineGradient(model, postprocess="square")
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Gradient():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__Gradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__Gradient():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__Gradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__Gradient():
-
-    def method(model):
-        return Gradient(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Gradient_pp_None():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__Gradient_pp_None(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, postprocess=None)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__Gradient_pp_None():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__Gradient_pp_None(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, postprocess=None)
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Gradient_pp_square():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__Gradient_pp_square(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, postprocess="square")
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__Gradient_pp_square():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__Gradient_pp_square(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Gradient(model, postprocess="square")
 
-    dryrun.test_analyzer(method, "mnist.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 ###############################################################################
@@ -174,32 +165,23 @@ def test_precommit__Gradient_pp_square():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__InputTimesGradient():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__InputTimesGradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return InputTimesGradient(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__InputTimesGradient():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__InputTimesGradient(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return InputTimesGradient(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__InputTimesGradient():
-
-    def method(model):
-        return InputTimesGradient(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 ###############################################################################
@@ -209,62 +191,44 @@ def test_imagenet__InputTimesGradient():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Deconvnet():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__Deconvnet(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Deconvnet(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__Deconvnet():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__Deconvnet(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Deconvnet(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__Deconvnet():
-
-    def method(model):
-        return Deconvnet(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__GuidedBackprop():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__GuidedBackprop(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return GuidedBackprop(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__GuidedBackprop():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__GuidedBackprop(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return GuidedBackprop(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__GuidedBackprop():
-
-    def method(model):
-        return GuidedBackprop(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 ###############################################################################
@@ -274,32 +238,23 @@ def test_imagenet__GuidedBackprop():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__IntegratedGradients():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__IntegratedGradients(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return IntegratedGradients(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__IntegratedGradients():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__IntegratedGradients(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return IntegratedGradients(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__IntegratedGradients():
-
-    def method(model):
-        return IntegratedGradients(model, steps=2)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 ###############################################################################
@@ -309,29 +264,20 @@ def test_imagenet__IntegratedGradients():
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__SmoothGrad():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__SmoothGrad(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return SmoothGrad(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__SmoothGrad():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__SmoothGrad(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return SmoothGrad(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__SmoothGrad():
-
-    def method(model):
-        return SmoothGrad(model, augment_by_n=2)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
