@@ -78,9 +78,10 @@ def _cnn(dim, n_conv, n_dense, locally_connected=False):
         for i in range(n_conv):
             tmp = Conv(2, kernel_size, activation="relu")(tmp)
         tmp = Pool()(tmp)
-        for i in range(n_dense):
-            tmp = layers.Dense(units=1, activation="linear")(tmp)
-        outputs = tmp
+        tmp = layers.Flatten()(tmp)
+        for i in range(n_dense-1):
+            tmp = layers.Dense(units=2, activation="relu")(tmp)
+        outputs = layers.Dense(units=1, activation="linear")(tmp)
         model = helper.build_keras_model(inputs, outputs)
     else:
         raise NotImplementedError()
