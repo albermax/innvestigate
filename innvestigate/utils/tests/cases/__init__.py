@@ -1,3 +1,5 @@
+import pytest
+
 
 # Import all test cases
 from .trivia import dot
@@ -52,3 +54,21 @@ PRECOMMIT = [
     "lc_cnn_2dim_c1_d1",
     "lc_cnn_2dim_c2_d1",
 ]
+
+
+def mark_as_xfail(case_ids, xfails):
+    """Mark cases as expected failures.
+
+    :param case_ids: Parameter list for pytest.mar.parametrize.
+    :param xfails: Parameters in case_ids to mark as expected failures.
+    :return: case_ids with added marks.
+    """
+    ret = []
+    for case in case_ids:
+        if case in xfails:
+            if not isinstance(case, tuple):
+                case = (case,)
+            # Mark as expected failure
+            case = pytest.param(*case, marks=pytest.mark.xfail)
+        ret.append(case)
+    return ret
