@@ -257,7 +257,9 @@ class PathIntegrator(AugmentReduceBase):
             axis=1)
         path_steps = [multiply_with_linspace(d) for d in difference]
 
-        ret = [keras.layers.Add()([x, p]) for x, p in zip(tmp, path_steps)]
+        reference_inputs = self._keras_get_constant_inputs()
+        ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs,
+                                                          path_steps)]
         ret = [ilayers.Reshape((-1,)+K.int_shape(x)[2:])(x) for x in ret]
         return ret
 
