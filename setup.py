@@ -1,6 +1,7 @@
 import io
 import os
 import setuptools
+import sys
 
 
 install_requirements = [
@@ -12,8 +13,17 @@ install_requirements = [
     "numpy",
     "pillow",
     "pytest",
-    "scipy",
 ]
+
+# scipy 1.3 only support py 3.5
+if sys.version_info[0] == 2:
+    install_requirements += [
+        "scipy<1.13"
+    ]
+else:
+    install_requirements += [
+        "scipy"
+    ]
 
 setup_requirements = [
     "pytest-runner",
