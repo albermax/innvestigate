@@ -18,7 +18,7 @@ install_requirements = [
 # scipy 1.3 only support py 3.5
 if sys.version_info[0] == 2:
     install_requirements += [
-        "scipy<1.13"
+        "scipy<1.3"
     ]
 else:
     install_requirements += [
