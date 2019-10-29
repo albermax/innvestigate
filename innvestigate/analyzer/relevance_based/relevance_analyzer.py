@@ -62,6 +62,7 @@ __all__ = [
 
     "LRPSequentialPresetAFlat",
     "LRPSequentialPresetBFlat",
+    "LRPSequentialPresetBFlatUntilIdx",
 ]
 
 
@@ -330,6 +331,8 @@ class LRP(base.ReverseAnalyzerBase):
     def __init__(self, model, *args, **kwargs):
         rule = kwargs.pop("rule", None)
         input_layer_rule = kwargs.pop("input_layer_rule", None)
+        until_layer_idx = kwargs.pop("until_layer_idx", None)
+        until_layer_rule = kwargs.pop("until_layer_rule", None)
 
         self._add_model_softmax_check()
         self._add_model_check(
@@ -351,6 +354,8 @@ class LRP(base.ReverseAnalyzerBase):
         else:
             self._rule = rule
         self._input_layer_rule = input_layer_rule
+        self._until_layer_rule = until_layer_rule
+        self._until_layer_idx = until_layer_idx
 
 
         if(
@@ -370,6 +375,12 @@ class LRP(base.ReverseAnalyzerBase):
             use_conditions = True
             rules = rule
 
+        #apply rule to first self._until_layer_idx layers
+        if self._until_layer_rule is not None and self._until_layer_idx is not None:
+            for i in range(self._until_layer_idx+1):
+                rules.insert(0,
+                             (lambda layer, foo, bound_i=i: kchecks.is_layer_at_idx(layer, bound_i),
+                              self._until_layer_rule))
 
         # create a BoundedRule for input layer handling from given tuple
         if self._input_layer_rule is not None:
@@ -785,3 +796,17 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
                                                 *args,
                                                 input_layer_rule="Flat",
                                                 **kwargs)
+
+class LRPSequentialPresetBFlatUntilIdx(LRPSequentialPresetBFlat):
+    """
+        Special LRP-configuration for ConvNets. Allows to perform LRP_flat from (including) layer until_layer_idx down until
+        the input layer. Weightless layers are ignored when counting the index for now.
+    """
+
+    def __init__(self, model, *args, **kwargs):
+        layer_flat_idx=kwargs.pop("until_layer_idx", None)
+        super(LRPSequentialPresetBFlatUntilIdx, self).__init__(model,
+                                                    *args,
+                                                    until_layer_idx=layer_flat_idx,
+                                                    until_layer_rule=rrule.FlatRule,
+                                                    **kwargs)
