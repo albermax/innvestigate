@@ -303,7 +303,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
         with tempfile.NamedTemporaryFile(suffix=".hdf5") as f:
             self._model.save(f.name)
-            deeplift_model = kc.convert_model_from_saved_files(
+            self._deeplift_model = kc.convert_model_from_saved_files(
                 f.name, nonlinear_mxts_mode=nonlinear_mxts_mode,
                 verbose=self._verbose)
 
@@ -316,18 +316,18 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
             raise ValueError("Only a single output layer is supported.")
         tmp = self._model.outputs[0]._keras_history
         target_layer_name = fix_name(tmp[0].name+"_%i" % tmp[1])
-        self._func = deeplift_model.get_target_contribs_func(
+        self._deep_lift_func = self._deeplift_model.get_target_contribs_func(
             find_scores_layer_name=score_layer_names,
             pre_activation_target_layer_name=target_layer_name)
         self._references = kutils.broadcast_np_tensors_to_keras_tensors(
             self._model.inputs, self._reference_inputs)
 
     def _analyze_with_deeplift(self, X, neuron_idx, batch_size):
-        return self._func(task_idx=neuron_idx,
-                          input_data_list=X,
-                          batch_size=batch_size,
-                          input_references_list=self._references,
-                          progress_update=1000000)
+        return self._deep_lift_func(task_idx=neuron_idx,
+                                    input_data_list=X,
+                                    batch_size=batch_size,
+                                    input_references_list=self._references,
+                                    progress_update=1000000)
 
     def analyze(self, X, neuron_selection=None):
         if not hasattr(self, "_deep_lift_func"):
