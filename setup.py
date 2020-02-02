@@ -12,6 +12,7 @@ install_requirements = [
     "numpy",
     "pillow",
     "pytest",
+    "tensorflow-gpu==1.15",
 ]
 
 # scipy 1.3 only support py 3.5
