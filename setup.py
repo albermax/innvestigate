@@ -9,6 +9,7 @@ install_requirements = [
     # This package relies on internal interfaces and conventions of Keras.
     # To ensure best compatibility we only support one(, the newest) version.
     "keras==2.2.4",
+    "matplotlib",
     "numpy",
     "pillow",
     "scipy",
