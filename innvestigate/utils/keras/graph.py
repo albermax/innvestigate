@@ -16,6 +16,7 @@ import keras.engine.topology
 import keras.layers
 import keras.models
 import numpy as np
+import warnings
 
 
 from . import checks as kchecks
@@ -476,16 +477,28 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
                 super(ScaleLayer, self).__init__(**kwargs)
 
             def build(self, input_shape):
+                def kernel_initializer(shape, dtype=None):
+                    if dtype is not None:
+                        warnings.warn("Ignore dtype %s as bias type."
+                                      % dtype)
+                    return self._kernel_to_be
+
                 self.kernel = self.add_weight(
                     name='kernel',
                     shape=K.int_shape(self._kernel_to_be),
-                    initializer=lambda a, b=None: self._kernel_to_be,
+                    initializer=kernel_initializer,
                     trainable=False)
                 if self.use_bias:
+                    def bias_initializer(shape, dtype=None):
+                        if dtype is not None:
+                            warnings.warn("Ignore dtype %s as bias type."
+                                          % dtype)
+                        return self._bias_to_be
+
                     self.bias = self.add_weight(
                         name='bias',
                         shape=K.int_shape(self._bias_to_be),
-                        initializer=lambda a, b=None: self._bias_to_be,
+                        initializer=bias_initializer,
                         trainable=False)
                 super(ScaleLayer, self).build(input_shape)
 
