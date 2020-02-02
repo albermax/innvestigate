@@ -8,8 +8,13 @@ from builtins import range
 ###############################################################################
 ###############################################################################
 
-
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    # The following function are only required for the notebooks
+    # and thus matplotlib is not part of the requirements.
+    # If needed please install it.
+    plt = None
 import numpy as np
 
 
