@@ -11,19 +11,9 @@ install_requirements = [
     "keras==2.2.4",
     "numpy",
     "pillow",
-    "pytest",
+    "scipy",
     "tensorflow-gpu==1.15",
 ]
-
-# scipy 1.3 only support py 3.5
-if sys.version_info[0] == 2:
-    install_requirements += [
-        "scipy<1.3"
-    ]
-else:
-    install_requirements += [
-        "scipy"
-    ]
 
 setup_requirements = [
     "pytest-runner",
@@ -44,7 +34,7 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.8",
+        version="2.0.0",
         description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
         classifiers=[
@@ -53,8 +43,7 @@ def setup():
             "Environment :: Console",
             "Intended Audience :: Science/Research",
             "Operating System :: POSIX :: Linux",
-            "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",
