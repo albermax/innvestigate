@@ -13,7 +13,7 @@ install_requirements = [
     "numpy",
     "pillow",
     "scipy",
-    "tensorflow-gpu==1.15",
+    "tensorflow==2.1",
 ]
 
 setup_requirements = [
