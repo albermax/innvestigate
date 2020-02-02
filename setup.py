@@ -20,7 +20,9 @@ setup_requirements = [
 ]
 
 test_requirements = [
-    "pytest"
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
 ]
 
 
