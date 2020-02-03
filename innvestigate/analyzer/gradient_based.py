@@ -8,16 +8,19 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.models
-import keras
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+import tensorflow.keras as keras
 
 
 from . import base
 from . import wrapper
+from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
+
 
 __all__ = [
     "BaselineGradient",
@@ -80,7 +83,6 @@ class BaselineGradient(base.AnalyzerNetworkBase):
         return ret
 
 
-from .. import layers as ilayers
 class Gradient(base.ReverseAnalyzerBase):
     """Gradient analyzer.
 
@@ -141,7 +143,7 @@ class InputTimesGradient(Gradient):
                               if x not in stop_analysis_at_tensors]
         gradients = super(InputTimesGradient, self)._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors)
-        return [keras.layers.Multiply()([i, g])
+        return [keras_layers.Multiply()([i, g])
                 for i, g in zip(tensors_to_analyze, gradients)]
 
 
@@ -153,7 +155,7 @@ class InputTimesGradient(Gradient):
 class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
-        self._activation = keras.layers.Activation("relu")
+        self._activation = keras_layers.Activation("relu")
         self._layer_wo_relu = kgraph.copy_layer_wo_activation(
             layer,
             name_template="reversed_%s",
@@ -203,7 +205,7 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
 
 def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
-    activation = keras.layers.Activation("relu")
+    activation = keras_layers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
     reversed_Ys = kutils.apply(activation, reversed_Ys)
 

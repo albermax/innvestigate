@@ -9,9 +9,9 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
-import keras.layers
-import keras.models
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
 import numpy as np
 import warnings
 
@@ -258,7 +258,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._allow_lambda_layers = allow_lambda_layers
         self._add_model_check(
             lambda layer: (not self._allow_lambda_layers and
-                           isinstance(layer, keras.layers.core.Lambda)),
+                           isinstance(layer, keras_layers.Lambda)),
             ("Lamda layers are not allowed. "
              "To force use set allow_lambda_layers parameter."),
             check_type="exception",
@@ -296,14 +296,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         # Flatten to form (batch_size, other_dimensions):
         if K.ndim(model_output[0]) > 2:
-            model_output = keras.layers.Flatten()(model_output)
+            model_output = keras_layers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
             l = ilayers.Max(name="iNNvestigate_max")
             model_output = l(model_output)
             self._special_helper_layers.append(l)
         elif neuron_selection_mode == "index":
-            neuron_indexing = keras.layers.Input(
+            neuron_indexing = keras_layers.Input(
                 batch_shape=[None, None], dtype=np.int32,
                 name='iNNvestigate_neuron_indexing')
             self._special_helper_layers.append(
@@ -320,7 +320,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         else:
             raise NotImplementedError()
 
-        model = keras.models.Model(inputs=model_inputs+analysis_inputs,
+        model = keras_models.Model(inputs=model_inputs+analysis_inputs,
                                    outputs=model_output)
         return model, analysis_inputs, stop_analysis_at_tensors
 
@@ -364,7 +364,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         inputs = model_inputs+analysis_inputs+constant_inputs
         outputs = analysis_outputs+debug_outputs
         outputs = kgraph.fake_keras_layer(inputs, outputs)
-        self._analyzer_model = keras.models.Model(inputs=inputs,
+        self._analyzer_model = keras_models.Model(inputs=inputs,
                                                   outputs=outputs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
@@ -424,6 +424,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 (np.arange(len(neuron_selection)).reshape((-1, 1)),
                  neuron_selection.reshape((-1, 1)))
             )
+
             ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
             ret = self._analyzer_model.predict_on_batch(X)

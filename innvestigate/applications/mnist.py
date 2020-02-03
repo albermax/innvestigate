@@ -18,13 +18,12 @@ from __future__ import\
 
 
 import os
-import keras.utils.data_utils
 import numpy as np
 
-import keras.models
-from keras.models import load_model, clone_model
-#from keras.utils import get_file
-
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+from tensorflow.keras.models import load_model, clone_model
+#from tensorflow.keras.utils import get_file
 
 
 __all__ = [
@@ -76,10 +75,10 @@ def _load_pretrained_net(modelname, new_input_shape):
 
     model = load_model(model_path)
     #create replacement input layer with new shape.
-    model.layers[0] = keras.layers.InputLayer(input_shape=new_input_shape, name="input_1")
+    model.layers[0] = keras_layers.InputLayer(input_shape=new_input_shape, name="input_1")
     for l in model.layers:
         l.name = "%s_workaround" % l.name
-    model = keras.models.Sequential(layers=model.layers)
+    model = keras_models.Sequential(layers=model.layers)
 
     model_w_sm = clone_model(model)
 
@@ -89,7 +88,7 @@ def _load_pretrained_net(modelname, new_input_shape):
     model_w_sm.predict(x_dummy)
 
     model_w_sm.set_weights(model.get_weights())
-    model_w_sm.add(keras.layers.Activation("softmax"))
+    model_w_sm.add(keras_layers.Activation("softmax"))
     return model, model_w_sm
 
 

@@ -9,17 +9,10 @@ import six
 ###############################################################################
 
 import inspect
-import keras
-import keras.backend as K
-import keras.engine.topology
-import keras.models
-import keras.layers
-import keras.layers.convolutional
-import keras.layers.core
-import keras.layers.local
-import keras.layers.noise
-import keras.layers.normalization
-import keras.layers.pooling
+import tensorflow.keras as keras
+import tensorflow.keras.backend as K
+import tensorflow.keras.models as keras_models
+import tensorflow.keras.layers as keras_layers
 
 
 from .. import base
@@ -83,54 +76,54 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
     def __init__(self, model, **kwargs):
         # Inside function to not break import if Keras changes.
         BASELINELRPZ_LAYERS = (
-            keras.engine.topology.InputLayer,
-            keras.layers.convolutional.Conv1D,
-            keras.layers.convolutional.Conv2D,
-            keras.layers.convolutional.Conv2DTranspose,
-            keras.layers.convolutional.Conv3D,
-            keras.layers.convolutional.Conv3DTranspose,
-            keras.layers.convolutional.Cropping1D,
-            keras.layers.convolutional.Cropping2D,
-            keras.layers.convolutional.Cropping3D,
-            keras.layers.convolutional.SeparableConv1D,
-            keras.layers.convolutional.SeparableConv2D,
-            keras.layers.convolutional.UpSampling1D,
-            keras.layers.convolutional.UpSampling2D,
-            keras.layers.convolutional.UpSampling3D,
-            keras.layers.convolutional.ZeroPadding1D,
-            keras.layers.convolutional.ZeroPadding2D,
-            keras.layers.convolutional.ZeroPadding3D,
-            keras.layers.core.Activation,
-            keras.layers.core.ActivityRegularization,
-            keras.layers.core.Dense,
-            keras.layers.core.Dropout,
-            keras.layers.core.Flatten,
-            keras.layers.core.Lambda,
-            keras.layers.core.Masking,
-            keras.layers.core.Permute,
-            keras.layers.core.RepeatVector,
-            keras.layers.core.Reshape,
-            keras.layers.core.SpatialDropout1D,
-            keras.layers.core.SpatialDropout2D,
-            keras.layers.core.SpatialDropout3D,
-            keras.layers.local.LocallyConnected1D,
-            keras.layers.local.LocallyConnected2D,
-            keras.layers.Add,
-            keras.layers.Concatenate,
-            keras.layers.Dot,
-            keras.layers.Maximum,
-            keras.layers.Minimum,
-            keras.layers.Subtract,
-            keras.layers.noise.AlphaDropout,
-            keras.layers.noise.GaussianDropout,
-            keras.layers.noise.GaussianNoise,
-            keras.layers.normalization.BatchNormalization,
-            keras.layers.pooling.GlobalMaxPooling1D,
-            keras.layers.pooling.GlobalMaxPooling2D,
-            keras.layers.pooling.GlobalMaxPooling3D,
-            keras.layers.pooling.MaxPooling1D,
-            keras.layers.pooling.MaxPooling2D,
-            keras.layers.pooling.MaxPooling3D,
+            keras_layers.Conv1D,
+            keras_layers.Conv2D,
+            keras_layers.Conv2DTranspose,
+            keras_layers.Conv3D,
+            keras_layers.Conv3DTranspose,
+            keras_layers.Cropping1D,
+            keras_layers.Cropping2D,
+            keras_layers.Cropping3D,
+            keras_layers.SeparableConv1D,
+            keras_layers.SeparableConv2D,
+            keras_layers.UpSampling1D,
+            keras_layers.UpSampling2D,
+            keras_layers.UpSampling3D,
+            keras_layers.ZeroPadding1D,
+            keras_layers.ZeroPadding2D,
+            keras_layers.ZeroPadding3D,
+            keras_layers.Activation,
+            keras_layers.ActivityRegularization,
+            keras_layers.Dense,
+            keras_layers.Dropout,
+            keras_layers.Flatten,
+            keras_layers.Lambda,
+            keras_layers.Masking,
+            keras_layers.Permute,
+            keras_layers.RepeatVector,
+            keras_layers.Reshape,
+            keras_layers.SpatialDropout1D,
+            keras_layers.SpatialDropout2D,
+            keras_layers.SpatialDropout3D,
+            keras_layers.LocallyConnected1D,
+            keras_layers.LocallyConnected2D,
+            keras_layers.Add,
+            keras_layers.Concatenate,
+            keras_layers.Dot,
+            keras_layers.InputLayer,
+            keras_layers.Maximum,
+            keras_layers.Minimum,
+            keras_layers.Subtract,
+            keras_layers.AlphaDropout,
+            keras_layers.GaussianDropout,
+            keras_layers.GaussianNoise,
+            keras_layers.BatchNormalization,
+            keras_layers.GlobalMaxPooling1D,
+            keras_layers.GlobalMaxPooling2D,
+            keras_layers.GlobalMaxPooling3D,
+            keras_layers.MaxPooling1D,
+            keras_layers.MaxPooling2D,
+            keras_layers.MaxPooling3D,
         )
 
         self._add_model_softmax_check()
@@ -152,7 +145,7 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
                               if x not in stop_analysis_at_tensors]
         gradients = iutils.to_list(ilayers.Gradient()(
             tensors_to_analyze+[model.outputs[0]]))
-        return [keras.layers.Multiply()([i, g])
+        return [keras_layers.Multiply()([i, g])
                 for i, g in zip(tensors_to_analyze, gradients)]
 
 
@@ -230,9 +223,9 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         # multiplication and then addition. The multiplicative scaling layer
         # has no effect on LRP and functions as a linear activation layer
 
-        minus_mu = keras.layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
-        minus_beta = keras.layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
-        prepare_div = keras.layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+        minus_mu = keras_layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
+        minus_beta = keras_layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
+        prepare_div = keras_layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
 
 
         x_minus_mu = kutils.apply(minus_mu, Xs)
@@ -241,9 +234,9 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         else:
             y_minus_beta = Ys
 
-        numerator = [keras.layers.Multiply()([x, ymb, r])
+        numerator = [keras_layers.Multiply()([x, ymb, r])
                      for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
-        denominator = [keras.layers.Multiply()([xmm, y])
+        denominator = [keras_layers.Multiply()([xmm, y])
                        for xmm, y in zip(x_minus_mu, Ys)]
 
         return [ilayers.SafeDivide()([n, prepare_div(d)])
@@ -277,7 +270,7 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
         # using the gradient.
         tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
+        return [keras_layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
 
 
@@ -309,7 +302,7 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         # using the gradient.
         tmp = iutils.to_list(grad(Xs+Zs+tmp))
         # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b])
+        return [keras_layers.Multiply()([a, b])
                 for a, b in zip(Xs, tmp)]
 
 
@@ -474,9 +467,9 @@ class LRP(base.ReverseAnalyzerBase):
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
         ##print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
-        #default_return_layers = [keras.layers.Activation]# TODO extend
+        #default_return_layers = [keras_layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
-           isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
+           isinstance(reverse_state['layer'], (keras_layers.Activation,)) and
            all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,

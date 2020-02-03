@@ -11,12 +11,12 @@ import six
 
 
 import inspect
-import keras.backend as K
-import keras.engine.topology
-import keras.layers
-import keras.models
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
 import numpy as np
 import warnings
+from tensorflow.python.keras.engine import InputLayer
 
 
 from . import checks as kchecks
@@ -123,11 +123,11 @@ def get_layer_neuronwise_io(layer,
     if Ys is None:
         Ys = iutils.to_list(layer.get_output_at(node_index))
 
-    if isinstance(layer, keras.layers.Dense):
+    if isinstance(layer, keras_layers.Dense):
         # Xs and Ys are already in shape.
         ret_Xs = Xs
         ret_Ys = Ys
-    elif isinstance(layer, keras.layers.Conv2D):
+    elif isinstance(layer, keras_layers.Conv2D):
         kernel = get_kernel(layer)
         # Expect filter dimension to be last.
         n_channels = kernel.shape[-1]
@@ -369,7 +369,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
         layer, node_index, tensor_index = x._keras_history
         if kchecks.contains_activation(layer, activation="softmax"):
             softmax_found = True
-            if isinstance(layer, keras.layers.Activation):
+            if isinstance(layer, keras_layers.Activation):
                 ret.append(layer.get_input_at(node_index))
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
@@ -383,7 +383,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 def model_wo_softmax(model):
     """Creates a new model w/o the final softmax activation."""
-    return keras.models.Model(inputs=model.inputs,
+    return keras_models.Model(inputs=model.inputs,
                               outputs=pre_softmax_tensors(model.outputs),
                               name=model.name)
 
@@ -397,7 +397,7 @@ def fake_keras_layer(inputs, outputs):
             output_shape = K.int_shape(inputs[0])
         else:
             output_shape = None
-        outputs = keras.layers.Lambda(f, output_shape=output_shape)(inputs)
+        outputs = keras_layers.Lambda(f, output_shape=output_shape)(inputs)
         outputs = iutils.to_list(outputs)
 
     return outputs
@@ -468,13 +468,18 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
         _kernel = kernel
         _bias = bias
 
-        class ScaleLayer(keras.layers.Layer):
+        class ScaleLayer(keras_layers.Layer):
 
             def __init__(self, use_bias=True, **kwargs):
                 self._kernel_to_be = _kernel
                 self._bias_to_be = _bias
                 self.use_bias = use_bias
                 super(ScaleLayer, self).__init__(**kwargs)
+
+            def get_config(self):
+                # Do not return `use_bias` as the weights
+                # are not mirrored in the weights attribute.
+                return super().get_config()
 
             def build(self, input_shape):
                 def kernel_initializer(shape, dtype=None):
@@ -632,7 +637,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 setattr(layer, "call", patch(layer, getattr(layer, "call")))
 
             # Trigger reapplication of model.
-            model_copy = keras.models.Model(inputs=model.inputs,
+            model_copy = keras_models.Model(inputs=model.inputs,
                                             outputs=model.outputs)
             outputs = iutils.to_list(model_copy(model.inputs))
         finally:
@@ -655,7 +660,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
             layer = layer_mapping[layer]
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
 
-            if isinstance(layer, keras.layers.InputLayer):
+            if isinstance(layer, keras_layers.InputLayer):
                 # Special case. Do nothing.
                 new_Xs, new_Ys = Xs, Ys
             else:
@@ -671,7 +676,9 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
     else:
         # Easy and safe way.
         reverse_executed_nodes = [
-            (node.outbound_layer, node.input_tensors, node.output_tensors)
+            (node.outbound_layer,
+             iutils.to_list(node.input_tensors),
+             iutils.to_list(node.output_tensors))
             for depth in sorted(model._nodes_by_depth.keys())
             for node in model._nodes_by_depth[depth]
         ]
@@ -727,7 +734,7 @@ def get_model_execution_trace(model,
     current_nid = 0
     tmp = []
     for l, Xs, Ys in execution_trace:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, InputLayer):
             tmp.append((None, l, Xs, Ys))
         else:
             tmp.append((current_nid, l, Xs, Ys))
@@ -757,7 +764,7 @@ def get_model_execution_trace(model,
     nid_to_nodes = {t[0]: t for t in execution_trace}
     tmp = []
     for nid, l, Xs, Ys in execution_trace:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, keras_layers.InputLayer):
             # The nids that created or receive the tensors.
             Xs_nids = []  # Input layer does not receive.
             Ys_nids = [inputs_to_node[id(Y)] for Y in Ys]
@@ -863,7 +870,7 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
 
     forward_connections = {}
     for l, Xs, Ys in execution_list:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, keras_layers.InputLayer):
             # Special case, do nothing.
             continue
 
@@ -880,7 +887,7 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
 
     ret = list()
     for l, Xs, Ys in execution_list:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, keras_layers.InputLayer):
             # Special case, do nothing.
             # Note: if a single input branches
             # this is not detected.
@@ -1034,7 +1041,7 @@ def reverse_model(model, reverse_mappings,
 
         if "final_tensor" not in tmp:
             if "tensor" not in tmp:
-                final_tensor = keras.layers.Add()(tmp["tensors"])
+                final_tensor = keras_layers.Add()(tmp["tensors"])
             else:
                 final_tensor = tmp["tensor"]
 
@@ -1062,7 +1069,7 @@ def reverse_model(model, reverse_mappings,
     layers, execution_list, outputs = execution_trace
     len_execution_list = len(execution_list)
     num_input_layers = len([_ for l, _, _ in execution_list
-                            if isinstance(l, keras.layers.InputLayer)])
+                            if isinstance(l, InputLayer)])
     len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
     reverse_execution_list = reversed(execution_list)
 
@@ -1136,7 +1143,7 @@ def reverse_model(model, reverse_mappings,
     for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):
         nid = len_execution_list_wo_inputs_layers - _nid - 1
 
-        if isinstance(layer, keras.layers.InputLayer):
+        if isinstance(layer, keras_layers.InputLayer):
             # Special case. Do nothing.
             pass
         elif kchecks.is_network(layer):

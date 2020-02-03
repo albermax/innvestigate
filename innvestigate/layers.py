@@ -8,12 +8,11 @@ from builtins import range, zip
 ###############################################################################
 ###############################################################################
 
-import keras
-import keras.backend as K
-import keras.constraints
-import keras.layers
-import keras.regularizers
-from keras.utils import conv_utils
+import tensorflow
+import tensorflow.keras as keras
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers as keras_layers
+from tensorflow.python.keras.utils import conv_utils
 import numpy as np
 
 
@@ -91,22 +90,22 @@ def One(reference=None):
     return Constant(1, reference=reference)
 
 
-class ZerosLike(keras.layers.Layer):
+class ZerosLike(keras_layers.Layer):
     def call(self, x):
         return [K.zeros_like(tmp) for tmp in iutils.to_list(x)]
 
 
-class OnesLike(keras.layers.Layer):
+class OnesLike(keras_layers.Layer):
     def call(self, x):
         return [K.ones_like(tmp) for tmp in iutils.to_list(x)]
 
 
-class AsFloatX(keras.layers.Layer):
+class AsFloatX(keras_layers.Layer):
     def call(self, x):
         return [iK.to_floatx(tmp) for tmp in iutils.to_list(x)]
 
 
-class FiniteCheck(keras.layers.Layer):
+class FiniteCheck(keras_layers.Layer):
     def call(self, x):
         return [K.sum(iK.to_floatx(iK.is_not_finite(tmp)))
                 for tmp in iutils.to_list(x)]
@@ -117,7 +116,7 @@ class FiniteCheck(keras.layers.Layer):
 ###############################################################################
 
 
-class Gradient(keras.layers.Layer):
+class Gradient(keras_layers.Layer):
     "Returns gradient of sum(output), expects inputs+[output,]."
 
     def call(self, x):
@@ -128,7 +127,7 @@ class Gradient(keras.layers.Layer):
         return input_shapes[:-1]
 
 
-class GradientWRT(keras.layers.Layer):
+class GradientWRT(keras_layers.Layer):
     "Returns gradient wrt to another layer and given gradient,"
     " expects inputs+[output,]."
 
@@ -143,7 +142,11 @@ class GradientWRT(keras.layers.Layer):
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
-        ret = iK.gradients(Xs, Ys, known_Ys)
+
+        ret = tensorflow.gradients(Ys, Xs,
+                                   grad_ys=known_Ys,
+                                   stop_gradients=Xs)
+
         if self.mask is not None:
             ret = [x for c, x in zip(self.mask, ret) if c]
         self.__workaround__len_ret = len(ret)
@@ -200,7 +203,7 @@ class GradientWRT(keras.layers.Layer):
 ###############################################################################
 
 
-class _Reduce(keras.layers.Layer):
+class _Reduce(keras_layers.Layer):
 
     def __init__(self, axis=-1, keepdims=False, *args, **kwargs):
         self.axis = axis
@@ -264,7 +267,7 @@ class CountNonZero(_Reduce):
 ###############################################################################
 
 
-class _Map(keras.layers.Layer):
+class _Map(keras_layers.Layer):
 
     def call(self, x):
         if isinstance(x, list) and len(x) == 1:
@@ -280,7 +283,7 @@ class _Map(keras.layers.Layer):
 
 class Identity(_Map):
     def _apply_map(self, x):
-        return K.identity(x)
+        return x
 
 
 class Abs(_Map):
@@ -353,51 +356,51 @@ class Print(_Map):
 ###############################################################################
 
 
-class Greater(keras.layers.Layer):
+class Greater(keras_layers.Layer):
     def call(self, x):
         a, b = x
         return K.greater(a, b)
 
 
-class Less(keras.layers.Layer):
+class Less(keras_layers.Layer):
     def call(self, x):
         a, b = x
         return K.less(a, b)
 
 
-class GreaterThanZero(keras.layers.Layer):
+class GreaterThanZero(keras_layers.Layer):
     def call(self, x):
         return K.greater(x, K.constant(0))
 
 
-class LessThanZero(keras.layers.Layer):
+class LessThanZero(keras_layers.Layer):
     def call(self, x):
         return K.less(x, K.constant(0))
 
 
-class GreaterEqual(keras.layers.Layer):
+class GreaterEqual(keras_layers.Layer):
     def call(self, x):
         a, b = x
         return K.greater_equal(a, b)
 
 
-class LessEqual(keras.layers.Layer):
+class LessEqual(keras_layers.Layer):
     def call(self, x):
         a, b = x
         return K.less_equal(a, b)
 
 
-class GreaterEqualThanZero(keras.layers.Layer):
+class GreaterEqualThanZero(keras_layers.Layer):
     def call(self, x):
         return K.greater_equal(x, K.constant(0))
 
 
-class LessEqualThanZero(keras.layers.Layer):
+class LessEqualThanZero(keras_layers.Layer):
     def call(self, x):
         return K.less_equal(x, K.constant(0))
 
 
-class Transpose(keras.layers.Layer):
+class Transpose(keras_layers.Layer):
 
     def __init__(self, axes=None, **kwargs):
         self._axes = axes
@@ -416,7 +419,7 @@ class Transpose(keras.layers.Layer):
             return tuple(np.asarray(input_shape)[list(self._axes)])
 
 
-class Dot(keras.layers.Layer):
+class Dot(keras_layers.Layer):
 
     def call(self, x):
         a, b = x
@@ -426,7 +429,7 @@ class Dot(keras.layers.Layer):
         return (input_shapes[0][0], input_shapes[1][1])
 
 
-class Divide(keras.layers.Layer):
+class Divide(keras_layers.Layer):
 
     def call(self, x):
         a, b = x
@@ -436,7 +439,7 @@ class Divide(keras.layers.Layer):
         return input_shapes[0]
 
 
-class SafeDivide(keras.layers.Layer):
+class SafeDivide(keras_layers.Layer):
 
     def __init__(self, *args, **kwargs):
         factor = kwargs.pop("factor", None)
@@ -459,7 +462,7 @@ class SafeDivide(keras.layers.Layer):
 ###############################################################################
 
 
-class Repeat(keras.layers.Layer):
+class Repeat(keras_layers.Layer):
 
     def __init__(self, n, axis, *args, **kwargs):
         self._n = n
@@ -481,7 +484,7 @@ class Repeat(keras.layers.Layer):
             return (input_shape[0]*self._n,)+input_shape[1:]
 
 
-class Reshape(keras.layers.Layer):
+class Reshape(keras_layers.Layer):
 
     def __init__(self, shape, *args, **kwargs):
         self._shape = shape
@@ -494,7 +497,7 @@ class Reshape(keras.layers.Layer):
         return tuple(x if x >= 0 else None for x in self._shape)
 
 
-class MultiplyWithLinspace(keras.layers.Layer):
+class MultiplyWithLinspace(keras_layers.Layer):
 
     def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
         self._start = start
@@ -522,14 +525,14 @@ class MultiplyWithLinspace(keras.layers.Layer):
         return ret
 
 
-class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
+class TestPhaseGaussianNoise(keras_layers.GaussianNoise):
 
     def call(self, inputs):
         # Always add Gaussian noise!
         return super(TestPhaseGaussianNoise, self).call(inputs, training=True)
 
 
-class ExtractConv2DPatches(keras.layers.Layer):
+class ExtractConv2DPatches(keras_layers.Layer):
 
     def __init__(self,
                  kernel_shape,
@@ -583,7 +586,7 @@ class ExtractConv2DPatches(keras.layers.Layer):
                 (np.product(self._kernel_shape) * self._depth,))
 
 
-class RunningMeans(keras.layers.Layer):
+class RunningMeans(keras_layers.Layer):
 
     def __init__(self, *args, **kwargs):
         self.stateful = True
@@ -630,7 +633,7 @@ class RunningMeans(keras.layers.Layer):
         return input_shapes
 
 
-class Broadcast(keras.layers.Layer):
+class Broadcast(keras_layers.Layer):
 
     def call(self, x):
         target_shapped, x = x
@@ -640,21 +643,21 @@ class Broadcast(keras.layers.Layer):
         return input_shapes[0]
 
 
-class Gather(keras.layers.Layer):
+class Gather(keras_layers.Layer):
 
     def call(self, inputs):
-        x, index = inputs
-        return iK.gather(x, 1, index)
+        x, indices = inputs
+        return tensorflow.gather(x, indices, axis=1)
 
     def compute_output_shape(self, input_shapes):
         return (input_shapes[0][0], input_shapes[1][0])+input_shapes[0][2:]
 
 
-class GatherND(keras.layers.Layer):
+class GatherND(keras_layers.Layer):
 
     def call(self, inputs):
         x, indices = inputs
-        return iK.gather_nd(x, indices)
+        return tensorflow.gather_nd(x, indices)
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[1][:2]+input_shapes[0][2:]

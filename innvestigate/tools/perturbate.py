@@ -8,9 +8,10 @@ import numpy as np
 import warnings
 import time
 
-import keras.backend as K
-from keras.utils import Sequence
-from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
+import tensorflow.keras.backend as K
+from tensorflow.keras.utils import GeneratorEnqueuer
+from tensorflow.keras.utils import OrderedEnqueuer
+from tensorflow.keras.utils import Sequence
 
 import innvestigate.utils
 

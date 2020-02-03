@@ -9,8 +9,9 @@ from builtins import zip
 ###############################################################################
 
 
-import keras.models
-import keras.backend as K
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+import tensorflow.keras.backend as K
 import numpy as np
 
 
@@ -116,7 +117,7 @@ class AugmentReduceBase(WrapperBase):
         new_outputs = iutils.to_list(self._reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
-        new_model = keras.models.Model(
+        new_model = keras_models.Model(
             inputs=inputs+extra_inputs+new_constant_inputs,
             outputs=new_outputs+extra_outputs)
         self._subanalyzer._analyzer_model = new_model
@@ -223,7 +224,7 @@ class PathIntegrator(AugmentReduceBase):
     def _keras_set_constant_inputs(self, inputs):
         tmp = [K.variable(x) for x in inputs]
         self._keras_constant_inputs = [
-            keras.layers.Input(tensor=x, shape=x.shape[1:])
+            keras_layers.Input(tensor=x, shape=x.shape[1:])
             for x in tmp]
 
     def _keras_get_constant_inputs(self):
@@ -236,7 +237,7 @@ class PathIntegrator(AugmentReduceBase):
             self._keras_set_constant_inputs(tmp)
 
         reference_inputs = self._keras_get_constant_inputs()
-        return [keras.layers.Subtract()([x, ri])
+        return [keras_layers.Subtract()([x, ri])
                 for x, ri in zip(X, reference_inputs)]
 
     def _augment(self, X):
@@ -258,7 +259,7 @@ class PathIntegrator(AugmentReduceBase):
         path_steps = [multiply_with_linspace(d) for d in difference]
 
         reference_inputs = self._keras_get_constant_inputs()
-        ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs,
+        ret = [keras_layers.Add()([x, p]) for x, p in zip(reference_inputs,
                                                           path_steps)]
         ret = [ilayers.Reshape((-1,)+K.int_shape(x)[2:])(x) for x in ret]
         return ret
@@ -268,5 +269,5 @@ class PathIntegrator(AugmentReduceBase):
         difference = self._keras_difference
         del self._keras_difference
 
-        return [keras.layers.Multiply()([x, d])
+        return [keras_layers.Multiply()([x, d])
                 for x, d in zip(tmp, difference)]
