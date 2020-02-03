@@ -34,7 +34,7 @@ import tensorflow.keras.applications.inception_v3 as keras_applications_inceptio
 import tensorflow.keras.applications.inception_resnet_v2 as keras_applications_inception_resnet_v2
 import tensorflow.keras.applications.densenet as keras_applications_densenet
 import tensorflow.keras.applications.nasnet as keras_applications_nasnet
-import tensorflow.keras.utils.data_utils as keras_utils_data_utils
+import tensorflow.keras.utils as keras_utils_data_utils
 import numpy as np
 import warnings
 

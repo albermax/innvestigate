@@ -657,7 +657,10 @@ class GatherND(keras_layers.Layer):
 
     def call(self, inputs):
         x, indices = inputs
-        return tensorflow.gather_nd(x, indices)
+        a = tensorflow.gather_nd(x, indices)
+        # Workaround to not break code when moving to tf 2.1
+        b = tensorflow.zeros_like(a)
+        return a + b
 
     def compute_output_shape(self, input_shapes):
         return input_shapes[1][:2]+input_shapes[0][2:]
