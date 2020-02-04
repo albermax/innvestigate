@@ -6,9 +6,6 @@ import setuptools
 install_requirements = [
     "future",
     "h5py",
-    # This package relies on internal interfaces and conventions of Keras.
-    # To ensure best compatibility we only support one(, the newest) version.
-    "keras==2.3.1",
     "matplotlib",
     "numpy",
     "pillow",
