@@ -16,7 +16,7 @@ import tensorflow.keras.layers as keras_layers
 import tensorflow.keras.models as keras_models
 import numpy as np
 import warnings
-from tensorflow.python.keras.engine import InputLayer
+from tensorflow.python.keras.engine.input_layer import InputLayer
 
 
 from . import checks as kchecks
