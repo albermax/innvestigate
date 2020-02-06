@@ -691,11 +691,11 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
     # E.g., a layer was also applied outside of the model. Then its
     # node list contains nodes that do not contribute to the model's output.
     # Those nodes are filtered here.
-    used_as_input = [x for x in outputs]
+    used_as_input = [id(x) for x in outputs]
     tmp = []
     for l, Xs, Ys in reversed(list(executed_nodes)):
-        if all([y in used_as_input for y in Ys]):
-            used_as_input += Xs
+        if all([id(y) in used_as_input for y in Ys]):
+            used_as_input += [id(x) for x in Xs]
             tmp.append((l, Xs, Ys))
     executed_nodes = list(reversed(tmp))
 
@@ -875,10 +875,10 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
             continue
 
         for x in Xs:
-            if x in forward_connections:
-                forward_connections[x] += Ys
+            if id(x) in forward_connections:
+                forward_connections[id(x)] += Ys
             else:
-                forward_connections[x] = list(Ys)
+                forward_connections[id(x)] = list(Ys)
 
     open_connections = {}
     for x in inputs:
@@ -894,8 +894,8 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
             continue
 
         for y in Ys:
-            assert y in open_connections
-            del open_connections[y]
+            assert id(y) in open_connections
+            del open_connections[id(y)]
 
         if len(open_connections) == 0:
             ret.append((l, (Xs, Ys)))
@@ -903,7 +903,7 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
         for y in Ys:
             if y not in outputs:
                 for fw_c in forward_connections[y]:
-                    open_connections[fw_c] = True
+                    open_connections[id(fw_c)] = True
 
     return ret
 
@@ -917,17 +917,17 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
 
     nodes = get_bottleneck_nodes(inputs, outputs, execution_list)
 
-    ret = list()
+    ret = dict()
     for l, (Xs, Ys) in nodes:
         for tensor_list in (Xs, Ys):
             if len(tensor_list) == 1:
                 tensor = tensor_list[0]
-                if tensor not in ret:
-                    ret.append(tensor)
+                if id(tensor) not in ret:
+                    ret[id(tensor)] = tensor
             else:
                 # TODO(albermax): put warning here?
                 pass
-    return ret
+    return list(ret.values())
 
 
 ###############################################################################
@@ -986,6 +986,7 @@ def reverse_model(model, reverse_mappings,
     """
 
     # Set default values ######################################################
+    stop_mapping_at_tensors = [id(x) for x in stop_mapping_at_tensors]
 
     if head_mapping is None:
         def head_mapping(X):
@@ -1016,14 +1017,14 @@ def reverse_model(model, reverse_mappings,
 
         def add_reversed_tensor(i, X, reversed_X):
             # Do not keep tensors that should stop the mapping.
-            if X in stop_mapping_at_tensors:
+            if id(X) in stop_mapping_at_tensors:
                 return
 
-            if X not in reversed_tensors:
-                reversed_tensors[X] = {"id": (nid, i),
-                                       "tensor": reversed_X}
+            if id(X) not in reversed_tensors:
+                reversed_tensors[id(X)] = {"id": (nid, i),
+                                           "tensor": reversed_X}
             else:
-                tmp = reversed_tensors[X]
+                tmp = reversed_tensors[id(X)]
                 if "tensor" in tmp and "tensors" in tmp:
                     raise Exception("Wrong order, tensors already aggregated!")
                 if "tensor" in tmp:
@@ -1037,7 +1038,7 @@ def reverse_model(model, reverse_mappings,
             add_reversed_tensor(i, X, reversed_X)
 
     def get_reversed_tensor(tensor):
-        tmp = reversed_tensors[tensor]
+        tmp = reversed_tensors[id(tensor)]
 
         if "final_tensor" not in tmp:
             if "tensor" not in tmp:
@@ -1046,7 +1047,7 @@ def reverse_model(model, reverse_mappings,
                 final_tensor = tmp["tensor"]
 
             if project_bottleneck_tensors is not False:
-                if tensor in bottleneck_tensors:
+                if id(tensor) in bottleneck_tensors:
                     project = ilayers.Project(project_bottleneck_tensors)
                     final_tensor = project(final_tensor)
 
@@ -1150,7 +1151,7 @@ def reverse_model(model, reverse_mappings,
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
-            if not all([ys in reversed_tensors for ys in Ys]):
+            if not all([id(ys) in reversed_tensors for ys in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
                 # Potentially this node is also not part of the
@@ -1159,8 +1160,10 @@ def reverse_model(model, reverse_mappings,
                 continue
             reversed_Ys = [get_reversed_tensor(ys)
                            for ys in Ys]
-            local_stop_mapping_at_tensors = [x for x in Xs
-                                             if x in stop_mapping_at_tensors]
+            local_stop_mapping_at_tensors = [
+                id(x) for x in Xs
+                if id(x) in stop_mapping_at_tensors
+            ]
 
             _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
             reverse_mapping = initialized_reverse_mappings[layer]
@@ -1179,7 +1182,7 @@ def reverse_model(model, reverse_mappings,
     # Return requested values #################################################
     reversed_input_tensors = [get_reversed_tensor(tmp)
                               for tmp in model.inputs
-                              if tmp not in stop_mapping_at_tensors]
+                              if id(tmp) not in stop_mapping_at_tensors]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:

@@ -484,7 +484,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
     def _gradient_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        mask = [x not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
+        mask = [id(x) not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
         return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
 
     def _reverse_mapping(self, layer):
