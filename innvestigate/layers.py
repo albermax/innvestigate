@@ -143,6 +143,11 @@ class GradientWRT(keras_layers.Layer):
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
 
+        if len(Ys) == 1:
+            Ys = Ys[0]
+        if len(known_Ys) == 1:
+            known_Ys = known_Ys[0]
+
         ret = tensorflow.gradients(Ys, Xs,
                                    grad_ys=known_Ys,
                                    stop_gradients=Xs)
