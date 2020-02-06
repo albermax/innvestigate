@@ -67,20 +67,15 @@ class BaselineGradient(base.AnalyzerNetworkBase):
         tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
                               if x not in stop_analysis_at_tensors]
         # Apply gradient of forward pass.
-        Y = model.outputs[0]
-        import tensorflow as tf
-        ret = tf.gradients([Y],
-                           tensors_to_analyze,
-                           grad_ys=[tf.ones_like(Y)],
-                           stop_gradients=tensors_to_analyze)
-        ret = iutils.to_list(ret)
+        ret = iutils.to_list(ilayers.Gradient()(
+            tensors_to_analyze+[model.outputs[0]]))
 
         if self._postprocess == "abs":
-            ret = [tf.abs(x) for x in ret]
+            ret = ilayers.Abs()(ret)
         elif self._postprocess == "square":
-            ret = [tf.square(x) for x in ret]
+            ret = ilayers.Square()(ret)
 
-        return ret
+        return iutils.to_list(ret)
 
 
 class Gradient(base.ReverseAnalyzerBase):
@@ -112,11 +107,10 @@ class Gradient(base.ReverseAnalyzerBase):
     def _postprocess_analysis(self, X):
         ret = super(Gradient, self)._postprocess_analysis(X)
 
-        import tensorflow as tf
         if self._postprocess == "abs":
-            ret = [tf.abs(x) for x in ret]
+            ret = ilayers.Abs()(ret)
         elif self._postprocess == "square":
-            ret = [tf.square(x) for x in ret]
+            ret = ilayers.Square()(ret)
 
         return iutils.to_list(ret)
 
