@@ -171,7 +171,10 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ## More documentation
 
-... can be found here: [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
+... can be found here:
+
+* [Software and application patterns for explanation methods](https://arxiv.org/abs/1904.04734)
+* [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
 
 ## Contributing
 

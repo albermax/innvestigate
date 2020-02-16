@@ -11,6 +11,7 @@ from __future__ import\
 import pytest
 
 
+from innvestigate.utils.tests import cases
 from innvestigate.utils.tests import dryrun
 
 
@@ -21,17 +22,21 @@ from innvestigate.utils.tests import dryrun
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__DryRunAnalyzerTestCase():
+@pytest.mark.parametrize("case_id", cases.FAST+cases.PRECOMMIT)
+def test_fast__DryRunAnalyzerTestCase(case_id):
     """
     Sanity test for the TestCase.
     """
 
-    def method(output_layer):
+    def create_analyzer_f(output_layer):
 
         class TestAnalyzer(object):
+            def fit(self, X):
+                pass
+
             def analyze(self, X):
                 return X
 
         return TestAnalyzer()
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)

@@ -9,7 +9,7 @@ from builtins import zip
 ###############################################################################
 
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 
 __all__ = [
@@ -58,8 +58,7 @@ def gradients(Xs, Ys, known_Ys):
     elif backend == "tensorflow":
         # no global import => do not break if module is not present
         import tensorflow
-        return tensorflow.gradients(Ys, Xs,
-                                    grad_ys=known_Ys,
+        return tensorflow.gradients(Ys, Xs, grad_ys=known_Ys,
                                     stop_gradients=Xs)
     else:
         # todo: add cntk

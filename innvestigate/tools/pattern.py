@@ -10,11 +10,11 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
-import keras.layers
-import keras.models
-import keras.optimizers
-import keras.utils
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+import tensorflow.keras.optimizers as keras_optimizers
+import tensorflow.keras.utils as keras_utils
 import numpy as np
 
 
@@ -113,7 +113,7 @@ def get_active_neuron_io(layer, active_node_indices,
         raise NotImplementedError("This code seems not to handle several Ys.")
         # Layer is applied several times in model.
         # Concatenate the io of the applications.
-        concatenate = keras.layers.Concatenate(axis=0)
+        concatenate = keras_layers.Concatenate(axis=0)
 
         if return_i and return_o:
             return (concatenate([x[0] for x in tmp]),
@@ -243,7 +243,10 @@ class LinearPattern(BasePattern):
 
         # Compute mask and active neuron counts.
         mask = ilayers.AsFloatX()(self._get_neuron_mask())
-        Y_masked = keras.layers.multiply([Y, mask])
+        if isinstance(mask, list):
+            mask = mask[0]
+
+        Y_masked = keras_layers.multiply([Y, mask])
         count = ilayers.CountNonZero(axis=0)(mask)
         count_all = ilayers.Sum(axis=0)(ilayers.OnesLike()(mask))
 
@@ -261,11 +264,12 @@ class LinearPattern(BasePattern):
 
         # ... along all neurons.
         mean_y = norm(ilayers.Sum(axis=0)(Y), count_all)
+
         _, c = self.mean_y([mean_y, count_all])
 
         # Create a dummy output to have a connected graph.
         # Needs to have the shape (mb_size, 1)
-        dummy = keras.layers.Average()([a, b, c])
+        dummy = keras_layers.Average()([a, b, c])
         return ilayers.Sum(axis=None)(dummy)
 
     def compute_pattern(self):
@@ -427,12 +431,12 @@ class PatternComputer(object):
         self._n_computer_outputs = len(computer_outputs)
         if self.compute_layers_in_parallel is True:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
+                keras_models.Model(inputs=self.model.inputs,
                                    outputs=computer_outputs)
             ]
         else:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
+                keras_models.Model(inputs=self.model.inputs,
                                    outputs=computer_output)
                 for computer_output in computer_outputs
             ]
@@ -440,7 +444,7 @@ class PatternComputer(object):
         # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
-            self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
+            self._computers = [keras_utils.multi_gpu_model(tmp, gpus=self.gpus)
                                for tmp in self._computers]
 
     def compute(self, X, batch_size=32, verbose=0):
@@ -464,10 +468,13 @@ class PatternComputer(object):
         self._create_computers()
 
         # We don't do gradient updates.
-        class NoOptimizer(keras.optimizers.Optimizer):
+        class NoOptimizer(keras_optimizers.Optimizer):
             def get_updates(self, *args, **kwargs):
                 return []
-        optimizer = NoOptimizer()
+
+            def get_config(self, *args, **kwargs):
+                return {}
+        optimizer = NoOptimizer(name="NoOptimizer")
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
             raise ValueError("Pattern are computed with "
@@ -486,7 +493,7 @@ class PatternComputer(object):
             dummy = np.ones(shape=(n, 1), dtype=dtype)
             return [dummy for _ in range(n_dummy_outputs)]
 
-        if isinstance(generator, keras.utils.Sequence):
+        if isinstance(generator, keras_utils.Sequence):
             generator = iutils.TargetAugmentedSequence(generator,
                                                        get_dummy_targets)
         else:

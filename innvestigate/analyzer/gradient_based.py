@@ -8,8 +8,9 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.models
-import keras
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+import tensorflow.keras as keras
 
 
 from . import base
@@ -19,6 +20,7 @@ from .. import utils as iutils
 from ..utils import keras as kutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
+
 
 __all__ = [
     "BaselineGradient",
@@ -64,6 +66,7 @@ class BaselineGradient(base.AnalyzerNetworkBase):
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
                               if x not in stop_analysis_at_tensors]
+        # Apply gradient of forward pass.
         ret = iutils.to_list(ilayers.Gradient()(
             tensors_to_analyze+[model.outputs[0]]))
 
@@ -73,20 +76,6 @@ class BaselineGradient(base.AnalyzerNetworkBase):
             ret = ilayers.Square()(ret)
 
         return iutils.to_list(ret)
-
-    def _get_state(self):
-        state = super(BaselineGradient, self)._get_state()
-        state.update({"postprocess": self._postprocess})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("postprocess")
-        kwargs = super(BaselineGradient, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "postprocess": postprocess,
-        })
-        return kwargs
 
 
 class Gradient(base.ReverseAnalyzerBase):
@@ -111,6 +100,9 @@ class Gradient(base.ReverseAnalyzerBase):
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
+        # todo(alber): Find out why second code path does not work.
+        import tensorflow as tf
+        return [tf.ones_like(X)]
 
     def _postprocess_analysis(self, X):
         ret = super(Gradient, self)._postprocess_analysis(X)
@@ -121,20 +113,6 @@ class Gradient(base.ReverseAnalyzerBase):
             ret = ilayers.Square()(ret)
 
         return iutils.to_list(ret)
-
-    def _get_state(self):
-        state = super(Gradient, self)._get_state()
-        state.update({"postprocess": self._postprocess})
-        return state
-
-    @classmethod
-    def _state_to_kwargs(clazz, state):
-        postprocess = state.pop("postprocess")
-        kwargs = super(Gradient, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "postprocess": postprocess,
-        })
-        return kwargs
 
 
 ###############################################################################
@@ -159,7 +137,7 @@ class InputTimesGradient(Gradient):
                               if x not in stop_analysis_at_tensors]
         gradients = super(InputTimesGradient, self)._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors)
-        return [keras.layers.Multiply()([i, g])
+        return [keras_layers.Multiply()([i, g])
                 for i, g in zip(tensors_to_analyze, gradients)]
 
 
@@ -171,7 +149,7 @@ class InputTimesGradient(Gradient):
 class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
 
     def __init__(self, layer, state):
-        self._activation = keras.layers.Activation("relu")
+        self._activation = keras_layers.Activation("relu")
         self._layer_wo_relu = kgraph.copy_layer_wo_activation(
             layer,
             name_template="reversed_%s",
@@ -183,7 +161,11 @@ class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
 
         # Apply gradient of forward pass without relus.
         Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
-        return ilayers.GradientWRT(len(Xs))(Xs+Ys_wo_relu+reversed_Ys)
+        # Apply gradient.
+        import tensorflow as tf
+        return tf.gradients(Ys_wo_relu, Xs,
+                            grad_ys=reversed_Ys,
+                            stop_gradients=Xs)
 
 
 class Deconvnet(base.ReverseAnalyzerBase):
@@ -217,12 +199,15 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
 
 def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
-    activation = keras.layers.Activation("relu")
+    activation = keras_layers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
     reversed_Ys = kutils.apply(activation, reversed_Ys)
 
     # Apply gradient of forward pass.
-    return ilayers.GradientWRT(len(Xs))(Xs+Ys+reversed_Ys)
+    import tensorflow as tf
+    return tf.gradients(Ys, Xs,
+                        grad_ys=reversed_Ys,
+                        stop_gradients=Xs)
 
 
 class GuidedBackprop(base.ReverseAnalyzerBase):

@@ -11,6 +11,7 @@ from __future__ import\
 import pytest
 
 
+from innvestigate.utils.tests import cases
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import Input
@@ -24,34 +25,21 @@ from innvestigate.analyzer import Random
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Input():
+@pytest.mark.parametrize("case_id", cases.FAST+cases.PRECOMMIT)
+def test_fast__Input(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Input(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__Random():
+@pytest.mark.parametrize("case_id", cases.FAST+cases.PRECOMMIT)
+def test_fast__Random(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return Random(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeRandom():
-
-    def method(model):
-        return Random(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)

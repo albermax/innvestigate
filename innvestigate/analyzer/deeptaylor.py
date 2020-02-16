@@ -8,13 +8,14 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.layers
-import keras.models
-
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
+from tensorflow.python.keras.engine.input_layer import InputLayer
 
 from . import base
 from .relevance_based import relevance_rule as lrp_rules
 from ..utils.keras import checks as kchecks
+from ..utils.keras import graph as kgraph
 
 
 __all__ = [
@@ -56,7 +57,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         self._add_conditional_reverse_mapping(
             lambda l: (kchecks.contains_kernel(l) and
                        kchecks.contains_activation(l)),
-            lrp_rules.Alpha1Beta0Rule,
+            lrp_rules.Alpha1Beta0IgnoreBiasRule,
             name="deep_taylor_kernel_w_relu",
         )
         self._add_conditional_reverse_mapping(
@@ -74,12 +75,17 @@ class DeepTaylor(base.ReverseAnalyzerBase):
             name="deep_taylor_relu",
         )
 
-        # Special layers.
+        # Assume conv layer beforehand -> unbounded
+        bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
+            lrp_rules.WSquareRule,
+            fuse_mode="one_linear",
+        )
         self._add_conditional_reverse_mapping(
             kchecks.is_batch_normalization_layer,
-            do_nothing,
+            bn_mapping,
             name="deep_taylor_batch_norm",
         )
+        # Special layers.
         self._add_conditional_reverse_mapping(
             kchecks.is_max_pooling,
             self._gradient_reverse_mapping,
@@ -91,20 +97,20 @@ class DeepTaylor(base.ReverseAnalyzerBase):
             name="deep_taylor_average_pooling",
         )
         self._add_conditional_reverse_mapping(
-            lambda l: isinstance(l, keras.layers.Add),
+            lambda l: isinstance(l, keras_layers.Add),
             # Ignore scaling with 0.5
             self._gradient_reverse_mapping,
             name="deep_taylor_add",
         )
         self._add_conditional_reverse_mapping(
             lambda l: isinstance(l, (
-                keras.layers.convolutional.UpSampling1D,
-                keras.layers.convolutional.UpSampling2D,
-                keras.layers.convolutional.UpSampling3D,
-                keras.layers.core.Dropout,
-                keras.layers.core.SpatialDropout1D,
-                keras.layers.core.SpatialDropout2D,
-                keras.layers.core.SpatialDropout3D,
+                keras_layers.UpSampling1D,
+                keras_layers.UpSampling2D,
+                keras_layers.UpSampling3D,
+                keras_layers.Dropout,
+                keras_layers.SpatialDropout1D,
+                keras_layers.SpatialDropout2D,
+                keras_layers.SpatialDropout3D,
             )),
             self._gradient_reverse_mapping,
             name="deep_taylor_special_layers",
@@ -113,19 +119,19 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         # Layers w/o transformation
         self._add_conditional_reverse_mapping(
             lambda l: isinstance(l, (
-                keras.engine.topology.InputLayer,
-                keras.layers.convolutional.Cropping1D,
-                keras.layers.convolutional.Cropping2D,
-                keras.layers.convolutional.Cropping3D,
-                keras.layers.convolutional.ZeroPadding1D,
-                keras.layers.convolutional.ZeroPadding2D,
-                keras.layers.convolutional.ZeroPadding3D,
-                keras.layers.Concatenate,
-                keras.layers.core.Flatten,
-                keras.layers.core.Masking,
-                keras.layers.core.Permute,
-                keras.layers.core.RepeatVector,
-                keras.layers.core.Reshape,
+                InputLayer,
+                keras_layers.Cropping1D,
+                keras_layers.Cropping2D,
+                keras_layers.Cropping3D,
+                keras_layers.ZeroPadding1D,
+                keras_layers.ZeroPadding2D,
+                keras_layers.ZeroPadding3D,
+                keras_layers.Concatenate,
+                keras_layers.Flatten,
+                keras_layers.Masking,
+                keras_layers.Permute,
+                keras_layers.RepeatVector,
+                keras_layers.Reshape,
             )),
             self._gradient_reverse_mapping,
             name="deep_taylor_no_transform",
@@ -146,8 +152,8 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         To be theoretically sound Deep-Taylor expects only positive outputs.
         """
 
-        positive_outputs = [keras.layers.ReLU()(x) for x in model.outputs]
-        model_with_positive_output = keras.models.Model(
+        positive_outputs = [keras_layers.ReLU()(x) for x in model.outputs]
+        model_with_positive_output = keras_models.Model(
             inputs=model.inputs, outputs=positive_outputs)
 
         return super(DeepTaylor, self)._prepare_model(

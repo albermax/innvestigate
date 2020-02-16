@@ -8,8 +8,9 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.layers
-import keras.models
+import tensorflow.keras as keras
+import tensorflow.keras.layers as keras_layers
+import tensorflow.keras.models as keras_models
 import numpy as np
 import pytest
 
@@ -34,9 +35,9 @@ def test_fast__PerturbationAnalysis():
     generator = iutils.BatchSequence([x, np.zeros(x.shape[0])], batch_size=x.shape[0])
 
     # Simple model
-    model = keras.models.Sequential([
-            keras.layers.Flatten(input_shape=x.shape[1:]),
-            keras.layers.Dense(1, use_bias=False),
+    model = keras_models.Sequential([
+            keras_layers.Flatten(input_shape=x.shape[1:]),
+            keras_layers.Dense(1, use_bias=False),
     ])
 
     weights = np.arange(4 * 4 * 1).reshape((4 * 4, 1))

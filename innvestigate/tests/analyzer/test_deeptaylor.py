@@ -11,6 +11,7 @@ from __future__ import\
 import pytest
 
 
+from innvestigate.utils.tests import cases
 from innvestigate.utils.tests import dryrun
 
 from innvestigate.analyzer import DeepTaylor
@@ -24,59 +25,41 @@ from innvestigate.analyzer import BoundedDeepTaylor
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__DeepTaylor():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__DeepTaylor(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return DeepTaylor(model)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__DeepTaylor():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__DeepTaylor(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return DeepTaylor(model)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__DeepTaylor():
-
-    def method(model):
-        return DeepTaylor(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BoundedDeepTaylor():
+@pytest.mark.parametrize("case_id", cases.FAST)
+def test_fast__BoundedDeepTaylor(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BoundedDeepTaylor(model, low=-1, high=1)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(case_id, create_analyzer_f)
 
 
 @pytest.mark.precommit
-def test_precommit__BoundedDeepTaylor():
+@pytest.mark.parametrize("case_id", cases.PRECOMMIT)
+def test_precommit__BoundedDeepTaylor(case_id):
 
-    def method(model):
+    def create_analyzer_f(model):
         return BoundedDeepTaylor(model, low=-1, high=1)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__BoundedDeepTaylor():
-
-    def method(model):
-        return BoundedDeepTaylor(model, low=-1, high=1)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(case_id, create_analyzer_f)

@@ -8,8 +8,8 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.backend as K
-import keras.utils
+import tensorflow.keras.backend as K
+import tensorflow.keras.utils as keras_utils
 import math
 
 
@@ -55,7 +55,7 @@ def to_list(l):
 ###############################################################################
 
 
-class BatchSequence(keras.utils.Sequence):
+class BatchSequence(keras_utils.Sequence):
     """Batch sequence generator.
 
     Take a (list of) input tensors and a batch size
@@ -88,7 +88,7 @@ class BatchSequence(keras.utils.Sequence):
             return tuple(ret)
 
 
-class TargetAugmentedSequence(keras.utils.Sequence):
+class TargetAugmentedSequence(keras_utils.Sequence):
     """Augments a sequence with a target on the fly.
 
     Takes a sequence/generator and a function that

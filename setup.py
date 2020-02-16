@@ -7,12 +7,11 @@ import sys
 install_requirements = [
     "future",
     "h5py",
-    # This package relies on internal interfaces and conventions of Keras.
-    # To ensure best compatibility we only support one(, the newest) version.
-    "keras==2.2.4",
+    "matplotlib",
     "numpy",
     "pillow",
-    "pytest",
+    "scipy",
+    "tensorflow==2.1",
 ]
 
 # scipy 1.3 only support py 3.5
@@ -30,7 +29,9 @@ setup_requirements = [
 ]
 
 test_requirements = [
-    "pytest"
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
 ]
 
 
@@ -44,7 +45,7 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.8",
+        version="2.0.0",
         description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
         classifiers=[
@@ -53,8 +54,7 @@ def setup():
             "Environment :: Console",
             "Intended Audience :: Science/Research",
             "Operating System :: POSIX :: Linux",
-            "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
         ],
         url="https://github.com/albermax/innvestigate",

@@ -10,109 +10,94 @@ from __future__ import\
 
 import pytest
 
-
-from keras.datasets import mnist
-import keras.layers
-import keras.models
-from keras.models import Model
-import keras.optimizers
 import numpy as np
 import unittest
 
+from innvestigate import backend
+from innvestigate.utils.tests import cases
 from innvestigate.utils.tests import dryrun
 
 import innvestigate
 from innvestigate.tools import PatternComputer
 
 
+require_tf = pytest.mark.skipif(backend.name() != "tensorflow",
+                                reason="Pattern computer only works with TF.")
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__PatternComputer_dummy_parallel():
+@pytest.mark.parametrize(
+    "case_id", ["dot", "mlp2", "mlp3", "cnn_2dim_c1_d1", "cnn_2dim_c2_d1"])
+def test_fast__PatternComputer_dummy_parallel(case_id):
 
-    def method(model):
-        return PatternComputer(model, pattern_type="dummy",
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
+
+    model, data = case()
+    computer = PatternComputer(model, pattern_type="dummy",
                                compute_layers_in_parallel=True)
+    computer.compute(data)
 
-    dryrun.test_pattern_computer(method, "mnist.log_reg")
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
-@pytest.mark.skip("Feature not supported.")
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__PatternComputer_dummy_sequential():
+@pytest.mark.parametrize(
+    "case_id", ["dot", "mlp2", "mlp3", "cnn_2dim_c1_d1", "cnn_2dim_c2_d1"])
+def test_fast__PatternComputer_linear(case_id):
 
-    def method(model):
-        return PatternComputer(model, pattern_type="dummy",
-                               compute_layers_in_parallel=False)
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
 
-    dryrun.test_pattern_computer(method, "mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+    model, data = case()
+    computer = PatternComputer(model, pattern_type="linear")
+    computer.compute(data)
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__PatternComputer_linear():
+@pytest.mark.parametrize(
+    "case_id", ["dot", "mlp2", "mlp3", "cnn_2dim_c1_d1", "cnn_2dim_c2_d1"])
+def test_fast__PatternComputer_relupositive(case_id):
 
-    def method(model):
-        return PatternComputer(model, pattern_type="linear")
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
 
-    dryrun.test_pattern_computer(method, "mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__PatternComputer_linear():
-
-    def method(model):
-        return PatternComputer(model, pattern_type="linear")
-
-    dryrun.test_pattern_computer(method, "mnist.*")
+    model, data = case()
+    computer = PatternComputer(model, pattern_type="relu.positive")
+    computer.compute(data)
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__PatternComputer_relupositive():
+@pytest.mark.parametrize(
+    "case_id", ["dot", "mlp2", "mlp3", "cnn_2dim_c1_d1", "cnn_2dim_c2_d1"])
+def test_fast__PatternComputer_relunegative(case_id):
 
-    def method(model):
-        return PatternComputer(model, pattern_type="relu.positive")
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
 
-    dryrun.test_pattern_computer(method, "mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__PatternComputer_relupositive():
-
-    def method(model):
-        return PatternComputer(model, pattern_type="relu.positive")
-
-    dryrun.test_pattern_computer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__PatternComputer_relunegative():
-
-    def method(model):
-        return PatternComputer(model, pattern_type="relu.negative")
-
-    dryrun.test_pattern_computer(method, "mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__PatternComputer_relunegative():
-
-    def method(model):
-        return PatternComputer(model, pattern_type="relu.negative")
-
-    dryrun.test_pattern_computer(method, "mnist.*")
+    model, data = case()
+    computer = PatternComputer(model, pattern_type="relu.negative")
+    computer.compute(data)
 
 
 ###############################################################################
@@ -120,6 +105,7 @@ def test_precommit__PatternComputer_relunegative():
 ###############################################################################
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
 class HaufePatternExample(unittest.TestCase):
@@ -136,10 +122,11 @@ class HaufePatternExample(unittest.TestCase):
 
         X = y * a_s + eps * a_d
 
-        model = keras.models.Sequential(
-            [keras.layers.Dense(1, input_shape=(2,), use_bias=True), ]
+        model = backend.keras.models.Sequential(
+            [backend.keras.layers.Dense(1, input_shape=(2,), use_bias=True), ]
         )
-        model.compile(optimizer=keras.optimizers.Adam(lr=1), loss="mse")
+        model.compile(
+            optimizer=backend.keras.optimizers.Adam(lr=1), loss="mse")
         model.fit(X, y, epochs=20, verbose=0).history
         self.assertTrue(model.evaluate(X, y, verbose=0) < 0.05)
 
@@ -166,6 +153,7 @@ class HaufePatternExample(unittest.TestCase):
 
 def fetch_data():
     # the data, shuffled and split between train and test sets
+    mnist = backend.keras.datasets.mnist
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     x_train = (x_train.reshape(60000, 1, 28, 28) - 127.5) / 127.5
@@ -176,16 +164,18 @@ def fetch_data():
     return x_train[:100], y_train[:100], x_test[:10], y_test[:10]
 
 
-def create_model(clazz):
+def create_model():
+    input_shape = (None, 1, 28, 28)
     num_classes = 10
 
-    network = clazz(
-        (None, 1, 28, 28),
-        num_classes,
-        dense_units=1024,
-        dropout_rate=0.25)
-    model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
-    model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+    layers = backend.keras.layers
+    inputs = layers.Input(shape=input_shape[1:])
+    tmp = layers.Flatten()(inputs)
+    tmp = layers.Dense(units=20, activation="relu")(tmp)
+    outputs = layers.Dense(units=10, activation="linear")(tmp)
+    model_wo_sm = backend.keras.models.Model(inputs, outputs)
+    outputs = layers.Activation("softmax")(outputs)
+    model_w_sm = backend.keras.models.Model(inputs, outputs)
     return model_wo_sm, model_w_sm
 
 
@@ -195,11 +185,11 @@ def train_model(model, data, epochs=20):
 
     x_train, y_train, x_test, y_test = data
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train = backend.keras.utils.to_categorical(y_train, num_classes)
+    y_test = backend.keras.utils.to_categorical(y_test, num_classes)
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer=keras.optimizers.RMSprop(),
+                  optimizer=backend.keras.optimizers.RMSprop(),
                   metrics=['accuracy'])
 
     model.fit(x_train, y_train,
@@ -209,16 +199,16 @@ def train_model(model, data, epochs=20):
     model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
 class MnistPatternExample_dense_linear(unittest.TestCase):
 
     def test(self):
         np.random.seed(234354346)
-        model_class = innvestigate.utils.tests.networks.base.mlp_2dense
 
         data = fetch_data()
-        model, modelp = create_model(model_class)
+        model, modelp = create_model()
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
@@ -249,16 +239,16 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
 class MnistPatternExample_dense_relu(unittest.TestCase):
 
     def test(self):
         np.random.seed(234354346)
-        model_class = innvestigate.utils.tests.networks.base.mlp_2dense
 
         data = fetch_data()
-        model, modelp = create_model(model_class)
+        model, modelp = create_model()
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 

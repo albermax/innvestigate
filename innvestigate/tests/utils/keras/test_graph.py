@@ -8,12 +8,16 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.models
 import pytest
 
 
+from innvestigate import backend
 from innvestigate.utils.keras import graph as kgraph
-from innvestigate.utils.tests import networks
+from innvestigate.utils.tests import cases
+
+
+require_tf = pytest.mark.skipif(backend.name() != "tensorflow",
+                                reason="Testing TF only functionality.")
 
 
 ###############################################################################
@@ -21,60 +25,34 @@ from innvestigate.utils.tests import networks
 ###############################################################################
 
 
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__get_model_execution_graph():
+@pytest.mark.parametrize("case_id", cases.FAST+cases.PRECOMMIT)
+def test_fast__get_model_execution_graph(case_id):
 
-    network_filter = "trivia.*:mnist.log_reg"
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
 
-    for network in networks.iterator(network_filter):
+    model, _ = case()
 
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
-
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
-
-
-@pytest.mark.precommit
-def test_commit__get_model_execution_graph():
-
-    network_filter = "mnist.*"
-
-    for network in networks.iterator(network_filter):
-
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
-
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
+    graph = kgraph.get_model_execution_graph(model)
+    kgraph.print_model_execution_graph(graph)
 
 
-@pytest.mark.precommit
-def test_precommit__get_model_execution_graph_resnet50():
-
-    network_filter = "imagenet.resnet50"
-
-    for network in networks.iterator(network_filter):
-
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
-
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
-
-
+@require_tf
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__get_model_execution_graph_with_inputs():
+@pytest.mark.parametrize("case_id", cases.FAST+cases.PRECOMMIT)
+def test_fast__get_model_execution_graph_with_inputs(case_id):
 
-    network_filter = "trivia.*:mnist.log_reg"
+    case = getattr(cases, case_id)
+    if case is None:
+        raise ValueError("Invalid case_id.")
 
-    for network in networks.iterator(network_filter):
+    model, _ = case()
 
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
-
-        graph = kgraph.get_model_execution_graph(model,
-                                                 keep_input_layers=True)
-        kgraph.print_model_execution_graph(graph)
+    graph = kgraph.get_model_execution_graph(model,
+                                             keep_input_layers=True)
+    kgraph.print_model_execution_graph(graph)
