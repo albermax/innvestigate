@@ -9,7 +9,7 @@ import six
 ###############################################################################
 ###############################################################################
 
-
+import tensorflow as tf
 import tensorflow.keras.backend as K
 import tensorflow.keras.layers as keras_layers
 import tensorflow.keras.models as keras_models
@@ -165,7 +165,7 @@ class BasePattern(object):
         else:
             ret = []
             for i in range(n_nodes):
-                output_tensors = iutils.to_list(self.layer.get_output_at(i))
+                output_tensors = [tmp.experimental_ref() for tmp in iutils.to_list(self.layer.get_output_at(i))]
                 # Check if output is used in the model.
                 if all([tmp in self.model_tensors
                         for tmp in output_tensors]):
@@ -232,6 +232,7 @@ class LinearPattern(BasePattern):
         for i in range(kgraph.get_layer_inbound_count(self.layer)):
             layer(self.layer.get_input_at(i))
         Xs, Ys = get_active_neuron_io(layer, self._active_node_indices)
+
         if len(Ys) != 1:
             raise ValueError("Assume that kernel layer have only one output.")
         X, Y = Xs[0], Ys[0]
@@ -248,7 +249,7 @@ class LinearPattern(BasePattern):
 
         Y_masked = keras_layers.multiply([Y, mask])
         count = ilayers.CountNonZero(axis=0)(mask)
-        count_all = ilayers.Sum(axis=0)(ilayers.OnesLike()(mask))
+        count_all = ilayers.CountNonZero(axis=0)(ilayers.OnesLike()(mask))
 
         # Get means ...
         def norm(x, count):
@@ -406,7 +407,7 @@ class PatternComputer(object):
         model_tensors = set()
         for _, input_tensors, output_tensors in execution_list:
             for t in input_tensors+output_tensors:
-                model_tensors.add(t)
+                model_tensors.add(t.experimental_ref())
 
         # Create pattern instances and collect the dummy outputs.
         self._pattern_instances = {k: [] for k in self.pattern_types}
@@ -474,6 +475,12 @@ class PatternComputer(object):
 
             def get_config(self, *args, **kwargs):
                 return {}
+
+            #keras seems to also call this function now when fitting. Perhaps override
+            #so that a "correct" value is returned
+            def apply_gradients(self, *args, **kwargs):
+                pass
+
         optimizer = NoOptimizer(name="NoOptimizer")
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
@@ -496,6 +503,7 @@ class PatternComputer(object):
         if isinstance(generator, keras_utils.Sequence):
             generator = iutils.TargetAugmentedSequence(generator,
                                                        get_dummy_targets)
+
         else:
             base_generator = generator
 

@@ -36,6 +36,7 @@ def dot():
         inputs = layers.Input(shape=input_shape[1:])
         outputs = layers.Dense(units=1, activation="linear")(inputs)
         model = helper.build_keras_model(inputs, outputs)
+
     else:
         raise NotImplementedError()
 
