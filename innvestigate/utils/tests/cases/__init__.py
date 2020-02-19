@@ -85,7 +85,7 @@ def mark_as_xfail(case_ids, xfails):
     return _mark_cases(case_ids, xfails, pytest.mark.xfail)
 
 
-def mark_as_skip(case_ids, xfails, skips):
+def mark_as_skip(case_ids, xfails):
     """Mark cases to skip.
 
     :param case_ids: Parameter list for pytest.mark.parametrize.
