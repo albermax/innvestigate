@@ -425,9 +425,9 @@ class AnalyzerNetworkBase(AnalyzerBase):
                  neuron_selection.reshape((-1, 1)))
             )
 
-            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
+            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection]).numpy()
         else:
-            ret = self._analyzer_model.predict_on_batch(X)
+            ret = self._analyzer_model.predict_on_batch(X).numpy()
 
         if self._n_debug_output > 0:
             self._handle_debug_output(ret[-self._n_debug_output:])
