@@ -425,9 +425,17 @@ class AnalyzerNetworkBase(AnalyzerBase):
                  neuron_selection.reshape((-1, 1)))
             )
 
-            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection]).numpy()
+            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
         else:
-            ret = self._analyzer_model.predict_on_batch(X).numpy()
+            ret = self._analyzer_model.predict_on_batch(X)
+
+        if isinstance(ret, list):
+            for i, r in enumerate(ret):
+                if not isinstance(r, np.ndarray):
+                    ret[i] = r.numpy()
+        else:
+            if not isinstance(ret, np.ndarray):
+                ret = ret.numpy()
 
         if self._n_debug_output > 0:
             self._handle_debug_output(ret[-self._n_debug_output:])

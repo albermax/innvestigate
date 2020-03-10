@@ -14,6 +14,15 @@ import tensorflow.keras.models as keras_models
 import tensorflow.keras.backend as K
 import numpy as np
 
+from tensorflow.python.distribute import distribution_strategy_context
+from tensorflow.python.framework import tensor_shape
+from tensorflow.python.keras import backend
+from tensorflow.python.keras.distribute import distributed_training_utils
+from tensorflow.python.keras.engine import base_layer
+from tensorflow.python.keras.engine import node as node_module
+from tensorflow.python.keras.saving.saved_model import layer_serialization
+from tensorflow.python.keras.utils import tf_utils
+from tensorflow.python.util.tf_export import keras_export
 
 from . import base
 from .. import layers as ilayers
@@ -28,7 +37,61 @@ __all__ = [
     "PathIntegrator",
 ]
 
+class ConstantInputLayer(base_layer.Layer):
+  """
+  tf.keras Input Layer, for constant inputs
+  """
 
+  def __init__(self,
+               input_tensor=None,
+               sparse=False,
+               name=None,
+               ragged=False,
+               **kwargs):
+
+    if kwargs:
+      raise ValueError('Unrecognized keyword arguments:', kwargs.keys())
+
+    if not name:
+      prefix = 'input'
+      name = prefix + '_' + str(backend.get_uid(prefix))
+
+    dtype = backend.dtype(input_tensor)
+
+    super(ConstantInputLayer, self).__init__(dtype=dtype, name=name)
+    self.built = True
+    self.sparse = sparse
+    self.ragged = ragged
+    self.batch_size = None
+    self.supports_masking = True
+    self.is_placeholder = False
+    self._batch_input_shape = tuple(input_tensor.shape.as_list())
+
+    # Create an input node to add to self.outbound_node
+    # and set output_tensors' _keras_history.
+    input_tensor._keras_history = base_layer.KerasHistory(self, 0, 0)
+    input_tensor._keras_mask = None
+    node_module.Node(
+        self,
+        inbound_layers=[],
+        node_indices=[],
+        tensor_indices=[],
+        input_tensors=[input_tensor],
+        output_tensors=[input_tensor])
+
+  def get_config(self):
+    config = {
+        'batch_input_shape': self._batch_input_shape,
+        'dtype': self.dtype,
+        'sparse': self.sparse,
+        'ragged': self.ragged,
+        'name': self.name
+    }
+    return config
+
+  @property
+  def _trackable_saved_model_saver(self):
+    return layer_serialization.InputLayerSavedModelSaver(self)
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -223,9 +286,16 @@ class PathIntegrator(AugmentReduceBase):
 
     def _keras_set_constant_inputs(self, inputs):
         tmp = [K.variable(x) for x in inputs]
-        self._keras_constant_inputs = [
-            keras_layers.Input(tensor=x, shape=x.shape[1:])
-            for x in tmp]
+
+        outputs = [ConstantInputLayer(input_tensor=x)._inbound_nodes[0].output_tensors for x in tmp]
+        outputs_reshaped = []
+        for out in outputs:
+            if len(out) == 1:
+                outputs_reshaped.append(out[0])
+            else:
+                outputs_reshaped.append(out)
+
+        self._keras_constant_inputs = outputs_reshaped
 
     def _keras_get_constant_inputs(self):
         return self._keras_constant_inputs
