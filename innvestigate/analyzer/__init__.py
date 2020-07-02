@@ -8,6 +8,7 @@ from __future__ import\
 ###############################################################################
 
 from .base import NotAnalyzeableModelException
+from .new_base import ReverseAnalyzerBase
 from .deeplift import DeepLIFTWrapper
 from .gradient_based import BaselineGradient
 from .gradient_based import Gradient
