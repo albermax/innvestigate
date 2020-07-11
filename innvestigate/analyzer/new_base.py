@@ -6,27 +6,12 @@ from __future__ import\
 ###############################################################################
 ###############################################################################
 
-
-import tensorflow.keras.layers as keras_layers
-import tensorflow.keras.models as keras_models
-import tensorflow.keras as keras
-import tensorflow.keras.backend as K
 import tensorflow as tf
-import numpy as np
-
-
-from . import base
-from . import wrapper
-from .. import layers as ilayers
-from .. import utils as iutils
 from ..utils import keras as kutils
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
 
 
 # Get Python six functionality:
 from builtins import zip
-import six
 
 ###############################################################################
 ###############################################################################
@@ -39,7 +24,7 @@ import tensorflow.keras.models as keras_models
 import numpy as np
 import warnings
 
-
+import inspect
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils.keras import checks as kchecks
@@ -272,12 +257,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
     """
 
     def __init__(self, model,
-                 neuron_selection_mode="max_activation",
                  allow_lambda_layers=False,
                  **kwargs):
-        if neuron_selection_mode not in ["max_activation", "index", "all"]:
-            raise ValueError("neuron_selection parameter is not valid.")
-        self._neuron_selection_mode = neuron_selection_mode
 
         self._allow_lambda_layers = allow_lambda_layers
         self._add_model_check(
@@ -288,7 +269,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-        self._special_helper_layers = []
 
         super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
@@ -356,7 +336,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _postprocess_analysis(self, X):
         return X
 
-def gradient_reverse_map(
+def reverse_map(
     #Alternative to kgraph.reverse_model.
         model,
         reverse_mappings,
@@ -364,15 +344,22 @@ def gradient_reverse_map(
         head_mapping,
         stop_mapping_at_tensors,
         verbose=False):
+
+    if head_mapping is None:
+        def head_mapping(X):
+            return X
+
     #TODO: verbose
     #TODO: HeadMapping
     #TODO this is just the basic core. Add full functionality of kgraph.reverse_model
-    stop_mapping_at_tensors = [x.name.split(":")[0] for x in stop_mapping_at_tensors]
 
+    #build model that is to be analyzed
     layers = kgraph.get_model_layers(model)
-    replacement_layers = []
+    stop_mapping_at_tensors = [x.name.split(":")[0] for x in stop_mapping_at_tensors]
+    layers.append(head_mapping)
 
-    #set all replacement layers
+    # set all replacement layers
+    replacement_layers = []
     for layer in layers:
         if not layer.name in stop_mapping_at_tensors:
             layer_next = []
@@ -435,11 +422,6 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, la
             hm.append(layer.explanation)
 
     return hm
-
-def GuidedBackpropReverseReLU(Xs, Ys, reversed_Ys, tape):
-    activation = keras_layers.Activation("relu")
-    reversed_Ys = kutils.apply(activation, reversed_Ys)
-    return tape.gradient(Ys, Xs, output_gradients=reversed_Ys)
 
 #TODO: more replacement layers
 class ReplacementLayer():
@@ -615,16 +597,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         :param layer: The layer for which a mapping should be returned.
         :return: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
-          * A :class:`ReverseMappingBase` subclass.
+          * A :class:`ReplacementLayer` subclass.
         """
         if layer in self._special_helper_layers:
             # Special layers added by AnalyzerNetworkBase
             # that should not be exposed to user.
+            #TODO: correct?
             return GradientReplacementLayer
 
         return self._apply_conditional_reverse_mappings(layer)
@@ -640,11 +618,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         :param condition: Condition when this mapping should be applied.
           Form: f(layer) -> bool
         :param mapping: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
+          * A function of form f(layer) that returns
+            a class:`ReverseMappingBase` subclass..
           * A :class:`ReverseMappingBase` subclass.
         :param priority: The higher the earlier the condition gets
           evaluated.
@@ -673,7 +648,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
-                    return mapping["mapping"]
+                    if (inspect.isclass(mapping["mapping"]) and issubclass(mapping["mapping"], ReplacementLayer)):
+                        return mapping["mapping"]
+                    elif callable(mapping["mapping"]):
+                        return mapping["mapping"](layer)
 
         return None
 
@@ -682,21 +660,21 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         Fallback function to map reversed_Ys to reversed_Xs
         (which should contain tensors of the same shape and type).
         """
-        return GradientReplacementLayer
+        return ReplacementLayer
 
-    def _head_mapping(self):
+    def _head_mapping_layer(self, X):
         """
         Map output tensors to new values before passing
         them into the reverted network.
         """
-        return ReplacementLayer
+        return X
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        inp, rep = gradient_reverse_map(
+        inp, rep = reverse_map(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
-            head_mapping=self._head_mapping,
+            head_mapping=self._head_mapping_layer,
             stop_mapping_at_tensors=stop_analysis_at_tensors,
             verbose=self._reverse_verbose,
         )
