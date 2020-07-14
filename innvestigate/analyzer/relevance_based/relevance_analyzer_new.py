@@ -3,12 +3,14 @@ from __future__ import\
     absolute_import, print_function, division, unicode_literals
 from builtins import zip
 import six
+import warnings
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 import inspect
+import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
 import tensorflow.keras.models as keras_models
@@ -21,7 +23,7 @@ from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
-from . import relevance_rule as rrule
+from . import relevance_rule_conv as rrule
 from . import utils as rutils
 
 
@@ -52,6 +54,12 @@ __all__ = [
 
     "LRPSequentialPresetAFlat",
     "LRPSequentialPresetBFlat",
+
+    "LRPSequentialCompositeA",
+    "LRPSequentialCompositeB",
+
+    "LRPSequentialCompositeAFlat",
+    "LRPSequentialCompositeBFlat",
 ]
 
 
@@ -83,12 +91,10 @@ LRP_RULES = {
     "Bounded": rrule.BoundedRule,
 }
 
-#TODO: tf2.0
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
     """Special BN handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
-        ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+    def __init__(self, layer, *args, **kwargs):
         config = layer.get_config()
 
         self._center = config['center']
@@ -99,29 +105,27 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         self._std = layer.moving_variance
         if self._center:
             self._beta = layer.beta
+        super(BatchNormalizationReverseLayer, self).__init__(layer, *args, **kwargs)
 
-        #TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
-        #super(BatchNormalizationReverseLayer, self).__init__(layer, state)
-        # how to do this:
-        # super.__init__ calls select_rule and sets a self._rule class
-        # check if isinstance(self_rule, EpsiloneRule), then reroute
-        # to BatchNormEpsilonRule. Not pretty, but should work.
+    def wrap_hook(self, ins, neuron_selection):
+        outs = self.layer_func(ins)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        ##print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
 
-        input_shape = [K.int_shape(x) for x in Xs]
-        if len(input_shape) != 1:
-            #extend below lambda layers towards multiple parameters.
-            raise ValueError("BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(len(Xs)))
-        input_shape = input_shape[0]
+        return outs
+
+    def explain_hook(self, ins, reversed_outs, args):
+        outs = args
+        input_shape = self.input_shape
 
         # prepare broadcasting shape for layer parameters
         broadcast_shape = [1] * len(input_shape)
         broadcast_shape[self._axis] = input_shape[self._axis]
-        broadcast_shape[0] =  -1
+        broadcast_shape[0] = -1
 
-        #reweight relevances as
+        # reweight relevances as
         #        x * (y - beta)     R
         # Rin = ---------------- * ----
         #           x - mu          y
@@ -131,85 +135,125 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
 
         minus_mu = keras_layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
         minus_beta = keras_layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
-        prepare_div = keras_layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*K.epsilon())
+        prepare_div = keras_layers.Lambda(
+            lambda x: x + (K.cast(K.greater_equal(x, 0), K.floatx()) * 2 - 1) * K.epsilon())
 
-
-        x_minus_mu = kutils.apply(minus_mu, Xs)
+        x_minus_mu = minus_mu(ins)
         if self._center:
-            y_minus_beta = kutils.apply(minus_beta, Ys)
+            y_minus_beta = minus_beta(outs)
         else:
-            y_minus_beta = Ys
+            y_minus_beta = outs
 
         numerator = [keras_layers.Multiply()([x, ymb, r])
-                     for x, ymb, r in zip(Xs, y_minus_beta, Rs)]
+                     for x, ymb, r in zip(ins, y_minus_beta, reversed_outs)]
         denominator = [keras_layers.Multiply()([xmm, y])
-                       for xmm, y in zip(x_minus_mu, Ys)]
+                       for xmm, y in zip(x_minus_mu, outs)]
 
         return [ilayers.SafeDivide()([n, prepare_div(d)])
                 for n, d in zip(numerator, denominator)]
 
-#TODO: tf2.0
 class AddReverseLayer(kgraph.ReverseMappingBase):
     """Special Add layer handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
-        ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+    def __init__(self, layer, *args, **kwargs):
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
-                                                             name_template="reversed_kernel_%s")
+                                                             name_template="no_act_%s")
+        super(AddReverseLayer, self).__init__(layer, *args, **kwargs)
 
-        #TODO: implement rule support.
-        #super(AddReverseLayer, self).__init__(layer, state)
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
+
+        return outs, Zs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
         # the outputs of the pooling operation at each location is the sum of its inputs.
         # the forward message must be known in this case, and are the inputs for each pooling thing.
         # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
         # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-        grad = ilayers.GradientWRT(len(Xs))
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
+        outs, Zs, tape = args
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = Zs
 
+        # Divide incoming relevance by the activations.
+        if len(self.layer_next) > 1:
+            tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
+        else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras_layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
 
-#TODO: tf2.0
+        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
+        if len(self.input_shape) > 1:
+            raise ValueError("Conv Layers should only have one input!")
+        if len(self.layer_next) > 1:
+            tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+            # TODO (for all rules) is it correct to add relevances here? should be due to sum conservation?
+            ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+        else:
+            tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+            ret = keras_layers.Multiply()([ins, tmp2])
+        return ret
+
 class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
     """Special AveragePooling handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
-        ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
+    def __init__(self, *args, **kwargs):
+        layer = kwargs.pop("layer", None)
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
-                                                             name_template="reversed_kernel_%s")
+                                                             name_template="no_act_%s")
+        super(AveragePoolingReverseLayer, self).__init__(layer, *args, **kwargs)
 
-        #TODO: implement rule support.
-        #super(AveragePoolingRerseLayer, self).__init__(layer, state)
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
+
+        return outs, Zs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
         # the outputs of the pooling operation at each location is the sum of its inputs.
         # the forward message must be known in this case, and are the inputs for each pooling thing.
         # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
         # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+        outs, Zs, tape = args
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = Zs
 
-        grad = ilayers.GradientWRT(len(Xs))
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
-
+        if len(self.layer_next) > 1:
+            tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
+        else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras_layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
+
+        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
+        if len(self.input_shape) > 1:
+            raise ValueError("Conv Layers should only have one input!")
+        if len(self.layer_next) > 1:
+            tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+            # TODO (for all rules) is it correct to add relevances here? should be due to sum conservation?
+            ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+        else:
+            tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+            ret = keras_layers.Multiply()([ins, tmp2])
+        return ret
 
 
 class LRP(base.ReverseAnalyzerBase):
@@ -260,7 +304,7 @@ class LRP(base.ReverseAnalyzerBase):
         ):
             # the given rule is a single string or single rule implementing cla ss
             use_conditions = True
-            rules = [(lambda a, b: True, rule)]
+            rules = [(lambda a: True, rule)]
 
         elif not isinstance(rule[0], tuple):
             # rule list of rule strings or classes
@@ -317,7 +361,7 @@ class LRP(base.ReverseAnalyzerBase):
 
         if isinstance(rule_class, six.string_types):
             rule_class = LRP_RULES[rule_class]
-        rule = rule_class(layer, reverse_state)
+        rule = rule_class
 
         return rule
 
@@ -381,7 +425,7 @@ class LRP(base.ReverseAnalyzerBase):
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
             ##print('return R')
-            return ReplacementLayer
+            return base.ReplacementLayer
         else:
             # This branch covers:
             # MaxPooling
@@ -391,18 +435,16 @@ class LRP(base.ReverseAnalyzerBase):
             # Concatenate
             # Cropping
             ##print('ilayers.GradientWRT')
-            return self._gradient_reverse_mapping(
-                Xs, Ys, reversed_Ys, reverse_state)
+            return self._gradient_reverse_mapping()
 
 
 ###############################################################################
-# ANALYZER CLASSES AND PRESETS ################################################
+# ANALYZER CLASSES AND COMPOSITES #############################################
 ###############################################################################
 
-#TODO: tf2.0
 class _LRPFixedParams(LRP):
     pass
-#TODO: tf2.0
+
 class LRPZ(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Z rule"""
     
@@ -410,7 +452,6 @@ class LRPZ(_LRPFixedParams):
         super(LRPZ, self).__init__(model, *args,
                                    rule="Z", bn_layer_rule="Z", **kwargs)
 
-#TODO: tf2.0
 class LRPZIgnoreBias(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Z-ignore-bias rule"""
 
@@ -420,8 +461,6 @@ class LRPZIgnoreBias(_LRPFixedParams):
                                              bn_layer_rule="ZIgnoreBias",
                                              **kwargs)
 
-
-#TODO: tf2.0
 class LRPEpsilon(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Epsilon rule"""
 
@@ -446,7 +485,6 @@ class LRPEpsilon(_LRPFixedParams):
                                          bn_layer_rule=EpsilonProxyRule,
                                          **kwargs)
 
-#TODO: tf2.0
 class LRPEpsilonIgnoreBias(LRPEpsilon):
     """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
 
@@ -456,7 +494,6 @@ class LRPEpsilonIgnoreBias(LRPEpsilon):
                                                    bias=False,
                                                    **kwargs)
 
-#TODO: tf2.0
 class LRPWSquare(_LRPFixedParams):
     """LRP-analyzer that uses the DeepTaylor W**2 rule"""
 
@@ -466,7 +503,6 @@ class LRPWSquare(_LRPFixedParams):
                                          bn_layer_rule="WSquare",
                                          **kwargs)
 
-#TODO: tf2.0
 class LRPFlat(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Flat rule"""
 
@@ -476,7 +512,6 @@ class LRPFlat(_LRPFixedParams):
                                       bn_layer_rule="Flat",
                                       **kwargs)
 
-#TODO: tf2.0
 class LRPAlphaBeta(LRP):
     """ Base class for LRP AlphaBeta"""
 
@@ -503,11 +538,10 @@ class LRPAlphaBeta(LRP):
                                            rule=AlphaBetaProxyRule,
                                            bn_layer_rule=AlphaBetaProxyRule,
                                            **kwargs)
-#TODO: tf2.0
+
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
     pass
 
-#TODO: tf2.0
 class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta rule with a=2,b=1"""
 
@@ -518,7 +552,6 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
                                              bias=True,
                                              **kwargs)
 
-#TODO: tf2.0
 class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=2,b=1"""
 
@@ -529,7 +562,6 @@ class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
                                                        bias=False,
                                                        **kwargs)
 
-#TODO: tf2.0
 class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta rule with a=1,b=0"""
 
@@ -540,7 +572,6 @@ class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
                                              bias=True,
                                              **kwargs)
 
-#TODO: tf2.0
 class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=1,b=0"""
 
@@ -550,14 +581,13 @@ class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
                                                        beta=0,
                                                        bias=False,
                                                        **kwargs)
-#TODO: tf2.0
+
 class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
     """LRP-analyzer that uses the LRP-alpha-beta rule with a=1,b=0"""
     #TODO: assert that layer inputs are always >= 0
     def __init__(self, model, *args, **kwargs):
         super(LRPZPlus, self).__init__(model, *args, **kwargs)
 
-#TODO: tf2.0
 class LRPZPlusFast(_LRPFixedParams):
     """
     The ZPlus rule is a special case of the AlphaBetaRule
@@ -570,12 +600,14 @@ class LRPZPlusFast(_LRPFixedParams):
                                            bn_layer_rule="ZPlusFast",
                                            **kwargs)
 
-#TODO: tf2.0
 class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
-    """Special LRP-configuration for ConvNets"""
+    """
+        Special LRP-configuration for ConvNets
+        DEPRECATED: use LRPSequentialCompositeBFlat instead
+    """
 
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
-
+        warnings.warn("deprecated", DeprecationWarning)
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             #TODO: fix. specify. extend.
@@ -604,11 +636,47 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
             bn_layer_rule=bn_layer_rule,
             **kwargs)
 
-#TODO: tf2.0
-class LRPSequentialPresetB(_LRPFixedParams):
+class LRPSequentialCompositeA(_LRPFixedParams): #for the lack of a better name
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
+
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            #TODO: fix. specify. extend.
+            ("LRPSequentialCompositeA is not advised "
+             "for networks with non-ReLU activations."),
+            check_type="warning",
+        )
+
+        class EpsilonProxyRule(rrule.EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super(EpsilonProxyRule, self).__init__(*args,
+                                                       epsilon=epsilon,
+                                                       bias=True,
+                                                       **kwargs)
+
+
+        conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
+                             (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule)
+                            ]
+        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
+
+        super(LRPSequentialCompositeA, self).__init__(
+            model,
+            *args,
+            rule=conditional_rules,
+            bn_layer_rule=bn_layer_rule,
+            **kwargs)
+
+class LRPSequentialPresetB(_LRPFixedParams):
+    """
+        Special LRP-configuration for ConvNets
+        DEPRECATED: use LRPSequentialCompositeBFlat instead
+    """
+
+    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
+        warnings.warn("deprecated", DeprecationWarning)
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             #TODO: fix. specify. extend.
@@ -636,28 +704,82 @@ class LRPSequentialPresetB(_LRPFixedParams):
             bn_layer_rule=bn_layer_rule,
             **kwargs)
 
-
-
-
-#TODO: tf2.0
-#TODO: allow to pass input layer identification by index or id.
-class LRPSequentialPresetAFlat(LRPSequentialPresetA):
+class LRPSequentialCompositeB(_LRPFixedParams):
     """Special LRP-configuration for ConvNets"""
 
+    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            #TODO: fix. specify. extend.
+            ("LRPSequentialCompositeB is not advised "
+             "for networks with non-ReLU activations."),
+            check_type="warning",
+        )
+
+        class EpsilonProxyRule(rrule.EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super(EpsilonProxyRule, self).__init__(*args,
+                                                       epsilon=epsilon,
+                                                       bias=True,
+                                                       **kwargs)
+
+        conditional_rules = [(kchecks.is_dense_layer, EpsilonProxyRule),
+                             (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule)
+                         ]
+        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
+
+        super(LRPSequentialCompositeB, self).__init__(
+            model,
+            *args,
+            rule=conditional_rules,
+            bn_layer_rule=bn_layer_rule,
+            **kwargs)
+
+#TODO: allow to pass input layer identification by index or id.
+class LRPSequentialPresetAFlat(LRPSequentialPresetA):
+    """
+        Special LRP-configuration for ConvNets
+        DEPRECATED: use LRPSequentialCompositeBFlat instead
+    """
+
     def __init__(self, model, *args, **kwargs):
+        warnings.warn("deprecated", DeprecationWarning)
         super(LRPSequentialPresetAFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
-
-#TODO: tf2.0
 #TODO: allow to pass input layer identification by index or id.
-class LRPSequentialPresetBFlat(LRPSequentialPresetB):
+class LRPSequentialCompositeAFlat(LRPSequentialCompositeA):
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, *args, **kwargs):
+        super(LRPSequentialCompositeAFlat, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="Flat",
+                                                **kwargs)
+
+
+#TODO: allow to pass input layer identification by index or id.
+class LRPSequentialPresetBFlat(LRPSequentialPresetB):
+    """
+        Special LRP-configuration for ConvNets
+        DEPRECATED: use LRPSequentialCompositeBFlat instead
+    """
+
+    def __init__(self, model, *args, **kwargs):
+        warnings.warn("deprecated", DeprecationWarning)
         super(LRPSequentialPresetBFlat, self).__init__(model,
+                                                *args,
+                                                input_layer_rule="Flat",
+                                                **kwargs)
+
+#TODO: allow to pass input layer identification by index or id.
+class LRPSequentialCompositeBFlat(LRPSequentialCompositeB):
+    """Special LRP-configuration for ConvNets"""
+
+    def __init__(self, model, *args, **kwargs):
+        super(LRPSequentialCompositeBFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
                                                 **kwargs)

@@ -40,6 +40,26 @@ from .relevance_based.relevance_analyzer import LRPSequentialPresetA
 from .relevance_based.relevance_analyzer import LRPSequentialPresetB
 from .relevance_based.relevance_analyzer import LRPSequentialPresetAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
+from .relevance_based.relevance_analyzer_new import LRP as LRP_new
+from .relevance_based.relevance_analyzer_new import LRPZ as LRPZ_new
+from .relevance_based.relevance_analyzer_new import LRPZIgnoreBias as LRPZIgnoreBias_new
+from .relevance_based.relevance_analyzer_new import LRPEpsilon as LRPEpsilon_new
+from .relevance_based.relevance_analyzer_new import LRPEpsilonIgnoreBias as LRPEpsilonIgnoreBias_new
+from .relevance_based.relevance_analyzer_new import LRPWSquare as LRPWSquare_new
+from .relevance_based.relevance_analyzer_new import LRPFlat as LRPFlat_new
+from .relevance_based.relevance_analyzer_new import LRPAlphaBeta as LRPAlphaBeta_new
+from .relevance_based.relevance_analyzer_new import LRPAlpha2Beta1 as LRPAlpha2Beta1_new
+from .relevance_based.relevance_analyzer_new import LRPAlpha2Beta1IgnoreBias as LRPAlpha2Beta1IgnoreBias_new
+from .relevance_based.relevance_analyzer_new import LRPAlpha1Beta0 as LRPAlpha1Beta0_new
+from .relevance_based.relevance_analyzer_new import LRPAlpha1Beta0IgnoreBias as LRPAlpha1Beta0IgnoreBias_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialPresetA as LRPSequentialPresetA_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialPresetB as LRPSequentialPresetB_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialPresetAFlat as LRPSequentialPresetAFlat_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialPresetBFlat as LRPSequentialPresetBFlat_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialCompositeA as LRPSequentialCompositeA_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialCompositeB as LRPSequentialCompositeB_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialCompositeAFlat as LRPSequentialCompositeAFlat_new
+from .relevance_based.relevance_analyzer_new import LRPSequentialCompositeBFlat as LRPSequentialCompositeBFlat_new
 from .deeptaylor import DeepTaylor
 from .deeptaylor import BoundedDeepTaylor
 from .wrapper import WrapperBase

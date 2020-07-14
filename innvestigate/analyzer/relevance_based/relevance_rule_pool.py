@@ -7,7 +7,7 @@ from builtins import zip
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
+import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
 import tensorflow.keras.layers as keras_layers
@@ -22,6 +22,7 @@ from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
 from .. import new_base as base
 
+#TODO: all
 
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions
@@ -61,13 +62,86 @@ __all__ = [
 
 
 class ZRule(base.ReplacementLayer):
-    def __init__(self, *args, **kwargs):
-        layer = kwargs.pop("layer", None)
+    def __init__(self, layer, *args, **kwargs):
         bias = kwargs.pop("bias", True)
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                              keep_bias=bias,
                                                              name_template="no_act_%s")
         super(ZRule, self).__init__(layer, *args, **kwargs)
+
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
+
+        return outs, Zs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
+        outs, Zs, tape = args
+        #last layer
+        if reversed_outs is None:
+            reversed_outs = Zs
+
+        # Divide incoming relevance by the activations.
+        if len(self.layer_next) > 1:
+            tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
+        else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
+        # Propagate the relevance to input neurons
+        # using the gradient.
+
+        print(self.name, np.shape(reversed_outs), np.shape(ins),np.shape(Zs),np.shape(tmp), type(ins))
+        if len(self.input_shape) > 1:
+            ret = []
+            for i in ins:
+                if len(self.layer_next) > 1:
+                    tmp2 = [tape.gradient(Zs, i, output_gradients=t) for t in tmp]
+                    ret.append(keras_layers.Add()([keras_layers.Multiply()([i, t]) for t in tmp2]))
+                else:
+                    tmp2 = tape.gradient(Zs, i, output_gradients=tmp)
+                    ret.append(keras_layers.Multiply()([i, tmp2]))
+        else:
+            if len(self.layer_next) > 1:
+                tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+                ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+            else:
+                tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+                ret = keras_layers.Multiply()([ins, tmp2])
+        return ret
+
+class ZIgnoreBiasRule(ZRule):
+    """
+    Basic LRP decomposition rule, ignoring the bias neuron
+    """
+    def __init__(self, *args, **kwargs):
+        super(ZIgnoreBiasRule, self).__init__(*args,
+                                              bias=False,
+                                              **kwargs)
+
+
+class EpsilonRule(base.ReplacementLayer):
+    """
+    Similar to ZRule.
+    The only difference is the addition of a numerical stabilizer term
+    epsilon to the decomposition function's denominator.
+    the sign of epsilon depends on the sign of the output activation
+    0 is considered to be positive, ie sign(0) = 1
+    """
+
+    def __init__(self, layer, *args, **kwargs):
+        self._epsilon = rutils.assert_lrp_epsilon_param(kwargs.pop("epsilon", 1e-7), self)
+        bias = kwargs.pop("bias", True)
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             keep_bias=bias,
+                                                             name_template="no_act_%s")
+        super(EpsilonRule, self).__init__(layer, *args, **kwargs)
+
 
     def wrap_hook(self, ins, neuron_selection):
         with tf.GradientTape() as tape:
@@ -82,64 +156,20 @@ class ZRule(base.ReplacementLayer):
 
     def explain_hook(self, ins, reversed_outs, args):
         outs, tape = args
+        # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
+        prepare_div = keras_layers.Lambda(
+            lambda x: x + (K.cast(K.greater_equal(x, 0), K.floatx()) * 2 - 1) * self._epsilon)
         # Get activations.
         Zs = self._layer_wo_act(ins)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(reversed_outs, Zs)]
+        tmp = [ilayers.Divide()([a, prepare_div(b)]) for a, b in zip(reversed_outs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
         tmp = tape.gradient(Zs, ins, output_gradients=tmp)
         # Re-weight relevance with the input values.
-        ret = [keras_layers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        ret = [keras_layers.Multiply()([a, b]) for a, b in zip(ins, tmp)]
         return ret
 
-#TODO: tf2.0
-class ZIgnoreBiasRule(ZRule):
-    """
-    Basic LRP decomposition rule, ignoring the bias neuron
-    """
-    def __init__(self, *args, **kwargs):
-        super(ZIgnoreBiasRule, self).__init__(*args,
-                                              bias=False,
-                                              **kwargs)
-
-
-#TODO: tf2.0
-class EpsilonRule(kgraph.ReverseMappingBase):
-    """
-    Similar to ZRule.
-    The only difference is the addition of a numerical stabilizer term
-    epsilon to the decomposition function's denominator.
-    the sign of epsilon depends on the sign of the output activation
-    0 is considered to be positive, ie sign(0) = 1
-    """
-
-    def __init__(self, layer, state, epsilon = 1e-7, bias=True):
-        self._epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
-            layer, keep_bias=bias, name_template="reversed_kernel_%s")
-
-
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
-        # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
-        prepare_div = keras_layers.Lambda(lambda x: x + (K.cast(K.greater_equal(x,0), K.floatx())*2-1)*self._epsilon)
-
-        # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
-
-        # Divide incoming relevance by the activations.
-        tmp = [ilayers.Divide()([a, prepare_div(b)])
-               for a, b in zip(Rs, Zs)]
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Zs+tmp))
-        # Re-weight relevance with the input values.
-        return [keras_layers.Multiply()([a, b])
-                for a, b in zip(Xs, tmp)]
-
-
-#TODO: tf2.0
 class EpsilonIgnoreBiasRule(EpsilonRule):
     """Same as EpsilonRule but ignores the bias."""
     def __init__(self, *args, **kwargs):
@@ -147,12 +177,11 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
                                                     bias=False,
                                                     **kwargs)
 
-
-#TODO: tf2.0
-class WSquareRule(kgraph.ReverseMappingBase):
+class WSquareRule(base.ReplacementLayer):
     """W**2 rule from Deep Taylor Decomposition"""
 
-    def __init__(self, layer, state, copy_weights=False):
+    def __init__(self, layer, *args, **kwargs):
+        copy_weights = kwargs.pop("copy_weights", True)
         # W-square rule works with squared weights and no biases.
         if copy_weights:
             weights = layer.get_weights()
@@ -167,30 +196,38 @@ class WSquareRule(kgraph.ReverseMappingBase):
             keep_bias=False,
             weights=weights,
             name_template="reversed_kernel_%s")
+        super(WSquareRule, self).__init__(layer, *args, **kwargs)
 
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape() as tape:
+            tape.watch(ins)
+            outs = self.layer_func(ins)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        grad = ilayers.GradientWRT(len(Xs))
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0:
+                outs = self._neuron_select(outs, neuron_selection)
+
+        return outs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
+        outs, tape = args
         # Create dummy forward path to take the derivative below.
-        Ys = kutils.apply(self._layer_wo_act_b, Xs)
+        Ys = self._layer_wo_act_b(ins)
 
         # Compute the sum of the weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = kutils.apply(self._layer_wo_act_b, ones)
+        Zs = self._layer_wo_act_b(ins)
         # Weight the incoming relevance.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(Rs, Zs)]
+        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(reversed_outs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.to_list(grad(Xs+Ys+tmp))
+        tmp = iutils.to_list(tape.gradient(Ys, ins, output_gradients=tmp))
         return tmp
 
-
-
-#TODO: tf2.0
 class FlatRule(WSquareRule):
     """Same as W**2 rule but sets all weights to ones."""
 
-    def __init__(self, layer, state, copy_weights=False):
+    def __init__(self, layer, *args, **kwargs):
+        copy_weights = kwargs.pop("copy_weights", True)
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
@@ -209,6 +246,7 @@ class FlatRule(WSquareRule):
             keep_bias=False,
             weights=weights,
             name_template="reversed_kernel_%s")
+        super(WSquareRule, self).__init__(layer, *args, **kwargs)
 
 
 

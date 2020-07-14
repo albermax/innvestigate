@@ -28,32 +28,35 @@ print(model_gradients)
 """
 """
 inputs = tf.keras.Input(shape=(1,))
-x = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
-y = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
+a = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
+x = tf.keras.layers.Dense(4, activation=tf.nn.relu)(a)
+y = tf.keras.layers.Dense(4, activation=tf.nn.relu)(a)
 z = tf.keras.layers.Concatenate()([x, y])
-outputs = tf.keras.layers.Dense(5, activation=tf.nn.relu)(z)
+outputs = tf.keras.layers.Dense(5, activation="softmax")(z)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
-"""
+#"""
 #"""
 model = tf.keras.applications.VGG16(
     include_top=True,
     weights="imagenet",
 )
 #"""
-inp = np.random.rand(5, 224, 224, 3)
+inp = np.random.rand(2, 224, 224, 3)
 #inp = np.random.rand(3, 1)
 model = innvestigate.utils.keras.graph.model_wo_softmax(model)
 
 a = time.time()
-ana = innvestigate.analyzer.new_base.ReverseAnalyzerBase(model)
-R = ana.analyze(inp, neuron_selection=None)
+ana = innvestigate.analyzer.LRPAlpha2Beta1_new(model)
+R = ana.analyze(inp, neuron_selection="max_activation")
 b = time.time()
 print(b-a)
 
 a = time.time()
-ana = innvestigate.analyzer.base.ReverseAnalyzerBase(model, neuron_selection_mode="all")
-R = ana.analyze(inp, neuron_selection=None)
+ana = innvestigate.analyzer.LRPAlpha2Beta1(model, neuron_selection_mode="max_activation")
+R2 = ana.analyze(inp, neuron_selection=None)
 b = time.time()
 print(b-a)
-#print(np.shape(R))
+
+import numpy as np
+print(np.sum(R2-R))

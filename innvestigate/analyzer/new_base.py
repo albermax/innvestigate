@@ -341,13 +341,8 @@ def reverse_map(
         model,
         reverse_mappings,
         default_reverse_mapping,
-        head_mapping,
         stop_mapping_at_tensors,
         verbose=False):
-
-    if head_mapping is None:
-        def head_mapping(X):
-            return X
 
     #TODO: verbose
     #TODO: HeadMapping
@@ -356,7 +351,6 @@ def reverse_map(
     #build model that is to be analyzed
     layers = kgraph.get_model_layers(model)
     stop_mapping_at_tensors = [x.name.split(":")[0] for x in stop_mapping_at_tensors]
-    layers.append(head_mapping)
 
     # set all replacement layers
     replacement_layers = []
@@ -423,10 +417,7 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, la
 
     return hm
 
-#TODO: more replacement layers
 class ReplacementLayer():
-    #TODO: consider merge layers. possibly need to redesign workflow. something asynchroneous?
-    #TODO: consider making this a sub_class of keras.Layer?
     def __init__(self, layer, layer_next=[]):
 
         self.layer_func = layer
@@ -461,12 +452,26 @@ class ReplacementLayer():
             input_vals = self.input_vals
             if len(input_vals) == 1:
                 input_vals = input_vals[0]
-            self.explanation = self.explain_hook(input_vals, self.reversed_output_vals, self.hook_vals)
+            rev_outs = self.reversed_output_vals
+            if rev_outs is not None and len(rev_outs) == 1:
+                rev_outs = rev_outs[0]
+            self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
             # callbacks
             if self.callbacks is not None:
-                for callback in self.callbacks:
-                    callback(self.explanation)
+                # check if multiple inputs explained
+                if len(self.callbacks) > 1 and not isinstance(self.explanation, list):
+                    raise ValueError(self.name + ": This layer has " + len(
+                        self.callbacks) + " inputs, but no list of explanations was provided.")
+                elif len(self.callbacks) > 1 and len(self.callbacks) != len(self.explanation):
+                    raise ValueError(self.name + ": This layer has " + len(self.callbacks) + " inputs, but only " + str(
+                        len(self.explanation)) + " explanations were computed")
+
+                if len(self.callbacks) > 1:
+                    for c, callback in enumerate(self.callbacks):
+                        callback(self.explanation[c])
+                else:
+                    self.callbacks[0](self.explanation)
 
             #reset
             self.input_vals = None
@@ -505,6 +510,10 @@ class ReplacementLayer():
         return Ys
 
     def try_apply(self, ins, neuron_selection=None, callback=None):
+
+        #DEBUG
+        #print(self.name, self.input_shape, np.shape(ins))
+
         #aggregate inputs
         if self.input_vals is None:
             self.input_vals = []
@@ -528,7 +537,10 @@ class ReplacementLayer():
             self.hook_vals = self.wrap_hook(input_vals, neuron_selection)
 
             #forward
-            self._forward(self.hook_vals[0], neuron_selection)
+            if isinstance(self.hook_vals, tuple):
+                self._forward(self.hook_vals[0], neuron_selection)
+            else:
+                self._forward(self.hook_vals, neuron_selection)
 
     def wrap_hook(self, ins, neuron_selection):
         """
@@ -543,14 +555,28 @@ class ReplacementLayer():
         return outs
 
     def explain_hook(self, ins, reversed_outs, args):
-        return reversed_outs
+        """
+        hook that computes the explanations.
+        param args: output of wrap_hook
+
+        returns: explanation, or list of explanations if the layer has multiple inputs (one for each)
+        """
+        outs=args
+        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(outs))
+        if len(self.layer_next) > 1:
+            raise ValueError("This basic function is not defined for layers with multiple outputs")
+        if len(self.input_shape) > 1:
+            ret = [reversed_outs for i in self.input_shape]
+        else:
+            ret = reversed_outs
+        return ret
 
 class GradientReplacementLayer(ReplacementLayer):
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
     def wrap_hook(self, ins, neuron_selection):
-        with tf.GradientTape() as tape:
+        with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
             outs = self.layer_func(ins)
 
@@ -562,7 +588,18 @@ class GradientReplacementLayer(ReplacementLayer):
 
     def explain_hook(self, ins, reversed_outs, args):
         outs, tape = args
-        ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+
+        #correct number of outs
+        if len(self.layer_next) > 1:
+            outs = [outs for l in self.layer_next]
+
+        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(outs))
+        if len(self.layer_next) > 1:
+            raise ValueError("This basic function is not defined for layers with multiple outputs")
+        if len(self.input_shape) > 1:
+            ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
+        else:
+            ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
         return ret
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
@@ -588,6 +625,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
+    def _gradient_reverse_mapping(self):
+        return GradientReplacementLayer
+
     def _reverse_mapping(self, layer):
         """
         This function should return a reverse mapping for the passed layer.
@@ -599,11 +639,6 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         :return: The mapping can be of the following forms:
           * A :class:`ReplacementLayer` subclass.
         """
-        if layer in self._special_helper_layers:
-            # Special layers added by AnalyzerNetworkBase
-            # that should not be exposed to user.
-            #TODO: correct?
-            return GradientReplacementLayer
 
         return self._apply_conditional_reverse_mappings(layer)
 
@@ -660,21 +695,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         Fallback function to map reversed_Ys to reversed_Xs
         (which should contain tensors of the same shape and type).
         """
-        return ReplacementLayer
-
-    def _head_mapping_layer(self, X):
-        """
-        Map output tensors to new values before passing
-        them into the reverted network.
-        """
-        return X
+        return GradientReplacementLayer
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         inp, rep = reverse_map(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
-            head_mapping=self._head_mapping_layer,
             stop_mapping_at_tensors=stop_analysis_at_tensors,
             verbose=self._reverse_verbose,
         )
