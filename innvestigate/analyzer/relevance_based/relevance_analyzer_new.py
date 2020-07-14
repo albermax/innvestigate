@@ -24,7 +24,7 @@ from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
-from . import relevance_rule_conv as rrule
+from . import relevance_rule_base as rrule
 from . import utils as rutils
 
 

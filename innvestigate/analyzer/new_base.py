@@ -498,7 +498,7 @@ class ReplacementLayer():
             # TODO error handling
             neuron_selection = [[neuron_selection] for n in range(Ys.shape[0])]
             Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
-        elif isinstance(neuron_selection, list):
+        elif isinstance(neuron_selection, list) or (hasattr(neuron_selection, "shape") and len(neuron_selection.shape) == 1):
             #TODO error handling
             #TODO this assumes that the last layer has shape (batch_size, n); is that a valid assumption?
             if len(np.shape(neuron_selection)) < 2:

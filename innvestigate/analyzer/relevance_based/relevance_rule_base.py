@@ -354,7 +354,10 @@ class AlphaBetaRule(base.ReplacementLayer):
         times_beta = keras_layers.Lambda(lambda x: x * self._beta)
 
         def f(i1, i2, z1, z2, rev):
-            Zs = [keras_layers.Add()([a, b]) for a, b in zip(z1, z2)]
+            if len(self.layer_next) > 1:
+                Zs = [keras_layers.Add()([a, b]) for a, b in zip(z1, z2)]
+            else:
+                Zs = keras_layers.Add()([z1, z2])
             # Divide incoming relevance by the activations.
             if rev is None:
                 rev = Zs
@@ -708,3 +711,101 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
                 for a, b in zip(Xs, tmp)]
 
 #TODO: gamma-Rule tf2.0
+class GammaRule(kgraph.ReverseMappingBase):
+    """
+    This decomposition rule handles the positive forward
+    activations (x*w > 0) and negative forward activations
+    (w * x < 0) independently, reducing the risk of zero
+    divisions considerably. In fact, the only case where
+    divisions by zero can happen is if there are either
+    no positive or no negative parts to the activation
+    at all.
+    Corresponding parameterization of this rule implement
+    methods such as Excitation Backpropagation with
+    alpha=1, beta=0
+    s.t.
+    alpha - beta = 1 (after current param. scheme.)
+    and
+    alpha > 1
+    beta > 0
+    """
+
+
+    def __init__(self,
+                 layer,
+                 state,
+                 gamma=None,
+                 bias=True,
+                 copy_weights=False):
+        self._gamma = gamma
+
+        # prepare positive and negative weights for computing positive
+        # and negative preactivations z in apply_accordingly.
+        if copy_weights:
+            weights = layer.get_weights()
+            if not bias and layer.use_bias:
+                weights = weights[:-1]
+            positive_weights = [x * (x > 0) for x in weights]
+        else:
+            weights = layer.weights
+            if not bias and layer.use_bias:
+                weights = weights[:-1]
+            positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
+
+        self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
+            layer,
+            keep_bias=bias,
+            weights=positive_weights,
+            name_template="reversed_kernel_positive_%s")
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(
+            layer,
+            keep_bias=bias,
+            weights=weights,
+            name_template="reversed_kernel_%s")
+
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        #this method is correct, but wasteful
+        grad = ilayers.GradientWRT(len(Xs))
+        times_gamma = keras.layers.Lambda(lambda x: x * self._gamma)
+        keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_x = keras.layers.Lambda(lambda x: x)
+
+
+        def f(layer1, layer2, X1, X2):
+            # Get activations of full positive or negative part.
+            Z1 = kutils.apply(layer1, X1)
+            Z2 = kutils.apply(layer2, X2)
+            Zs = [keras.layers.Add()([a, b])
+                    for a, b in zip(Z1, Z2)]
+            # Divide incoming relevance by the activations.
+            tmp = [ilayers.SafeDivide()([a, b])
+                    for a, b in zip(Rs, Zs)]
+            # Propagate the relevance to the input neurons
+            # using the gradient
+            tmp1 = iutils.to_list(grad(X1+Z1+tmp))
+            tmp2 = iutils.to_list(grad(X2+Z2+tmp))
+            # Re-weight relevance with the input values.
+            tmp1 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X1, tmp1)]
+            tmp2 = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X2, tmp2)]
+            #combine and return
+            return [keras.layers.Add()([a, b])
+                    for a, b in zip(tmp1, tmp2)]
+
+
+        # Distinguish postive and negative inputs.
+        Xs_pos = kutils.apply(keep_positives, Xs)
+        Xs_ = kutils.apply(keep_x, Xs)
+        # xpos*wpos + xneg*wneg
+        activator_relevances = f(self._layer_wo_act_positive,
+                                 self._layer_wo_act,
+                                 Xs_pos, Xs_)
+
+
+        all_relevances = f(self._layer_wo_act,
+                                 self._layer_wo_act_positive,
+                                 Xs_pos, Xs_)
+        return [keras.layers.Subtract()([times_gamma(a), b])
+                for a, b in zip(activator_relevances, all_relevances)]

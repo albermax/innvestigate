@@ -47,7 +47,7 @@ model = innvestigate.utils.keras.graph.model_wo_softmax(model)
 
 a = time.time()
 ana = innvestigate.analyzer.LRPAlpha2Beta1_new(model)
-R = ana.analyze(inp, neuron_selection="max_activation")
+R = ana.analyze(inp, neuron_selection=np.array([0, 1, 2]))
 b = time.time()
 print(b-a)
 
