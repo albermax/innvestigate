@@ -353,7 +353,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                 raise ValueError("One neuron can be selected with DeepLIFT.")
 
             neuron_idx = neuron_selection[0]
-            analysis = self._analyze_with_deeplift(X, neuron_idx, self.batch_size)
+            analysis = self._analyze_with_deeplift(X, neuron_idx, self._batch_size)
 
             # Parse the output.
             ret = []
