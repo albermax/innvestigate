@@ -4,6 +4,7 @@ from __future__ import\
 from builtins import zip
 import six
 import warnings
+warnings.filterwarnings("default", category=DeprecationWarning)
 
 ###############################################################################
 ###############################################################################
@@ -607,7 +608,8 @@ class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name
     """
 
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
-        warnings.warn("deprecated", DeprecationWarning)
+        warnings.warn("LRPSequentialPresetA is deprecated. Use LRPSequentialCompositeA instead",
+                      DeprecationWarning)
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             #TODO: fix. specify. extend.
@@ -676,7 +678,8 @@ class LRPSequentialPresetB(_LRPFixedParams):
     """
 
     def __init__(self, model, epsilon=1e-1, *args, **kwargs):
-        warnings.warn("deprecated", DeprecationWarning)
+        warnings.warn("LRPSequentialPresetB is deprecated. Use LRPSequentialCompositeB instead",
+                      DeprecationWarning)
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             #TODO: fix. specify. extend.
@@ -743,7 +746,8 @@ class LRPSequentialPresetAFlat(LRPSequentialPresetA):
     """
 
     def __init__(self, model, *args, **kwargs):
-        warnings.warn("deprecated", DeprecationWarning)
+        warnings.warn("LRPSequentialPresetAFlat is deprecated. Use LRPSequentialCompositeAFlat instead",
+                      DeprecationWarning)
         super(LRPSequentialPresetAFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",
@@ -768,7 +772,8 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
     """
 
     def __init__(self, model, *args, **kwargs):
-        warnings.warn("deprecated", DeprecationWarning)
+        warnings.warn("LRPSequentialPresetBFlat is deprecated. Use LRPSequentialCompositeBFlat instead",
+                      DeprecationWarning)
         super(LRPSequentialPresetBFlat, self).__init__(model,
                                                 *args,
                                                 input_layer_rule="Flat",

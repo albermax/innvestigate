@@ -66,6 +66,7 @@ class ZRule(base.ReplacementLayer):
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                              keep_bias=bias,
                                                              name_template="no_act_%s")
+        print(self._layer_wo_act.get_config()["use_bias"])
         super(ZRule, self).__init__(layer, *args, **kwargs)
 
     def wrap_hook(self, ins, neuron_selection):

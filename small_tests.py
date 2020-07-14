@@ -26,24 +26,23 @@ with tf.GradientTape() as tape:
 model_gradients = tape.gradient(ret, x)
 print(model_gradients)
 """
-"""
+#"""
 inputs = tf.keras.Input(shape=(1,))
 a = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
 x = tf.keras.layers.Dense(4, activation=tf.nn.relu)(a)
-y = tf.keras.layers.Dense(4, activation=tf.nn.relu)(a)
-z = tf.keras.layers.Concatenate()([x, y])
-outputs = tf.keras.layers.Dense(5, activation="softmax")(z)
+#z = tf.keras.layers.Concatenate()([x, y])
+outputs = tf.keras.layers.Dense(5, activation="softmax")(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 #"""
-#"""
+"""
 model = tf.keras.applications.VGG16(
     include_top=True,
     weights="imagenet",
 )
-#"""
-inp = np.random.rand(2, 224, 224, 3)
-#inp = np.random.rand(3, 1)
+"""
+#inp = np.random.rand(2, 224, 224, 3)
+inp = np.random.rand(3, 1)
 model = innvestigate.utils.keras.graph.model_wo_softmax(model)
 
 a = time.time()
