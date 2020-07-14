@@ -332,7 +332,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                           progress_update=None)
 
     def analyze(self, X, neuron_selection=None):
-        if not hasattr(self, "_deep_lift_func"):
+        if not hasattr(self, "_func"):
             self._create_deep_lift_func()
 
         X = iutils.to_list(X)
