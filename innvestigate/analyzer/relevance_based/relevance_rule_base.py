@@ -13,7 +13,6 @@ import tensorflow.keras.backend as K
 import tensorflow.keras.layers as keras_layers
 import numpy as np
 
-
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
@@ -21,6 +20,7 @@ from innvestigate.utils.keras import backend as iK
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
 from .. import new_base as base
+from .. import reverse_map as reverse_map
 
 
 # TODO: differentiate between LRP and DTD rules?
@@ -60,25 +60,34 @@ __all__ = [
 ]
 
 
-class ZRule(base.ReplacementLayer):
+class ZRule(reverse_map.ReplacementLayer):
     def __init__(self, layer, *args, **kwargs):
         bias = kwargs.pop("bias", True)
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                              keep_bias=bias,
                                                              name_template="no_act_%s")
-        print(self._layer_wo_act.get_config()["use_bias"])
+        #print(self._layer_wo_act.get_config()["use_bias"])
         super(ZRule, self).__init__(layer, *args, **kwargs)
+
+    #@tf.function
+    def apply(self, ins, neuron_selection):
+        """
+        applies layer / forward tf ops.
+        """
+        outs = self.layer_func(ins)
+        Zs = self._layer_wo_act(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Zs = self._neuron_select(Zs, neuron_selection)
+
+        return Zs, outs
 
     def wrap_hook(self, ins, neuron_selection):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            outs = self.layer_func(ins)
-            Zs = self._layer_wo_act(ins)
-
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
-                outs = self._neuron_select(outs, neuron_selection)
-                Zs = self._neuron_select(Zs, neuron_selection)
+            Zs, outs = self.apply(ins, neuron_selection)
 
         return outs, Zs, tape
 
@@ -96,7 +105,7 @@ class ZRule(base.ReplacementLayer):
         # Propagate the relevance to input neurons
         # using the gradient.
 
-        print(self.name, np.shape(reversed_outs), np.shape(ins),np.shape(Zs),np.shape(tmp))
+        #print(self.name, np.shape(reversed_outs), np.shape(ins),np.shape(Zs),np.shape(tmp))
         if len(self.input_shape) > 1:
             raise ValueError("Conv Layers should only have one input!")
         if len(self.layer_next) > 1:
@@ -118,7 +127,7 @@ class ZIgnoreBiasRule(ZRule):
                                               **kwargs)
 
 
-class EpsilonRule(base.ReplacementLayer):
+class EpsilonRule(reverse_map.ReplacementLayer):
     """
     Similar to ZRule.
     The only difference is the addition of a numerical stabilizer term
@@ -135,16 +144,21 @@ class EpsilonRule(base.ReplacementLayer):
                                                              name_template="no_act_%s")
         super(EpsilonRule, self).__init__(layer, *args, **kwargs)
 
+    def apply(self, ins, neuron_selection):
+        outs = self.layer_func(ins)
+        Zs = self._layer_wo_act(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Zs = self._neuron_select(Zs, neuron_selection)
+
+        return Zs, outs
+
     def wrap_hook(self, ins, neuron_selection):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            outs = self.layer_func(ins)
-            Zs = self._layer_wo_act(ins)
-
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
-                outs = self._neuron_select(outs, neuron_selection)
-                Zs = self._neuron_select(Zs, neuron_selection)
+            Zs, outs = self.apply(ins, neuron_selection)
 
         return outs, Zs, tape
 
@@ -180,7 +194,7 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
                                                     bias=False,
                                                     **kwargs)
 
-class WSquareRule(base.ReplacementLayer):
+class WSquareRule(reverse_map.ReplacementLayer):
     """W**2 rule from Deep Taylor Decomposition"""
 
     def __init__(self, layer, *args, **kwargs):
@@ -201,16 +215,21 @@ class WSquareRule(base.ReplacementLayer):
             name_template="reversed_kernel_%s")
         super(WSquareRule, self).__init__(layer, *args, **kwargs)
 
+    def apply(self, ins, neuron_selection):
+        outs = self.layer_func(ins)
+        Ys = self._layer_wo_act_b(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Ys = self._neuron_select(Ys, neuron_selection)
+
+        return  Ys, outs
+
     def wrap_hook(self, ins, neuron_selection):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            outs = self.layer_func(ins)
-            Ys = self._layer_wo_act_b(ins)
-
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
-                outs = self._neuron_select(outs, neuron_selection)
-                Ys = self._neuron_select(Ys, neuron_selection)
+            Ys, outs = self.apply(ins, neuron_selection)
 
         return outs, Ys, tape
 
@@ -263,7 +282,7 @@ class FlatRule(WSquareRule):
             name_template="reversed_kernel_%s")
         super(WSquareRule, self).__init__(layer, *args, **kwargs)
 
-class AlphaBetaRule(base.ReplacementLayer):
+class AlphaBetaRule(reverse_map.ReplacementLayer):
     """
     This decomposition rule handles the positive forward
     activations (x*w > 0) and negative forward activations
@@ -321,6 +340,9 @@ class AlphaBetaRule(base.ReplacementLayer):
             weights=negative_weights,
             name_template="reversed_kernel_negative_%s")
         super(AlphaBetaRule, self).__init__(layer, *args, **kwargs)
+
+    def apply(self, ins, neuron_selection):
+        pass
 
     def wrap_hook(self, ins, neuron_selection):
         keep_positives = keras_layers.Lambda(lambda x: x * K.cast(K.greater(x, 0), K.floatx()))

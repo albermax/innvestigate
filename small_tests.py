@@ -26,36 +26,48 @@ with tf.GradientTape() as tape:
 model_gradients = tape.gradient(ret, x)
 print(model_gradients)
 """
-#"""
+"""
 inputs = tf.keras.Input(shape=(1,))
 a = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
-x = tf.keras.layers.Dense(4, activation=tf.nn.relu)(a)
-#z = tf.keras.layers.Concatenate()([x, y])
-outputs = tf.keras.layers.Dense(5, activation="softmax")(x)
+x = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
+z = tf.keras.layers.Concatenate()([a, x])
+outputs = tf.keras.layers.Dense(5, activation="softmax")(z)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs)
 #"""
-"""
+#"""
 model = tf.keras.applications.VGG16(
     include_top=True,
     weights="imagenet",
 )
-"""
-#inp = np.random.rand(2, 224, 224, 3)
-inp = np.random.rand(3, 1)
+#"""
+inp = np.random.rand(3, 224, 224, 3)
+#inp = np.random.rand(3, 1)
 model = innvestigate.utils.keras.graph.model_wo_softmax(model)
 
 a = time.time()
-ana = innvestigate.analyzer.LRPAlpha2Beta1_new(model)
+ana = innvestigate.analyzer.LRPSequentialPresetBFlat_new(model)
 R = ana.analyze(inp, neuron_selection=np.array([0, 1, 2]))
 b = time.time()
+#print(R[0])
 print(b-a)
 
 a = time.time()
-ana = innvestigate.analyzer.LRPAlpha2Beta1(model, neuron_selection_mode="max_activation")
+ana = innvestigate.analyzer.LRPSequentialPresetBFlat_new(model)
+R = ana.analyze(inp, neuron_selection=None)
+b = time.time()
+#print(R[0])
+print(b-a)
+
+a = time.time()
+ana = innvestigate.analyzer.LRPSequentialPresetBFlat_new(model)
+R = ana.analyze(inp, neuron_selection="max_activation")
+b = time.time()
+#print(R[0][0][0])
+print(b-a)
+
+a = time.time()
+ana = innvestigate.analyzer.LRPSequentialPresetBFlat(model, neuron_selection_mode="max_activation")
 R2 = ana.analyze(inp, neuron_selection=None)
 b = time.time()
 print(b-a)
-
-import numpy as np
-print(np.sum(R2-R))

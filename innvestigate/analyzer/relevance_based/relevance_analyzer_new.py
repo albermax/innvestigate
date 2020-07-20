@@ -18,7 +18,9 @@ import tensorflow.keras.models as keras_models
 import tensorflow.keras.layers as keras_layers
 
 
+import numpy as np
 from .. import new_base as base
+from .. import reverse_map
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
@@ -192,7 +194,7 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
         # Propagate the relevance to input neurons
         # using the gradient.
 
-        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
+        #print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
         if len(self.input_shape) > 1:
             raise ValueError("Conv Layers should only have one input!")
         if len(self.layer_next) > 1:
@@ -244,7 +246,7 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         # Propagate the relevance to input neurons
         # using the gradient.
 
-        print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
+        #print(self.name, np.shape(reversed_outs), np.shape(ins), np.shape(Zs), np.shape(tmp), type(ins))
         if len(self.input_shape) > 1:
             raise ValueError("Conv Layers should only have one input!")
         if len(self.layer_next) > 1:
@@ -301,7 +303,7 @@ class LRP(base.ReverseAnalyzerBase):
 
         if(
            isinstance(rule, six.string_types) or
-           (inspect.isclass(rule) and issubclass(rule, base.ReplacementLayer)) # NOTE: All LRP rules inherit from base.ReplacementLayer
+           (inspect.isclass(rule) and issubclass(rule, reverse_map.ReplacementLayer)) # NOTE: All LRP rules inherit from reverse_map.ReplacementLayer
         ):
             # the given rule is a single string or single rule implementing cla ss
             use_conditions = True
@@ -426,7 +428,7 @@ class LRP(base.ReverseAnalyzerBase):
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
             ##print('return R')
-            return base.ReplacementLayer
+            return reverse_map.ReplacementLayer
         else:
             # This branch covers:
             # MaxPooling
