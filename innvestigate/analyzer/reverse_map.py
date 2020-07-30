@@ -10,6 +10,8 @@ import tensorflow.keras.backend as K
 import numpy as np
 from ..utils.keras import graph as kgraph
 
+import tensorflow.keras.layers as keras_layers
+
 class ReplacementLayer():
     def __init__(self, layer, layer_next=[]):
 
@@ -140,7 +142,7 @@ class ReplacementLayer():
                     if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
                         raise ValueError("Expected last layer " + self.name + "to have only one output with shape dimension 2, but got " + str(self.output_shape))
                     else:
-                        neuron_selection_tmp = [[neuron_selection] for n in range(self.output_shape[0][0])]
+                        neuron_selection_tmp = [[neuron_selection] for n in range(self.input_vals[0].shape[0])]
                         neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 elif isinstance(neuron_selection, list) or (
                         hasattr(neuron_selection, "shape") and len(neuron_selection.shape) == 1):
@@ -189,12 +191,17 @@ class ReplacementLayer():
         """
         hook that computes the explanations.
         param args: additional parameters
+        param reversed_outs: either backpropagated explanation, or None if last layer
 
         returns: explanation, or tensor of multiple explanations if the layer has multiple inputs (one for each)
         """
         outs = args
+
+        if reversed_outs is None:
+            reversed_outs = outs
+
         if len(self.layer_next) > 1:
-            raise ValueError("This basic function is not defined for layers with multiple outputs")
+            raise ValueError("This basic function is not defined for layers with multiple children")
         if len(self.input_shape) > 1:
             ret = [reversed_outs for i in self.input_shape]
             ret = tf.keras.layers.concatenate(ret, axis=1)
@@ -217,13 +224,19 @@ class GradientReplacementLayer(ReplacementLayer):
 
     def explain_hook(self, ins, reversed_outs, args):
         outs, tape = args
-        #print("EXPL ", ins.shape, reversed_outs.shape, outs.shape)
+
+        if reversed_outs is None:
+            reversed_outs = outs
+
         # correct number of outs
         if len(self.layer_next) > 1:
             outs = [outs for l in self.layer_next]
 
         if len(self.layer_next) > 1:
-            raise ValueError("This basic function is not defined for layers with multiple outputs")
+            #print(self.name, np.shape(outs), np.shape(reversed_outs))
+            #TODO: is this correct?
+            keras_layers.Add(dtype=tf.float32)([tape.gradient(o, ins, output_gradients=r) for o, r in zip(outs, reversed_outs)])
+            #raise ValueError("This basic function is not defined for layers with multiple children")
         if len(self.input_shape) > 1:
             ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
         else:
@@ -282,11 +295,13 @@ def reverse_map(
             if id(layer.layer_func.output) == id(t):
                 input_layers.append(layer)
 
-    #TODO rethink this format. probably make a ReplacementModel class or something
     return input_layers, replacement_layers
 
 def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, layer_names=None):
-    #shape of Xs: (batch_size, n_ins, ...), or (batch_size, ...)
+    #shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
+
+    #TODO: output shape?
+    #Returns: Explanation of Form (n_inputs, batch_size, ...)
 
     #format input & obtain explanations
     if len(reverse_ins) == 1:
@@ -295,8 +310,8 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, la
 
     else:
         #multiple inputs. reshape to (n_ins, batch_size, ...)
-        Xs_new = [[X[i] for X in Xs] for i, _ in enumerate(reverse_ins)]
-        Xs = Xs_new
+        #Xs_new = [[X[i] for X in Xs] for i, _ in enumerate(reverse_ins)]
+        #Xs = Xs_new
         for i, reverse_in in enumerate(reverse_ins):
             reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection)
 
