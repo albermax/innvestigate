@@ -116,8 +116,9 @@ nosetests.cfg
 *.jpg
 *.jpeg
 *.JPEG
-*.h5
+#*.h5
 *.png
 
 # ignore nbconvert script output
 examples/nbconvert_tmp
+
