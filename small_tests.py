@@ -11,8 +11,8 @@ import time
 
 def SimpleDense():
     inputs = tf.keras.Input(shape=(1,))
-    a = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
-    outputs = tf.keras.layers.Dense(5, activation="softmax")(a)
+    #a = tf.keras.layers.Dense(4, activation=tf.nn.relu)(inputs)
+    outputs = tf.keras.layers.Dense(3, activation="softmax")(inputs)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     inp = np.random.rand(3, 1)
 
@@ -66,7 +66,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     print("Param neuron_selection: ", neuron_selection)
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
     a = time.time()
-    ana = analyzer(model)
+    ana = analyzer(model, gamma=1)
     R = ana.analyze(input, neuron_selection=neuron_selection)
     b = time.time()
     print("Time Passed: ", b - a)
@@ -119,7 +119,7 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPZPlusFast_new,
     #innvestigate.analyzer.LRPEpsilon_new,
     #innvestigate.analyzer.LRPEpsilonIgnoreBias_new,
-    innvestigate.analyzer.LRPWSquare_new,
+    #innvestigate.analyzer.LRPWSquare_new,
     #innvestigate.analyzer.LRPFlat_new,
     #innvestigate.analyzer.LRPAlpha2Beta1_new,
     #innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias_new,
@@ -129,6 +129,7 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeB_new,
     #innvestigate.analyzer.LRPSequentialCompositeAFlat_new,
     #innvestigate.analyzer.LRPSequentialCompositeBFlat_new,
+    innvestigate.analyzer.LRPGamma_new
 ]
 
 analyzer_cases_old = [
@@ -139,9 +140,9 @@ analyzer_cases_old = [
     #innvestigate.analyzer.LRPZPlusFast,
     #innvestigate.analyzer.LRPEpsilon,
     #innvestigate.analyzer.LRPEpsilonIgnoreBias,
-    innvestigate.analyzer.LRPWSquare,
+    #innvestigate.analyzer.LRPWSquare,
     #innvestigate.analyzer.LRPFlat,
-    #innvestigate.analyzer.LRPAlpha2Beta1,
+    innvestigate.analyzer.LRPAlpha2Beta1,
     #innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias,
     #innvestigate.analyzer.LRPAlpha1Beta0,
     #innvestigate.analyzer.LRPAlpha1Beta0IgnoreBias,

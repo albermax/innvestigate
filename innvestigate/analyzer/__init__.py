@@ -43,11 +43,14 @@ from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
 from .relevance_based.relevance_analyzer_new import LRP as LRP_new
 from .relevance_based.relevance_analyzer_new import LRPZ as LRPZ_new
 from .relevance_based.relevance_analyzer_new import LRPZIgnoreBias as LRPZIgnoreBias_new
+from .relevance_based.relevance_analyzer_new import LRPZPlus as LRPZPlus_new
+from .relevance_based.relevance_analyzer_new import LRPZPlusFast as LRPZPlusFast_new
 from .relevance_based.relevance_analyzer_new import LRPEpsilon as LRPEpsilon_new
 from .relevance_based.relevance_analyzer_new import LRPEpsilonIgnoreBias as LRPEpsilonIgnoreBias_new
 from .relevance_based.relevance_analyzer_new import LRPWSquare as LRPWSquare_new
 from .relevance_based.relevance_analyzer_new import LRPFlat as LRPFlat_new
 from .relevance_based.relevance_analyzer_new import LRPAlphaBeta as LRPAlphaBeta_new
+from .relevance_based.relevance_analyzer_new import LRPGamma as LRPGamma_new
 from .relevance_based.relevance_analyzer_new import LRPAlpha2Beta1 as LRPAlpha2Beta1_new
 from .relevance_based.relevance_analyzer_new import LRPAlpha2Beta1IgnoreBias as LRPAlpha2Beta1IgnoreBias_new
 from .relevance_based.relevance_analyzer_new import LRPAlpha1Beta0 as LRPAlpha1Beta0_new

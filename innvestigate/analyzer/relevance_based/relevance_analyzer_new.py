@@ -52,6 +52,8 @@ __all__ = [
     "LRPZPlus",
     "LRPZPlusFast",
 
+    "LRPGamma",
+
     "LRPSequentialPresetA",
     "LRPSequentialPresetB",
 
@@ -601,6 +603,30 @@ class LRPZPlusFast(_LRPFixedParams):
         super(LRPZPlusFast, self).__init__(model, *args,
                                            rule="ZPlusFast",
                                            bn_layer_rule="ZPlusFast",
+                                           **kwargs)
+
+class LRPGamma(LRP):
+    """ Base class for LRP Gamma"""
+
+    def __init__(self, model, *args, gamma=None, bias=True, **kwargs):
+        self._gamma = gamma
+        self._bias = bias
+
+        class GammaProxyRule(rrule.GammaRule):
+            """
+            Dummy class inheriting from GammaRule
+            for the purpose of passing along the chosen parameters from
+            the LRP analyzer class to the decomposition rules.
+            """
+            def __init__(self, *args, **kwargs):
+                super(GammaProxyRule, self).__init__(*args,
+                                                         gamma=gamma,
+                                                         bias=bias,
+                                                         **kwargs)
+
+        super(LRPGamma, self).__init__(model, *args,
+                                           rule=GammaProxyRule,
+                                           bn_layer_rule=GammaProxyRule,
                                            **kwargs)
 
 class LRPSequentialPresetA(_LRPFixedParams): #for the lack of a better name

@@ -54,6 +54,7 @@ class ReplacementLayer():
                 if len(rev_outs) == 1:
                     rev_outs = rev_outs[0]
 
+            #print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
             self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
             # callbacks
