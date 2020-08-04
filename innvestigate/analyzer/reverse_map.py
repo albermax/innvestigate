@@ -201,8 +201,9 @@ class ReplacementLayer():
             reversed_outs = outs
 
         if len(self.layer_next) > 1:
-            raise ValueError("This basic function is not defined for layers with multiple children")
-        if len(self.input_shape) > 1:
+            #TODO is this addition correct?
+            ret = keras_layers.Add(dtype=tf.float32)([r for r in reversed_outs])
+        elif len(self.input_shape) > 1:
             ret = [reversed_outs for i in self.input_shape]
             ret = tf.keras.layers.concatenate(ret, axis=1)
         else:
@@ -318,12 +319,12 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, la
     #obtain explanations for specified layers
     if layer_names is None:
         #just explain input layers
-        hm = [layer.explanation for layer in reverse_ins]
+        hm = [layer.explanation.numpy() for layer in reverse_ins]
     else:
         hm = []
         for name in layer_names:
             layer = [layer for layer in reverse_layers if layer.name==name][0]
-            hm.append(layer.explanation)
+            hm.append(layer.explanation.numpy())
 
     return hm
 
