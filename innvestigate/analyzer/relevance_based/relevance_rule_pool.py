@@ -20,7 +20,7 @@ import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import backend as iK
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
-from .. import new_base as base
+from .. import base as base
 
 #TODO: all
 

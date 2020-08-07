@@ -27,6 +27,9 @@ from .. import reverse_map as reverse_map
 __all__ = [
     #dedicated treatment for special layers
 
+    "BatchNormalizationReverseRule",
+    "AddReverseRule",
+    "AveragePoolingReverseRule",
 
     #general rules
     "ZRule",
@@ -57,7 +60,6 @@ __all__ = [
     "ZPlusFastRule",
     "BoundedRule"
 ]
-
 
 class ZRule(reverse_map.ReplacementLayer):
     def __init__(self, layer, *args, **kwargs):
@@ -91,6 +93,10 @@ class ZRule(reverse_map.ReplacementLayer):
         return outs, Zs, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, Zs, tape = args
         #last layer
         if reversed_outs is None:
@@ -99,19 +105,14 @@ class ZRule(reverse_map.ReplacementLayer):
         # Divide incoming relevance by the activations.
         if len(self.layer_next) > 1:
             tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
-        else:
-            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
-        # Propagate the relevance to input neurons
-        # using the gradient.
-
-        #print(self.name, np.shape(reversed_outs), np.shape(ins),np.shape(Zs),np.shape(tmp))
-        if len(self.input_shape) > 1:
-            raise ValueError("Conv Layers should only have one input!")
-        if len(self.layer_next) > 1:
+            # Propagate the relevance to input neurons
+            # using the gradient.
             tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
-            #TODO (for all rules) is it correct to add relevances here? should be due to sum conservation?
             ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
         else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
+            # Propagate the relevance to input neurons
+            # using the gradient.
             tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
             ret = keras_layers.Multiply()([ins, tmp2])
         return ret
@@ -162,6 +163,10 @@ class EpsilonRule(reverse_map.ReplacementLayer):
         return outs, Zs, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, Zs, tape = args
 
         if reversed_outs is None:
@@ -172,16 +177,14 @@ class EpsilonRule(reverse_map.ReplacementLayer):
         # Divide incoming relevance by the activations.
         if len(self.layer_next) > 1:
             tmp = [ilayers.SafeDivide()([r, prepare_div(Zs)]) for r in reversed_outs]
-        else:
-            tmp = ilayers.SafeDivide()([reversed_outs, prepare_div(Zs)])
-        # Propagate the relevance to input neurons
-        # using the gradient.
-        if len(self.input_shape) > 1:
-            raise ValueError("Conv Layers should only have one input!")
-        if len(self.layer_next) > 1:
+            # Propagate the relevance to input neurons
+            # using the gradient.
             tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
             ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
         else:
+            tmp = ilayers.SafeDivide()([reversed_outs, prepare_div(Zs)])
+            # Propagate the relevance to input neurons
+            # using the gradient.
             tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
             ret = keras_layers.Multiply()([ins, tmp2])
         return ret
@@ -237,6 +240,10 @@ class WSquareRule(reverse_map.ReplacementLayer):
         return outs, Ys, Zs, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, Ys, Zs, tape = args
 
         if reversed_outs is None:
@@ -245,16 +252,13 @@ class WSquareRule(reverse_map.ReplacementLayer):
         # Weight the incoming relevance.
         if len(self.layer_next) > 1:
             tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
-        else:
-            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
-
-        # Redistribute the relevances along the gradient.
-        if len(self.input_shape) > 1:
-            raise ValueError("Conv Layers should only have one input!")
-        if len(self.layer_next) > 1:
+            # Redistribute the relevances along the gradient.
             ret = keras_layers.Add()([tape.gradient(Ys, ins, output_gradients=t) for t in tmp])
         else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
+            # Redistribute the relevances along the gradient.
             ret = tape.gradient(Ys, ins, output_gradients=tmp)
+
         return ret
 
 class FlatRule(WSquareRule):
@@ -370,36 +374,37 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
         return outs, ins_pos, ins_neg, Zs_pos, Zs_neg, Zs_pos_n, Zs_neg_p, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, ins_pos, ins_neg, Zs_pos, Zs_neg, Zs_pos_n, Zs_neg_p, tape = args
         # this method is correct, but wasteful
         times_alpha = keras_layers.Lambda(lambda x: x * self._alpha)
         times_beta = keras_layers.Lambda(lambda x: x * self._beta)
 
         def f(i1, i2, z1, z2, rev):
-            if len(self.layer_next) > 1:
-                Zs = [keras_layers.Add()([a, b]) for a, b in zip(z1, z2)]
-            else:
-                Zs = keras_layers.Add()([z1, z2])
-            # Divide incoming relevance by the activations.
             if rev is None:
                 rev = outs
+
+            Zs = keras_layers.Add()([z1, z2])
+
+            # Divide incoming relevance by the activations.
             if len(self.layer_next) > 1:
                 tmp = [ilayers.SafeDivide()([r, Zs]) for r in rev]
-            else:
-                tmp = ilayers.SafeDivide()([rev, Zs])
-            # Propagate the relevance to the input neurons
-            # using the gradient
-            if len(self.input_shape) > 1:
-                raise ValueError("Conv Layers should only have one input!")
-            if len(self.layer_next) > 1:
-                tmp1 = [tape.gradient(z1, i1, output_gradients=tmp) for t in tmp]
-                tmp2 = [tape.gradient(z2, i2, output_gradients=tmp) for t in tmp]
+                # Propagate the relevance to the input neurons
+                # using the gradient
+                tmp1 = [tape.gradient(z1, i1, output_gradients=t) for t in tmp]
+                tmp2 = [tape.gradient(z2, i2, output_gradients=t) for t in tmp]
                 # Re-weight relevance with the input values.
-                tmp_1 = [keras_layers.Multiply()([i1, tmp1]) for t in tmp1]
-                tmp_2 = [keras_layers.Multiply()([i2, tmp2]) for t in tmp2]
+                tmp_1 = [keras_layers.Multiply()([i1, t]) for t in tmp1]
+                tmp_2 = [keras_layers.Multiply()([i2, t]) for t in tmp2]
                 # combine
                 combined = [keras_layers.Add()([a, b]) for a, b in zip(tmp_1, tmp_2)]
             else:
+                tmp = ilayers.SafeDivide()([rev, Zs])
+                # Propagate the relevance to the input neurons
+                # using the gradient
                 tmp1 = tape.gradient(z1, i1, output_gradients=tmp)
                 tmp2 = tape.gradient(z2, i2, output_gradients=tmp)
                 # Re-weight relevance with the input values.
@@ -545,6 +550,10 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
         return outs, ins_pos, ins_neg, Zs_pos, Zs_neg, Zs_pos_n, Zs_neg_p, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, ins_pos, ins_neg, Zs_pos, Zs_neg, Zs_pos_n, Zs_neg_p, tape = args
         # this method is correct, but wasteful
         times_alpha0 = keras_layers.Lambda(lambda x: x * self._alpha[0])
@@ -558,21 +567,19 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
                 rev = outs
             if len(self.layer_next) > 1:
                 tmp = [ilayers.SafeDivide()([r, Zs]) for r in rev]
+                # Propagate the relevance to the input neurons
+                # using the gradient
+                tmp1 = [tape.gradient(Zs, Xs, output_gradients=t) for t in tmp]
+                # Re-weight relevance with the input values.
+                tmp_1 = [keras_layers.Multiply()([Xs, t]) for t in tmp1]
             else:
                 tmp = ilayers.SafeDivide()([rev, Zs])
-            # Propagate the relevance to the input neurons
-            # using the gradient
-            if len(self.input_shape) > 1:
-                raise ValueError("Conv Layers should only have one input!")
-            if len(self.layer_next) > 1:
-                tmp1 = [tape.gradient(Zs, Xs, output_gradients=tmp) for t in tmp]
-                # Re-weight relevance with the input values.
-                tmp_1 = [keras_layers.Multiply()([Xs, tmp1]) for t in tmp1]
-            else:
+                # Propagate the relevance to the input neurons
+                # using the gradient
                 tmp1 = tape.gradient(Zs, Xs, output_gradients=tmp)
                 # Re-weight relevance with the input values.
-
                 tmp_1 = keras_layers.Multiply()([Xs, tmp1])
+
             return tmp_1
 
         # xpos*wpos
@@ -705,18 +712,23 @@ class BoundedRule(reverse_map.ReplacementLayer):
         return outs, low, high, A, B, C, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, low, high, A, B, C, tape = args
 
         if reversed_outs is None:
             reversed_outs = outs
+
         if len(self.layer_next) > 1:
             Zs = [keras_layers.Subtract()([a, keras_layers.Add()([b, c])]) for a, b, c in zip(A, B, C)]
             # Divide relevances with the value.
             tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
             # Distribute along the gradient.
-            tmpA = [tape.gradient(A, ins, output_gradients=tmp) for t in tmp]
-            tmpB = [tape.gradient(B, ins, output_gradients=tmp) for t in tmp]
-            tmpC = [tape.gradient(C, ins, output_gradients=tmp) for t in tmp]
+            tmpA = [tape.gradient(A, ins, output_gradients=t) for t in tmp]
+            tmpB = [tape.gradient(B, ins, output_gradients=t) for t in tmp]
+            tmpC = [tape.gradient(C, ins, output_gradients=t) for t in tmp]
             ret = keras_layers.Add()([keras_layers.Subtract()([a, keras_layers.Add()([b, c])]) for a, b, c in zip(tmpA, tmpB, tmpC)])
         else:
             Zs = keras_layers.Subtract()([A, keras_layers.Add()([B, C])])
@@ -789,6 +801,10 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
         return outs, Zs, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, Zs, tape = args
 
         if reversed_outs is None:
@@ -799,7 +815,7 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
             tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp_1 = [tape.gradient(Zs, ins, output_gradients=tmp) for t in tmp]
+            tmp_1 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
             # Re-weight relevance with the input values.
             ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp_1])
         else:
@@ -884,35 +900,37 @@ class GammaRule(reverse_map.ReplacementLayer):
         return outs, ins_pos, Zs_pos, Zs_act, Zs_pos_act, Zs_act_pos, tape
 
     def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
         outs, ins_pos, Zs_pos, Zs_act, Zs_pos_act, Zs_act_pos, tape = args
         # this method is correct, but wasteful
         times_gamma = keras_layers.Lambda(lambda x: x * self._gamma)
 
         def f(i1, i2, z1, z2, rev):
-            if len(self.layer_next) > 1:
-                Zs = [keras_layers.Add()([a, b]) for a, b in zip(z1, z2)]
-            else:
-                Zs = keras_layers.Add()([z1, z2])
-            # Divide incoming relevance by the activations.
+
             if rev is None:
                 rev = outs
+
+            Zs = keras_layers.Add()([z1, z2])
+
+            # Divide incoming relevance by the activations.
             if len(self.layer_next) > 1:
                 tmp = [ilayers.SafeDivide()([r, Zs]) for r in rev]
-            else:
-                tmp = ilayers.SafeDivide()([rev, Zs])
-            # Propagate the relevance to the input neurons
-            # using the gradient
-            if len(self.input_shape) > 1:
-                raise ValueError("Conv Layers should only have one input!")
-            if len(self.layer_next) > 1:
-                tmp1 = [tape.gradient(z1, i1, output_gradients=tmp) for t in tmp]
-                tmp2 = [tape.gradient(z2, i2, output_gradients=tmp) for t in tmp]
+                # Propagate the relevance to the input neurons
+                # using the gradient
+                tmp1 = [tape.gradient(z1, i1, output_gradients=t) for t in tmp]
+                tmp2 = [tape.gradient(z2, i2, output_gradients=t) for t in tmp]
                 # Re-weight relevance with the input values.
-                tmp_1 = [keras_layers.Multiply()([i1, tmp1]) for t in tmp1]
-                tmp_2 = [keras_layers.Multiply()([i2, tmp2]) for t in tmp2]
+                tmp_1 = [keras_layers.Multiply()([i1, t]) for t in tmp1]
+                tmp_2 = [keras_layers.Multiply()([i2, t]) for t in tmp2]
                 # combine
                 combined = [keras_layers.Add()([a, b]) for a, b in zip(tmp_1, tmp_2)]
             else:
+                tmp = ilayers.SafeDivide()([rev, Zs])
+                # Propagate the relevance to the input neurons
+                # using the gradient
                 tmp1 = tape.gradient(z1, i1, output_gradients=tmp)
                 tmp2 = tape.gradient(z2, i2, output_gradients=tmp)
                 # Re-weight relevance with the input values.
@@ -933,4 +951,204 @@ class GammaRule(reverse_map.ReplacementLayer):
             ret = keras_layers.Add()(sub)
         else:
             ret = keras_layers.Subtract()([times_gamma(activator_relevances), all_relevances])
+        return ret
+
+# TODO not tested in tf2.0 yet
+class BatchNormalizationReverseRule(reverse_map.ReplacementLayer):
+    """Special BN handler that applies the Z-Rule"""
+
+    def __init__(self, layer, *args, **kwargs):
+        config = layer.get_config()
+
+        self._center = config['center']
+        self._scale = config['scale']
+        self._axis = config['axis']
+
+        self._mean = layer.moving_mean
+        self._std = layer.moving_variance
+        if self._center:
+            self._beta = layer.beta
+        super(BatchNormalizationReverseRule, self).__init__(layer, *args, **kwargs)
+
+    def apply(self, ins, neuron_selection):
+        outs = self.layer_func(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+
+        return outs
+
+    def wrap_hook(self, ins, neuron_selection):
+        return self.apply(ins, neuron_selection)
+
+    def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
+        outs = args
+
+        if reversed_outs is None:
+            reversed_outs = outs
+
+        # prepare broadcasting shape for layer parameters
+        broadcast_shape = [1] * len(self.input_shape[0])
+        broadcast_shape[self._axis] = self.input_shape[0][self._axis]
+        broadcast_shape[0] = -1
+
+        # reweight relevances as
+        #        x * (y - beta)     R
+        # Rin = ---------------- * ----
+        #           x - mu          y
+        # batch norm can be considered as 3 distinct layers of subtraction,
+        # multiplication and then addition. The multiplicative scaling layer
+        # has no effect on LRP and functions as a linear activation layer
+
+        minus_mu = keras_layers.Lambda(lambda x: x - K.reshape(self._mean, broadcast_shape))
+        minus_beta = keras_layers.Lambda(lambda x: x - K.reshape(self._beta, broadcast_shape))
+        prepare_div = keras_layers.Lambda(
+            lambda x: x + (K.cast(K.greater_equal(x, 0), K.floatx()) * 2 - 1) * K.epsilon())
+
+        x_minus_mu = minus_mu(ins)
+        if self._center:
+            y_minus_beta = [minus_beta(o) for o in outs]
+        else:
+            y_minus_beta = outs
+
+        if len(self.layer_next) > 1:
+
+            numerator = [keras_layers.Multiply()([ins, y_minus_beta, r]) for r in reversed_outs]
+            denominator = keras_layers.Multiply()([x_minus_mu, outs])
+
+            ret = keras_layers.Add()([ilayers.SafeDivide()([n, prepare_div(denominator)]) for n in numerator])
+        else:
+
+            numerator = keras_layers.Multiply()([ins, y_minus_beta, reversed_outs])
+            denominator = keras_layers.Multiply()([x_minus_mu, outs])
+            ret = ilayers.SafeDivide()([numerator, prepare_div(denominator)])
+
+        return ret
+
+# TODO not tested in tf2.0 yet
+class AddReverseRule(reverse_map.ReplacementLayer):
+    """Special Add layer handler that applies the Z-Rule"""
+
+    def __init__(self, layer, *args, **kwargs):
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             name_template="no_act_%s")
+        super(AddReverseRule, self).__init__(layer, *args, **kwargs)
+
+    # @tf.function
+    def apply(self, ins, neuron_selection):
+        """
+        applies layer / forward tf ops.
+        """
+        outs = self.layer_func(ins)
+        Zs = self._layer_wo_act(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Zs = self._neuron_select(Zs, neuron_selection)
+
+        return Zs, outs
+
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            Zs, outs = self.apply(ins, neuron_selection)
+
+        return outs, Zs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
+        # the outputs of the pooling operation at each location is the sum of its inputs.
+        # the forward message must be known in this case, and are the inputs for each pooling thing.
+        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+
+        outs, Zs, tape = args
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = Zs
+
+        # Divide incoming relevance by the activations.
+        if len(self.layer_next) > 1:
+            tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
+            # Propagate the relevance to input neurons
+            # using the gradient.
+            tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+            ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+        else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
+            # Propagate the relevance to input neurons
+            # using the gradient.
+            tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+            ret = keras_layers.Multiply()([ins, tmp2])
+
+        return ret
+
+# TODO not tested in tf2.0 yet
+class AveragePoolingReverseRule(reverse_map.ReplacementLayer):
+    """Special AveragePooling handler that applies the Z-Rule"""
+
+    def __init__(self, layer, *args, **kwargs):
+        self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
+                                                             name_template="no_act_%s")
+        super(AveragePoolingReverseRule, self).__init__(layer, *args, **kwargs)
+
+    def apply(self, ins, neuron_selection):
+        """
+        applies layer / forward tf ops.
+        """
+        outs = self.layer_func(ins)
+        Zs = self._layer_wo_act(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Zs = self._neuron_select(Zs, neuron_selection)
+
+        return Zs, outs
+
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            Zs, outs = self.apply(ins, neuron_selection)
+
+        return outs, Zs, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
+
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
+        # the outputs of the pooling operation at each location is the sum of its inputs.
+        # the forward message must be known in this case, and are the inputs for each pooling thing.
+        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
+        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+
+        uts, Zs, tape = args
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = Zs
+
+        # Divide incoming relevance by the activations.
+        if len(self.layer_next) > 1:
+            tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
+            # Propagate the relevance to input neurons
+            # using the gradient.
+            tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+            ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+        else:
+            tmp = ilayers.SafeDivide()([reversed_outs, Zs])
+            # Propagate the relevance to input neurons
+            # using the gradient.
+            tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+            ret = keras_layers.Multiply()([ins, tmp2])
+
         return ret

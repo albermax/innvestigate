@@ -1,23 +1,23 @@
-# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+# Get Python six functionality:
 from builtins import zip
-import six
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-
-import tensorflow.keras.backend as K
 import tensorflow.keras.layers as keras_layers
-import tensorflow.keras.models as keras_models
-import numpy as np
 import warnings
 
-
-from .. import layers as ilayers
+import inspect
 from .. import utils as iutils
+from . import reverse_map
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
@@ -248,12 +248,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
     """
 
     def __init__(self, model,
-                 neuron_selection_mode="max_activation",
                  allow_lambda_layers=False,
                  **kwargs):
-        if neuron_selection_mode not in ["max_activation", "index", "all"]:
-            raise ValueError("neuron_selection parameter is not valid.")
-        self._neuron_selection_mode = neuron_selection_mode
 
         self._allow_lambda_layers = allow_lambda_layers
         self._add_model_check(
@@ -264,7 +260,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-        self._special_helper_layers = []
 
         super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
@@ -279,93 +274,13 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-    def _prepare_model(self, model):
-        """
-        Prepares the model to analyze before it gets actually analyzed.
-
-        This class adds the code to select a specific output neuron.
-        """
-        neuron_selection_mode = self._neuron_selection_mode
-        model_inputs = model.inputs
-
-        model_output = model.outputs
-        if len(model_output) > 1:
-            raise ValueError("Only models with one output tensor are allowed.")
-        analysis_inputs = []
-        stop_analysis_at_tensors = []
-
-        # Flatten to form (batch_size, other_dimensions):
-        if K.ndim(model_output[0]) > 2:
-            model_output = keras_layers.Flatten()(model_output)
-
-        if neuron_selection_mode == "max_activation":
-            l = ilayers.Max(name="iNNvestigate_max")
-            model_output = l(model_output)
-            self._special_helper_layers.append(l)
-        elif neuron_selection_mode == "index":
-            neuron_indexing = keras_layers.Input(
-                batch_shape=[None, None], dtype=np.int32,
-                name='iNNvestigate_neuron_indexing')
-            self._special_helper_layers.append(
-                neuron_indexing._keras_history[0])
-            analysis_inputs.append(neuron_indexing)
-            # The indexing tensor should not be analyzed.
-            stop_analysis_at_tensors.append(neuron_indexing)
-
-            l = ilayers.GatherND(name="iNNvestigate_gather_nd")
-            model_output = l(model_output+[neuron_indexing])
-            self._special_helper_layers.append(l)
-        elif neuron_selection_mode == "all":
-            pass
-        else:
-            raise NotImplementedError()
-
-        model = keras_models.Model(inputs=model_inputs+analysis_inputs,
-                                   outputs=model_output)
-        return model, analysis_inputs, stop_analysis_at_tensors
-
     def create_analyzer_model(self):
         """
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
-        model_inputs = self._model.inputs
-        tmp = self._prepare_model(self._model)
-        model, analysis_inputs, stop_analysis_at_tensors = tmp
-        self._analysis_inputs = analysis_inputs
-        self._prepared_model = model
 
-        tmp = self._create_analysis(
-            model, stop_analysis_at_tensors=stop_analysis_at_tensors)
-        if isinstance(tmp, tuple):
-            if len(tmp) == 3:
-                analysis_outputs, debug_outputs, constant_inputs = tmp
-            elif len(tmp) == 2:
-                analysis_outputs, debug_outputs = tmp
-                constant_inputs = list()
-            elif len(tmp) == 1:
-                analysis_outputs = iutils.to_list(tmp[0])
-                constant_inputs, debug_outputs = list(), list()
-            else:
-                raise Exception("Unexpected output from _create_analysis.")
-        else:
-            analysis_outputs = tmp
-            constant_inputs, debug_outputs = list(), list()
-
-        analysis_outputs = iutils.to_list(analysis_outputs)
-        debug_outputs = iutils.to_list(debug_outputs)
-        constant_inputs = iutils.to_list(constant_inputs)
-
-        self._n_data_input = len(model_inputs)
-        self._n_constant_input = len(constant_inputs)
-        self._n_data_output = len(analysis_outputs)
-        self._n_debug_output = len(debug_outputs)
-
-        inputs = model_inputs+analysis_inputs+constant_inputs
-        outputs = analysis_outputs+debug_outputs
-        outputs = kgraph.fake_keras_layer(inputs, outputs)
-        self._analyzer_model = keras_models.Model(inputs=inputs,
-                                                  outputs=outputs)
+        self._analyzer_model = self._create_analysis(self._model)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         """
@@ -393,107 +308,50 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection=None):
+    def analyze(self, X, neuron_selection=None, layer_names=None):
         """
-        Same interface as :class:`Analyzer` besides
+                Same interface as :class:`Analyzer` besides
 
-        :param neuron_selection: If neuron_selection_mode is 'index' this
-          should be an integer with the index for the chosen neuron.
-        """
+                :param neuron_selection: If neuron_selection_mode is 'index' this
+                  should be an integer with the index for the chosen neuron.
+                """
+        #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
+        inp, all = self._analyzer_model
+        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names)
+        ret = self._postprocess_analysis(ret)
 
-        X = iutils.to_list(X)
-
-        if(neuron_selection is not None and
-           self._neuron_selection_mode != "index"):
-            raise ValueError("Only neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
-        if(neuron_selection is None and
-           self._neuron_selection_mode == "index"):
-            raise ValueError("neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
-
-        if self._neuron_selection_mode == "index":
-            neuron_selection = np.asarray(neuron_selection).flatten()
-            if neuron_selection.size == 1:
-                neuron_selection = np.repeat(neuron_selection, len(X[0]))
-
-            # Add first axis indices for gather_nd
-            neuron_selection = np.hstack(
-                (np.arange(len(neuron_selection)).reshape((-1, 1)),
-                 neuron_selection.reshape((-1, 1)))
-            )
-
-            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
-        else:
-            ret = self._analyzer_model.predict_on_batch(X)
-
-        if isinstance(ret, list):
-            for i, r in enumerate(ret):
-                if not isinstance(r, np.ndarray):
-                    ret[i] = r.numpy()
-        else:
-            if not isinstance(ret, np.ndarray):
-                ret = ret.numpy()
-
-        if self._n_debug_output > 0:
-            self._handle_debug_output(ret[-self._n_debug_output:])
-            ret = ret[:-self._n_debug_output]
-
-        if isinstance(ret, list) and len(ret) == 1:
-            ret = ret[0]
         return ret
 
+    def _postprocess_analysis(self, X):
+        return X
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
-    """Convenience class for analyzers that revert the model's structure.
+    """Guided backprop analyzer.
 
-    This class contains many helper functions around the graph
-    reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
+    Applies the "guided backprop" algorithm to analyze the model.
 
-    The deriving classes should specify how the graph should be reverted
-    by implementing the following functions:
-
-    * :func:`_reverse_mapping(layer)` given a layer this function
-      returns a reverse mapping for the layer as specified in
-      :func:`innvestigate.utils.keras.graph.reverse_model` or None.
-
-      This function can be implemented, but it is encouraged to
-      implement a default mapping and add additional changes with
-      the function :func:`_add_conditional_reverse_mapping` (see below).
-
-      The default behavior is finding a conditional mapping (see below),
-      if none is found, :func:`_default_reverse_mapping` is applied.
-    * :func:`_default_reverse_mapping` defines the default
-      reverse mapping.
-    * :func:`_head_mapping` defines how the outputs of the model
-      should be instantiated before the are passed to the reversed
-      network.
-
-    Furthermore other parameters of the function
-    :func:`innvestigate.utils.keras.graph.reverse_model` can
-    be changed by setting the according parameters of the
-    init function:
-
-    :param reverse_verbose: Print information on the reverse process.
-    :param reverse_reapply_on_copied_layers: See
-      :func:`innvestigate.utils.keras.graph.reverse_model`.
+    :param model: A Keras model.
     """
 
-    def __init__(self,
-                 model,
-                 reverse_verbose=False,
-                 reverse_reapply_on_copied_layers=False,
-                 **kwargs):
-        self._reverse_verbose = reverse_verbose
-        self._reverse_reapply_on_copied_layers = (
-            reverse_reapply_on_copied_layers)
+    def __init__(self, model, **kwargs):
+
+        self._add_model_softmax_check()
+        self._add_model_check(
+            lambda layer: not kchecks.only_relu_activation(layer),
+            "GuidedBackprop is only specified for "
+            "networks with ReLU activations.",
+            check_type="exception",
+        )
+
+        #TODO set verbose correctly somewhere
+        self._reverse_verbose = False
+
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
-    def _gradient_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        mask = [id(x) not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
-        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
+    def _gradient_reverse_mapping(self):
+        return reverse_map.GradientReplacementLayer
 
     def _reverse_mapping(self, layer):
         """
@@ -504,17 +362,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         :param layer: The layer for which a mapping should be returned.
         :return: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
-          * A :class:`ReverseMappingBase` subclass.
+          * A :class:`ReplacementLayer` subclass.
         """
-        if layer in self._special_helper_layers:
-            # Special layers added by AnalyzerNetworkBase
-            # that should not be exposed to user.
-            return self._gradient_reverse_mapping
 
         return self._apply_conditional_reverse_mappings(layer)
 
@@ -529,11 +378,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         :param condition: Condition when this mapping should be applied.
           Form: f(layer) -> bool
         :param mapping: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
+          * A function of form f(layer) that returns
+            a class:`ReverseMappingBase` subclass..
           * A :class:`ReverseMappingBase` subclass.
         :param priority: The higher the earlier the condition gets
           evaluated.
@@ -562,37 +408,27 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
-                    return mapping["mapping"]
+                    if (inspect.isclass(mapping["mapping"]) and issubclass(mapping["mapping"], reverse_map.ReplacementLayer)):
+                        return mapping["mapping"]
+                    elif callable(mapping["mapping"]):
+                        return mapping["mapping"](layer)
 
         return None
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self, layer):
         """
         Fallback function to map reversed_Ys to reversed_Xs
         (which should contain tensors of the same shape and type).
         """
-        return self._gradient_reverse_mapping(
-            Xs, Ys, reversed_Ys, reverse_state)
-
-    def _head_mapping(self, X):
-        """
-        Map output tensors to new values before passing
-        them into the reverted network.
-        """
-        return X
-
-    def _postprocess_analysis(self, X):
-        return X
+        return reverse_map.GradientReplacementLayer
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        ret = kgraph.reverse_model(
+        inp, rep = reverse_map.reverse_map(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
-            head_mapping=self._head_mapping,
             stop_mapping_at_tensors=stop_analysis_at_tensors,
-            verbose=self._reverse_verbose)
+            verbose=self._reverse_verbose,
+        )
 
-        ret = self._postprocess_analysis(ret)
-
-        return ret
+        return inp, rep
