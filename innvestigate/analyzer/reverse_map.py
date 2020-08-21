@@ -301,9 +301,13 @@ def reverse_map(
 
 def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, layer_names=None):
     #shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
-
-    #TODO: output shape?
     #Returns: Explanation of Form (n_inputs, batch_size, ...)
+
+    if not isinstance(Xs, tf.Tensor):
+        try:
+            Xs = tf.constant(Xs)
+        except:
+            raise ValueError("Xs has not supported type ", type(Xs))
 
     #format input & obtain explanations
     if len(reverse_ins) == 1:
