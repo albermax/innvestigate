@@ -9,7 +9,7 @@ from __future__ import\
 
 
 import inspect
-import tensorflow.python.keras.engine.network as keras_engine_network
+import tensorflow.keras.models as keras_models
 import tensorflow.keras.activations as keras_activations
 import tensorflow.keras.layers as keras_layers
 
@@ -244,7 +244,7 @@ def is_network(layer):
     """
     Is network in network?
     """
-    return isinstance(layer, keras_engine_network.Network)
+    return isinstance(layer, keras_models.Model)
 
 
 def is_conv_layer(layer, *args, **kwargs):

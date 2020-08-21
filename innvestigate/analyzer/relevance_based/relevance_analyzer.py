@@ -21,11 +21,8 @@ import tensorflow.keras.layers as keras_layers
 import numpy as np
 from .. import base as base
 from .. import reverse_map
-from innvestigate import layers as ilayers
-from innvestigate import utils as iutils
-import innvestigate.utils.keras as kutils
-from innvestigate.utils.keras import checks as kchecks
-from innvestigate.utils.keras import graph as kgraph
+from ...utils.keras import checks as kchecks
+from ...utils.keras import graph as kgraph
 from . import relevance_rule_base as rrule
 from . import utils as rutils
 
