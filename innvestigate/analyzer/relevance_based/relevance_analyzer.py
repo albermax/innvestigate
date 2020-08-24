@@ -185,11 +185,27 @@ LRP_RULES = {
 }
 
 
+class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
+    def __init__(self, layer, state):
+        #TODO: implement rule support.
+        return
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        # the embedding layer outputs for an (indexed) input a vector.
+        # thus, in the relevance backward pass, the embedding layer receives
+        # relevances Rs corresponding to those vectors.
+        # Due to the 1:1 relationship between input index and output mapping vector,
+        # the relevance backward pass can be realized by pooling relevances
+        # over the vector axis.
+
+        #relevances are given shaped [batch_size, sequence_length, embedding_dims]
+        pool_relevance = keras.layers.Lambda(lambda x: keras.backend.sum(x, axis=-1))
+        return [pool_relevance(r) for r in Rs]
+
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
     """Special BN handler that applies the Z-Rule"""
 
     def __init__(self, layer, state):
-        ##print("in BatchNormalizationReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         config = layer.get_config()
 
         self._center = config['center']
@@ -209,8 +225,6 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         # to BatchNormEpsilonRule. Not pretty, but should work.
 
     def apply(self, Xs, Ys, Rs, reverse_state):
-        ##print("    in BatchNormalizationReverseLayer.apply:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']))
-
         input_shape = [K.int_shape(x) for x in Xs]
         if len(input_shape) != 1:
             #extend below lambda layers towards multiple parameters.
@@ -254,7 +268,6 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
     """Special Add layer handler that applies the Z-Rule"""
 
     def __init__(self, layer, state):
-        ##print("in AddReverseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                              name_template="reversed_kernel_%s")
 
@@ -285,7 +298,6 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
     """Special AveragePooling handler that applies the Z-Rule"""
 
     def __init__(self, layer, state):
-        ##print("in AveragePoolingRerseLayer.init:", layer.__class__.__name__,"-> Dedicated ReverseLayer class" ) #debug
         self._layer_wo_act = kgraph.copy_layer_wo_activation(layer,
                                                              name_template="reversed_kernel_%s")
 
@@ -404,16 +416,13 @@ class LRP(base.ReverseAnalyzerBase):
         super(LRP, self).__init__(model, *args, **kwargs)
 
     def create_rule_mapping(self, layer, reverse_state):
-        ##print("in select_rule:", layer.__class__.__name__ , end='->') #debug
         rule_class = None
         if self._rules_use_conditions is True:
             for condition, rule in self._rules:
                 if condition(layer, reverse_state):
-                    ##print(str(rule)) #debug
                     rule_class = rule
                     break
         else:
-            ##print(str(rules[0]), '(via pop)') #debug
             rule_class = self._rules.pop()
 
         if rule_class is None:
@@ -467,13 +476,17 @@ class LRP(base.ReverseAnalyzerBase):
             AddReverseLayer,
             name="lrp_add_layer_mapping",
         )
+        self._add_conditional_reverse_mapping(
+            kchecks.is_embedding_layer,
+            EmbeddingReverseLayer,
+            name="lrp_embedding_mapping"
+        )
 
         # FINALIZED constructor.
         return super(LRP, self)._create_analysis(*args, **kwargs)
 
 
     def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        ##print("    in _default_reverse_mapping:", reverse_state['layer'].__class__.__name__, '(nid: {})'.format(reverse_state['nid']),  end='->')
         #default_return_layers = [keras.layers.Activation]# TODO extend
         if(len(Xs) == len(Ys) and
            isinstance(reverse_state['layer'], (keras.layers.Activation,)) and
@@ -481,7 +494,6 @@ class LRP(base.ReverseAnalyzerBase):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
-            ##print('return R')
             return reversed_Ys
         else:
             # This branch covers:
@@ -491,7 +503,6 @@ class LRP(base.ReverseAnalyzerBase):
             # Reshape
             # Concatenate
             # Cropping
-            ##print('ilayers.GradientWRT')
             return self._gradient_reverse_mapping(
                 Xs, Ys, reversed_Ys, reverse_state)
 
