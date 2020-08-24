@@ -1,13 +1,6 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -16,7 +9,6 @@ import six
 
 
 import inspect
-import keras.backend as K
 import keras.engine.topology
 import keras.layers
 import keras.layers.advanced_activations
@@ -211,6 +203,22 @@ def contains_activation(layer, activation=None):
             return layer.activation == keras.activations.get(activation)
         else:
             return True
+    elif isinstance(layer, keras.layers.ReLU):
+        if activation is not None:
+            return (keras.activations.get("relu") ==
+                    keras.activations.get(activation))
+        else:
+            return True
+    elif isinstance(layer, (
+            keras.layers.advanced_activations.ELU,
+            keras.layers.advanced_activations.LeakyReLU,
+            keras.layers.advanced_activations.PReLU,
+            keras.layers.advanced_activations.Softmax,
+            keras.layers.advanced_activations.ThresholdedReLU)):
+        if activation is not None:
+            raise Exception("Cannot detect activation type.")
+        else:
+            return True
     else:
         return False
 
@@ -242,6 +250,7 @@ def contains_bias(layer):
 
 
 def only_relu_activation(layer):
+    """Checks if layer contains no or only a ReLU activation."""
     return (not contains_activation(layer) or
             contains_activation(layer, None) or
             contains_activation(layer, "linear") or
@@ -256,6 +265,7 @@ def is_network(layer):
 
 
 def is_conv_layer(layer, *args, **kwargs):
+    """Checks if layer is a convolutional layer."""
     CONV_LAYERS = (
         keras.layers.convolutional.Conv1D,
         keras.layers.convolutional.Conv2D,
@@ -272,16 +282,22 @@ def is_embedding_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.Embedding)
 
 def is_batch_normalization_layer(layer, *args, **kwargs):
+    """Checks if layer is a batchnorm layer."""
     return isinstance(layer, keras.layers.normalization.BatchNormalization)
 
+
 def is_add_layer(layer, *args, **kwargs):
+    """Checks if layer is an addition-merge layer."""
     return isinstance(layer, keras.layers.Add)
 
+
 def is_dense_layer(layer, *args, **kwargs):
+    """Checks if layer is a dense layer."""
     return isinstance(layer, keras.layers.core.Dense)
 
 
 def is_convnet_layer(layer):
+    """Checks if layer is from a convolutional network."""
     # Inside function to not break import if Keras changes.
     CONVNET_LAYERS = (
         keras.engine.topology.InputLayer,
@@ -351,10 +367,12 @@ def is_convnet_layer(layer):
 
 
 def is_relu_convnet_layer(layer):
+    """Checks if layer is from a convolutional network with ReLUs."""
     return (is_convnet_layer(layer) and only_relu_activation(layer))
 
 
 def is_average_pooling(layer):
+    """Checks if layer is an average-pooling layer."""
     AVERAGEPOOLING_LAYERS = (
         keras.layers.pooling.AveragePooling1D,
         keras.layers.pooling.AveragePooling2D,
@@ -367,6 +385,7 @@ def is_average_pooling(layer):
 
 
 def is_max_pooling(layer):
+    """Checks if layer is a max-pooling layer."""
     MAXPOOLING_LAYERS = (
         keras.layers.pooling.MaxPooling1D,
         keras.layers.pooling.MaxPooling2D,
@@ -379,6 +398,7 @@ def is_max_pooling(layer):
 
 
 def is_input_layer(layer, ignore_reshape_layers=True):
+    """Checks if layer is an input layer."""
     # Triggers if ALL inputs of layer are connected
     # to a Keras input layer object.
     # Note: In the sequential api the Sequential object

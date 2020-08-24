@@ -1,6 +1,25 @@
+## Version 1.0.8
+
+Bugfixes, increased code covervage, CI.
+
+## Version 1.0.7
+
+Add Python 2 compatibility again.
+
+Bugfixes.
+
+## Version 1.0.6
+
+* Add beta version of DeepLIFT (as in Ancona et.al.) and wrapper for DeepLIFT package.
+* Updating readme and bugfixes.
+
+## Version 1.0.5
+
+Treat IntegratedGradients as attribution method and bugfixes.
+
 ## Version 1.0.1-1.0.4
 
-Adds the following functionality:
+Added the following functionality:
 
 * Additional notebooks.
 * Analyzers: Input\*Gradient

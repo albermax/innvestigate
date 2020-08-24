@@ -1,20 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import \
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import range
 import six
-# End: Python 2/3 compatability header small
 
 import numpy as np
-import math
 import warnings
 import time
 
-import keras
 import keras.backend as K
 from keras.utils import Sequence
 from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
@@ -42,7 +35,7 @@ class Perturbation:
 
     def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
                  aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
-        if isinstance(perturbation_function, str):
+        if isinstance(perturbation_function, six.string_types):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
@@ -78,7 +71,8 @@ class Perturbation:
     @staticmethod
     def compute_region_ordering(aggregated_regions):
         # 0 means highest scoring region
-        order = np.argsort(-aggregated_regions.reshape((*aggregated_regions.shape[:2], -1)), axis=-1)
+        new_shape = tuple(aggregated_regions.shape[:2]) + (-1,)
+        order = np.argsort(-aggregated_regions.reshape(new_shape), axis=-1)
         ranks = order.argsort().reshape(aggregated_regions.shape)
         return ranks
 
@@ -139,7 +133,10 @@ class Perturbation:
                     region)
 
                 if self.value_range is not None:
-                    np.clip(x_perturbated, *self.value_range, x_perturbated)
+                    np.clip(x_perturbated,
+                            self.value_range[0],
+                            self.value_range[1],
+                            x_perturbated)
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 

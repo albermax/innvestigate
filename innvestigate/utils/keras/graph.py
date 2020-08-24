@@ -1,13 +1,8 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
+from builtins import range, zip
 import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -23,7 +18,6 @@ import keras.models
 import numpy as np
 
 
-from .. import keras as kutils
 from . import checks as kchecks
 from ... import layers as ilayers
 from ... import utils as iutils
@@ -48,6 +42,9 @@ __all__ = [
     "get_model_execution_graph",
     "print_model_execution_graph",
 
+    "get_bottleneck_nodes",
+    "get_bottleneck_tensors",
+
     "ReverseMappingBase",
     "reverse_model",
 ]
@@ -59,12 +56,14 @@ __all__ = [
 
 
 def get_kernel(layer):
+    """Returns the kernel weights of a layer, i.e, w/o biases."""
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
     return ret[0]
 
 
 def get_input_layers(layer):
+    """Returns all layers that created this layer's inputs."""
     ret = set()
 
     for node_index in range(len(layer._inbound_nodes)):
@@ -81,10 +80,12 @@ def get_input_layers(layer):
 
 
 def get_layer_inbound_count(layer):
+    """Returns the number inbound nodes of a layer."""
     return len(layer._inbound_nodes)
 
 
 def get_layer_outbound_count(layer):
+    """Returns the number outbound nodes of a layer."""
     return len(layer.outbound_nodes)
 
 
@@ -94,6 +95,24 @@ def get_layer_neuronwise_io(layer,
                             Ys=None,
                             return_i=True,
                             return_o=True):
+    """Returns the input and output for each neuron in a layer
+
+    Returns the symbolic input and output for each neuron in a layer.
+    For a dense layer this is the input output itself.
+    For convolutional layers this method extracts for each neuron
+    the input output mapping.
+
+    At the moment this function is designed
+    to work with dense and conv2d layers.
+
+    :param layer: The targeted layer.
+    :param node_index: Index of the layer node to use.
+    :param Xs: Ignore the layer's input but use Xs instead.
+    :param Ys: Ignore the layer's output but use Ys instead.
+    :param return_i: Return the inputs.
+    :param return_o: Return the outputs.
+    :return: Inputs and outputs, if specified, for each individual neuron.
+    """
     if not kchecks.contains_kernel(layer):
         raise NotImplementedError()
 
@@ -151,7 +170,14 @@ def get_layer_neuronwise_io(layer,
 
 
 def get_symbolic_weight_names(layer, weights=None):
-    #TODO: documentate.
+    """Attribute names for weights
+
+    Looks up the attribute names of weight tensors.
+
+    :param layer: Targeted layer.
+    :param weights: A list of weight tensors.
+    :return: The attribute names of the weights.
+    """
 
     if weights is None:
         weights = layer.weights
@@ -181,11 +207,17 @@ def get_symbolic_weight_names(layer, weights=None):
 
 
 def update_symbolic_weights(layer, weight_mapping):
-    """
+    """Updates the symbolic tensors of a layer
+
+    Updates the symbolic tensors of a layer by replacing them.
+
     Note this does not update the loss or anything alike!
     Use with caution!
+
+    :param layer: Targeted layer.
+    :param weight_mapping: Dict with attribute name and weight tensors
+      as keys and values.
     """
-    #TODO: documentate.
 
     trainable_weight_ids = [id(x) for x in layer._trainable_weights]
     non_trainable_weight_ids = [id(x) for x in layer._non_trainable_weights]
@@ -208,6 +240,20 @@ def get_layer_from_config(old_layer,
                           new_config,
                           weights=None,
                           reuse_symbolic_tensors=True):
+    """Creates a new layer from a config
+
+    Creates a new layer given a changed config and weights etc.
+
+    :param old_layer: A layer that shall be used as base.
+    :param new_config: The config to create the new layer.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     new_layer = old_layer.__class__.from_config(new_config)
 
     if weights is None:
@@ -243,6 +289,20 @@ def copy_layer_wo_activation(layer,
                              weights=None,
                              reuse_symbolic_tensors=True,
                              **kwargs):
+    """Copy a Keras layer and remove the activations
+
+    Copies a Keras layer but remove potential activations.
+
+    :param layer: A layer that should be copied.
+    :param keep_bias: Keep a potential bias.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     config = layer.get_config()
     if name_template is None:
         config["name"] = None
@@ -250,13 +310,14 @@ def copy_layer_wo_activation(layer,
         config["name"] = name_template % config["name"]
     if kchecks.contains_activation(layer):
         config["activation"] = None
-    if keep_bias is False and config.get("use_bias", False):
-        config["use_bias"] = False
-        if weights is None:
-            if reuse_symbolic_tensors:
-                weights = layer.weights[:-1]
-            else:
-                weights = layer.get_weights()[:-1]
+    if hasattr(layer, "use_bias"):
+        if keep_bias is False and config.get("use_bias", True):
+            config["use_bias"] = False
+            if weights is None:
+                if reuse_symbolic_tensors:
+                    weights = layer.weights[:-1]
+                else:
+                    weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
@@ -266,23 +327,38 @@ def copy_layer(layer,
                weights=None,
                reuse_symbolic_tensors=True,
                **kwargs):
+    """Copy a Keras layer
 
+    Copies a Keras layer.
+
+    :param layer: A layer that should be copied.
+    :param keep_bias: Keep a potential bias.
+    :param weights: Weights to set in the new layer.
+      Options: np tensors, symbolic tensors, or None,
+      in which case the weights from old_layers are used.
+    :param reuse_symbolic_tensors: If the weights of the
+      old_layer are used copy the symbolic ones or copy
+      the Numpy weights.
+    :return: The new layer instance.
+    """
     config = layer.get_config()
     if name_template is None:
         config["name"] = None
     else:
         config["name"] = name_template % config["name"]
-    if keep_bias is False and config.get("use_bias", False):
-        config["use_bias"] = False
-        if weights is None:
-            if reuse_symbolic_tensors:
-                weights = layer.weights[:-1]
-            else:
-                weights = layer.get_weights()[:-1]
+    if hasattr(layer, "use_bias"):
+        if keep_bias is False and config.get("use_bias", True):
+            config["use_bias"] = False
+            if weights is None:
+                if reuse_symbolic_tensors:
+                    weights = layer.weights[:-1]
+                else:
+                    weights = layer.get_weights()[:-1]
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
 def pre_softmax_tensors(Xs, should_find_softmax=True):
+    """Finds the tensors that were preceeding a potential softmax."""
     softmax_found = False
 
     Xs = iutils.to_list(Xs)
@@ -304,6 +380,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 
 def model_wo_softmax(model):
+    """Creates a new model w/o the final softmax activation."""
     return keras.models.Model(inputs=model.inputs,
                               outputs=pre_softmax_tensors(model.outputs),
                               name=model.name)
@@ -315,6 +392,7 @@ def model_wo_softmax(model):
 
 
 def get_model_layers(model):
+    """Returns all layers of a model."""
     ret = []
 
     def collect_layers(container):
@@ -348,6 +426,114 @@ def model_contains(model, layer_condition, return_only_counts=False):
     else:
         return collected_layers
 
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+def apply_mapping_to_fused_bn_layer(mapping, fuse_mode="one_linear"):
+    """
+    Applies a mapping to a linearized Batch Normalization layer.
+
+    :param mapping: The mapping to be applied.
+      Should take parameters layer and reverse_state and
+      return a mapping function.
+    :param fuse_mode: Either 'one_linear': apply the mapping
+      to a once linearized layer, or
+      'two_linear': apply to twice to a twice linearized layer.
+    """
+    if fuse_mode not in ["one_linear", "two_linear"]:
+        raise ValueError("fuse_mode can only be 'one_linear' or 'two_linear'")
+
+    # todo(alber): remove this workaround and make a proper class
+    def ScaleLayer(kernel, bias):
+        _kernel = kernel
+        _bias = bias
+
+        class ScaleLayer(keras.layers.Layer):
+
+            def __init__(self, use_bias=True, **kwargs):
+                self._kernel_to_be = _kernel
+                self._bias_to_be = _bias
+                self.use_bias = use_bias
+                super(ScaleLayer, self).__init__(**kwargs)
+
+            def build(self, input_shape):
+                self.kernel = self.add_weight(
+                    name='kernel',
+                    shape=K.int_shape(self._kernel_to_be),
+                    initializer=lambda a, b=None: self._kernel_to_be,
+                    trainable=False)
+                if self.use_bias:
+                    self.bias = self.add_weight(
+                        name='bias',
+                        shape=K.int_shape(self._bias_to_be),
+                        initializer=lambda a, b=None: self._bias_to_be,
+                        trainable=False)
+                super(ScaleLayer, self).build(input_shape)
+
+            def call(self, x):
+                ret = (x * self.kernel)
+                if self.use_bias:
+                    ret += self.bias
+                return ret
+
+            def compute_output_shape(self, input_shape):
+                return input_shape
+
+        return ScaleLayer()
+
+    def meta_mapping(layer, reverse_state):
+        # get bn params
+        weights = layer.weights[:]
+        if layer.scale:
+            gamma = weights.pop(0)
+        else:
+            gamma = K.ones_like(weights[0])
+        if layer.center:
+            beta = weights.pop(0)
+        else:
+            beta = K.zeros_like(weights[0])
+        mean, variance = weights
+
+        if fuse_mode == "one_linear":
+            tmp = K.sqrt(variance**2 + layer.epsilon)
+            tmp_k = gamma / tmp
+            tmp_b = -mean / tmp + beta
+
+            inputs = layer.get_input_at(0)
+            surrogate_layer = ScaleLayer(tmp_k, tmp_b)
+            # init layer
+            surrogate_layer(inputs)
+            actual_mapping = mapping(surrogate_layer, reverse_state).apply
+        else:
+            tmp = K.sqrt(variance**2 + layer.epsilon)
+            tmp_k1 = 1 / tmp
+            tmp_b1 = -mean / tmp
+            tmp_k2 = gamma
+            tmp_b2 = beta
+
+            inputs = layer.get_input_at(0)
+            surrogate_layer1 = ScaleLayer(tmp_k1, tmp_b1)
+            surrogate_layer2 = ScaleLayer(tmp_k2, tmp_b2)
+            # init layers
+            surrogate_layer1(inputs)
+            surrogate_layer2(inputs)
+            # todo(alber): update reverse state
+            actual_mapping_1 = mapping(surrogate_layer1, reverse_state).apply
+            actual_mapping_2 = mapping(surrogate_layer2, reverse_state).apply
+
+            def actual_mapping(Xs, Ys, reversed_Ys, reverse_state):
+                from . import apply as kapply
+                X2s = kapply(surrogate_layer1, Xs)
+                # Apply first mapping
+                # todo(alber): update reverse state
+                reversed_X2s = actual_mapping_2(
+                    X2s, Ys, reversed_Ys, reverse_state)
+                return actual_mapping_1(Xs, X2s, reversed_X2s, reverse_state)
+        return actual_mapping
+    return meta_mapping
 
 ###############################################################################
 ###############################################################################
@@ -483,6 +669,27 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 def get_model_execution_trace(model,
                               keep_input_layers=False,
                               reapply_on_copied_layers=False):
+    """
+    Returns a list representing the execution graph.
+    Each key is the node's id as it is used by the reverse_model method.
+
+    Each associated value contains a dictionary with the following items:
+
+    * nid: the node id.
+    * layer: the layer creating this node.
+    * Xs: the input tensors (only valid if not in a nested container).
+    * Ys: the output tensors (only valid if not in a nested container).
+    * Xs_nids: the ids of the nodes creating the Xs.
+    * Ys_nids: the ids of nodes using the according output tensor.
+    * Xs_layers: the layer that created the accodring input tensor.
+    * Ys_layers: the layers using the according output tensor.
+
+    :param model: A kera model.
+    :param keep_input_layers: Keep input layers.
+    :param reapply_on_copied_layers: If the execution needs to be linearized,
+      reapply with copied layers. Might be slow. Prevents changes of the
+      original layer's node lists.
+    """
     _, execution_trace, _ = trace_model_execution(
         model,
         reapply_on_copied_layers=reapply_on_copied_layers)
@@ -523,10 +730,10 @@ def get_model_execution_trace(model,
     for nid, l, Xs, Ys in execution_trace:
         if isinstance(l, keras.layers.InputLayer):
             # The nids that created or receive the tensors.
-            Xs_nids = [] # Input layer does not receive.
+            Xs_nids = []  # Input layer does not receive.
             Ys_nids = [inputs_to_node[id(Y)] for Y in Ys]
             # The layers that created or receive the tensors.
-            Xs_layers = [] # Input layer does not receive.
+            Xs_layers = []  # Input layer does not receive.
             Ys_layers = [[nid_to_nodes[Ynid][1] for Ynid in Ynids2]
                          for Ynids2 in Ys_nids]
         else:
@@ -576,10 +783,13 @@ def get_model_execution_graph(model, keep_input_layers=False):
     * Ys_nids: the ids of nodes using the according output tensor.
     * Xs_layers: the layer that created the accodring input tensor.
     * Ys_layers: the layers using the according output tensor.
+
+    :param model: A kera model.
+    :param keep_input_layers: Keep input layers.
     """
     trace = get_model_execution_trace(model,
-                                       keep_input_layers=keep_input_layers,
-                                       reapply_on_copied_layers=False)
+                                      keep_input_layers=keep_input_layers,
+                                      reapply_on_copied_layers=False)
 
     input_layers = [tmp for tmp in trace if tmp["nid"] is None]
     graph = {tmp["nid"]: tmp for tmp in trace}
@@ -590,6 +800,7 @@ def get_model_execution_graph(model, keep_input_layers=False):
 
 
 def print_model_execution_graph(graph):
+    """Pretty print of a model execution graph."""
 
     def nids_as_str(nids):
         return ", ".join(["%s" % nid for nid in nids])
@@ -601,7 +812,6 @@ def print_model_execution_graph(graph):
                node["layer"].name,
                nids_as_str(node["Xs_nids"]),
                nids_as_str(node["Ys_nids"]),))
-        
 
     if None in graph:
         print("Graph input layers:")
@@ -615,11 +825,11 @@ def print_model_execution_graph(graph):
         print_node(graph[nid])
 
 
-def get_bottleneck_tensors(inputs, outputs, execution_list):
+def get_bottleneck_nodes(inputs, outputs, execution_list):
     """
-    Given an execution list this function returns all tensors that
+    Given an execution list this function returns all nodes that
     are a bottleneck in the network, i.e., "all information" must pass
-    through this tensor.
+    through this node.
     """
 
     forward_connections = {}
@@ -639,7 +849,7 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
         for fw_c in forward_connections[x]:
             open_connections[fw_c] = True
 
-    ret = set()
+    ret = list()
     for l, Xs, Ys in execution_list:
         if isinstance(l, keras.layers.InputLayer):
             # Special case, do nothing.
@@ -652,16 +862,35 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
             del open_connections[y]
 
         if len(open_connections) == 0:
-            if len(Xs) == 1:
-                ret.add(Xs[0])
-            if len(Xs) == 1:
-                ret.add(Ys[0])
+            ret.append((l, (Xs, Ys)))
 
         for y in Ys:
             if y not in outputs:
                 for fw_c in forward_connections[y]:
                     open_connections[fw_c] = True
 
+    return ret
+
+
+def get_bottleneck_tensors(inputs, outputs, execution_list):
+    """
+    Given an execution list this function returns all tensors that
+    are a bottleneck in the network, i.e., "all information" must pass
+    through this tensor.
+    """
+
+    nodes = get_bottleneck_nodes(inputs, outputs, execution_list)
+
+    ret = list()
+    for l, (Xs, Ys) in nodes:
+        for tensor_list in (Xs, Ys):
+            if len(tensor_list) == 1:
+                tensor = tensor_list[0]
+                if tensor not in ret:
+                    ret.append(tensor)
+            else:
+                # TODO(albermax): put warning here?
+                pass
     return ret
 
 
@@ -687,6 +916,7 @@ def reverse_model(model, reverse_mappings,
                   return_all_reversed_tensors=False,
                   clip_all_reversed_tensors=False,
                   project_bottleneck_tensors=False,
+                  execution_trace=None,
                   reapply_on_copied_layers=False):
     """
     Reverses a Keras model based on the given reverse functions.
@@ -796,9 +1026,11 @@ def reverse_model(model, reverse_mappings,
     _print("Reverse model: {}".format(model))
 
     # Create a list with nodes in reverse execution order.
-    layers, execution_list, outputs = trace_model_execution(
-        model,
-        reapply_on_copied_layers=reapply_on_copied_layers)
+    if execution_trace is None:
+        execution_trace = trace_model_execution(
+            model,
+            reapply_on_copied_layers=reapply_on_copied_layers)
+    layers, execution_list, outputs = execution_trace
     len_execution_list = len(execution_list)
     num_input_layers = len([_ for l, _, _ in execution_list
                             if isinstance(l, keras.layers.InputLayer)])
@@ -826,19 +1058,35 @@ def reverse_model(model, reverse_mappings,
                 }
             )
             reverse_mapping = reverse_mapping_obj.apply
-        elif(callable(meta_reverse_mapping) and
-             len(inspect.signature(meta_reverse_mapping).parameters) == 2):
-            # Function that returns mapping
-            reverse_mapping = meta_reverse_mapping(
-                layer,
-                {
-                    "model": model,
-                    "layer": layer,
-                }
-            )
         else:
-            # Nothing meta here
-            reverse_mapping = meta_reverse_mapping
+            def parameter_count(func):
+                if hasattr(inspect, "signature"):
+                    ret = len(inspect.signature(func).parameters)
+                else:
+                    spec = inspect.getargspec(func)
+                    ret = len(spec.args)
+                    if spec.varargs is not None:
+                        ret += len(spec.varargs)
+                    if spec.keywords is not None:
+                        ret += len(spec.keywords)
+                    if ret == 3:
+                        # assume class function with self
+                        ret -= 1
+                return ret
+
+            if(callable(meta_reverse_mapping) and
+               parameter_count(meta_reverse_mapping) == 2):
+                # Function that returns mapping
+                reverse_mapping = meta_reverse_mapping(
+                    layer,
+                    {
+                        "model": model,
+                        "layer": layer,
+                    }
+                )
+            else:
+                # Nothing meta here
+                reverse_mapping = meta_reverse_mapping
 
         initialized_reverse_mappings[layer] = reverse_mapping
 

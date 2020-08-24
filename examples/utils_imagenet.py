@@ -20,7 +20,7 @@ def postprocess(X, color_conversion, channels_first):
 
 def image(X):
     X = X.copy()
-    return ivis.project(X, absmax=255.0, input_is_postive_only=True)
+    return ivis.project(X, absmax=255.0, input_is_positive_only=True)
 
 
 def bk_proj(X):
@@ -29,9 +29,9 @@ def bk_proj(X):
 
 
 def heatmap(X):
-    X = ivis.gamma(X, minamp=0, gamma=0.95)
+    #X = ivis.gamma(X, minamp=0, gamma=0.95)
     return ivis.heatmap(X)
 
 
 def graymap(X):
-    return ivis.graymap(np.abs(X), input_is_postive_only=True)
+    return ivis.graymap(np.abs(X), input_is_positive_only=True)

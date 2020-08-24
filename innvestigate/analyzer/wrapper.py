@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import zip
 
 
 ###############################################################################
@@ -40,6 +34,12 @@ __all__ = [
 
 
 class WrapperBase(base.AnalyzerBase):
+    """Interface for wrappers around analyzers
+
+    This class is the basic interface for wrappers around analyzers.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._subanalyzer = subanalyzer
@@ -76,17 +76,32 @@ class WrapperBase(base.AnalyzerBase):
 
 
 class AugmentReduceBase(WrapperBase):
+    """Interface for wrappers that augment the input and reduce the analysis.
+
+    This class is an interface for wrappers that:
+    * augment the input to the analyzer by creating new samples.
+    * reduce the returned analysis to match the initial input shapes.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param augment_by_n: Number of samples to create.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._augment_by_n = kwargs.pop("augment_by_n", 2)
+        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+
+        if self._neuron_selection_mode != "all":
+            # TODO: this is not transparent, find a better way.
+            subanalyzer._neuron_selection_mode = "index"
         super(AugmentReduceBase, self).__init__(subanalyzer,
                                                 *args, **kwargs)
 
-        self._keras_based_augment_reduce = False
         if isinstance(self._subanalyzer, base.AnalyzerNetworkBase):
             # Take the keras analyzer model and
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
+        else:
+            raise NotImplementedError("Keras-based subanalyzer required.")
 
     def create_analyzer_model(self):
         if not self._keras_based_augment_reduce:
@@ -106,16 +121,17 @@ class AugmentReduceBase(WrapperBase):
         inputs = model.inputs[:self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
         # todo: check this, index seems not right.
-        outputs = model.outputs[:self._subanalyzer._n_data_input]
+        #outputs = model.outputs[:self._subanalyzer._n_data_input]
         extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
 
         if len(extra_outputs) > 0:
             raise Exception("No extra output is allowed "
                             "with this wrapper.")
 
-        new_inputs = iutils.to_list(self._keras_based_augment(inputs))
+        new_inputs = iutils.to_list(self._augment(inputs))
+        # print(type(new_inputs), type(extra_inputs))
         tmp = iutils.to_list(model(new_inputs+extra_inputs))
-        new_outputs = iutils.to_list(self._keras_based_reduce(tmp))
+        new_outputs = iutils.to_list(self._reduce(tmp))
         new_constant_inputs = self._keras_get_constant_inputs()
 
         new_model = keras.models.Model(
@@ -127,38 +143,35 @@ class AugmentReduceBase(WrapperBase):
         if self._keras_based_augment_reduce is True:
             if not hasattr(self._subanalyzer, "_analyzer_model"):
                 self.create_analyzer_model()
+
+            ns_mode = self._neuron_selection_mode
+            if ns_mode in ["max_activation", "index"]:
+                if ns_mode == "max_activation":
+                    tmp = self._subanalyzer._model.predict(X)
+                    indices = np.argmax(tmp, axis=1)
+                else:
+                    if len(args):
+                        args = list(args)
+                        indices = args.pop(0)
+                    else:
+                        indices = kwargs.pop("neuron_selection")
+
+                # broadcast to match augmented samples.
+                indices = np.repeat(indices, self._augment_by_n)
+
+                kwargs["neuron_selection"] = indices
             return self._subanalyzer.analyze(X, *args, **kwargs)
         else:
-            # todo: remove python based code.
-            # also tests.
             raise DeprecationWarning("Not supported anymore.")
-            return_list = isinstance(X, list)
-
-            X = self._python_based_augment(iutils.to_list(X))
-            ret = self._subanalyzer.analyze(X, *args, **kwargs)
-            ret = self._python_based_reduce(ret)
-
-            if return_list is True:
-                return ret
-            else:
-                return ret[0]
-
-    def _python_based_augment(self, X):
-        return [np.repeat(x, self._augment_by_n, axis=0) for x in X]
-
-    def _python_based_reduce(self, X):
-        tmp = [x.reshape((-1, self._augment_by_n)+x.shape[1:]) for x in X]
-        tmp = [x.mean(axis=1) for x in tmp]
-        return tmp
 
     def _keras_get_constant_inputs(self):
         return list()
 
-    def _keras_based_augment(self, X):
+    def _augment(self, X):
         repeat = ilayers.Repeat(self._augment_by_n, axis=0)
         return [repeat(x) for x in iutils.to_list(X)]
 
-    def _keras_based_reduce(self, X):
+    def _reduce(self, X):
         X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
         reshape = [ilayers.Reshape((-1, self._augment_by_n)+shape[1:])
                    for shape in X_shape]
@@ -167,6 +180,11 @@ class AugmentReduceBase(WrapperBase):
         return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
 
     def _get_state(self):
+        if self._neuron_selection_mode != "all":
+            # TODO: this is not transparent, find a better way.
+            # revert the tempering in __init__
+            tmp = self._neuron_selection_mode
+            self._subanalyzer._neuron_selection_mode = tmp
         state = super(AugmentReduceBase, self)._get_state()
         state.update({"augment_by_n": self._augment_by_n})
         return state
@@ -185,20 +203,23 @@ class AugmentReduceBase(WrapperBase):
 
 
 class GaussianSmoother(AugmentReduceBase):
+    """Wrapper that adds noise to the input and averages over analyses
+
+    This wrapper creates new samples by adding Gaussian noise
+    to the input. The final analysis is an average of the returned analyses.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param noise_scale: The stddev of the applied noise.
+    :param augment_by_n: Number of samples to create.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._noise_scale = kwargs.pop("noise_scale", 1)
         super(GaussianSmoother, self).__init__(subanalyzer,
                                                *args, **kwargs)
 
-    def _python_based_augment(self, X):
-        tmp = super(GaussianSmoother, self)._python_based_augment(X)
-        ret = [x + np.random.normal(0, self._noise_scale, size=x.shape)
-               for x in tmp]
-        return ret
-
-    def _keras_based_augment(self, X):
-        tmp = super(GaussianSmoother, self)._keras_based_augment(X)
+    def _augment(self, X):
+        tmp = super(GaussianSmoother, self)._augment(X)
         noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
         return [noise(x) for x in tmp]
 
@@ -221,6 +242,21 @@ class GaussianSmoother(AugmentReduceBase):
 
 
 class PathIntegrator(AugmentReduceBase):
+    """Integrated the analysis along a path
+
+    This analyzer:
+    * creates a path from input to reference image.
+    * creates steps number of intermediate inputs and
+      crests an analysis for them.
+    * sums the analyses and multiplies them with the input-reference_input.
+
+    This wrapper is used to implement Integrated Gradients.
+    We refer to the paper for further information.
+
+    :param subanalyzer: The analyzer to be wrapped.
+    :param steps: Number of steps for integration.
+    :param reference_inputs: The reference input.
+    """
 
     def __init__(self, subanalyzer, *args, **kwargs):
         steps = kwargs.pop("steps", 16)
@@ -231,43 +267,6 @@ class PathIntegrator(AugmentReduceBase):
                                              augment_by_n=steps,
                                              **kwargs)
 
-    def _python_based_compute_difference(self, X):
-        if getattr(self, "_difference", None) is None:
-            reference_inputs = iutils.to_list(self._reference_inputs)
-            difference = [x-ri for x, ri in zip(X, reference_inputs)]
-            self._difference = difference
-        return self._difference
-
-    def _python_based_augment(self, X):
-        difference = self._python_based_compute_difference(X)
-
-        tmp = super(PathIntegrator, self)._python_based_augment(X)
-        tmp = [x.reshape((-1, self._augment_by_n)+x.shape[1:]) for x in tmp]
-
-        # Make broadcastable.
-        difference = [x.reshape((-1, 1)+x.shape[1:]) for x in difference]
-
-        alpha = (K.cast_to_floatx(np.arange(self._augment_by_n)) /
-                 self._augment_by_n)
-        # Make broadcastable.
-        alpha = [alpha.reshape((1, self._augment_by_n) +
-                               tuple(np.ones_like(x.shape[2:])))
-                 for x in difference]
-        # Compute path steps.
-        path_steps = [a * d for a, d in zip(alpha, difference)]
-
-        ret = [x+p for x, p in zip(tmp, path_steps)]
-        ret = [x.reshape((-1,)+x.shape[2:]) for x in ret]
-        return ret
-
-    def _python_based_reduce(self, X):
-        tmp = super(PathIntegrator, self)._python_based_reduce(X)
-        # todo: make this part nicer!
-        difference = self._python_based_compute_difference(X)
-        del self._difference
-
-        return [x*d for x, d in zip(tmp, difference)]
-
     def _keras_set_constant_inputs(self, inputs):
         tmp = [K.variable(x) for x in inputs]
         self._keras_constant_inputs = [
@@ -277,30 +276,22 @@ class PathIntegrator(AugmentReduceBase):
     def _keras_get_constant_inputs(self):
         return self._keras_constant_inputs
 
-    def _keras_based_compute_difference(self, X):
+    def _compute_difference(self, X):
         if self._keras_constant_inputs is None:
-            def none_to_one(tmp):
-                return [1 if x is None else x for x in tmp]
-
-            if isinstance(self._reference_inputs, list):
-                tmp = [np.broadcast_to(ri, none_to_one(K.int_shape(x)))
-                       for x, ri in zip(X, self._reference_inputs)]
-            else:
-                tmp = [np.broadcast_to(self._reference_inputs,
-                                       none_to_one(K.int_shape(x)))
-                       for x in X]
+            tmp = kutils.broadcast_np_tensors_to_keras_tensors(
+                X, self._reference_inputs)
             self._keras_set_constant_inputs(tmp)
 
         reference_inputs = self._keras_get_constant_inputs()
         return [keras.layers.Subtract()([x, ri])
                 for x, ri in zip(X, reference_inputs)]
 
-    def _keras_based_augment(self, X):
-        tmp = super(PathIntegrator, self)._keras_based_augment(X)
+    def _augment(self, X):
+        tmp = super(PathIntegrator, self)._augment(X)
         tmp = [ilayers.Reshape((-1, self._augment_by_n)+K.int_shape(x)[1:])(x)
                for x in tmp]
 
-        difference = self._keras_based_compute_difference(X)
+        difference = self._compute_difference(X)
         self._keras_difference = difference
         # Make broadcastable.
         difference = [ilayers.Reshape((-1, 1)+K.int_shape(x)[1:])(x)
@@ -313,12 +304,13 @@ class PathIntegrator(AugmentReduceBase):
             axis=1)
         path_steps = [multiply_with_linspace(d) for d in difference]
 
-        ret = [keras.layers.Add()([x, p]) for x, p in zip(tmp, path_steps)]
+        reference_inputs = self._keras_get_constant_inputs()
+        ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs, path_steps)]
         ret = [ilayers.Reshape((-1,)+K.int_shape(x)[2:])(x) for x in ret]
         return ret
 
-    def _keras_based_reduce(self, X):
-        tmp = super(PathIntegrator, self)._keras_based_reduce(X)
+    def _reduce(self, X):
+        tmp = super(PathIntegrator, self)._reduce(X)
         difference = self._keras_difference
         del self._keras_difference
 

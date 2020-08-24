@@ -1,13 +1,7 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import range, zip
 
 
 ###############################################################################
@@ -16,8 +10,9 @@ import six
 
 import keras
 import keras.backend as K
-from keras.engine.topology import Layer
+import keras.constraints
 import keras.layers
+import keras.regularizers
 from keras.utils import conv_utils
 import numpy as np
 
@@ -70,6 +65,8 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
+    "Gather",
+    "GatherND",
 ]
 
 
@@ -318,8 +315,17 @@ class Project(_Map):
         def safe_divide(a, b):
             return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
 
+        dims = K.int_shape(x)
+        n_dim = len(dims)
+        axes = tuple(range(1, n_dim))
+        if len(axes) == 1:
+            # TODO(albermax): this is only the case when the dimension in this
+            # axis is 1, fix this.
+            # Cannot reduce
+            return x
+
         absmax = K.max(K.abs(x),
-                       axis=tuple(range(1, len(x.shape))),
+                       axis=axes,
                        keepdims=True)
         x = safe_divide(x, absmax)
 
@@ -641,4 +647,14 @@ class Gather(keras.layers.Layer):
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[1][0])
+        return (input_shapes[0][0], input_shapes[1][0])+input_shapes[0][2:]
+
+
+class GatherND(keras.layers.Layer):
+
+    def call(self, inputs):
+        x, indices = inputs
+        return iK.gather_nd(x, indices)
+
+    def compute_output_shape(self, input_shapes):
+        return input_shapes[1][:2]+input_shapes[0][2:]

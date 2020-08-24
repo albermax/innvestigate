@@ -1,33 +1,67 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
+from .base import NotAnalyzeableModelException
+from .deeplift import DeepLIFT
+from .deeplift import DeepLIFTWrapper
+from .gradient_based import BaselineGradient
+from .gradient_based import Gradient
+from .gradient_based import InputTimesGradient
+from .gradient_based import GuidedBackprop
+from .gradient_based import Deconvnet
+from .gradient_based import IntegratedGradients
+from .gradient_based import SmoothGrad
+from .misc import Input
+from .misc import Random
+from .pattern_based import PatternNet
+from .pattern_based import PatternAttribution
+from .relevance_based.relevance_analyzer import BaselineLRPZ
+from .relevance_based.relevance_analyzer import LRP
+from .relevance_based.relevance_analyzer import LRPZ
+from .relevance_based.relevance_analyzer import LRPZIgnoreBias
+from .relevance_based.relevance_analyzer import LRPZPlus
+from .relevance_based.relevance_analyzer import LRPZPlusFast
+from .relevance_based.relevance_analyzer import LRPEpsilon
+from .relevance_based.relevance_analyzer import LRPEpsilonIgnoreBias
+from .relevance_based.relevance_analyzer import LRPWSquare
+from .relevance_based.relevance_analyzer import LRPFlat
+from .relevance_based.relevance_analyzer import LRPAlphaBeta
+from .relevance_based.relevance_analyzer import LRPAlpha2Beta1
+from .relevance_based.relevance_analyzer import LRPAlpha2Beta1IgnoreBias
+from .relevance_based.relevance_analyzer import LRPAlpha1Beta0
+from .relevance_based.relevance_analyzer import LRPAlpha1Beta0IgnoreBias
+from .relevance_based.relevance_analyzer import LRPSequentialPresetA
+from .relevance_based.relevance_analyzer import LRPSequentialPresetB
+from .relevance_based.relevance_analyzer import LRPSequentialPresetAFlat
+from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
+from .deeptaylor import DeepTaylor
+from .deeptaylor import BoundedDeepTaylor
+from .wrapper import WrapperBase
+from .wrapper import AugmentReduceBase
+from .wrapper import GaussianSmoother
+from .wrapper import PathIntegrator
 
-from .base import *
-from .wrapper import *
 
-from .gradient_based import *
-from .misc import *
-from .pattern_based import *
-from .relevance_based.relevance_analyzer import *
-
+# Disable pyflaks warnings:
+assert NotAnalyzeableModelException
+assert DeepLIFT
+assert BaselineLRPZ
+assert WrapperBase
+assert AugmentReduceBase
+assert GaussianSmoother
+assert PathIntegrator
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
 
 analyzers = {
     # Utility.
@@ -72,22 +106,35 @@ analyzers = {
     "deep_taylor": DeepTaylor,
     "deep_taylor.bounded": BoundedDeepTaylor,
 
+    # DeepLIFT
+    #"deep_lift": DeepLIFT,
+    "deep_lift.wrapper": DeepLIFTWrapper,
+
     # Pattern based
     "pattern.net": PatternNet,
     "pattern.attribution": PatternAttribution,
 }
 
-# TODO: update LRP, reduce methods, split into LRP and DTD.
-# Some rules do not make sense when used for the full network, which is confusing.
-def create_analyzer(name, model, **kwargs):
-    """ Convenience interface to create analyzers.
 
-    This function is a convenient interface to create analyzer.
-    It allows to address analyzers via names instead of classes.
+def create_analyzer(name, model, **kwargs):
+    """Instantiates the analyzer with the name 'name'
+
+    This convenience function takes an analyzer name
+    creates the respective analyzer.
+
+    Alternatively analyzers can be created directly by
+    instantiating the respective classes.
 
     :param name: Name of the analyzer.
-    :param model: The model to analyze.
-    :param kwargs: Parameters for the analyzer's init function.
+    :param model: The model to analyze, passed to the analyzer's __init__.
+    :param kwargs: Additional parameters for the analyzer's .
     :return: An instance of the chosen analyzer.
+    :raise KeyError: If there is no analyzer with the passed name.
     """
-    return analyzers[name](model, **kwargs)
+    try:
+        analyzer_class = analyzers[name]
+    except KeyError:
+        raise KeyError(
+            "No analyzer with the name '%s' could be found."
+            " All possible names are: %s" % (name, list(analyzers.keys())))
+    return analyzer_class(model, **kwargs)

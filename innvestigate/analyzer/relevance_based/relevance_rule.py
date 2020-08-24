@@ -1,20 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
+# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
+from builtins import zip
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-import inspect
 import keras
 import keras.backend as K
 import keras.engine.topology
@@ -29,12 +22,10 @@ import keras.layers.pooling
 import numpy as np
 
 
-from .. import base
 from innvestigate import layers as ilayers
 from innvestigate import utils as iutils
 import innvestigate.utils.keras as kutils
 from innvestigate.utils.keras import backend as iK
-from innvestigate.utils.keras import checks as kchecks
 from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
 
@@ -63,6 +54,12 @@ __all__ = [
 
     "Alpha1Beta0Rule",
     "Alpha1Beta0IgnoreBiasRule",
+
+    "AlphaBetaXRule",
+    "AlphaBetaX1000Rule",
+    "AlphaBetaX1010Rule",
+    "AlphaBetaX1001Rule",
+    "AlphaBetaX2m100Rule",
 
     "ZPlusRule",
     "ZPlusFastRule",
@@ -146,6 +143,7 @@ class EpsilonRule(kgraph.ReverseMappingBase):
 
 
 class EpsilonIgnoreBiasRule(EpsilonRule):
+    """Same as EpsilonRule but ignores the bias."""
     def __init__(self, *args, **kwargs):
         super(EpsilonIgnoreBiasRule, self).__init__(*args,
                                                     bias=False,
@@ -154,12 +152,17 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
+    """W**2 rule from Deep Taylor Decomposition"""
+
     def __init__(self, layer, state, copy_weights=False):
         # W-square rule works with squared weights and no biases.
         if copy_weights:
-            weights = [x**2 for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
         else:
-            weights = [x**2 for x in layer.weights[:-1]]
+            weights = layer.weights
+        if layer.use_bias:
+            weights = weights[:-1]
+        weights = [x**2 for x in weights]
 
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
             layer,
@@ -187,13 +190,21 @@ class WSquareRule(kgraph.ReverseMappingBase):
 
 
 class FlatRule(WSquareRule):
+    """Same as W**2 rule but sets all weights to ones."""
+
     def __init__(self, layer, state, copy_weights=False):
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
-            weights = [np.ones_like(x) for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [np.ones_like(x) for x in weights]
         else:
-            weights = [K.ones_like(x) for x in layer.weights[:-1]]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [K.ones_like(x) for x in weights]
 
         self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
             layer,
@@ -239,13 +250,13 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
         # and negative preactivations z in apply_accordingly.
         if copy_weights:
             weights = layer.get_weights()
-            if not bias:
+            if not bias and layer.use_bias:
                 weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
             weights = layer.weights
-            if not bias:
+            if not bias and layer.use_bias:
                 weights = weights[:-1]
             positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
             negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
@@ -314,8 +325,9 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
 
 
 
-
+        
 class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
+    """Same as AlphaBetaRule but ignores biases."""
     def __init__(self, *args, **kwargs):
         super(AlphaBetaIgnoreBiasRule, self).__init__(*args,
                                                       bias=False,
@@ -324,6 +336,7 @@ class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
 
 
 class Alpha2Beta1Rule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=2, beta=1"""
     def __init__(self, *args, **kwargs):
         super(Alpha2Beta1Rule, self).__init__(*args,
                                               alpha=2,
@@ -333,6 +346,7 @@ class Alpha2Beta1Rule(AlphaBetaRule):
 
 
 class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=2, beta=1 and ignores biases"""
     def __init__(self, *args, **kwargs):
         super(Alpha2Beta1IgnoreBiasRule, self).__init__(*args,
                                                         alpha=2,
@@ -342,6 +356,7 @@ class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
 
 
 class Alpha1Beta0Rule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=1, beta=0"""
     def __init__(self, *args, **kwargs):
         super(Alpha1Beta0Rule, self).__init__(*args,
                                               alpha=1,
@@ -351,6 +366,7 @@ class Alpha1Beta0Rule(AlphaBetaRule):
 
 
 class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
+    """AlphaBetaRule with alpha=1, beta=0 and ignores biases"""
     def __init__(self, *args, **kwargs):
         super(Alpha1Beta0IgnoreBiasRule, self).__init__(*args,
                                                         alpha=1,
@@ -359,8 +375,133 @@ class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
                                                         **kwargs)
 
 
+class AlphaBetaXRule(kgraph.ReverseMappingBase):
+    """
+    AlphaBeta advanced as proposed by Alexander Binder.
+    """
+
+    def __init__(self,
+                 layer,
+                 state,
+                 alpha=(0.5, 0.5),
+                 beta=(0.5, 0.5),
+                 bias=True,
+                 copy_weights=False):
+        self._alpha = alpha
+        self._beta = beta
+
+        # prepare positive and negative weights for computing positive
+        # and negative preactivations z in apply_accordingly.
+        if copy_weights:
+            weights = layer.get_weights()
+            if not bias and getattr(layer, "use_bias", False):
+                weights = weights[:-1]
+            positive_weights = [x * (x > 0) for x in weights]
+            negative_weights = [x * (x < 0) for x in weights]
+        else:
+            weights = layer.weights
+            if not bias and getattr(layer, "use_bias", False):
+                weights = weights[:-1]
+            positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
+            negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
+
+        self._layer_wo_act_positive = kgraph.copy_layer_wo_activation(
+            layer,
+            keep_bias=bias,
+            weights=positive_weights,
+            name_template="reversed_kernel_positive_%s")
+        self._layer_wo_act_negative = kgraph.copy_layer_wo_activation(
+            layer,
+            keep_bias=bias,
+            weights=negative_weights,
+            name_template="reversed_kernel_negative_%s")
+
+    def apply(self, Xs, Ys, Rs, reverse_state):
+        #this method is correct, but wasteful
+        grad = ilayers.GradientWRT(len(Xs))
+        times_alpha0 = keras.layers.Lambda(lambda x: x * self._alpha[0])
+        times_alpha1 = keras.layers.Lambda(lambda x: x * self._alpha[1])
+        times_beta0 = keras.layers.Lambda(lambda x: x * self._beta[0])
+        times_beta1 = keras.layers.Lambda(lambda x: x * self._beta[1])
+        keep_positives = keras.layers.Lambda(
+            lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        keep_negatives = keras.layers.Lambda(
+            lambda x: x * K.cast(K.less(x,0), K.floatx()))
+
+        def f(layer, X):
+            Zs = kutils.apply(layer, X)
+            # Divide incoming relevance by the activations.
+            tmp = [ilayers.SafeDivide()([a, b])
+                    for a, b in zip(Rs, Zs)]
+            # Propagate the relevance to the input neurons
+            # using the gradient
+            tmp = iutils.to_list(grad(X+Zs+tmp))
+            # Re-weight relevance with the input values.
+            tmp = [keras.layers.Multiply()([a, b])
+                    for a, b in zip(X, tmp)]
+            return tmp
+
+        # Distinguish postive and negative inputs.
+        Xs_pos = kutils.apply(keep_positives, Xs)
+        Xs_neg = kutils.apply(keep_negatives, Xs)
+
+        # xpos*wpos
+        r_pp = f(self._layer_wo_act_positive, Xs_pos)
+        # xneg*wneg
+        r_nn = f(self._layer_wo_act_negative, Xs_neg)
+        # a0 * r_pp + a1 * r_nn
+        r_pos = [keras.layers.Add()([times_alpha0(pp), times_beta1(nn)])
+                 for pp, nn in zip(r_pp, r_nn)]
+
+        # xpos*wneg
+        r_pn = f(self._layer_wo_act_negative, Xs_pos)
+        # xneg*wpos
+        r_np = f(self._layer_wo_act_positive, Xs_neg)
+        # b0 * r_pn + b1 * r_np
+        r_neg = [keras.layers.Add()([times_beta0(pn), times_beta1(np)])
+                 for pn, np in zip(r_pn, r_np)]
+
+        return [keras.layers.Subtract()([a, b]) for a, b in zip(r_pos, r_neg)]
+
+
+class AlphaBetaX1000Rule(AlphaBetaXRule):
+    def __init__(self, *args, **kwargs):
+        super(AlphaBetaX1000Rule, self).__init__(*args,
+                                                 alpha=(1, 0),
+                                                 beta=(0, 0),
+                                                 bias=True,
+                                                 **kwargs)
+
+
+class AlphaBetaX1010Rule(AlphaBetaXRule):
+    def __init__(self, *args, **kwargs):
+        super(AlphaBetaX1010Rule, self).__init__(*args,
+                                                 alpha=(1, 0),
+                                                 beta=(0, -1),
+                                                 bias=True,
+                                                 **kwargs)
+
+
+class AlphaBetaX1001Rule(AlphaBetaXRule):
+    def __init__(self, *args, **kwargs):
+        super(AlphaBetaX1001Rule, self).__init__(*args,
+                                                 alpha=(1, 1),
+                                                 beta=(0, 0),
+                                                 bias=True,
+                                                 **kwargs)
+
+
+class AlphaBetaX2m100Rule(AlphaBetaXRule):
+    def __init__(self, *args, **kwargs):
+        super(AlphaBetaX2m100Rule, self).__init__(*args,
+                                                  alpha=(2, 0),
+                                                  beta=(1, 0),
+                                                  bias=True,
+                                                  **kwargs)
+
 
 class BoundedRule(kgraph.ReverseMappingBase):
+    """Z_B rule from the Deep Taylor Decomposition"""
     # TODO: this only works for relu networks, needs to be extended.
     # TODO: check
     def __init__(self, layer, state, low=-1, high=1, copy_weights=False):
@@ -371,11 +512,15 @@ class BoundedRule(kgraph.ReverseMappingBase):
         # One is the original form and two with only the positive or
         # negative weights.
         if copy_weights:
-            weights = layer.get_weights()[:-1]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
-            weights = layer.weights[:-1]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
             positive_weights = [x * iK.to_floatx(x > 0) for x in weights]
             negative_weights = [x * iK.to_floatx(x < 0) for x in weights]
 
@@ -454,11 +599,15 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
         # no biases.
         #TODO: assert that layer inputs are always >= 0
         if copy_weights:
-            weights = [x * iK.to_floatx(x > 0)
-                       for x in layer.get_weights()[:-1]]
+            weights = layer.get_weights()
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [x * (x > 0) for x in weights]
         else:
-            weights = [x * iK.to_floatx(x > 0)
-                       for x in layer.weights[:-1]]
+            weights = layer.weights
+            if layer.use_bias:
+                weights = weights[:-1]
+            weights = [x * iK.to_floatx(x > 0) for x in weights]
 
         self._layer_wo_act_b_positive = kgraph.copy_layer_wo_activation(
             layer,
