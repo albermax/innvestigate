@@ -199,6 +199,7 @@ LRP_RULES = {
 class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
     def __init__(self, layer, state):
         #TODO: implement rule support.
+        return
 
     def apply(self, Xs, Ys, Rs, reverse_state):
         # the embedding layer outputs for an (indexed) input a vector.
