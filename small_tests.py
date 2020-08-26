@@ -48,6 +48,15 @@ def VGG16():
     )
     inp = np.random.rand(3, 224, 224, 3)
 
+    model.summary()
+
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.MaxPooling2D):
+            print(layer.name)
+            print(layer.get_weights())
+
+    exit()
+
     return inp, model, "VGG16"
 
 def Resnet50():

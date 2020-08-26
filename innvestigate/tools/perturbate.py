@@ -13,7 +13,7 @@ from tensorflow.keras.utils import GeneratorEnqueuer
 from tensorflow.keras.utils import OrderedEnqueuer
 from tensorflow.keras.utils import Sequence
 
-import innvestigate.utils
+from ... import utils as iutils
 
 
 class Perturbation:
@@ -230,7 +230,7 @@ class PerturbationAnalysis:
             x = np.array(x)
             y = np.array(y)
             analysis = np.array(analysis)
-            self.analysis_generator = innvestigate.utils.BatchSequence([x, y, analysis], batch_size=256)
+            self.analysis_generator = iutils.BatchSequence([x, y, analysis], batch_size=256)
         self.verbose = verbose
 
     def compute_on_batch(self, x, analysis=None, return_analysis=False):
