@@ -278,6 +278,8 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         self._nonlinear_mode = kwargs.pop("nonlinear_mode", "rescale")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._verbose = kwargs.pop("verbose", False)
+        #relevant for "index" selection mode
+        self._batch_size = kwargs.pop("batch_size", 32)
         self._add_model_softmax_check()
 
         try:
@@ -327,10 +329,10 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                           input_data_list=X,
                           batch_size=batch_size,
                           input_references_list=self._references,
-                          progress_update=1000000)
+                          progress_update=None)
 
     def analyze(self, X, neuron_selection=None):
-        if not hasattr(self, "_deep_lift_func"):
+        if not hasattr(self, "_func"):
             self._create_deep_lift_func()
 
         X = iutils.to_list(X)
@@ -351,7 +353,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                 raise ValueError("One neuron can be selected with DeepLIFT.")
 
             neuron_idx = neuron_selection[0]
-            analysis = self._analyze_with_deeplift(X, neuron_idx, len(X[0]))
+            analysis = self._analyze_with_deeplift(X, neuron_idx, self._batch_size)
 
             # Parse the output.
             ret = []
