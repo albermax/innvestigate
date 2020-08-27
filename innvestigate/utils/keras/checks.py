@@ -429,3 +429,7 @@ def is_input_layer(layer, ignore_reshape_layers=True):
         return True
     else:
         return False
+
+def is_layer_at_idx(layer, index, ignore_reshape_layers=True):
+    """Checks if layer is a layer at index index, by repeatedly applying is_input_layer()."""
+    kgraph = get_kgraph()
