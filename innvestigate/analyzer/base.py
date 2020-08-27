@@ -413,7 +413,6 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
             stop_mapping_at_tensors=stop_analysis_at_tensors,
-            verbose=self._reverse_verbose,
         )
 
         return inp, rep

@@ -381,11 +381,17 @@ def reverse_map(
 
     #find input access points
     input_layers = []
-    for t in model.inputs:
+    for i, t in enumerate(model.inputs):
         for layer in replacement_layers:
             if id(layer.layer_func.output) == id(t):
                 input_layers.append(layer)
+        if len(input_layers) < i+1:
+            #if we did not append an input layer, we need to create one
+            #TODO case for no input layer here
+            raise ValueError("Temporary error. You need to explicitly define an Input Layer for now")
 
+
+    print([i.layer_func for i in input_layers])
     return input_layers, replacement_layers
 
 def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, layer_names=None):
@@ -407,7 +413,6 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, la
              The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.
     """
     #shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
-    #Returns: Explanation of Form (n_inputs, batch_size, ...)
 
     if not isinstance(Xs, tf.Tensor):
         try:
