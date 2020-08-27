@@ -13,6 +13,26 @@ from ..utils.keras import graph as kgraph
 import tensorflow.keras.layers as keras_layers
 
 class ReplacementLayer():
+    """
+    Base class for providing explainability functionality.
+
+    This class wraps a single network layer, providing hooks for applying the layer and retrieving an explanation.
+    Basically:
+    * Any forward passes required for computing the explanation are defined in apply method. During the forward pass, a callback is given to all child layers to retrieve their explanations
+    * Wrappers (e.g., a GradientTape) around the forward pass(es) that are required to compute an explanation can be defined and returned by wrap_hook method
+    * In wrap_hook method, forward pass(es) are applied by calling on apply method
+    * Explanation is computed in explain_hook method and then passed to callback functions of parent ReplacementLayers
+
+    :param layer: Layer (of base class tensorflow.keras.layers.Layer) of to wrap
+    :param layer_next: List of Layers in the network that receive output of layer (=child layers)
+
+    This is just a base class. To extend this for specific XAI methods,
+    - apply()
+    - wrap_hook()
+    - explain_hook()
+    should be overwritten accordingly
+
+    """
     def __init__(self, layer, layer_next=[]):
 
         self.layer_func = layer
@@ -33,6 +53,15 @@ class ReplacementLayer():
         self.explanation = None
 
     def try_explain(self, reversed_outs):
+        """
+        callback function called by child layers when their explanation is computed.
+
+        * aggregates explanations of all children
+        * calls explain_hook to compute own explanation
+        * sends own explanation to all parent layers by calling their callback functions
+
+        :param reversed_outs: the child layer's explanation. None if this is the last layer.
+        """
         # aggregate explanations
         if reversed_outs is not None:
             if self.reversed_output_vals is None:
@@ -81,6 +110,14 @@ class ReplacementLayer():
             self.hook_vals = None
 
     def _forward(self, Ys, neuron_selection=None):
+        """
+        Forward Pass to all child layers
+        * If this is the last layer, directly calls try_explain to compute own explanation
+        * Otherwise calls try_apply on all child layers
+
+        :param Ys: output of own forward pass
+        :param neuron_selection: neuron_selection parameter (see try_apply)
+        """
         if len(self.layer_next) == 0:
             # last layer: directly compute explanation
             self.try_explain(None)
@@ -91,6 +128,12 @@ class ReplacementLayer():
 
     #@tf.function #this is not faster
     def _neuron_select(self, Ys, neuron_selection):
+        """
+        Performs neuron_selection on Ys
+
+        :param Ys: output of own forward pass
+        :param neuron_selection: neuron_selection parameter (see try_apply)
+        """
         #error handling is done before, in try_apply
         if isinstance(neuron_selection, tf.Tensor):
             Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
@@ -101,7 +144,21 @@ class ReplacementLayer():
         return Ys
 
     def try_apply(self, ins, neuron_selection=None, callback=None):
+        """
+        Tries to apply own forward pass:
+        * Aggregates inputs and callbacks of all parent layers
+        * Performs a canonization  of the neuron_selection parameter
+        * Calls wrap_hook (wrapped forward pass(es))
+        * Calls _forward (forward result of forward pass to child layers)
 
+        :param ins output of own forward pass
+        :param neuron_selection: neuron_selection parameter. One of the following:
+            - None or "all"
+            - "max_activation"
+            - int
+            - list or np.array of int, with length equal to batch size
+        :param callback callback function of the parent layer that called self.try_apply
+        """
         # DEBUG
         # print(self.name, self.input_shape, np.shape(ins))
 
@@ -159,7 +216,7 @@ class ReplacementLayer():
                     raise ValueError(
                         "Parameter neuron_selection only accepts the following values: None, 'all', 'max_activation', <int>, <list>, <one-dimensional array>")
 
-            # apply layer. allow for
+            # apply and wrappers
             self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp)
 
             # forward
@@ -171,8 +228,16 @@ class ReplacementLayer():
     #@tf.function #this is not faster
     def apply(self, ins, neuron_selection):
         """
-        applies layer / forward tf ops.
-        for efficiency, keep as tf.function
+        applies own forward pass(es) (layer / forward tf ops.)
+        * should contain a call to self.layer_func(ins)
+        * should contain a call to self._neuron_select if this is the last layer
+
+        :param ins: input(s) of this layer
+        :param neuron_selection: neuron_selection parameter (see try_apply)
+
+        :returns output of this layer
+
+        To be extended for specific XAI methods
         """
         outs = self.layer_func(ins)
 
@@ -184,17 +249,32 @@ class ReplacementLayer():
 
     def wrap_hook(self, ins, neuron_selection):
         """
-        hook that wraps the layer function. should contain a call to self.apply.
+        hook that wraps the layer function.
+        E.g., by defining a GradientTape
+        * should contain a call to self.apply.
+        * may define any wrappers around
+
+        :param ins: input(s) of this layer
+        :param neuron_selection: neuron_selection parameter (see try_apply)
+
+        :returns output of apply + any wrappers that were defined and are needed in explain_hook
+
+        To be extended for specific XAI methods
         """
         return self.apply(ins, neuron_selection)
 
     def explain_hook(self, ins, reversed_outs, args):
         """
         hook that computes the explanations.
-        param args: additional parameters
-        param reversed_outs: either backpropagated explanation, or None if last layer
+        * Core XAI functionality
 
-        returns: explanation, or tensor of multiple explanations if the layer has multiple inputs (one for each)
+        :param ins: input(s) of this layer
+        :param args: outputs of wrap_hook (any parameters that may be needed to compute explanation)
+        :param reversed_outs: either backpropagated explanation(s) of child layers, or None if this is the last layer
+
+        :returns explanation, or tensor of multiple explanations if the layer has multiple inputs (one for each)
+
+        To be extended for specific XAI methods
         """
         outs = args
 
@@ -213,6 +293,10 @@ class ReplacementLayer():
 
 
 class GradientReplacementLayer(ReplacementLayer):
+    """
+    Simple extension of ReplacementLayer
+    * Explains by computing gradients of outputs w.r.t. inputs of layer
+    """
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
@@ -247,16 +331,21 @@ class GradientReplacementLayer(ReplacementLayer):
 
 
 def reverse_map(
-    #Alternative to kgraph.reverse_model.
         model,
         reverse_mappings,
         default_reverse_mapping,
-        stop_mapping_at_tensors,
-        verbose=False):
+        stop_mapping_at_tensors
+        ):
+    """
+    Builds the reverse_map by wrapping network layer(s) into ReplacementLayer(s)
 
-    #TODO: verbose
-    #TODO: HeadMapping
-    #TODO this is just the basic core. Add full functionality of kgraph.reverse_model
+    :param model: model to be analyzed
+    :param reverse_mappings: mapping layer->reverse mapping (ReplacementLayer or some subclass thereof)
+    :param default_reverse_mapping: ReplacementLayer or some subclass thereof; default mapping to use
+    :param stop_mapping_at_tensors: list of tensor names to stop mapping at
+
+    :returns reversed "model" as a list of input layers and a list of wrapped layers
+    """
 
     #build model that is to be analyzed
     layers = kgraph.get_model_layers(model)
@@ -300,6 +389,23 @@ def reverse_map(
     return input_layers, replacement_layers
 
 def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, layer_names=None):
+    """
+    Computes an explanation by applying a reversed model
+
+    :param Xs: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
+    :param reverse_ins: list of input ReplacementLayer(s)
+    :param reverse_layers: list of all ReplacementLayer(s) denoting the reversed model
+    :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
+            - None or "all"
+            - "max_activation"
+            - int
+            - list or np.array of int, with length equal to batch size
+    :param layer_names: None or list of layer names whose explanations should be returned.
+                        Can be used to obtain intermediate explanations or explanations of multiple layers
+
+    :returns list of explanations. Each explanation in this list (np.array) corresponds to one layer.
+             The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.
+    """
     #shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
     #Returns: Explanation of Form (n_inputs, batch_size, ...)
 

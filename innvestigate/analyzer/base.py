@@ -58,7 +58,7 @@ class AnalyzerBase(object):
     >>> a_new = A.load(*state)
     >>> analysis = a_new.analyze(X_test)
 
-    :param model: A Keras model.
+    :param model: A tf.keras model.
     :param disable_model_checks: Do not execute model checks that enforce
       compatibility of analyzer and model.
 
@@ -241,9 +241,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
     * allows :func:`_create_analysis` to return tensors
       that are intercept for debugging purposes.
 
-    :param neuron_selection_mode: How to select the neuron to analyze.
-      Possible values are 'max_activation', 'index' for the neuron
-      (expects indices at :func:`analyze` calls), 'all' take all neurons.
     :param allow_lambda_layers: Allow the model to contain lambda layers.
     """
 
@@ -286,22 +283,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
         """
         Interface that needs to be implemented by a derived class.
 
-        This function is expected to create a Keras graph that creates
-        a custom analysis for the model inputs given the model outputs.
+        This function is expected to create a custom analysis for the model inputs given the model outputs.
 
         :param model: Target of analysis.
         :param stop_analysis_at_tensors: A list of tensors where to stop the
-          analysis. Similar to stop_gradient arguments when computing the
-          gradient of a graph.
-        :return: Either one-, two- or three-tuple of lists of tensors.
-          * The first list of tensors represents the analysis for each
-            model input tensor. Tensors present in stop_analysis_at_tensors
-            should be omitted.
-          * The second list, if present, is a list of debug tensors that will
-            be passed to :func:`_handle_debug_output` after the analysis
-            is executed.
-          * The third list, if present, is a list of constant input tensors
-            added to the analysis model.
+          analysis.
+        :return: reversed "model" as a list of input layers and a list of wrapped layers
         """
         raise NotImplementedError()
 
@@ -312,8 +299,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         """
                 Same interface as :class:`Analyzer` besides
 
-                :param neuron_selection: If neuron_selection_mode is 'index' this
-                  should be an integer with the index for the chosen neuron.
+                :param neuron_selection: Chosen neuron(s).
                 """
         #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
@@ -417,8 +403,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     def _default_reverse_mapping(self, layer):
         """
-        Fallback function to map reversed_Ys to reversed_Xs
-        (which should contain tensors of the same shape and type).
+        Fallback function to map layer
         """
         return reverse_map.GradientReplacementLayer
 
