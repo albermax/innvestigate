@@ -295,7 +295,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection=None, layer_names=None):
+    def analyze(self, X, neuron_selection="max_activation", layer_names=None):
         """
                 Same interface as :class:`Analyzer` besides
 
