@@ -394,7 +394,7 @@ def reverse_map(
     print([i.layer_func for i in input_layers])
     return input_layers, replacement_layers
 
-def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection=None, layer_names=None):
+def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None):
     """
     Computes an explanation by applying a reversed model
 
