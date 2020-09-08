@@ -7,13 +7,11 @@ from __future__ import\
 ###############################################################################
 ###############################################################################
 
-
+import tensorflow as tf
 import tensorflow.keras.layers as keras_layers
-import tensorflow.keras.models as keras_models
-import tensorflow.keras as keras
-
 
 from . import base
+from . import reverse_map
 from . import wrapper
 from .. import layers as ilayers
 from .. import utils as iutils
@@ -21,9 +19,7 @@ from ..utils import keras as kutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
-
 __all__ = [
-    "BaselineGradient",
     "Gradient",
 
     "InputTimesGradient",
@@ -37,52 +33,60 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class BaselineGradient(base.AnalyzerNetworkBase):
-    """Gradient analyzer based on build-in gradient.
-
-    Returns as analysis the function value with respect to the input.
-    The gradient is computed via the build in function.
-    Is mainly used for debugging purposes.
-
-    :param model: A Keras model.
+class GradientHeadMapReplacementLayer(reverse_map.GradientReplacementLayer):
+    """
+    Simple extension of GradientReplacementLayer
+    * Explains by computing gradients of outputs w.r.t. inputs of layer
+    * Slight difference to reverse_map.GradientReplacementLayer:
+      A mapping may be applied to the las layer output before backpropagation
     """
 
-    def __init__(self, model, postprocess=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super(GradientHeadMapReplacementLayer, self).__init__(*args, **kwargs)
 
-        if postprocess not in [None, "abs", "square"]:
-            raise ValueError("Parameter 'postprocess' must be either "
-                             "None, 'abs', or 'square'.")
-        self._postprocess = postprocess
+    def _head_mapping(self, outs):
+        """
+        headmapping to apply to outputs
+        """
+        return outs
 
-        self._add_model_softmax_check()
+    def apply(self, ins, neuron_selection):
+        """
+        only change for this subclass: applying the headmapping
+        """
+        outs = super(GradientHeadMapReplacementLayer, self).apply(ins, neuron_selection)
 
-        super(BaselineGradient, self).__init__(model, **kwargs)
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._head_mapping(outs)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
-                              if x not in stop_analysis_at_tensors]
-        # Apply gradient of forward pass.
-        ret = iutils.to_list(ilayers.Gradient()(
-            tensors_to_analyze+[model.outputs[0]]))
+        return outs
 
-        if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
-        elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+###############################################################################
+###############################################################################
+###############################################################################
 
-        return iutils.to_list(ret)
+class GradientOnesReplacementLayer(GradientHeadMapReplacementLayer):
+    """
+    Simple extension of GradientHeadMapReplacementLayer
+    * Explains by computing gradients of outputs w.r.t. inputs of layer
+    * Maps outputs to ones
+    """
 
+    def __init__(self, *args, **kwargs):
+        super(GradientOnesReplacementLayer, self).__init__(*args, **kwargs)
+
+    def _head_mapping(self, outs):
+        """
+        headmapping to apply to outputs
+        """
+        return ilayers.OnesLike()(outs)
 
 class Gradient(base.ReverseAnalyzerBase):
     """Gradient analyzer.
 
     Returns as analysis the function value with respect to the input.
-    The gradient is computed via the librarie's network reverting.
+    The gradient is computed via the library's network reverting.
 
     :param model: A Keras model.
     """
@@ -98,14 +102,11 @@ class Gradient(base.ReverseAnalyzerBase):
 
         super(Gradient, self).__init__(model, **kwargs)
 
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
-        # todo(alber): Find out why second code path does not work.
-        import tensorflow as tf
-        return [tf.ones_like(X)]
+    def _default_reverse_mapping(self, layer):
+        return GradientOnesReplacementLayer
 
-    def _postprocess_analysis(self, X):
-        ret = super(Gradient, self)._postprocess_analysis(X)
+    def _postprocess_analysis(self, hm):
+        ret = super(Gradient, self)._postprocess_analysis(hm)
 
         if self._postprocess == "abs":
             ret = ilayers.Abs()(ret)
@@ -119,6 +120,72 @@ class Gradient(base.ReverseAnalyzerBase):
 ###############################################################################
 ###############################################################################
 
+class InputTimesGradientReplacementLayer(GradientOnesReplacementLayer):
+    """
+    ReplacementLayer for Input*Gradient
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(InputTimesGradientReplacementLayer, self).__init__(*args, **kwargs)
+
+    def try_explain(self, reversed_outs):
+        """
+        self.explanation here is input*gradient, however only gradient is sent to callbacks
+        """
+        # aggregate explanations
+        if reversed_outs is not None:
+            if self.reversed_output_vals is None:
+                self.reversed_output_vals = []
+            self.reversed_output_vals.append(reversed_outs)
+
+        # last layer or aggregation finished
+        if self.reversed_output_vals is None or len(self.reversed_output_vals) == len(self.layer_next):
+            # apply post hook: explain
+            if self.hook_vals is None:
+                raise ValueError(
+                    "self.hook_vals should contain values at this point. Is self.wrap_hook working correctly?")
+            input_vals = self.input_vals
+            if len(input_vals) == 1:
+                input_vals = input_vals[0]
+
+            rev_outs = self.reversed_output_vals
+            if rev_outs is not None:
+                if len(rev_outs) == 1:
+                    rev_outs = rev_outs[0]
+
+            # print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
+            self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
+
+            #gradient*input specific
+            explanation = self.explanation
+
+            if len(self.input_shape) > 1:
+                self.explanation = [e*i for e, i in zip(input_vals, self.explanation)]
+            else:
+                self.explanation = self.explanation * input_vals
+
+            # callbacks
+            if self.callbacks is not None:
+                # check if multiple inputs explained
+                if len(self.callbacks) > 1 and not isinstance(explanation, list):
+                    raise ValueError(self.name + ": This layer has " + str(
+                        len(self.callbacks)) + " inputs, but no list of explanations was provided.")
+                elif len(self.callbacks) > 1 and len(self.callbacks) != len(explanation):
+                    raise ValueError(
+                        self.name + ": This layer has " + str(len(self.callbacks)) + " inputs, but only " + str(
+                            len(explanation)) + " explanations were computed")
+
+                if len(self.callbacks) > 1:
+                    for c, callback in enumerate(self.callbacks):
+                        callback(explanation[c])
+                else:
+                    self.callbacks[0](explanation)
+
+            # reset
+            self.input_vals = None
+            self.reversed_output_vals = None
+            self.callbacks = None
+            self.hook_vals = None
 
 class InputTimesGradient(Gradient):
     """Input*Gradient analyzer.
@@ -132,41 +199,70 @@ class InputTimesGradient(Gradient):
 
         super(InputTimesGradient, self).__init__(model, **kwargs)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
-                              if x not in stop_analysis_at_tensors]
-        gradients = super(InputTimesGradient, self)._create_analysis(
-            model, stop_analysis_at_tensors=stop_analysis_at_tensors)
-        return [keras_layers.Multiply()([i, g])
-                for i, g in zip(tensors_to_analyze, gradients)]
-
+    def _default_reverse_mapping(self, layer):
+        return InputTimesGradientReplacementLayer
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
+class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
 
-class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
-
-    def __init__(self, layer, state):
+    def __init__(self, layer, *args, **kwargs):
         self._activation = keras_layers.Activation("relu")
         self._layer_wo_relu = kgraph.copy_layer_wo_activation(
             layer,
             name_template="reversed_%s",
         )
+        super(DeconvnetReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state):
+    def apply(self, ins, neuron_selection):
+        """
+        applies layer / forward tf ops.
+        """
+        outs = self.layer_func(ins)
+        Ys = self._layer_wo_relu(ins)
+
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0:
+            outs = self._neuron_select(outs, neuron_selection)
+            Ys = self._neuron_select(Ys, neuron_selection)
+
+        return Ys, outs
+
+    def wrap_hook(self, ins, neuron_selection):
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            Ys, outs = self.apply(ins, neuron_selection)
+
+        return outs, Ys, tape
+
+    def explain_hook(self, ins, reversed_outs, args):
+
+        outs, Ys, tape = args
+
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = Ys
+
         # Apply relus conditioned on backpropagated values.
-        reversed_Ys = kutils.apply(self._activation, reversed_Ys)
+        Ys_wo_relu = self._layer_wo_relu(ins)
 
-        # Apply gradient of forward pass without relus.
-        Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
-        # Apply gradient.
-        import tensorflow as tf
-        return tf.gradients(Ys_wo_relu, Xs,
-                            grad_ys=reversed_Ys,
-                            stop_gradients=Xs)
-
+        if len(self.layer_next) > 1:
+            reversed_outs = [self._activation(r) for r in reversed_outs]
+            # Apply gradient.
+            if len(self.input_shape) > 1:
+                ret = [keras_layers.Add()([tape.gradient(Ys_wo_relu, i, output_gradients=r) for r in reversed_outs]) for i in ins]
+            else:
+                ret = keras_layers.Add()([tape.gradient(Ys_wo_relu, ins, output_gradients=r)  for r in reversed_outs])
+        else:
+            reversed_outs = self._activation(reversed_outs)
+            # Apply gradient.
+            if len(self.input_shape) > 1:
+                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
+            else:
+                ret = tape.gradient(Ys_wo_relu, ins, output_gradients=reversed_outs)
+        return ret
 
 class Deconvnet(base.ReverseAnalyzerBase):
     """Deconvnet analyzer.
@@ -191,25 +287,43 @@ class Deconvnet(base.ReverseAnalyzerBase):
 
         self._add_conditional_reverse_mapping(
             lambda layer: kchecks.contains_activation(layer, "relu"),
-            DeconvnetReverseReLULayer,
+            DeconvnetReplacementLayer,
             name="deconvnet_reverse_relu_layer",
         )
 
         return super(Deconvnet, self)._create_analysis(*args, **kwargs)
 
+class GuidedBackpropReplacementLayer(reverse_map.GradientReplacementLayer):
 
-def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
-    activation = keras_layers.Activation("relu")
-    # Apply relus conditioned on backpropagated values.
-    reversed_Ys = kutils.apply(activation, reversed_Ys)
+    def __init__(self, layer, *args, **kwargs):
+        self._activation = keras_layers.Activation("relu")
+        super(GuidedBackpropReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    # Apply gradient of forward pass.
-    import tensorflow as tf
-    return tf.gradients(Ys, Xs,
-                        grad_ys=reversed_Ys,
-                        stop_gradients=Xs)
+    def explain_hook(self, ins, reversed_outs, args):
 
+        outs, tape = args
 
+        # last layer
+        if reversed_outs is None:
+            reversed_outs = outs
+
+        if len(self.layer_next) > 1:
+            reversed_outs = [self._activation(r) for r in reversed_outs]
+            # Apply gradient.
+            if len(self.input_shape) > 1:
+                ret = [keras_layers.Add()([tape.gradient(outs, i, output_gradients=r) for r in reversed_outs]) for i in ins]
+            else:
+                ret = keras_layers.Add()([tape.gradient(outs, ins, output_gradients=r)  for r in reversed_outs])
+        else:
+            reversed_outs = self._activation(reversed_outs)
+            # Apply gradient.
+            if len(self.input_shape) > 1:
+                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
+            else:
+                ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+        return ret
+
+#TODO: tf2.0
 class GuidedBackprop(base.ReverseAnalyzerBase):
     """Guided backprop analyzer.
 
@@ -234,7 +348,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
         self._add_conditional_reverse_mapping(
             lambda layer: kchecks.contains_activation(layer, "relu"),
-            GuidedBackpropReverseReLULayer,
+            GuidedBackpropReplacementLayer,
             name="guided_backprop_reverse_relu_layer",
         )
 
@@ -245,7 +359,7 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.0
 class IntegratedGradients(wrapper.PathIntegrator):
     """Integrated gradient analyzer.
 
@@ -272,7 +386,7 @@ class IntegratedGradients(wrapper.PathIntegrator):
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.0
 class SmoothGrad(wrapper.GaussianSmoother):
     """Smooth grad analyzer.
 

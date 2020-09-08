@@ -33,7 +33,7 @@ class ReplacementLayer():
     should be overwritten accordingly
 
     """
-    def __init__(self, layer, layer_next=[]):
+    def __init__(self, layer, layer_next=[], head_mapping=None):
 
         self.layer_func = layer
         self.layer_next = layer_next
@@ -143,6 +143,16 @@ class ReplacementLayer():
             Ys = K.max(Ys, axis=-1, keepdims=True)
         return Ys
 
+    def _head_mapping(self, Ys):
+        """
+        Maps the output of the last layer(s) to some other values
+
+        :param Ys: output to be mapped
+
+        :returns: mapped output
+        """
+        return Ys
+
     def try_apply(self, ins, neuron_selection=None, callback=None):
         """
         Tries to apply own forward pass:
@@ -243,6 +253,7 @@ class ReplacementLayer():
 
         # check if final layer (i.e., no next layers)
         if len(self.layer_next) == 0:
+            outs = self._head_mapping(outs)
             outs = self._neuron_select(outs, neuron_selection)
 
         return outs
@@ -319,14 +330,15 @@ class GradientReplacementLayer(ReplacementLayer):
             outs = [outs for l in self.layer_next]
 
         if len(self.layer_next) > 1:
-            #print(self.name, np.shape(outs), np.shape(reversed_outs))
-            #TODO: is this correct?
-            keras_layers.Add(dtype=tf.float32)([tape.gradient(o, ins, output_gradients=r) for o, r in zip(outs, reversed_outs)])
-            #raise ValueError("This basic function is not defined for layers with multiple children")
-        if len(self.input_shape) > 1:
-            ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
+            if len(self.input_shape) > 1:
+                ret = [keras_layers.Add(dtype=tf.float32)([tape.gradient(o, i, output_gradients=r) for o, r in zip(outs, reversed_outs)]) for i in ins]
+            else:
+                ret = keras_layers.Add(dtype=tf.float32)([tape.gradient(o, ins, output_gradients=r) for o, r in zip(outs, reversed_outs)])
         else:
-            ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+            if len(self.input_shape) > 1:
+                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
+            else:
+                ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
         return ret
 
 
@@ -427,8 +439,6 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
 
     else:
         #multiple inputs. reshape to (n_ins, batch_size, ...)
-        #Xs_new = [[X[i] for X in Xs] for i, _ in enumerate(reverse_ins)]
-        #Xs = Xs_new
         for i, reverse_in in enumerate(reverse_ins):
             reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection)
 

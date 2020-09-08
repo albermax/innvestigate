@@ -308,29 +308,19 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         return ret
 
-    def _postprocess_analysis(self, X):
-        return X
+    def _postprocess_analysis(self, hm):
+        return hm
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
-    """Guided backprop analyzer.
-
-    Applies the "guided backprop" algorithm to analyze the model.
-
-    :param model: A Keras model.
+    """Convenience class for analyzers that revert the model's structure.
+    This class contains many helper functions around the graph
+    reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
+    The deriving classes should specify how the graph should be reverted.
     """
 
-    def __init__(self, model, **kwargs):
-
-        self._add_model_softmax_check()
-        self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
-            "GuidedBackprop is only specified for "
-            "networks with ReLU activations.",
-            check_type="exception",
-        )
-
-        #TODO set verbose correctly somewhere
-        self._reverse_verbose = False
+    def __init__(self,
+                 model,
+                 **kwargs):
 
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
