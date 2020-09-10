@@ -80,7 +80,7 @@ class GradientOnesReplacementLayer(GradientHeadMapReplacementLayer):
         """
         headmapping to apply to outputs
         """
-        return ilayers.OnesLike()(outs)
+        return ilayers.SafeDivide()([outs, outs])
 
 class Gradient(base.ReverseAnalyzerBase):
     """Gradient analyzer.

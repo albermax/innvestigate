@@ -14,34 +14,34 @@ import matplotlib.pyplot as plt
 
 import innvestigate
 
-(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
-
-train_images, test_images = train_images / 255.0, test_images / 255.0
-
-class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer',
-               'dog', 'frog', 'horse', 'ship', 'truck']
-
-model = models.Sequential()
-model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.MaxPooling2D((2, 2)))
-model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(layers.Flatten())
-model.add(layers.Dense(64, activation='relu'))
-model.add(layers.Dense(10))
-
-model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-
-#history = model.fit(train_images, train_labels, epochs=1,
-#                    validation_data=(test_images, test_labels))
-
-analyser = innvestigate.create_analyzer("lrp.epsilon", model)
-
-analysis = analyser.analyze(test_images[0])
-print(analysis)
+# (train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+#
+# train_images, test_images = train_images / 255.0, test_images / 255.0
+#
+# class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+#                'dog', 'frog', 'horse', 'ship', 'truck']
+#
+# model = models.Sequential()
+# model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)))
+# model.add(layers.MaxPooling2D((2, 2)))
+# model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+# model.add(layers.MaxPooling2D((2, 2)))
+# model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+# model.add(layers.Flatten())
+# model.add(layers.Dense(64, activation='relu'))
+# model.add(layers.Dense(10))
+#
+# model.compile(optimizer='adam',
+#               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+#               metrics=['accuracy'])
+#
+# #history = model.fit(train_images, train_labels, epochs=1,
+# #                    validation_data=(test_images, test_labels))
+#
+# analyser = innvestigate.create_analyzer("lrp.epsilon", model)
+#
+# analysis = analyser.analyze(test_images[0])
+# print(analysis)
 
 
 #---------------------------------------------------------------------------------------
@@ -88,12 +88,27 @@ def VGG16():
 
     model.summary()
 
-    for layer in model.layers:
-        if isinstance(layer, tf.keras.layers.MaxPooling2D):
-            print(layer.name)
-            print(layer.get_weights())
+    return inp, model, "VGG16"
 
-    exit()
+def VGG16_modified():
+    keras_model = tf.keras.applications.VGG16(
+        include_top=False,
+        weights="imagenet",
+        input_shape=(224, 224, 3)
+    )
+    inp = np.random.rand(3, 224, 224, 3)
+    last = keras_model.output
+
+    x = Flatten()(last)
+    x = Dropout(0.5)(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = Dense(1024, activation='relu')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(200, activation='softmax')(x)
+
+    model = tf.keras.models.Model(keras_model.input, x)
+
+    model.summary()
 
     return inp, model, "VGG16"
 
@@ -124,16 +139,16 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    SimpleDense,
+    #SimpleDense,
     #MultiIn,
     #MultiConnect,
-    #VGG16
+    VGG16_modified
 ]
 
 analyzer_cases = [
     #innvestigate.analyzer.ReverseAnalyzerBase,
     innvestigate.analyzer.LRPZ,
-   # innvestigate.analyzer.LRPZIgnoreBias,
+    #innvestigate.analyzer.LRPZIgnoreBias,
     #innvestigate.analyzer.LRPZPlus,
     #innvestigate.analyzer.LRPZPlusFast,
     #innvestigate.analyzer.LRPEpsilon,
@@ -148,16 +163,20 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeB,
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
     #innvestigate.analyzer.LRPSequentialCompositeBFlat,
-    #innvestigate.analyzer.LRPGamma
+    #innvestigate.analyzer.LRPGamma,
+    innvestigate.analyzer.Gradient,
+    innvestigate.analyzer.InputTimesGradient,
+    innvestigate.analyzer.GuidedBackprop,
+    innvestigate.analyzer.Deconvnet,
 ]
 
 neuron_selection_cases = [
     None,
-    #"max_activation",
-    #"all",
-    #0,
-    #[0, 1, 2],
-    #np.array([0, 1, 2])
+    "max_activation",
+    "all",
+    0,
+    [0, 1, 2],
+    np.array([0, 1, 2])
 ]
 
 for model_case in model_cases:
@@ -174,7 +193,7 @@ for model_case in model_cases:
             tf.keras.backend.clear_session()
 
 
-            #print("Explanation Shape:", np.shape(R_new))
+            print("Explanation Shape:", np.shape(R_new))
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

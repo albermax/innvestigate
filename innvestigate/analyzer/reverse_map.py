@@ -143,16 +143,6 @@ class ReplacementLayer():
             Ys = K.max(Ys, axis=-1, keepdims=True)
         return Ys
 
-    def _head_mapping(self, Ys):
-        """
-        Maps the output of the last layer(s) to some other values
-
-        :param Ys: output to be mapped
-
-        :returns: mapped output
-        """
-        return Ys
-
     def try_apply(self, ins, neuron_selection=None, callback=None):
         """
         Tries to apply own forward pass:
@@ -253,7 +243,6 @@ class ReplacementLayer():
 
         # check if final layer (i.e., no next layers)
         if len(self.layer_next) == 0:
-            outs = self._head_mapping(outs)
             outs = self._neuron_select(outs, neuron_selection)
 
         return outs
@@ -339,6 +328,7 @@ class GradientReplacementLayer(ReplacementLayer):
                 ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
             else:
                 ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+
         return ret
 
 
@@ -402,8 +392,6 @@ def reverse_map(
             #TODO case for no input layer here
             raise ValueError("Temporary error. You need to explicitly define an Input Layer for now")
 
-
-    print([i.layer_func for i in input_layers])
     return input_layers, replacement_layers
 
 def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None):
