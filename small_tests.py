@@ -129,7 +129,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
     a = time.time()
     ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection)
+    R = ana.analyze(input, neuron_selection=neuron_selection, stop_mapping_at_layers=["block1_pool"])
     b = time.time()
     print("Time Passed: ", b - a)
     print("explanation: ", np.shape(R))
@@ -142,7 +142,8 @@ model_cases = [
     #SimpleDense,
     #MultiIn,
     #MultiConnect,
-    VGG16_modified
+    VGG16,
+    #VGG16_modified
 ]
 
 analyzer_cases = [

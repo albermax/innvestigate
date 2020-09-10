@@ -50,17 +50,21 @@ class GradientHeadMapReplacementLayer(reverse_map.GradientReplacementLayer):
         """
         return outs
 
-    def apply(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         """
         only change for this subclass: applying the headmapping
         """
-        outs = super(GradientHeadMapReplacementLayer, self).apply(ins, neuron_selection)
+        with tf.GradientTape(persistent=True) as tape:
+            tape.watch(ins)
+            outs = self.layer_func(ins)
 
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._head_mapping(outs)
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                outs = self._head_mapping(outs)
 
-        return outs
+        return outs, tape
+
 
 ###############################################################################
 ###############################################################################
@@ -216,24 +220,16 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
         )
         super(DeconvnetReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        """
-        applies layer / forward tf ops.
-        """
-        outs = self.layer_func(ins)
-        Ys = self._layer_wo_relu(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Ys = self._neuron_select(Ys, neuron_selection)
-
-        return Ys, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Ys, outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+            Ys = self._layer_wo_relu(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+            Ys = self._neuron_select(Ys, neuron_selection)
 
         return outs, Ys, tape
 

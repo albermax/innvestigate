@@ -70,25 +70,16 @@ class ZRule(reverse_map.ReplacementLayer):
         #print(self._layer_wo_act.get_config()["use_bias"])
         super(ZRule, self).__init__(layer, *args, **kwargs)
 
-    #@tf.function
-    def apply(self, ins, neuron_selection):
-        """
-        applies layer / forward tf ops.
-        """
-        outs = self.layer_func(ins)
-        Zs = self._layer_wo_act(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Zs = self._neuron_select(Zs, neuron_selection)
-
-        return Zs, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Zs, outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
 
         return outs, Zs, tape
 
@@ -144,21 +135,16 @@ class EpsilonRule(reverse_map.ReplacementLayer):
                                                              name_template="no_act_%s")
         super(EpsilonRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        outs = self.layer_func(ins)
-        Zs = self._layer_wo_act(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Zs = self._neuron_select(Zs, neuron_selection)
-
-        return Zs, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Zs, outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
 
         return outs, Zs, tape
 
@@ -217,25 +203,20 @@ class WSquareRule(reverse_map.ReplacementLayer):
             name_template="reversed_kernel_%s")
         super(WSquareRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        ones = ilayers.OnesLike()(ins)
-        outs = self.layer_func(ins)
-        Ys = self._layer_wo_act_b(ins)
-        Zs = self._layer_wo_act_b(ones)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Ys = self._neuron_select(Ys, neuron_selection)
-            # Compute the sum of the weights.
-            Zs = self._neuron_select(Zs, neuron_selection)
-
-        return Ys, Zs, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Ys, Zs, outs = self.apply(ins, neuron_selection)
+            ones = ilayers.OnesLike()(ins)
+            outs = self.layer_func(ins)
+            Ys = self._layer_wo_act_b(ins)
+            Zs = self._layer_wo_act_b(ones)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                Ys = self._neuron_select(Ys, neuron_selection)
+                # Compute the sum of the weights.
+                Zs = self._neuron_select(Zs, neuron_selection)
 
         return outs, Ys, Zs, tape
 
@@ -345,10 +326,7 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
             name_template="reversed_kernel_negative_%s")
         super(AlphaBetaRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        pass
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         keep_positives = keras_layers.Lambda(lambda x: x * K.cast(K.greater(x, 0), K.floatx()))
         keep_negatives = keras_layers.Lambda(lambda x: x * K.cast(K.less(x, 0), K.floatx()))
         ins_pos = keep_positives(ins)
@@ -364,7 +342,7 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
             Zs_neg_p = self._layer_wo_act_positive(ins_neg)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 outs = self._neuron_select(outs, neuron_selection)
                 Zs_pos = self._neuron_select(Zs_pos, neuron_selection)
                 Zs_neg = self._neuron_select(Zs_neg, neuron_selection)
@@ -521,10 +499,7 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
             name_template="reversed_kernel_negative_%s")
         super(AlphaBetaXRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        pass
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         keep_positives = keras_layers.Lambda(lambda x: x * K.cast(K.greater(x, 0), K.floatx()))
         keep_negatives = keras_layers.Lambda(lambda x: x * K.cast(K.less(x, 0), K.floatx()))
         ins_pos = keep_positives(ins)
@@ -540,7 +515,7 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
             Zs_neg_p = self._layer_wo_act_positive(ins_neg)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 outs = self._neuron_select(outs, neuron_selection)
                 Zs_pos = self._neuron_select(Zs_pos, neuron_selection)
                 Zs_neg = self._neuron_select(Zs_neg, neuron_selection)
@@ -685,10 +660,7 @@ class BoundedRule(reverse_map.ReplacementLayer):
 
         super(BoundedRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        pass
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         to_low = keras_layers.Lambda(lambda x: x * 0 + self._low)
         to_high = keras_layers.Lambda(lambda x: x * 0 + self._high)
         low = [to_low(x) for x in ins]
@@ -703,7 +675,7 @@ class BoundedRule(reverse_map.ReplacementLayer):
             B = self._layer_wo_act_positive(low)
             C = self._layer_wo_act_negative(high)
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 outs = self._neuron_select(outs, neuron_selection)
                 A = self._neuron_select(A, neuron_selection)
                 B = self._neuron_select(B, neuron_selection)
@@ -787,14 +759,14 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
     def apply(self, ins, neuron_selection):
         pass
 
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
             outs = self.layer_func(ins)
             # Get activations.
             Zs = self._layer_wo_act_b_positive(ins)
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 outs = self._neuron_select(outs, neuron_selection)
                 Zs = self._neuron_select(Zs, neuron_selection)
 
@@ -877,7 +849,7 @@ class GammaRule(reverse_map.ReplacementLayer):
     def apply(self, ins, neuron_selection):
         pass
 
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         keep_positives = keras_layers.Lambda(lambda x: x * K.cast(K.greater(x, 0), K.floatx()))
         ins_pos = keep_positives(ins)
         with tf.GradientTape(persistent=True) as tape:
@@ -890,7 +862,7 @@ class GammaRule(reverse_map.ReplacementLayer):
             Zs_act_pos = self._layer_wo_act_positive(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 outs = self._neuron_select(outs, neuron_selection)
                 Zs_pos = self._neuron_select(Zs_pos, neuron_selection)
                 Zs_act = self._neuron_select(Zs_act, neuron_selection)
@@ -970,17 +942,14 @@ class BatchNormalizationReverseRule(reverse_map.ReplacementLayer):
             self._beta = layer.beta
         super(BatchNormalizationReverseRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         outs = self.layer_func(ins)
 
         # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
+        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
             outs = self._neuron_select(outs, neuron_selection)
 
         return outs
-
-    def wrap_hook(self, ins, neuron_selection):
-        return self.apply(ins, neuron_selection)
 
     def explain_hook(self, ins, reversed_outs, args):
 
@@ -1039,25 +1008,16 @@ class AddReverseRule(reverse_map.ReplacementLayer):
                                                              name_template="no_act_%s")
         super(AddReverseRule, self).__init__(layer, *args, **kwargs)
 
-    # @tf.function
-    def apply(self, ins, neuron_selection):
-        """
-        applies layer / forward tf ops.
-        """
-        outs = self.layer_func(ins)
-        Zs = self._layer_wo_act(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Zs = self._neuron_select(Zs, neuron_selection)
-
-        return Zs, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Zs, outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
 
         return outs, Zs, tape
 
@@ -1101,24 +1061,16 @@ class AveragePoolingReverseRule(reverse_map.ReplacementLayer):
                                                              name_template="no_act_%s")
         super(AveragePoolingReverseRule, self).__init__(layer, *args, **kwargs)
 
-    def apply(self, ins, neuron_selection):
-        """
-        applies layer / forward tf ops.
-        """
-        outs = self.layer_func(ins)
-        Zs = self._layer_wo_act(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
-            outs = self._neuron_select(outs, neuron_selection)
-            Zs = self._neuron_select(Zs, neuron_selection)
-
-        return Zs, outs
-
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            Zs, outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+            Zs = self._layer_wo_act(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
+                Zs = self._neuron_select(Zs, neuron_selection)
 
         return outs, Zs, tape
 

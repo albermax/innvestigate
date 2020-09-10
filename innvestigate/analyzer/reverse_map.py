@@ -1,4 +1,4 @@
-
+import warnings
 import tensorflow as tf
 
 ###############################################################################
@@ -109,7 +109,7 @@ class ReplacementLayer():
             self.callbacks = None
             self.hook_vals = None
 
-    def _forward(self, Ys, neuron_selection=None):
+    def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None):
         """
         Forward Pass to all child layers
         * If this is the last layer, directly calls try_explain to compute own explanation
@@ -117,14 +117,15 @@ class ReplacementLayer():
 
         :param Ys: output of own forward pass
         :param neuron_selection: neuron_selection parameter (see try_apply)
+        :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
         """
-        if len(self.layer_next) == 0:
+        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
             # last layer: directly compute explanation
             self.try_explain(None)
         else:
             # forward
             for layer_n in self.layer_next:
-                layer_n.try_apply(Ys, neuron_selection, self.try_explain)
+                layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers)
 
     #@tf.function #this is not faster
     def _neuron_select(self, Ys, neuron_selection):
@@ -135,15 +136,16 @@ class ReplacementLayer():
         :param neuron_selection: neuron_selection parameter (see try_apply)
         """
         #error handling is done before, in try_apply
-        if isinstance(neuron_selection, tf.Tensor):
-            Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
-        elif neuron_selection is None:
+
+        if neuron_selection is None:
             Ys = Ys
+        elif isinstance(neuron_selection, tf.Tensor):
+            Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
         else:
-            Ys = K.max(Ys, axis=-1, keepdims=True)
+            Ys = K.max(Ys, axis=1, keepdims=True)
         return Ys
 
-    def try_apply(self, ins, neuron_selection=None, callback=None):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None):
         """
         Tries to apply own forward pass:
         * Aggregates inputs and callbacks of all parent layers
@@ -157,6 +159,7 @@ class ReplacementLayer():
             - "max_activation"
             - int
             - list or np.array of int, with length equal to batch size
+        :param stop_mapping_at_layers: list of layers to stop mapping at
         :param callback callback function of the parent layer that called self.try_apply
         """
         # DEBUG
@@ -185,11 +188,7 @@ class ReplacementLayer():
                 input_vals = input_vals[0]
 
             # adapt neuron_selection param for max efficiency
-            if len(self.layer_next) != 0:
-                # basically just a filler value (we are not in the last layer)
-                # allowing for efficient graph building
-                neuron_selection_tmp = tf.constant(0)
-            else:
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
                 if neuron_selection is None:
                     neuron_selection_tmp = None
                 elif isinstance(neuron_selection, str) and neuron_selection == "all":
@@ -197,71 +196,57 @@ class ReplacementLayer():
                 elif isinstance(neuron_selection, str) and neuron_selection == "max_activation":
                     neuron_selection_tmp = "max_activation"
                 elif isinstance(neuron_selection, int):
-                    if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
-                        raise ValueError("Expected last layer " + self.name + "to have only one output with shape dimension 2, but got " + str(self.output_shape))
-                    else:
-                        neuron_selection_tmp = [[neuron_selection] for n in range(self.input_vals[0].shape[0])]
-                        neuron_selection_tmp = tf.constant(neuron_selection_tmp)
+                    #if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
+                    #    raise ValueError("Expected last layer " + self.name + " to have only one output with shape dimension 2, but got " + str(self.output_shape))
+                    #else:
+                    neuron_selection_tmp = [[neuron_selection] for n in range(self.input_vals[0].shape[0])]
+                    neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 elif isinstance(neuron_selection, list) or (
                         hasattr(neuron_selection, "shape") and len(neuron_selection.shape) == 1):
-                    # TODO this assumes that the last layer has shape (batch_size, n); is that a valid assumption?
-                    if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
-                        raise ValueError("Expected last layer " + self.name + "to have only one output with shape dimension 2, but got " + str(self.output_shape))
-                    elif len(np.shape(neuron_selection)) < 1:
-                        raise ValueError("Expected parameter neuron_selection to have only one dimension, but got neuron_selection of shape " + str(np.shape(neuron_selection)))
-                    else:
-                        neuron_selection_tmp = [[n] for n in neuron_selection]
-                        neuron_selection_tmp = tf.constant(neuron_selection_tmp)
+                    #if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
+                    #    raise ValueError("Expected last layer " + self.name + " to have only one output with shape dimension 2, but got " + str(self.output_shape))
+                    #elif len(np.shape(neuron_selection)) < 1:
+                    #    raise ValueError("Expected parameter neuron_selection to have only one dimension, but got neuron_selection of shape " + str(np.shape(neuron_selection)))
+                    #else:
+                    neuron_selection_tmp = [[n] for n in neuron_selection]
+                    neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 else:
                     raise ValueError(
                         "Parameter neuron_selection only accepts the following values: None, 'all', 'max_activation', <int>, <list>, <one-dimensional array>")
+            else:
+                neuron_selection_tmp = neuron_selection
 
             # apply and wrappers
-            self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp)
+            self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp, stop_mapping_at_layers)
 
             # forward
             if isinstance(self.hook_vals, tuple):
-                self._forward(self.hook_vals[0], neuron_selection)
+                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers)
             else:
-                self._forward(self.hook_vals, neuron_selection)
+                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers)
 
-    #@tf.function #this is not faster
-    def apply(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         """
-        applies own forward pass(es) (layer / forward tf ops.)
-        * should contain a call to self.layer_func(ins)
-        * should contain a call to self._neuron_select if this is the last layer
+        hook that wraps and applies the layer function.
+        E.g., by defining a GradientTape
+        * should contain a call to self._neuron_select.
+        * may define any wrappers around
 
         :param ins: input(s) of this layer
         :param neuron_selection: neuron_selection parameter (see try_apply)
+        :param neuron_selection: stop_mapping_at_layers parameter (see try_apply)
 
-        :returns output of this layer
+        :returns output of layer function + any wrappers that were defined and are needed in explain_hook
 
         To be extended for specific XAI methods
         """
         outs = self.layer_func(ins)
 
         # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0:
+        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
             outs = self._neuron_select(outs, neuron_selection)
 
         return outs
-
-    def wrap_hook(self, ins, neuron_selection):
-        """
-        hook that wraps the layer function.
-        E.g., by defining a GradientTape
-        * should contain a call to self.apply.
-        * may define any wrappers around
-
-        :param ins: input(s) of this layer
-        :param neuron_selection: neuron_selection parameter (see try_apply)
-
-        :returns output of apply + any wrappers that were defined and are needed in explain_hook
-
-        To be extended for specific XAI methods
-        """
-        return self.apply(ins, neuron_selection)
 
     def explain_hook(self, ins, reversed_outs, args):
         """
@@ -300,11 +285,15 @@ class GradientReplacementLayer(ReplacementLayer):
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
-    def wrap_hook(self, ins, neuron_selection):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
         #print("WRAP ", ins.shape, neuron_selection.shape)
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
-            outs = self.apply(ins, neuron_selection)
+            outs = self.layer_func(ins)
+
+            # check if final layer (i.e., no next layers)
+            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+                outs = self._neuron_select(outs, neuron_selection)
 
         return outs, tape
 
@@ -336,7 +325,6 @@ def reverse_map(
         model,
         reverse_mappings,
         default_reverse_mapping,
-        stop_mapping_at_tensors
         ):
     """
     Builds the reverse_map by wrapping network layer(s) into ReplacementLayer(s)
@@ -344,28 +332,25 @@ def reverse_map(
     :param model: model to be analyzed
     :param reverse_mappings: mapping layer->reverse mapping (ReplacementLayer or some subclass thereof)
     :param default_reverse_mapping: ReplacementLayer or some subclass thereof; default mapping to use
-    :param stop_mapping_at_tensors: list of tensor names to stop mapping at
 
     :returns reversed "model" as a list of input layers and a list of wrapped layers
     """
 
     #build model that is to be analyzed
     layers = kgraph.get_model_layers(model)
-    stop_mapping_at_tensors = [x.name.split(":")[0] for x in stop_mapping_at_tensors]
 
     # set all replacement layers
     replacement_layers = []
     for layer in layers:
-        if not layer.name in stop_mapping_at_tensors:
-            layer_next = []
-            wrapper_class = reverse_mappings(layer)
-            if wrapper_class is None:
-                wrapper_class = default_reverse_mapping(layer)
+        layer_next = []
+        wrapper_class = reverse_mappings(layer)
+        if wrapper_class is None:
+            wrapper_class = default_reverse_mapping(layer)
 
-            if not issubclass(wrapper_class, ReplacementLayer):
-                raise ValueError("Reverse Mappings should be an instance of ReplacementLayer")
+        if not issubclass(wrapper_class, ReplacementLayer):
+            raise ValueError("Reverse Mappings should be an instance of ReplacementLayer")
 
-            replacement_layers.append(wrapper_class(layer, layer_next))
+        replacement_layers.append(wrapper_class(layer, layer_next))
 
     #connect graph structure
     for layer in replacement_layers:
@@ -394,7 +379,7 @@ def reverse_map(
 
     return input_layers, replacement_layers
 
-def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None):
+def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[]):
     """
     Computes an explanation by applying a reversed model
 
@@ -408,11 +393,16 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
             - list or np.array of int, with length equal to batch size
     :param layer_names: None or list of layer names whose explanations should be returned.
                         Can be used to obtain intermediate explanations or explanations of multiple layers
+    :param stop_mapping_at_layers: list of layers to stop mapping at ("output" layers)
 
     :returns list of explanations. Each explanation in this list (np.array) corresponds to one layer.
              The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.
     """
     #shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
+
+    warnings.simplefilter("always")
+    if len(stop_mapping_at_layers) > 0 and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
+        warnings.warn("You are specifying layers to stop forward pass at, and also neuron-selecting by index. Please make sure the corresponding shapes fit together!")
 
     if not isinstance(Xs, tf.Tensor):
         try:
@@ -423,12 +413,12 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
     #format input & obtain explanations
     if len(reverse_ins) == 1:
         #single input network
-        reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection)
+        reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers)
 
     else:
         #multiple inputs. reshape to (n_ins, batch_size, ...)
         for i, reverse_in in enumerate(reverse_ins):
-            reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection)
+            reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers)
 
     #obtain explanations for specified layers
     if layer_names is None:

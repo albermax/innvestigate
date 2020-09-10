@@ -277,15 +277,13 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         self._analyzer_model = self._create_analysis(self._model)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+    def _create_analysis(self, model):
         """
         Interface that needs to be implemented by a derived class.
 
         This function is expected to create a custom analysis for the model inputs given the model outputs.
 
         :param model: Target of analysis.
-        :param stop_analysis_at_tensors: A list of tensors where to stop the
-          analysis.
         :return: reversed "model" as a list of input layers and a list of wrapped layers
         """
         raise NotImplementedError()
@@ -293,17 +291,17 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", layer_names=None):
+    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[]):
         """
-                Same interface as :class:`Analyzer` besides
+        Same interface as :class:`Analyzer` besides
 
-                :param neuron_selection: Chosen neuron(s).
-                """
+        :param neuron_selection: Chosen neuron(s).
+        """
         #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
         inp, all = self._analyzer_model
-        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names)
+        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers)
         ret = self._postprocess_analysis(ret)
 
         return ret
@@ -395,12 +393,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         """
         return reverse_map.GradientReplacementLayer
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+    def _create_analysis(self, model):
         inp, rep = reverse_map.reverse_map(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
-            stop_mapping_at_tensors=stop_analysis_at_tensors,
         )
 
         return inp, rep
