@@ -306,6 +306,9 @@ class AnalyzerNetworkBase(AnalyzerBase):
         ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names)
         ret = self._postprocess_analysis(ret)
 
+        if isinstance(ret, list) and len(ret) == 1:
+            ret = ret[0]
+
         return ret
 
     def _postprocess_analysis(self, hm):

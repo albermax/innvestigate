@@ -44,8 +44,8 @@ from .relevance_based.relevance_analyzer import LRPSequentialCompositeA
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeB
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeBFlat
-# from .deeptaylor import DeepTaylor
-# from .deeptaylor import BoundedDeepTaylor
+from .deeptaylor import DeepTaylor
+from .deeptaylor import BoundedDeepTaylor
 # from .wrapper import WrapperBase
 # from .wrapper import AugmentReduceBase
 # from .wrapper import GaussianSmoother
@@ -106,8 +106,8 @@ analyzers = {
     "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
 
     # Deep Taylor
-    #"deep_taylor": DeepTaylor,
-    #"deep_taylor.bounded": BoundedDeepTaylor,
+    "deep_taylor": DeepTaylor,
+    "deep_taylor.bounded": BoundedDeepTaylor,
 
     # # DeepLIFT
     # "deep_lift.wrapper": DeepLIFTWrapper,

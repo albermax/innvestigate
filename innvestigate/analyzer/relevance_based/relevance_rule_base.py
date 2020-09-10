@@ -691,8 +691,8 @@ class BoundedRule(reverse_map.ReplacementLayer):
     def wrap_hook(self, ins, neuron_selection):
         to_low = keras_layers.Lambda(lambda x: x * 0 + self._low)
         to_high = keras_layers.Lambda(lambda x: x * 0 + self._high)
-        low = [to_low(x) for x in ins]
-        high = [to_high(x) for x in ins]
+        low = tf.convert_to_tensor([to_low(x) for x in ins])
+        high = tf.convert_to_tensor([to_high(x) for x in ins])
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
             tape.watch(low)
