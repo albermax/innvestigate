@@ -152,7 +152,7 @@ class ReplacementLayer():
     @tf.custom_gradient
     def _toNumber(self, x, value):
         """
-        Helper function to set a Tensor to a fixed value while having a fixed gradient of 1
+        Helper function to set a Tensor to a fixed value while having a gradient of "value"
 
         """
 
