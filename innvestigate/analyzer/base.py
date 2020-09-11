@@ -291,17 +291,19 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[]):
+    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[], r_init=None):
         """
         Same interface as :class:`Analyzer` besides
 
         :param neuron_selection: Chosen neuron(s).
+        :param r_init: reverse initialization value as integer or float. Value with with explanation is initialized.
+                       If None the explanation is initialized with original model output values.
         """
         #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
         inp, all = self._analyzer_model
-        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers)
+        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
         ret = self._postprocess_analysis(ret)
 
         return ret

@@ -108,7 +108,7 @@ class ReplacementLayer():
             self.callbacks = None
             self.hook_vals = None
 
-    def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None):
+    def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None, r_init=None):
         """
         Forward Pass to all child layers
         * If this is the last layer, directly calls try_explain to compute own explanation
@@ -117,6 +117,7 @@ class ReplacementLayer():
         :param Ys: output of own forward pass
         :param neuron_selection: neuron_selection parameter (see try_apply)
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
+        :param r_init: reverse initialization value. Value with with explanation is initialized.
         """
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
@@ -124,11 +125,11 @@ class ReplacementLayer():
         elif self.name in stop_mapping_at_layers:
             self.try_explain(None)
             for layer_n in self.layer_next:
-                layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers)
+                layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
         else:
             # forward
             for layer_n in self.layer_next:
-                layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers)
+                layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers, r_init)
 
     #@tf.function #this is not faster
     def _neuron_select(self, Ys, neuron_selection):
@@ -159,7 +160,7 @@ class ReplacementLayer():
 
         def grad(dy, variables=None):  # variables=None and None as output necessary as toNumber requires two arguments
 
-            return dy * tf.ones(x.shape), None
+            return dy * tf.ones(x.shape) * value, None
 
         return y, grad
 
@@ -185,7 +186,7 @@ class ReplacementLayer():
 
         return Ys
 
-    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None):
         """
         Tries to apply own forward pass:
         * Aggregates inputs and callbacks of all parent layers
@@ -257,15 +258,15 @@ class ReplacementLayer():
                 neuron_selection_tmp = neuron_selection
 
             # apply and wrappers
-            self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp, stop_mapping_at_layers)
+            self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
 
             # forward
             if isinstance(self.hook_vals, tuple):
-                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers)
+                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init)
             else:
-                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers)
+                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
         """
         hook that wraps and applies the layer function.
         E.g., by defining a GradientTape
@@ -274,7 +275,7 @@ class ReplacementLayer():
 
         :param ins: input(s) of this layer
         :param neuron_selection: neuron_selection parameter (see try_apply)
-        :param neuron_selection: stop_mapping_at_layers parameter (see try_apply)
+        :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
 
         :returns output of layer function + any wrappers that were defined and are needed in explain_hook
 
@@ -284,7 +285,7 @@ class ReplacementLayer():
 
         # check if final layer (i.e., no next layers)
         if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
-            outs = self._neuron_select(outs, neuron_selection)
+            outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
 
         return outs
 
@@ -325,7 +326,7 @@ class GradientReplacementLayer(ReplacementLayer):
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
         #print("WRAP ", ins.shape, neuron_selection.shape)
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
@@ -333,7 +334,7 @@ class GradientReplacementLayer(ReplacementLayer):
 
             # check if final layer (i.e., no next layers)
             if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
-                outs = self._neuron_select(outs, neuron_selection)
+                outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
 
         return outs, tape
 
@@ -419,7 +420,7 @@ def reverse_map(
 
     return input_layers, replacement_layers
 
-def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[]):
+def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[], r_init=None):
     """
     Computes an explanation by applying a reversed model
 
@@ -434,6 +435,7 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
     :param layer_names: None or list of layer names whose explanations should be returned.
                         Can be used to obtain intermediate explanations or explanations of multiple layers
     :param stop_mapping_at_layers: list of layers to stop mapping at ("output" layers)
+    :param r_init: reverse initialization value. Value with with explanation is initialized.
 
     :returns list of explanations. Each explanation in this list (np.array) corresponds to one layer.
              The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.
@@ -453,12 +455,12 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
     #format input & obtain explanations
     if len(reverse_ins) == 1:
         #single input network
-        reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers)
+        reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
 
     else:
         #multiple inputs. reshape to (n_ins, batch_size, ...)
         for i, reverse_in in enumerate(reverse_ins):
-            reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers)
+            reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection, stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
 
     #obtain explanations for specified layers
     if layer_names is None:
