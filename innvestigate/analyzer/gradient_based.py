@@ -220,7 +220,7 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
         )
         super(DeconvnetReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
+    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
             outs = self.layer_func(ins)
@@ -228,8 +228,8 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
 
             # check if final layer (i.e., no next layers)
             if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
-                outs = self._neuron_select(outs, neuron_selection)
-            Ys = self._neuron_select(Ys, neuron_selection)
+                outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
+                Ys = self._neuron_sel_and_head_map(Ys, neuron_selection, r_init)
 
         return outs, Ys, tape
 
