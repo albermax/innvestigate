@@ -148,6 +148,43 @@ class ReplacementLayer():
             Ys = K.max(Ys, axis=1, keepdims=True)
         return Ys
 
+    @tf.custom_gradient
+    def _toNumber(self, x, value):
+        """
+        Helper function to set a Tensor to a fixed value while having a fixed gradient of 1
+
+        """
+
+        y = tf.constant(value, dtype=tf.float32, shape=x.shape)
+
+        def grad(dy, variables=None):  # variables=None and None as output necessary as toNumber requires two arguments
+
+            return dy * tf.ones(x.shape), None
+
+        return y, grad
+
+    def _head_mapping(self, Ys, model_output_value=None):
+        """
+                Sets the model output to a fixed value. Used as initialization
+                for the explanation method.
+
+                :param model_output_value: output value of model / initialized value for explanation method
+
+                """
+        if model_output_value != None:
+            Ys = self._toNumber(Ys, model_output_value)
+        elif model_output_value == None:
+            Ys = Ys
+
+        return Ys
+
+    def _neuron_sel_and_head_map(self, Ys, neuron_selection=None, model_output_value=None):
+
+        Ys = self._neuron_select(Ys, neuron_selection)
+        Ys = self._head_mapping(Ys, model_output_value)
+
+        return Ys
+
     def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None):
         """
         Tries to apply own forward pass:
