@@ -20,14 +20,13 @@ class ReplacementLayer():
     Basically:
     * Any forward passes required for computing the explanation are defined in apply method. During the forward pass, a callback is given to all child layers to retrieve their explanations
     * Wrappers (e.g., a GradientTape) around the forward pass(es) that are required to compute an explanation can be defined and returned by wrap_hook method
-    * In wrap_hook method, forward pass(es) are applied by calling on apply method
+    * In wrap_hook method, forward pass(es) are applied and Tapes defined
     * Explanation is computed in explain_hook method and then passed to callback functions of parent ReplacementLayers
 
     :param layer: Layer (of base class tensorflow.keras.layers.Layer) of to wrap
     :param layer_next: List of Layers in the network that receive output of layer (=child layers)
 
     This is just a base class. To extend this for specific XAI methods,
-    - apply()
     - wrap_hook()
     - explain_hook()
     should be overwritten accordingly
@@ -119,9 +118,13 @@ class ReplacementLayer():
         :param neuron_selection: neuron_selection parameter (see try_apply)
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
         """
-        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+        if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
             self.try_explain(None)
+        elif self.name in stop_mapping_at_layers:
+            self.try_explain(None)
+            for layer_n in self.layer_next:
+                layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers)
         else:
             # forward
             for layer_n in self.layer_next:

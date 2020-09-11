@@ -140,8 +140,8 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 
 model_cases = [
     #SimpleDense,
-    #MultiIn,
-    #MultiConnect,
+    MultiIn,
+    MultiConnect,
     VGG16,
     #VGG16_modified
 ]
