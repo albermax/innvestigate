@@ -311,6 +311,31 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _postprocess_analysis(self, hm):
         return hm
 
+    def getIntermediate(self, layer_names):
+
+        if not hasattr(self, "_analyzer_model"):
+            raise AttributeError("You have to analyze the model before intermediate results are available!")
+
+        if not isinstance(layer_names, list):
+            raise AttributeError("layer_names has to be a list of strings")
+
+        for l in layer_names:
+            if not isinstance(l, str):
+                raise AttributeError("layer_names has to be a list of strings")
+
+        _, reverse_layers = self._analyzer_model
+
+        # obtain explanations for specified layers
+        hm = []
+        for name in layer_names:
+            layer = [layer for layer in reverse_layers if layer.name == name]
+            if len(layer) > 0:
+                if layer[0].explanation == None:
+                    raise AttributeError("layer has to be analyzed before")
+                hm.append(layer[0].explanation.numpy())
+
+        return hm
+
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
     This class contains many helper functions around the graph
