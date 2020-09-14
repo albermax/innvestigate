@@ -124,8 +124,8 @@ class ReplacementLayer():
             self.try_explain(None)
         elif self.name in stop_mapping_at_layers:
             self.try_explain(None)
-            for layer_n in self.layer_next:
-                layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+           # for layer_n in self.layer_next:
+           #     layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
         else:
             # forward
             for layer_n in self.layer_next:
@@ -144,6 +144,8 @@ class ReplacementLayer():
         if neuron_selection is None:
             Ys = Ys
         elif isinstance(neuron_selection, tf.Tensor):
+            # flatten and then filter neuron_selection index
+            Ys = tf.reshape(Ys, (Ys.shape[0], np.prod(Ys.shape[1:])))
             Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
         else:
             Ys = K.max(Ys, axis=1, keepdims=True)
