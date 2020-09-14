@@ -313,6 +313,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def getIntermediate(self, layer_names):
 
+        """
+        Get intermediate results of explanation.
+        explanation of layer i has shape equal to input_shape of layer i.
+
+        param layer_names: list of strings containing the names of the layers
+
+            """
+
         if not hasattr(self, "_analyzer_model"):
             raise AttributeError("You have to analyze the model before intermediate results are available!")
 
