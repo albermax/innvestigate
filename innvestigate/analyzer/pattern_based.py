@@ -53,7 +53,7 @@ SUPPORTED_LAYER_PATTERNNET = (
     keras_layers.MaxPooling3D,
 )
 
-
+#TODO: tf2.*
 class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
     """
     PatternNet backward mapping for layers with kernels.
@@ -113,7 +113,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
         # Second step: propagate through the pattern layer.
         return grad_pattern(Xs+pattern_Ys+tmp)
 
-
+#TODO: tf2.*
 class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
     """PatternNet analyzer.
 
@@ -218,7 +218,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
             use_multiprocessing=use_multiprocessing,
             verbose=verbose)
 
-
+#TODO: tf2.*
 class PatternAttribution(PatternNet):
     """PatternAttribution analyzer.
 

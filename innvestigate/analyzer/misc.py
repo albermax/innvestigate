@@ -20,7 +20,7 @@ __all__ = ["Random", "Input"]
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.*
 class Input(AnalyzerNetworkBase):
     """Returns the input.
 
@@ -34,7 +34,7 @@ class Input(AnalyzerNetworkBase):
                               if x.experimental_ref() not in [a.experimental_ref() for a in stop_analysis_at_tensors]]
         return [ilayers.Identity()(x) for x in tensors_to_analyze]
 
-
+#TODO: tf2.*
 class Random(AnalyzerNetworkBase):
     """Returns noise.
 

@@ -120,7 +120,7 @@ class WrapperBase(base.AnalyzerBase):
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.*
 class AugmentReduceBase(WrapperBase):
     """Interface for wrappers that augment the input and reduce the analysis.
 
@@ -134,11 +134,7 @@ class AugmentReduceBase(WrapperBase):
 
     def __init__(self, subanalyzer, *args, **kwargs):
         self._augment_by_n = kwargs.pop("augment_by_n", 2)
-        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
 
-        if self._neuron_selection_mode != "all":
-            # TODO: this is not transparent, find a better way.
-            subanalyzer._neuron_selection_mode = "index"
         super(AugmentReduceBase, self).__init__(subanalyzer,
                                                 *args, **kwargs)
 
@@ -230,7 +226,7 @@ class AugmentReduceBase(WrapperBase):
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.*
 class GaussianSmoother(AugmentReduceBase):
     """Wrapper that adds noise to the input and averages over analyses
 
@@ -257,7 +253,7 @@ class GaussianSmoother(AugmentReduceBase):
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.*
 class PathIntegrator(AugmentReduceBase):
     """Integrated the analysis along a path
 

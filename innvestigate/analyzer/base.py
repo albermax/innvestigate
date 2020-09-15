@@ -291,22 +291,57 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[]):
+    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[], r_init=None):
         """
         Same interface as :class:`Analyzer` besides
 
         :param neuron_selection: Chosen neuron(s).
+        :param r_init: reverse initialization value as integer or float. Value with with explanation is initialized.
+                       If None the explanation is initialized with original model output values.
         """
         #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
         inp, all = self._analyzer_model
-        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers)
+        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
         ret = self._postprocess_analysis(ret)
 
         return ret
 
     def _postprocess_analysis(self, hm):
+        return hm
+
+    def getIntermediate(self, layer_names):
+
+        """
+        Get intermediate results of explanation.
+        explanation of layer i has shape equal to input_shape of layer i.
+
+        param layer_names: list of strings containing the names of the layers
+
+            """
+
+        if not hasattr(self, "_analyzer_model"):
+            raise AttributeError("You have to analyze the model before intermediate results are available!")
+
+        if not isinstance(layer_names, list):
+            raise AttributeError("layer_names has to be a list of strings")
+
+        for l in layer_names:
+            if not isinstance(l, str):
+                raise AttributeError("layer_names has to be a list of strings")
+
+        _, reverse_layers = self._analyzer_model
+
+        # obtain explanations for specified layers
+        hm = []
+        for name in layer_names:
+            layer = [layer for layer in reverse_layers if layer.name == name]
+            if len(layer) > 0:
+                if layer[0].explanation == None:
+                    raise AttributeError("layer has to be analyzed before")
+                hm.append(layer[0].explanation.numpy())
+
         return hm
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
