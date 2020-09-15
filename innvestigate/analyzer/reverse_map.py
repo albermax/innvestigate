@@ -25,6 +25,7 @@ class ReplacementLayer():
 
     :param layer: Layer (of base class tensorflow.keras.layers.Layer) of to wrap
     :param layer_next: List of Layers in the network that receive output of layer (=child layers)
+    :param r_init_constant: If not None, defines a constant head_mapping
 
     This is just a base class. To extend this for specific XAI methods,
     - wrap_hook()
@@ -32,11 +33,12 @@ class ReplacementLayer():
     should be overwritten accordingly
 
     """
-    def __init__(self, layer, layer_next=[], head_mapping=None):
+    def __init__(self, layer, layer_next=[], r_init_constant=None):
 
         self.layer_func = layer
         self.layer_next = layer_next
         self.name = layer.name
+        self.r_init = r_init_constant
 
         self.input_shape = layer.input_shape
         if not isinstance(self.input_shape, list):
@@ -117,7 +119,7 @@ class ReplacementLayer():
         :param Ys: output of own forward pass
         :param neuron_selection: neuron_selection parameter (see try_apply)
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
-        :param r_init: reverse initialization value. Value with with explanation is initialized.
+        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
         """
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
@@ -166,12 +168,12 @@ class ReplacementLayer():
 
     def _head_mapping(self, Ys, model_output_value=None):
         """
-                Sets the model output to a fixed value. Used as initialization
-                for the explanation method.
+        Sets the model output to a fixed value. Used as initialization
+        for the explanation method.
 
-                :param model_output_value: output value of model / initialized value for explanation method
+        :param model_output_value: output value of model / initialized value for explanation method
 
-                """
+        """
         if model_output_value != None:
             Ys = self._toNumber(Ys, model_output_value)
         elif model_output_value == None:
@@ -202,9 +204,14 @@ class ReplacementLayer():
             - list or np.array of int, with length equal to batch size
         :param stop_mapping_at_layers: list of layers to stop mapping at
         :param callback callback function of the parent layer that called self.try_apply
+        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
         """
         # DEBUG
         # print(self.name, self.input_shape, np.shape(ins))
+
+        #uses the class attribute, if it is not None.
+        if self.r_init is not None:
+            r_init = self.r_init
 
         # aggregate inputs
         if self.input_vals is None:
@@ -276,6 +283,7 @@ class ReplacementLayer():
         :param ins: input(s) of this layer
         :param neuron_selection: neuron_selection parameter (see try_apply)
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
+        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
 
         :returns output of layer function + any wrappers that were defined and are needed in explain_hook
 
@@ -435,7 +443,9 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
     :param layer_names: None or list of layer names whose explanations should be returned.
                         Can be used to obtain intermediate explanations or explanations of multiple layers
     :param stop_mapping_at_layers: list of layers to stop mapping at ("output" layers)
-    :param r_init: reverse initialization value. Value with with explanation is initialized.
+    :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+                   This parameter, however, may be overwritten by a constant for specific explanation methods.
+                   For these Explanation methods, this parameter may not have any effect
 
     :returns list of explanations. Each explanation in this list (np.array) corresponds to one layer.
              The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.

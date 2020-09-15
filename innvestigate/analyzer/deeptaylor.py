@@ -28,7 +28,7 @@ __all__ = [
 ###############################################################################
 ###############################################################################
 
-
+#TODO: tf2.*
 class DeepTaylor(base.ReverseAnalyzerBase):
     """DeepTaylor for ReLU-networks with unbounded input
 
@@ -159,7 +159,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         return super(DeepTaylor, self)._prepare_model(
             model_with_positive_output)
 
-
+#TODO: tf2.*
 class BoundedDeepTaylor(DeepTaylor):
     """DeepTaylor for ReLU-networks with bounded input
 

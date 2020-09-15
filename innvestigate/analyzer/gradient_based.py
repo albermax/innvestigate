@@ -33,58 +33,19 @@ __all__ = [
 ]
 
 
-class GradientHeadMapReplacementLayer(reverse_map.GradientReplacementLayer):
-    """
-    Simple extension of GradientReplacementLayer
-    * Explains by computing gradients of outputs w.r.t. inputs of layer
-    * Slight difference to reverse_map.GradientReplacementLayer:
-      A mapping may be applied to the las layer output before backpropagation
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(GradientHeadMapReplacementLayer, self).__init__(*args, **kwargs)
-
-    def _head_mapping(self, outs):
-        """
-        headmapping to apply to outputs
-        """
-        return outs
-
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers):
-        """
-        only change for this subclass: applying the headmapping
-        """
-        with tf.GradientTape(persistent=True) as tape:
-            tape.watch(ins)
-            outs = self.layer_func(ins)
-
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
-                outs = self._neuron_select(outs, neuron_selection)
-                outs = self._head_mapping(outs)
-
-        return outs, tape
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-class GradientOnesReplacementLayer(GradientHeadMapReplacementLayer):
+class GradientOnesReplacementLayer(reverse_map.GradientReplacementLayer):
     """
     Simple extension of GradientHeadMapReplacementLayer
     * Explains by computing gradients of outputs w.r.t. inputs of layer
-    * Maps outputs to ones
+    * Headmapping equals one
     """
 
     def __init__(self, *args, **kwargs):
-        super(GradientOnesReplacementLayer, self).__init__(*args, **kwargs)
-
-    def _head_mapping(self, outs):
-        """
-        headmapping to apply to outputs
-        """
-        return ilayers.SafeDivide()([outs, outs])
+        super(GradientOnesReplacementLayer, self).__init__(*args, **kwargs, r_init_constant=1)
 
 class Gradient(base.ReverseAnalyzerBase):
     """Gradient analyzer.
@@ -319,7 +280,6 @@ class GuidedBackpropReplacementLayer(reverse_map.GradientReplacementLayer):
                 ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
         return ret
 
-#TODO: tf2.0
 class GuidedBackprop(base.ReverseAnalyzerBase):
     """Guided backprop analyzer.
 
@@ -394,7 +354,7 @@ class SmoothGrad(wrapper.GaussianSmoother):
 
     def __init__(self, model, augment_by_n=64, **kwargs):
         subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode", "postprocess"]
+        kwargs_keys = ["postprocess"]
         for key in kwargs_keys:
             if key in kwargs:
                 subanalyzer_kwargs[key] = kwargs.pop(key)
