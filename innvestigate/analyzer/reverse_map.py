@@ -165,12 +165,12 @@ class ReplacementLayer():
 
     def _head_mapping(self, Ys, model_output_value=None):
         """
-                Sets the model output to a fixed value. Used as initialization
-                for the explanation method.
+        Sets the model output to a fixed value. Used as initialization
+        for the explanation method.
 
-                :param model_output_value: output value of model / initialized value for explanation method
+        :param model_output_value: output value of model / initialized value for explanation method
 
-                """
+        """
         if model_output_value != None:
             Ys = self._toNumber(Ys, model_output_value)
         elif model_output_value == None:
