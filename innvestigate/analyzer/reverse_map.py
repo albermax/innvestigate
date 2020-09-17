@@ -48,10 +48,13 @@ class ReplacementLayer():
             self.output_shape = [self.output_shape]
 
         self.input_vals = None
+        self.original_output_vals = None
         self.reversed_output_vals = None
         self.callbacks = None
         self.hook_vals = None
         self.explanation = None
+
+        self.forward_after_stopping = True
 
     def try_explain(self, reversed_outs):
         """
@@ -121,13 +124,21 @@ class ReplacementLayer():
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
         :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
         """
+        #print(self.name)
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
             self.try_explain(None)
         elif self.name in stop_mapping_at_layers:
             self.try_explain(None)
-           # for layer_n in self.layer_next:
-           #     layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+
+            if self.forward_after_stopping:
+                #if the output was mapped, this restores the original for the forwarding
+                if self.original_output_vals is not None:
+                    Ys = self.original_output_vals
+                    self.original_output_vals = None
+
+                for layer_n in self.layer_next:
+                    layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
         else:
             # forward
             for layer_n in self.layer_next:
@@ -185,6 +196,10 @@ class ReplacementLayer():
 
     def _neuron_sel_and_head_map(self, Ys, neuron_selection=None, model_output_value=None):
 
+        #save original output
+        self.original_output_vals = Ys
+
+        #apply neuron selection and head mapping
         Ys = self._neuron_select(Ys, neuron_selection)
         Ys = self._head_mapping(Ys, model_output_value)
 

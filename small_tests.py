@@ -140,8 +140,8 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 
 model_cases = [
     #SimpleDense,
-    MultiIn,
-    MultiConnect,
+    #MultiIn,
+    #MultiConnect,
     VGG16,
     #VGG16_modified
 ]
@@ -165,19 +165,19 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
     #innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
-    innvestigate.analyzer.Gradient,
-    innvestigate.analyzer.InputTimesGradient,
-    innvestigate.analyzer.GuidedBackprop,
-    innvestigate.analyzer.Deconvnet,
+    #innvestigate.analyzer.Gradient,
+    #innvestigate.analyzer.InputTimesGradient,
+    #innvestigate.analyzer.GuidedBackprop,
+    #innvestigate.analyzer.Deconvnet,
 ]
 
 neuron_selection_cases = [
     None,
-    "max_activation",
-    "all",
-    0,
-    [0, 1, 2],
-    np.array([0, 1, 2])
+    #"max_activation",
+    #"all",
+    #0,
+    #[0, 1, 2],
+    #np.array([0, 1, 2])
 ]
 
 for model_case in model_cases:

@@ -342,7 +342,6 @@ class IntegratedGradients(wrapper.PathIntegrator):
 ###############################################################################
 ###############################################################################
 
-#TODO: tf2.0
 class SmoothGrad(wrapper.GaussianSmoother):
     """Smooth grad analyzer.
 

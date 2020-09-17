@@ -14,6 +14,7 @@ import tensorflow.keras.models as keras_models
 import tensorflow.keras.backend as K
 import numpy as np
 
+import tensorflow as tf
 from tensorflow.python.distribute import distribution_strategy_context
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import backend
@@ -120,7 +121,6 @@ class WrapperBase(base.AnalyzerBase):
 ###############################################################################
 ###############################################################################
 
-#TODO: tf2.*
 class AugmentReduceBase(WrapperBase):
     """Interface for wrappers that augment the input and reduce the analysis.
 
@@ -145,88 +145,60 @@ class AugmentReduceBase(WrapperBase):
         else:
             raise NotImplementedError("Keras-based subanalyzer required.")
 
-    def create_analyzer_model(self):
-        if not self._keras_based_augment_reduce:
-            return
-
-        self._subanalyzer.create_analyzer_model()
-
-        if self._subanalyzer._n_debug_output > 0:
-            raise Exception("No debug output at subanalyzer is supported.")
-
-        model = self._subanalyzer._analyzer_model
-        if None in model.input_shape[1:]:
-            raise ValueError("The input shape for the model needs "
-                             "to be fully specified (except the batch axis). "
-                             "Model input shape is: %s" % (model.input_shape,))
-
-        inputs = model.inputs[:self._subanalyzer._n_data_input]
-        extra_inputs = model.inputs[self._subanalyzer._n_data_input:]
-        # todo: check this, index seems not right.
-        #outputs = model.outputs[:self._subanalyzer._n_data_input]
-        extra_outputs = model.outputs[self._subanalyzer._n_data_input:]
-
-        if len(extra_outputs) > 0:
-            raise Exception("No extra output is allowed "
-                            "with this wrapper.")
-
-        new_inputs = iutils.to_list(self._augment(inputs))
-        # print(type(new_inputs), type(extra_inputs))
-        tmp = iutils.to_list(model(new_inputs+extra_inputs))
-        new_outputs = iutils.to_list(self._reduce(tmp))
-        new_constant_inputs = self._keras_get_constant_inputs()
-
-        new_model = keras_models.Model(
-            inputs=inputs+extra_inputs+new_constant_inputs,
-            outputs=new_outputs+extra_outputs)
-        self._subanalyzer._analyzer_model = new_model
-
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:
-            if not hasattr(self._subanalyzer, "_analyzer_model"):
-                self.create_analyzer_model()
+            neuron_selection = kwargs.pop("neuron_selection", "max_activation")
 
-            ns_mode = self._neuron_selection_mode
-            if ns_mode in ["max_activation", "index"]:
-                if ns_mode == "max_activation":
-                    tmp = self._subanalyzer._model.predict(X)
-                    indices = np.argmax(tmp, axis=1)
-                else:
-                    if len(args):
-                        args = list(args)
-                        indices = args.pop(0)
-                    else:
-                        indices = kwargs.pop("neuron_selection")
+            if isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray):
+                neuron_selection = np.stack([neuron_selection for _ in range(self._augment_by_n)], axis=None)
+            else:
+                indices = kwargs.pop("neuron_selection")
 
                 # broadcast to match augmented samples.
-                indices = np.repeat(indices, self._augment_by_n)
+                indices = np.repeat(indices, self._augment_by_n, axis=0)
 
                 kwargs["neuron_selection"] = indices
-            return self._subanalyzer.analyze(X, *args, **kwargs)
+
+            if not hasattr(self._subanalyzer, "_analyzer_model"):
+                self._subanalyzer.create_analyzer_model()
+
+            X = self._augment(X)
+            ret = self._subanalyzer.analyze(X, *args, **kwargs)
+            ret = self._reduce(ret)
+
+            return ret
         else:
             raise DeprecationWarning("Not supported anymore.")
 
-    def _keras_get_constant_inputs(self):
-        return list()
-
     def _augment(self, X):
-        repeat = ilayers.Repeat(self._augment_by_n, axis=0)
-        return [repeat(x) for x in iutils.to_list(X)]
+
+        # X is array-like
+
+        ins, rev = self._subanalyzer._analyzer_model
+        if len(ins) == 1:
+            repeat = np.repeat(X, self._augment_by_n, axis=0)
+        else:
+            repeat = []
+            for x in X:
+                repeat.append(np.repeat(x, self._augment_by_n, axis=0))
+
+        return repeat
 
     def _reduce(self, X):
-        X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
-        reshape = [ilayers.Reshape((-1, self._augment_by_n)+shape[1:])
-                   for shape in X_shape]
-        mean = ilayers.Mean(axis=1)
 
-        return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
+        # X is a dict for each layer that is explained
+
+        means = {}
+        for key in X.keys():
+            means[key] = np.mean(X[key].reshape((-1, self._augment_by_n) + tuple(X[key].shape[1:])), axis=1).squeeze()
+
+        return means
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-#TODO: tf2.*
 class GaussianSmoother(AugmentReduceBase):
     """Wrapper that adds noise to the input and averages over analyses
 
@@ -245,8 +217,16 @@ class GaussianSmoother(AugmentReduceBase):
 
     def _augment(self, X):
         tmp = super(GaussianSmoother, self)._augment(X)
-        noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
-        return [noise(x) for x in tmp]
+        ins, rev = self._subanalyzer._analyzer_model
+        if len(ins) == 1:
+            noise = np.random.normal(0, 0.1, X.shape)
+            ret = X + noise
+        else:
+            ret = []
+            for x in X:
+                noise = np.random.normal(0, 0.1, x.shape)
+                ret.append(x + noise)
+        return ret
 
 
 ###############################################################################
