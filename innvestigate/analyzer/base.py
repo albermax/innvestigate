@@ -311,36 +311,37 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _postprocess_analysis(self, hm):
         return hm
 
-    def getIntermediate(self, layer_names):
+
+    def get_intermediate(self, layer_names=None):
 
         """
         Get intermediate results of explanation.
         explanation of layer i has shape equal to input_shape of layer i.
 
-        param layer_names: list of strings containing the names of the layers
+        returns a dictionary
+
+        param layer_names: list of strings containing the names of the layers.
+                            if layer_names == None or == "all", explanations of all layers are returned.
 
             """
 
         if not hasattr(self, "_analyzer_model"):
             raise AttributeError("You have to analyze the model before intermediate results are available!")
 
-        if not isinstance(layer_names, list):
+        if isinstance(layer_names, list):
+            for l in layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("layer_names has to be a list of strings")
+
+        # not list and not None
+        elif layer_names is not None:
             raise AttributeError("layer_names has to be a list of strings")
 
-        for l in layer_names:
-            if not isinstance(l, str):
-                raise AttributeError("layer_names has to be a list of strings")
+        input_layers, reverse_layers = self._analyzer_model
 
-        _, reverse_layers = self._analyzer_model
-
-        # obtain explanations for specified layers
-        hm = []
-        for name in layer_names:
-            layer = [layer for layer in reverse_layers if layer.name == name]
-            if len(layer) > 0:
-                if layer[0].explanation == None:
-                    raise AttributeError("layer has to be analyzed before")
-                hm.append(layer[0].explanation.numpy())
+        if layer_names is None:
+            layer_names = "all"
+        hm = reverse_map.get_intermediate(input_layers, reverse_layers, layer_names)
 
         return hm
 
