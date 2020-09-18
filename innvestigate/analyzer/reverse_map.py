@@ -130,7 +130,7 @@ class ReplacementLayer():
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
             self.try_explain(None)
-        elif self.name in stop_mapping_at_layers:
+        elif stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers:
             self.try_explain(None)
 
             if self.forward_after_stopping:
@@ -485,7 +485,7 @@ class ReverseModel():
         reverse_ins, reverse_layers = self._reverse_model
 
         warnings.simplefilter("always")
-        if len(stop_mapping_at_layers) > 0 and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
+        if stop_mapping_at_layers is not None and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
             warnings.warn("You are specifying layers to stop forward pass at, and also neuron-selecting by index. Please make sure the corresponding shapes fit together!")
 
         if not isinstance(Xs, tf.Tensor):
