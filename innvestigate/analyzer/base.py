@@ -292,7 +292,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=[], r_init=None, f_init=None):
         """
         Takes an array-like input X and explains it. Also applies postprocessing to the explanation
 
