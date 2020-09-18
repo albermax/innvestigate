@@ -77,7 +77,7 @@ class ZRule(reverse_map.ReplacementLayer):
             Zs = self._layer_wo_act(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs = self._neuron_sel_and_head_map(Zs, neuron_selection, r_init)
 
@@ -142,7 +142,7 @@ class EpsilonRule(reverse_map.ReplacementLayer):
             Zs = self._layer_wo_act(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs = self._neuron_sel_and_head_map(Zs, neuron_selection, r_init)
 
@@ -212,7 +212,7 @@ class WSquareRule(reverse_map.ReplacementLayer):
             Zs = self._layer_wo_act_b(ones)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Ys = self._neuron_sel_and_head_map(Ys, neuron_selection, r_init)
                 # Compute the sum of the weights.
@@ -342,7 +342,7 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
             Zs_neg_p = self._layer_wo_act_positive(ins_neg)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs_pos = self._neuron_sel_and_head_map(Zs_pos, neuron_selection, r_init)
                 Zs_neg = self._neuron_sel_and_head_map(Zs_neg, neuron_selection, r_init)
@@ -515,7 +515,7 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
             Zs_neg_p = self._layer_wo_act_positive(ins_neg)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs_pos = self._neuron_sel_and_head_map(Zs_pos, neuron_selection, r_init)
                 Zs_neg = self._neuron_sel_and_head_map(Zs_neg, neuron_selection, r_init)
@@ -675,7 +675,7 @@ class BoundedRule(reverse_map.ReplacementLayer):
             B = self._layer_wo_act_positive(low)
             C = self._layer_wo_act_negative(high)
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 A = self._neuron_sel_and_head_map(A, neuron_selection, r_init)
                 B = self._neuron_sel_and_head_map(B, neuron_selection, r_init)
@@ -766,7 +766,7 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
             # Get activations.
             Zs = self._layer_wo_act_b_positive(ins)
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs = self._neuron_sel_and_head_map(Zs, neuron_selection, r_init)
 
@@ -862,7 +862,7 @@ class GammaRule(reverse_map.ReplacementLayer):
             Zs_act_pos = self._layer_wo_act_positive(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs_pos = self._neuron_sel_and_head_map(Zs_pos, neuron_selection, r_init)
                 Zs_act = self._neuron_sel_and_head_map(Zs_act, neuron_selection, r_init)
@@ -946,7 +946,7 @@ class BatchNormalizationReverseRule(reverse_map.ReplacementLayer):
         outs = self.layer_func(ins)
 
         # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
             outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
 
         return outs
@@ -1015,16 +1015,13 @@ class AddReverseRule(reverse_map.ReplacementLayer):
             Zs = self._layer_wo_act(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs = self._neuron_sel_and_head_map(Zs, neuron_selection, r_init)
 
         return outs, Zs, tape
 
     def explain_hook(self, ins, reversed_outs, args):
-
-        if len(self.input_shape) > 1:
-            raise ValueError("This Layer should only have one input!")
 
         # the outputs of the pooling operation at each location is the sum of its inputs.
         # the forward message must be known in this case, and are the inputs for each pooling thing.
@@ -1041,14 +1038,22 @@ class AddReverseRule(reverse_map.ReplacementLayer):
             tmp = [ilayers.SafeDivide()([r, Zs]) for r in reversed_outs]
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
-            ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
+            if len(self.input_shape) > 1:
+                tmp2 = [[tape.gradient(Zs, i, output_gradients=t) for t in tmp] for i in ins]
+                ret = [keras_layers.Add()([keras_layers.Multiply()([i, t]) for t in tmp2[idx]]) for idx, i in enumerate(ins)]
+            else:
+                tmp2 = [tape.gradient(Zs, ins, output_gradients=t) for t in tmp]
+                ret = keras_layers.Add()([keras_layers.Multiply()([ins, t]) for t in tmp2])
         else:
             tmp = ilayers.SafeDivide()([reversed_outs, Zs])
             # Propagate the relevance to input neurons
             # using the gradient.
-            tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
-            ret = keras_layers.Multiply()([ins, tmp2])
+            if len(self.input_shape) > 1:
+                tmp2 = [tape.gradient(Zs, i, output_gradients=tmp) for i in ins]
+                ret = [keras_layers.Multiply()([i, tmp2[idx]]) for idx, i in enumerate(ins)]
+            else:
+                tmp2 = tape.gradient(Zs, ins, output_gradients=tmp)
+                ret = keras_layers.Multiply()([ins, tmp2])
 
         return ret
 
@@ -1068,7 +1073,7 @@ class AveragePoolingReverseRule(reverse_map.ReplacementLayer):
             Zs = self._layer_wo_act(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Zs = self._neuron_sel_and_head_map(Zs, neuron_selection, r_init)
 

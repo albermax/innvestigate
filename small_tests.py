@@ -79,6 +79,21 @@ def MultiConnect():
 
     return inp, model, "MultiConnect"
 
+def MultiAdd():
+    inputs = tf.keras.Input(shape=(10,))
+    x1 = keras.layers.Dense(120, use_bias=False)(inputs)
+    x2 = keras.layers.Dense(190, use_bias=False)(inputs)
+    x = keras.layers.Concatenate(axis=-1)([x1, x2])
+    x = keras.layers.Dense(240, use_bias=False)(x)
+    x1 = keras.layers.Dense(120, use_bias=False)(inputs)
+    x2 = keras.layers.Dense(120, use_bias=False)(inputs)
+    x = keras.layers.Add()([x1, x2])
+    x = keras.layers.Dense(10, use_bias=False, activation="softmax")(x)
+    model = tf.keras.Model(inputs=inputs, outputs=x)
+    inp = np.random.rand(3, 10)
+
+    return inp, model, "MultiAdd"
+
 def VGG16():
     model = tf.keras.applications.VGG16(
         include_top=True,
@@ -142,7 +157,8 @@ model_cases = [
     #SimpleDense,
     #MultiIn,
     #MultiConnect,
-    VGG16,
+    MultiAdd,
+    #VGG16,
     #VGG16_modified
 ]
 
@@ -194,7 +210,8 @@ for model_case in model_cases:
             tf.keras.backend.clear_session()
 
 
-            print("Explanation Shape:", np.shape(R_new))
+            #print("Explanation Shape:", np.shape(R_new))
+            print(R_new)
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

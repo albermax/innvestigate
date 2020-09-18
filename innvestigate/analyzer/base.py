@@ -247,6 +247,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                  **kwargs):
 
         self._allow_lambda_layers = allow_lambda_layers
+        self._analyzed = False
         self._add_model_check(
             lambda layer: (not self._allow_lambda_layers and
                            isinstance(layer, keras_layers.Lambda)),
@@ -291,19 +292,53 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[], r_init=None):
+    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
-        Same interface as :class:`Analyzer` besides
+        Takes an array-like input X and explains it. Also applies postprocessing to the explanation
 
-        :param neuron_selection: Chosen neuron(s).
-        :param r_init: reverse initialization value as integer or float. Value with with explanation is initialized.
-                       If None the explanation is initialized with original model output values.
+        :param X: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
+        :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
+                - None or "all"
+                - "max_activation"
+                - int
+                - list or np.array of int, with length equal to batch size
+        :param explained_layer_names: None or "all" or list of layer names whose explanations should be returned.
+                                      Can be used to obtain intermediate explanations or explanations of multiple layers
+                                      if layer names provided, a dictionary is returned
+        :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
+        :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
+        :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
+
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
         """
-        #TODO: check X, neuron_selection, and layer_selection for validity
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
-        inp, all = self._analyzer_model
-        ret = reverse_map.apply_reverse_map(X, inp, all, neuron_selection=neuron_selection, layer_names=layer_names, stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
+
+        if isinstance(explained_layer_names, list):
+            for l in explained_layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+        elif explained_layer_names is not None:
+            # not list and not None
+            raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+
+        if isinstance(stop_mapping_at_layers, list):
+            for l in stop_mapping_at_layers:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
+        elif stop_mapping_at_layers is not None:
+            # not list and not None
+            raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
+
+        ret = reverse_map.apply_reverse_map(X,
+                                            self._analyzer_model,
+                                            neuron_selection=neuron_selection,
+                                            explained_layer_names=explained_layer_names,
+                                            stop_mapping_at_layers=stop_mapping_at_layers,
+                                            r_init=r_init,
+                                            f_init = f_init
+                                            )
+        self._analyzed=True
         ret = self._postprocess_analysis(ret)
 
         return ret
@@ -312,36 +347,35 @@ class AnalyzerNetworkBase(AnalyzerBase):
         return hm
 
 
-    def get_intermediate(self, layer_names=None):
+    def get_explanations(self, explained_layer_names=None):
 
         """
-        Get intermediate results of explanation.
+        Get results of (previously computed) explanation.
         explanation of layer i has shape equal to input_shape of layer i.
 
-        returns a dictionary
+        :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
+                            if explained_layer_names == 'all', explanations of all layers are returned.
 
-        param layer_names: list of strings containing the names of the layers.
-                            if layer_names == None or == "all", explanations of all layers are returned.
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
 
-            """
+        """
 
         if not hasattr(self, "_analyzer_model"):
+            self.create_analyzer_model()
+
+        if not self._analyzed:
             raise AttributeError("You have to analyze the model before intermediate results are available!")
 
-        if isinstance(layer_names, list):
-            for l in layer_names:
+        if isinstance(explained_layer_names, list):
+            for l in explained_layer_names:
                 if not isinstance(l, str):
-                    raise AttributeError("layer_names has to be a list of strings")
+                    raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+        elif explained_layer_names is not None:
+            # not list and not None
+            raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
 
-        # not list and not None
-        elif layer_names is not None:
-            raise AttributeError("layer_names has to be a list of strings")
-
-        input_layers, reverse_layers = self._analyzer_model
-
-        if layer_names is None:
-            layer_names = "all"
-        hm = reverse_map.get_intermediate(input_layers, reverse_layers, layer_names)
+        hm = reverse_map.get_explanations(self._analyzer_model, explained_layer_names)
+        hm = self._postprocess_analysis(hm)
 
         return hm
 

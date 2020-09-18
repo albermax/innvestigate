@@ -25,7 +25,8 @@ class ReplacementLayer():
 
     :param layer: Layer (of base class tensorflow.keras.layers.Layer) of to wrap
     :param layer_next: List of Layers in the network that receive output of layer (=child layers)
-    :param r_init_constant: If not None, defines a constant head_mapping
+    :param r_init_constant: If not None, defines a constant output mapping
+    :param f_init_constant: If not None, defines a constant activation mapping
 
     This is just a base class. To extend this for specific XAI methods,
     - wrap_hook()
@@ -33,12 +34,13 @@ class ReplacementLayer():
     should be overwritten accordingly
 
     """
-    def __init__(self, layer, layer_next=[], r_init_constant=None):
+    def __init__(self, layer, layer_next=[], r_init_constant=None, f_init_constant=None):
 
         self.layer_func = layer
         self.layer_next = layer_next
         self.name = layer.name
         self.r_init = r_init_constant
+        self.f_init = f_init_constant
 
         self.input_shape = layer.input_shape
         if not isinstance(self.input_shape, list):
@@ -144,7 +146,21 @@ class ReplacementLayer():
             for layer_n in self.layer_next:
                 layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers, r_init)
 
-    #@tf.function #this is not faster
+    @tf.custom_gradient
+    def _toNumber(self, X, value):
+        """
+        Helper function to set a Tensor to a fixed value while having a gradient of "value"
+
+        """
+
+        y = tf.constant(value, dtype=tf.float32, shape=X.shape)
+
+        def grad(dy, variables=None):  # variables=None and None as output necessary as toNumber requires two arguments
+
+            return dy * tf.ones(X.shape) * value, None
+
+        return y, grad
+
     def _neuron_select(self, Ys, neuron_selection):
         """
         Performs neuron_selection on Ys
@@ -163,21 +179,6 @@ class ReplacementLayer():
         else:
             Ys = K.max(Ys, axis=1, keepdims=True)
         return Ys
-
-    @tf.custom_gradient
-    def _toNumber(self, x, value):
-        """
-        Helper function to set a Tensor to a fixed value while having a gradient of "value"
-
-        """
-
-        y = tf.constant(value, dtype=tf.float32, shape=x.shape)
-
-        def grad(dy, variables=None):  # variables=None and None as output necessary as toNumber requires two arguments
-
-            return dy * tf.ones(x.shape) * value, None
-
-        return y, grad
 
     def _head_mapping(self, Ys, model_output_value=None):
         """
@@ -205,7 +206,7 @@ class ReplacementLayer():
 
         return Ys
 
-    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
         Tries to apply own forward pass:
         * Aggregates inputs and callbacks of all parent layers
@@ -219,9 +220,10 @@ class ReplacementLayer():
             - "max_activation"
             - int
             - list or np.array of int, with length equal to batch size
-        :param stop_mapping_at_layers: list of layers to stop mapping at
+        :param stop_mapping_at_layers: None or list of layers to stop mapping at
         :param callback callback function of the parent layer that called self.try_apply
-        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+        :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+        :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
         """
         # DEBUG
         # print(self.name, self.input_shape, np.shape(ins))
@@ -253,7 +255,7 @@ class ReplacementLayer():
                 input_vals = input_vals[0]
 
             # adapt neuron_selection param for max efficiency
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 if neuron_selection is None:
                     neuron_selection_tmp = None
                 elif isinstance(neuron_selection, str) and neuron_selection == "all":
@@ -299,7 +301,7 @@ class ReplacementLayer():
 
         :param ins: input(s) of this layer
         :param neuron_selection: neuron_selection parameter (see try_apply)
-        :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
+        :param stop_mapping_at_layers: None or stop_mapping_at_layers parameter (see try_apply)
         :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
 
         :returns output of layer function + any wrappers that were defined and are needed in explain_hook
@@ -309,7 +311,7 @@ class ReplacementLayer():
         outs = self.layer_func(ins)
 
         # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
             outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
 
         return outs
@@ -358,7 +360,7 @@ class GradientReplacementLayer(ReplacementLayer):
             outs = self.layer_func(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
 
         return outs, tape
@@ -445,28 +447,28 @@ def reverse_map(
 
     return input_layers, replacement_layers
 
-def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_activation", layer_names=None, stop_mapping_at_layers=[], r_init=None):
+def apply_reverse_map(Xs, analyzer_model, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
     """
     Computes an explanation by applying a reversed model
 
     :param Xs: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
-    :param reverse_ins: list of input ReplacementLayer(s)
-    :param reverse_layers: list of all ReplacementLayer(s) denoting the reversed model
+    :param analyzer_model: tuple of the following lists: (reverse_ins: list of input ReplacementLayer(s), reverse_layers: list of all ReplacementLayer(s) denoting the reversed model)
     :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
             - None or "all"
             - "max_activation"
             - int
             - list or np.array of int, with length equal to batch size
-    :param layer_names: None or list of layer names whose explanations should be returned.
-                        Can be used to obtain intermediate explanations or explanations of multiple layers
-                        if layer names provided, a dictionary is returned
-    :param stop_mapping_at_layers: list of layers to stop mapping at ("output" layers)
-    :param r_init: reverse initialization value. Value with with explanation is initialized.
+    :param explained_layer_names: None or "all" or list of layer names whose explanations should be returned.
+                                  Can be used to obtain intermediate explanations or explanations of multiple layers
+    :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
+    :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
+    :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
 
-    :returns list of explanations. Each explanation in this list (np.array) corresponds to one layer.
-             The list either contains the explanations of all input layers if layer_names=None, or the explanations for all layers in layer_names otherwise.
+    :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
     """
     # shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
+
+    reverse_ins, reverse_layers = analyzer_model
 
     warnings.simplefilter("always")
     if len(stop_mapping_at_layers) > 0 and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
@@ -482,34 +484,37 @@ def apply_reverse_map(Xs, reverse_ins, reverse_layers, neuron_selection="max_act
     if len(reverse_ins) == 1:
         # single input network
         reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection,
-                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
+                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
 
     else:
         # multiple inputs. reshape to (n_ins, batch_size, ...)
         for i, reverse_in in enumerate(reverse_ins):
             reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection,
-                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init)
+                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
 
     # obtain explanations for specified layers
-    hm = get_intermediate(reverse_ins, reverse_layers, layer_names)
+    hm = get_explanations(analyzer_model, explained_layer_names)
 
     return hm
 
 
-def get_intermediate(reverse_ins, reverse_layers, layer_names=None):
+def get_explanations(analyzer_model, explained_layer_names=None):
     """
-            Get intermediate results of explanation.
-            explanation of layer i has shape equal to input_shape of layer i.
+    Get results of (previously computed) explanation.
+    explanation of layer i has shape equal to input_shape of layer i.
 
-            returns a dictionary
+    :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
+                        if explained_layer_names == 'all', explanations of all layers are returned.
 
-            param layer_names: list of strings containing the names of the layers.
-                                if layer_names == 'all', explanations of all layers are returned.
+    :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
 
-                """
+    """
+
+    reverse_ins, reverse_layers = analyzer_model
+
     hm = {}
 
-    if layer_names is None:
+    if explained_layer_names is None:
         # just explain input layers
         for layer in reverse_ins:
             hm[layer.name] = layer.explanation.numpy()
@@ -517,15 +522,15 @@ def get_intermediate(reverse_ins, reverse_layers, layer_names=None):
         return hm
 
     # output everything possible
-    if layer_names is "all":
-        for l in reverse_layers:
-            if l.explanation is not None:
-                hm[l.name] = l.explanation.numpy()
+    if explained_layer_names is "all":
+        for layer in reverse_layers:
+            if layer.explanation is not None:
+                hm[layer.name] = layer.explanation.numpy()
 
         return hm
 
     # otherwise, obtain explanations for specified layers
-    for name in layer_names:
+    for name in explained_layer_names:
         layer = [layer for layer in reverse_layers if layer.name == name]
         if len(layer) > 0:
             if layer[0].explanation is None:

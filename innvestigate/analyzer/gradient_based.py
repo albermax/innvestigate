@@ -188,7 +188,7 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
             Ys = self._layer_wo_relu(ins)
 
             # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or self.name in stop_mapping_at_layers:
+            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
                 Ys = self._neuron_sel_and_head_map(Ys, neuron_selection, r_init)
 
