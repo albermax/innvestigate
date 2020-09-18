@@ -71,14 +71,15 @@ class Gradient(base.ReverseAnalyzerBase):
         return GradientOnesReplacementLayer
 
     def _postprocess_analysis(self, hm):
-        ret = super(Gradient, self)._postprocess_analysis(hm)
+        hm = super(Gradient, self)._postprocess_analysis(hm)
 
-        if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
-        elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+        for key in hm.keys():
+            if self._postprocess == "abs":
+                hm[key] = ilayers.Abs()(hm[key]).numpy()
+            elif self._postprocess == "square":
+                hm[key] = ilayers.Square()(hm[key]).numpy()
 
-        return iutils.to_list(ret)
+        return hm
 
 
 ###############################################################################

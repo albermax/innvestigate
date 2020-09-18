@@ -389,153 +389,174 @@ class GradientReplacementLayer(ReplacementLayer):
         return ret
 
 
-def reverse_map(
-        model,
-        reverse_mappings,
-        default_reverse_mapping,
-        ):
+class ReverseModel():
     """
-    Builds the reverse_map by wrapping network layer(s) into ReplacementLayer(s)
+    Defines a ReverseModel
 
-    :param model: model to be analyzed
-    :param reverse_mappings: mapping layer->reverse mapping (ReplacementLayer or some subclass thereof)
-    :param default_reverse_mapping: ReplacementLayer or some subclass thereof; default mapping to use
+    ReverseModels are built from ReplacementLayer subclasses. A ReverseModel is defined via a list of Input ReplacementLayers (the input layers of the model)
+            and ReplacementLayers (the whole model)
 
-    :returns reversed "model" as a list of input layers and a list of wrapped layers
+    Offers methods to
+        - build
+        - apply
+        - get precomputed explanations from
+        - save
+        - load
+    the ReverseModel
     """
 
-    #build model that is to be analyzed
-    layers = kgraph.get_model_layers(model)
+    def __init__(self, model, reverse_mappings, default_reverse_mapping):
+        self.build(model, reverse_mappings, default_reverse_mapping)
 
-    # set all replacement layers
-    replacement_layers = []
-    for layer in layers:
-        layer_next = []
-        wrapper_class = reverse_mappings(layer)
-        if wrapper_class is None:
-            wrapper_class = default_reverse_mapping(layer)
+    def build(self, model, reverse_mappings, default_reverse_mapping):
+        """
+        Builds the ReverseModel by wrapping keras network layer(s) into ReplacementLayer(s)
 
-        if not issubclass(wrapper_class, ReplacementLayer):
-            raise ValueError("Reverse Mappings should be an instance of ReplacementLayer")
+        :param model: tf.keras model to be replaced
+        :param reverse_mappings: mapping layer->reverse mapping (ReplacementLayer or some subclass thereof)
+        :param default_reverse_mapping: ReplacementLayer or some subclass thereof; default mapping to use
 
-        replacement_layers.append(wrapper_class(layer, layer_next))
+        :returns -
+        """
 
-    # connect graph structure
-    for layer in replacement_layers:
-        for layer2 in replacement_layers:
-            inp = layer2.layer_func.input
-            out = layer.layer_func.output
-            if not isinstance(inp, list):
-                inp = [inp]
-            if not isinstance(out, list):
-                out = [out]
+        # build model that is to be analyzed
+        layers = kgraph.get_model_layers(model)
 
-            for i in inp:
-                if id(i) in [id(o) for o in out] and id(layer) != id(layer2):
-                    layer.layer_next.append(layer2)
+        # set all replacement layers
+        replacement_layers = []
+        for layer in layers:
+            layer_next = []
+            wrapper_class = reverse_mappings(layer)
+            if wrapper_class is None:
+                wrapper_class = default_reverse_mapping(layer)
 
-    # find input access points
-    input_layers = []
-    for i, t in enumerate(model.inputs):
+            if not issubclass(wrapper_class, ReplacementLayer):
+                raise ValueError("Reverse Mappings should be an instance of ReplacementLayer")
+
+            replacement_layers.append(wrapper_class(layer, layer_next))
+
+        # connect graph structure
         for layer in replacement_layers:
-            if id(layer.layer_func.output) == id(t):
-                input_layers.append(layer)
-        if len(input_layers) < i + 1:
-            # if we did not append an input layer, we need to create one
-            # TODO case for no input layer here
-            raise ValueError("Temporary error. You need to explicitly define an Input Layer for now")
+            for layer2 in replacement_layers:
+                inp = layer2.layer_func.input
+                out = layer.layer_func.output
+                if not isinstance(inp, list):
+                    inp = [inp]
+                if not isinstance(out, list):
+                    out = [out]
 
-    return input_layers, replacement_layers
+                for i in inp:
+                    if id(i) in [id(o) for o in out] and id(layer) != id(layer2):
+                        layer.layer_next.append(layer2)
 
-def apply_reverse_map(Xs, analyzer_model, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
-    """
-    Computes an explanation by applying a reversed model
+        # find input access points
+        input_layers = []
+        for i, t in enumerate(model.inputs):
+            for layer in replacement_layers:
+                if id(layer.layer_func.output) == id(t):
+                    input_layers.append(layer)
+            if len(input_layers) < i + 1:
+                # if we did not append an input layer, we need to create one
+                # TODO case for no input layer here
+                raise ValueError("Temporary error. You need to explicitly define an Input Layer for now")
 
-    :param Xs: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
-    :param analyzer_model: tuple of the following lists: (reverse_ins: list of input ReplacementLayer(s), reverse_layers: list of all ReplacementLayer(s) denoting the reversed model)
-    :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
-            - None or "all"
-            - "max_activation"
-            - int
-            - list or np.array of int, with length equal to batch size
-    :param explained_layer_names: None or "all" or list of layer names whose explanations should be returned.
-                                  Can be used to obtain intermediate explanations or explanations of multiple layers
-    :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
-    :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
-    :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
+        self._reverse_model = (input_layers, replacement_layers)
 
-    :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
-    """
-    # shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
+    def apply(self, Xs, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        """
+        Computes an explanation by applying the ReverseModel
 
-    reverse_ins, reverse_layers = analyzer_model
+        :param Xs: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
+        :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
+                - None or "all"
+                - "max_activation"
+                - int
+                - list or np.array of int, with length equal to batch size
+        :param explained_layer_names: None or "all" or list of layer names whose explanations should be returned.
+                                      Can be used to obtain intermediate explanations or explanations of multiple layers
+        :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
+        :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
+        :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
 
-    warnings.simplefilter("always")
-    if len(stop_mapping_at_layers) > 0 and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
-        warnings.warn("You are specifying layers to stop forward pass at, and also neuron-selecting by index. Please make sure the corresponding shapes fit together!")
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
+        """
+        # shape of Xs: (n_ins, batch_size, ...), or (batch_size, ...)
 
-    if not isinstance(Xs, tf.Tensor):
-        try:
-            Xs = tf.constant(Xs)
-        except:
-            raise ValueError("Xs has not supported type ", type(Xs))
+        reverse_ins, reverse_layers = self._reverse_model
 
-    # format input & obtain explanations
-    if len(reverse_ins) == 1:
-        # single input network
-        reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection,
-                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
+        warnings.simplefilter("always")
+        if len(stop_mapping_at_layers) > 0 and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
+            warnings.warn("You are specifying layers to stop forward pass at, and also neuron-selecting by index. Please make sure the corresponding shapes fit together!")
 
-    else:
-        # multiple inputs. reshape to (n_ins, batch_size, ...)
-        for i, reverse_in in enumerate(reverse_ins):
-            reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection,
-                                 stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
+        if not isinstance(Xs, tf.Tensor):
+            try:
+                Xs = tf.constant(Xs)
+            except:
+                raise ValueError("Xs has not supported type ", type(Xs))
 
-    # obtain explanations for specified layers
-    hm = get_explanations(analyzer_model, explained_layer_names)
+        # format input & obtain explanations
+        if len(reverse_ins) == 1:
+            # single input network
+            reverse_ins[0].try_apply(tf.constant(Xs), neuron_selection=neuron_selection,
+                                     stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
 
-    return hm
+        else:
+            # multiple inputs. reshape to (n_ins, batch_size, ...)
+            for i, reverse_in in enumerate(reverse_ins):
+                reverse_in.try_apply(tf.constant(Xs[i]), neuron_selection=neuron_selection,
+                                     stop_mapping_at_layers=stop_mapping_at_layers, r_init=r_init, f_init=f_init)
 
-
-def get_explanations(analyzer_model, explained_layer_names=None):
-    """
-    Get results of (previously computed) explanation.
-    explanation of layer i has shape equal to input_shape of layer i.
-
-    :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
-                        if explained_layer_names == 'all', explanations of all layers are returned.
-
-    :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
-
-    """
-
-    reverse_ins, reverse_layers = analyzer_model
-
-    hm = {}
-
-    if explained_layer_names is None:
-        # just explain input layers
-        for layer in reverse_ins:
-            hm[layer.name] = layer.explanation.numpy()
+        # obtain explanations for specified layers
+        hm = self.get_explanations(explained_layer_names)
 
         return hm
 
-    # output everything possible
-    if explained_layer_names is "all":
-        for layer in reverse_layers:
-            if layer.explanation is not None:
+
+    def get_explanations(self, explained_layer_names=None):
+        """
+        Get results of (previously computed) explanation.
+        explanation of layer i has shape equal to input_shape of layer i.
+
+        :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
+                            if explained_layer_names == 'all', explanations of all layers are returned.
+
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
+
+        """
+
+        reverse_ins, reverse_layers = self._reverse_model
+
+        hm = {}
+
+        if explained_layer_names is None:
+            # just explain input layers
+            for layer in reverse_ins:
                 hm[layer.name] = layer.explanation.numpy()
 
+            return hm
+
+        # output everything possible
+        if explained_layer_names is "all":
+            for layer in reverse_layers:
+                if layer.explanation is not None:
+                    hm[layer.name] = layer.explanation.numpy()
+
+            return hm
+
+        # otherwise, obtain explanations for specified layers
+        for name in explained_layer_names:
+            layer = [layer for layer in reverse_layers if layer.name == name]
+            if len(layer) > 0:
+                if layer[0].explanation is None:
+                    raise AttributeError(f"layer <<{name}>> has to be analyzed before")
+                hm[name] = layer[0].explanation.numpy()
+
         return hm
 
-    # otherwise, obtain explanations for specified layers
-    for name in explained_layer_names:
-        layer = [layer for layer in reverse_layers if layer.name == name]
-        if len(layer) > 0:
-            if layer[0].explanation is None:
-                raise AttributeError(f"layer <<{name}>> has to be analyzed before")
-            hm[name] = layer[0].explanation.numpy()
+    #TODO
+    def save(self):
+        raise NotImplementedError
 
-    return hm
-
+    #TODO
+    def load(self):
+        raise NotImplementedError

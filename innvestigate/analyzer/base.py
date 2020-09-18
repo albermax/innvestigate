@@ -330,14 +330,13 @@ class AnalyzerNetworkBase(AnalyzerBase):
             # not list and not None
             raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
 
-        ret = reverse_map.apply_reverse_map(X,
-                                            self._analyzer_model,
-                                            neuron_selection=neuron_selection,
-                                            explained_layer_names=explained_layer_names,
-                                            stop_mapping_at_layers=stop_mapping_at_layers,
-                                            r_init=r_init,
-                                            f_init = f_init
-                                            )
+        ret = self._analyzer_model.apply(X,
+                                        neuron_selection=neuron_selection,
+                                        explained_layer_names=explained_layer_names,
+                                        stop_mapping_at_layers=stop_mapping_at_layers,
+                                        r_init=r_init,
+                                        f_init = f_init
+                                        )
         self._analyzed=True
         ret = self._postprocess_analysis(ret)
 
@@ -374,7 +373,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             # not list and not None
             raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
 
-        hm = reverse_map.get_explanations(self._analyzer_model, explained_layer_names)
+        hm = self._analyzer_model.get_explanations(explained_layer_names)
         hm = self._postprocess_analysis(hm)
 
         return hm
@@ -464,10 +463,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return reverse_map.GradientReplacementLayer
 
     def _create_analysis(self, model):
-        inp, rep = reverse_map.reverse_map(
+        analyzer_model = reverse_map.ReverseModel(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
         )
 
-        return inp, rep
+        return analyzer_model
