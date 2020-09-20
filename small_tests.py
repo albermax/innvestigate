@@ -154,34 +154,34 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    #SimpleDense,
-    #MultiIn,
-    #MultiConnect,
+    SimpleDense,
+    MultiIn,
+    MultiConnect,
     MultiAdd,
     #VGG16,
     #VGG16_modified
 ]
 
 analyzer_cases = [
-    #innvestigate.analyzer.ReverseAnalyzerBase,
+    innvestigate.analyzer.ReverseAnalyzerBase,
     innvestigate.analyzer.LRPZ,
-    #innvestigate.analyzer.LRPZIgnoreBias,
-    #innvestigate.analyzer.LRPZPlus,
-    #innvestigate.analyzer.LRPZPlusFast,
-    #innvestigate.analyzer.LRPEpsilon,
-    #innvestigate.analyzer.LRPEpsilonIgnoreBias,
-    #innvestigate.analyzer.LRPWSquare,
-    #innvestigate.analyzer.LRPFlat,
-    #innvestigate.analyzer.LRPAlpha2Beta1,
-    #innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias,
-    #innvestigate.analyzer.LRPAlpha1Beta0,
-    #innvestigate.analyzer.LRPAlpha1Beta0IgnoreBias,
-    #innvestigate.analyzer.LRPSequentialCompositeA,
-    #innvestigate.analyzer.LRPSequentialCompositeB,
-    #innvestigate.analyzer.LRPSequentialCompositeAFlat,
-    #innvestigate.analyzer.LRPSequentialCompositeBFlat,
+    innvestigate.analyzer.LRPZIgnoreBias,
+    innvestigate.analyzer.LRPZPlus,
+    innvestigate.analyzer.LRPZPlusFast,
+    innvestigate.analyzer.LRPEpsilon,
+    innvestigate.analyzer.LRPEpsilonIgnoreBias,
+    innvestigate.analyzer.LRPWSquare,
+    innvestigate.analyzer.LRPFlat,
+    innvestigate.analyzer.LRPAlpha2Beta1,
+    innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias,
+    innvestigate.analyzer.LRPAlpha1Beta0,
+    innvestigate.analyzer.LRPAlpha1Beta0IgnoreBias,
+    innvestigate.analyzer.LRPSequentialCompositeA,
+    innvestigate.analyzer.LRPSequentialCompositeB,
+    innvestigate.analyzer.LRPSequentialCompositeAFlat,
+    innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
-    #innvestigate.analyzer.Gradient,
+    innvestigate.analyzer.Gradient,
     #innvestigate.analyzer.InputTimesGradient,
     #innvestigate.analyzer.GuidedBackprop,
     #innvestigate.analyzer.Deconvnet,
@@ -189,11 +189,11 @@ analyzer_cases = [
 
 neuron_selection_cases = [
     None,
-    #"max_activation",
-    #"all",
-    #0,
-    #[0, 1, 2],
-    #np.array([0, 1, 2])
+    "max_activation",
+    "all",
+    0,
+    [0, 1, 2],
+    np.array([0, 1, 2])
 ]
 
 for model_case in model_cases:

@@ -816,7 +816,7 @@ class GammaRule(reverse_map.ReplacementLayer):
                  **kwargs):
 
         if gamma is None:
-            raise ValueError("Invalid gamma: " + str(gamma))
+            raise ValueError("Invalid gamma for LRP-Gamma Rule: " + str(gamma) + ". Please provide a valid gamma value")
 
         self._gamma = gamma
 

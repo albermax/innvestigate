@@ -171,6 +171,7 @@ class AugmentReduceBase(WrapperBase):
             raise DeprecationWarning("Not supported anymore.")
 
     def _augment(self, X):
+        #creates augment_by_n samples for each original sample in X
 
         # X is array-like
 
@@ -185,6 +186,7 @@ class AugmentReduceBase(WrapperBase):
         return repeat
 
     def _reduce(self, X):
+        #reduces the augmented samples to original number of samples in X
 
         # X is a dict for each layer that is explained
 
@@ -219,12 +221,12 @@ class GaussianSmoother(AugmentReduceBase):
         tmp = super(GaussianSmoother, self)._augment(X)
         ins, rev = self._subanalyzer._analyzer_model
         if len(ins) == 1:
-            noise = np.random.normal(0, 0.1, X.shape)
+            noise = np.random.normal(0, self._noise_scale, X.shape)
             ret = X + noise
         else:
             ret = []
             for x in X:
-                noise = np.random.normal(0, 0.1, x.shape)
+                noise = np.random.normal(0, self._noise_scale, x.shape)
                 ret.append(x + noise)
         return ret
 
@@ -233,7 +235,6 @@ class GaussianSmoother(AugmentReduceBase):
 ###############################################################################
 ###############################################################################
 
-#TODO: tf2.*
 class PathIntegrator(AugmentReduceBase):
     """Integrated the analysis along a path
 
@@ -254,66 +255,41 @@ class PathIntegrator(AugmentReduceBase):
     def __init__(self, subanalyzer, *args, **kwargs):
         steps = kwargs.pop("steps", 16)
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
-        self._keras_constant_inputs = None
         super(PathIntegrator, self).__init__(subanalyzer,
                                              *args,
                                              augment_by_n=steps,
                                              **kwargs)
 
-    def _keras_set_constant_inputs(self, inputs):
-        tmp = [K.variable(x) for x in inputs]
-
-        outputs = [ConstantInputLayer(input_tensor=x)._inbound_nodes[0].output_tensors for x in tmp]
-        outputs_reshaped = []
-        for out in outputs:
-            if len(out) == 1:
-                outputs_reshaped.append(out[0])
-            else:
-                outputs_reshaped.append(out)
-
-        self._keras_constant_inputs = outputs_reshaped
-
-    def _keras_get_constant_inputs(self):
-        return self._keras_constant_inputs
-
-    def _compute_difference(self, X):
-        if self._keras_constant_inputs is None:
-            tmp = kutils.broadcast_np_tensors_to_keras_tensors(
-                X, self._reference_inputs)
-            self._keras_set_constant_inputs(tmp)
-
-        reference_inputs = self._keras_get_constant_inputs()
-        return [keras_layers.Subtract()([x, ri])
-                for x, ri in zip(X, reference_inputs)]
+    def analyze(self, X, *args, **kwargs):
+        explained_layer_names = kwargs.pop("explained_layer_names", None)
+        if explained_layer_names is not None and len(explained_layer_names) > 0:
+            raise ValueError("Intermediate explanations are not available for Integrated Gradients")
 
     def _augment(self, X):
-        tmp = super(PathIntegrator, self)._augment(X)
-        tmp = [ilayers.Reshape((-1, self._augment_by_n)+K.int_shape(x)[1:])(x)
-               for x in tmp]
+        X = super(PathIntegrator, self)._augment(X)
 
-        difference = self._compute_difference(X)
-        self._keras_difference = difference
-        # Make broadcastable.
-        difference = [ilayers.Reshape((-1, 1)+K.int_shape(x)[1:])(x)
-                      for x in difference]
+        ins, rev = self._subanalyzer._analyzer_model
+        self.difference = {}
+        if len(ins) == 1:
+            difference = (X - self._reference_inputs)
+            self.difference[ins[0].name] = difference
+            step_size = difference / (self._augment_by_n-1)
+            ret = self._reference_inputs + step_size*np.arange(0, self._augment_by_n)
+        else:
+            ret = []
+            for i, x in enumerate(X):
+                difference = (x - self._reference_inputs)
+                self.difference[ins[i].name] = difference
+                step_size = difference / (self._augment_by_n - 1)
+                ret.append(self._reference_inputs + step_size * np.arange(0, self._augment_by_n))
 
-        # Compute path steps.
-        multiply_with_linspace = ilayers.MultiplyWithLinspace(
-            0, 1,
-            n=self._augment_by_n,
-            axis=1)
-        path_steps = [multiply_with_linspace(d) for d in difference]
-
-        reference_inputs = self._keras_get_constant_inputs()
-        ret = [keras_layers.Add()([x, p]) for x, p in zip(reference_inputs,
-                                                          path_steps)]
-        ret = [ilayers.Reshape((-1,)+K.int_shape(x)[2:])(x) for x in ret]
         return ret
 
     def _reduce(self, X):
-        tmp = super(PathIntegrator, self)._reduce(X)
-        difference = self._keras_difference
-        del self._keras_difference
+        X = super(PathIntegrator, self)._reduce(X)
 
-        return [keras_layers.Multiply()([x, d])
-                for x, d in zip(tmp, difference)]
+        ret = {}
+        for key in X.keys():
+            ret[key] = self.difference[key] * X[key]
+
+        return ret

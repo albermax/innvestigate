@@ -367,7 +367,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             return 1
 
         # current layer is part of stop mapping
-        if layer.name in stop_mapping_at_layers:
+        if stop_mapping_at_layers is not None and layer.name in stop_mapping_at_layers:
             # boolean signifies whether next layers are after a stop mapping layer
             after_stop_mapping = True
 
