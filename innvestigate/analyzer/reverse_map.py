@@ -56,7 +56,12 @@ class ReplacementLayer():
         self.hook_vals = None
         self.explanation = None
 
+        ###############
+        # TODO: remove one of the variables
         self.forward_after_stopping = True
+        self.base_forward_after_stopping = False
+        #############
+        self.reached_after_stop_mapping = None
 
     def try_explain(self, reversed_outs):
         """
@@ -133,6 +138,15 @@ class ReplacementLayer():
         elif self.name in stop_mapping_at_layers:
             self.try_explain(None)
 
+            #########################
+            # TODO: New Code, remove comments if it is good
+           # if self.base_forward_after_stopping:
+
+            #    for layer_n in self.layer_next:
+             #       layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+
+            #########################
+            # TODO: Leander checks if this code is still necessary
             if self.forward_after_stopping:
                 #if the output was mapped, this restores the original for the forwarding
                 if self.original_output_vals is not None:
@@ -141,6 +155,8 @@ class ReplacementLayer():
 
                 for layer_n in self.layer_next:
                     layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+            #############################
+
         else:
             # forward
             for layer_n in self.layer_next:
