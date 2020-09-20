@@ -7,3 +7,5 @@ from .analyzer import NotAnalyzeableModelException
 assert analyzer
 assert create_analyzer
 assert NotAnalyzeableModelException
+
+__version__ = '1.0.9'

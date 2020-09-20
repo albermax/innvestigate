@@ -44,7 +44,7 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.8",
+        version="1.0.9",
         description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
         classifiers=[

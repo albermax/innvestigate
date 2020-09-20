@@ -1,3 +1,12 @@
+## Version 1.0.9
+
+- BatchNormalization Layer compatible with LRP
+- EmbeddingLayer support
+- new Alpha-Beta-LRP-rules
+
+Additionally various PR were merged and bugs fixed,
+for details see [PR #222](https://github.com/albermax/innvestigate/pull/222)
+
 ## Version 1.0.8
 
 Bugfixes, increased code covervage, CI.
