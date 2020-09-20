@@ -94,6 +94,26 @@ def MultiAdd():
 
     return inp, model, "MultiAdd"
 
+def ConcatModel():
+    inputs = keras.layers.Input(shape=(224, 224, 3))
+    x = keras.layers.Conv2D(16, (5, 5), use_bias=False, activation="linear")(inputs)
+    x = keras.layers.AvgPool2D()(x)
+    x = keras.layers.Conv2D(32, (5, 5), use_bias=False, activation="linear")(x)
+    x = keras.layers.AvgPool2D()(x)
+    x = keras.layers.Flatten()(x)
+    x1 = keras.layers.Dense(120, use_bias=False)(x)
+    x2 = keras.layers.Dense(120, use_bias=False)(x)
+    x = keras.layers.Concatenate()([x1, x2])
+
+    x = keras.layers.Dense(10, use_bias=False, activation="softmax")(x)
+
+    model = keras.models.Model(inputs=inputs, outputs=x)
+    inp = np.random.rand(3, 224, 224, 3)
+
+    model.summary()
+
+    return inp, model, "ConcatModel"
+
 def VGG16():
     model = tf.keras.applications.VGG16(
         include_top=True,
@@ -144,7 +164,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
     a = time.time()
     ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection, stop_mapping_at_layers=None)
+    R = ana.analyze(input, neuron_selection=neuron_selection, stop_mapping_at_layers=["dense"])
     b = time.time()
     print("Time Passed: ", b - a)
     print("explanation: ", np.shape(R))
@@ -154,34 +174,35 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    SimpleDense,
-    MultiIn,
-    MultiConnect,
-    MultiAdd,
+    #SimpleDense,
+    #MultiIn,
+    #MultiConnect,
+    #MultiAdd,
+    ConcatModel,
     #VGG16,
     #VGG16_modified
 ]
 
 analyzer_cases = [
-    innvestigate.analyzer.ReverseAnalyzerBase,
+    #innvestigate.analyzer.ReverseAnalyzerBase,
     innvestigate.analyzer.LRPZ,
-    innvestigate.analyzer.LRPZIgnoreBias,
-    innvestigate.analyzer.LRPZPlus,
-    innvestigate.analyzer.LRPZPlusFast,
-    innvestigate.analyzer.LRPEpsilon,
-    innvestigate.analyzer.LRPEpsilonIgnoreBias,
-    innvestigate.analyzer.LRPWSquare,
-    innvestigate.analyzer.LRPFlat,
-    innvestigate.analyzer.LRPAlpha2Beta1,
-    innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias,
-    innvestigate.analyzer.LRPAlpha1Beta0,
-    innvestigate.analyzer.LRPAlpha1Beta0IgnoreBias,
-    innvestigate.analyzer.LRPSequentialCompositeA,
-    innvestigate.analyzer.LRPSequentialCompositeB,
-    innvestigate.analyzer.LRPSequentialCompositeAFlat,
-    innvestigate.analyzer.LRPSequentialCompositeBFlat,
+    #innvestigate.analyzer.LRPZIgnoreBias,
+    #innvestigate.analyzer.LRPZPlus,
+    #innvestigate.analyzer.LRPZPlusFast,
+    #innvestigate.analyzer.LRPEpsilon,
+    #innvestigate.analyzer.LRPEpsilonIgnoreBias,
+    #innvestigate.analyzer.LRPWSquare,
+    #innvestigate.analyzer.LRPFlat,
+    #innvestigate.analyzer.LRPAlpha2Beta1,
+    #innvestigate.analyzer.LRPAlpha2Beta1IgnoreBias,
+    #innvestigate.analyzer.LRPAlpha1Beta0,
+    #innvestigate.analyzer.LRPAlpha1Beta0IgnoreBias,
+    #innvestigate.analyzer.LRPSequentialCompositeA,
+    #innvestigate.analyzer.LRPSequentialCompositeB,
+    #innvestigate.analyzer.LRPSequentialCompositeAFlat,
+    #innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
-    innvestigate.analyzer.Gradient,
+    #innvestigate.analyzer.Gradient,
     #innvestigate.analyzer.InputTimesGradient,
     #innvestigate.analyzer.GuidedBackprop,
     #innvestigate.analyzer.Deconvnet,
@@ -211,7 +232,7 @@ for model_case in model_cases:
 
 
             #print("Explanation Shape:", np.shape(R_new))
-            print(R_new)
+            #print(R_new)
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

@@ -93,7 +93,8 @@ class ReplacementLayer():
             if rev_outs is not None:
                 if len(rev_outs) == 1:
                     rev_outs = rev_outs[0]
-
+            #print("Backward:", self.name)
+            #print(self.name, len(self.layer_next))
             #print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
             self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
@@ -131,7 +132,7 @@ class ReplacementLayer():
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
         :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
         """
-        #print(self.name)
+        #print("Forward: ", self.name)
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
             self.try_explain(None)
@@ -153,8 +154,12 @@ class ReplacementLayer():
                     Ys = self.original_output_vals
                     self.original_output_vals = None
 
+                #make a dummy callback so that logic does not get buggy
+                def dummyCallback(reversed_outs):
+                    pass
+
                 for layer_n in self.layer_next:
-                    layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+                    layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init)
             #############################
 
         else:
