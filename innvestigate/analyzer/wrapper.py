@@ -150,14 +150,9 @@ class AugmentReduceBase(WrapperBase):
             neuron_selection = kwargs.pop("neuron_selection", "max_activation")
 
             if isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray):
-                neuron_selection = np.stack([neuron_selection for _ in range(self._augment_by_n)], axis=None)
-            else:
-                indices = kwargs.pop("neuron_selection")
+                neuron_selection = np.repeat(np.array(neuron_selection), self._augment_by_n, axis=0)
 
-                # broadcast to match augmented samples.
-                indices = np.repeat(indices, self._augment_by_n, axis=0)
-
-                kwargs["neuron_selection"] = indices
+            kwargs["neuron_selection"] = neuron_selection
 
             if not hasattr(self._subanalyzer, "_analyzer_model"):
                 self._subanalyzer.create_analyzer_model()
@@ -175,7 +170,7 @@ class AugmentReduceBase(WrapperBase):
 
         # X is array-like
 
-        ins, rev = self._subanalyzer._analyzer_model
+        ins, rev = self._subanalyzer._analyzer_model._reverse_model
         if len(ins) == 1:
             repeat = np.repeat(X, self._augment_by_n, axis=0)
         else:
@@ -218,8 +213,8 @@ class GaussianSmoother(AugmentReduceBase):
                                                *args, **kwargs)
 
     def _augment(self, X):
-        tmp = super(GaussianSmoother, self)._augment(X)
-        ins, rev = self._subanalyzer._analyzer_model
+        X = super(GaussianSmoother, self)._augment(X)
+        ins, rev = self._subanalyzer._analyzer_model._reverse_model
         if len(ins) == 1:
             noise = np.random.normal(0, self._noise_scale, X.shape)
             ret = X + noise
@@ -268,7 +263,7 @@ class PathIntegrator(AugmentReduceBase):
     def _augment(self, X):
         X = super(PathIntegrator, self)._augment(X)
 
-        ins, rev = self._subanalyzer._analyzer_model
+        ins, rev = self._subanalyzer._analyzer_model._reverse_model
         self.difference = {}
         if len(ins) == 1:
             difference = (X - self._reference_inputs)

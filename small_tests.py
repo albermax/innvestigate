@@ -143,8 +143,6 @@ def VGG16_modified():
 
     model = tf.keras.models.Model(keras_model.input, x)
 
-    model.summary()
-
     return inp, model, "VGG16"
 
 def Resnet50():
@@ -162,6 +160,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     print("Analyzer Class: ", analyzer)
     print("Param neuron_selection: ", neuron_selection)
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
+    model.summary()
     a = time.time()
     ana = analyzer(model)
     R = ana.analyze(input, neuron_selection=neuron_selection, stop_mapping_at_layers=["dense"])
@@ -174,10 +173,10 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    #SimpleDense,
-    #MultiIn,
-    #MultiConnect,
-    #MultiAdd,
+    SimpleDense,
+    MultiIn,
+    MultiConnect,
+    MultiAdd,
     ConcatModel,
     #VGG16,
     #VGG16_modified
@@ -206,6 +205,8 @@ analyzer_cases = [
     #innvestigate.analyzer.InputTimesGradient,
     #innvestigate.analyzer.GuidedBackprop,
     #innvestigate.analyzer.Deconvnet,
+    innvestigate.analyzer.SmoothGrad,
+    innvestigate.analyzer.IntegratedGradients,
 ]
 
 neuron_selection_cases = [
@@ -233,6 +234,12 @@ for model_case in model_cases:
 
             #print("Explanation Shape:", np.shape(R_new))
             #print(R_new)
+
+            #for key in R_new.keys():
+            #    plt.figure("Heatmap")
+            #    img = R_new[key][0]/np.max(np.abs(R_new[key][0]))
+            #    plt.imshow(R_new[key][0], cmap="jet")
+            #    plt.show()
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

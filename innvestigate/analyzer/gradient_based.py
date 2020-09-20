@@ -128,7 +128,7 @@ class InputTimesGradientReplacementLayer(GradientOnesReplacementLayer):
             if len(self.input_shape) > 1:
                 self.explanation = [e*i for e, i in zip(input_vals, self.explanation)]
             else:
-                self.explanation = self.explanation * input_vals
+                self.explanation = self.explanation * tf.cast(input_vals, self.explanation.dtype)
 
             # callbacks
             if self.callbacks is not None:
@@ -316,7 +316,6 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 ###############################################################################
 ###############################################################################
 
-#TODO: tf2.0
 class IntegratedGradients(wrapper.PathIntegrator):
     """Integrated gradient analyzer.
 
