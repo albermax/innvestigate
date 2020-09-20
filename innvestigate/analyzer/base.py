@@ -333,11 +333,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
         # check if a layer before layers in stop_mapping_layers are connected to layers
         # after stop_mapping_at_layers
         # if yes, forward pass has to be done for every layer in model
-        in_layers, rev_layer = self._analyzer_model._reverse_model
-        for il in in_layers:
-            if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
-                for rl in rev_layer:
-                    rl.base_forward_after_stopping = True
+        if stop_mapping_at_layers is not None:
+            in_layers, rev_layer = self._analyzer_model._reverse_model
+            for il in in_layers:
+                if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
+                    for rl in rev_layer:
+                        rl.base_forward_after_stopping = True
 
         ret = self._analyzer_model.apply(X,
                                         neuron_selection=neuron_selection,
