@@ -1,5 +1,6 @@
-from __future__ import \
+from __future__ import\
     absolute_import, print_function, division, unicode_literals
+
 
 ###############################################################################
 ###############################################################################
@@ -17,6 +18,7 @@ from .. import utils as iutils
 from . import reverse_map
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
+
 
 __all__ = [
     "NotAnalyzeableModelException",
@@ -172,7 +174,7 @@ class TrainerMixin(object):
         """
         generator = iutils.BatchSequence(X, batch_size)
         return self._fit_generator(generator,
-                                   **kwargs)
+                                  **kwargs)
 
     def fit_generator(self, *args, **kwargs):
         """
@@ -254,6 +256,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
+
         super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
     def _add_model_softmax_check(self):
@@ -289,8 +292,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=[],
-                r_init=None, f_init=None):
+    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
         Takes an array-like input X and explains it. Also applies postprocessing to the explanation
 
@@ -328,28 +330,21 @@ class AnalyzerNetworkBase(AnalyzerBase):
             # not list and not None
             raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
 
-        in_layers, rev_layer = self._analyzer_model
-        for il in in_layers:
-            if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
-                for rl in rev_layer:
-                    rl.base_forward_after_stopping = True
-
-
-        ret = reverse_map.apply_reverse_map(X,
-                                            self._analyzer_model,
-                                            neuron_selection=neuron_selection,
-                                            explained_layer_names=explained_layer_names,
-                                            stop_mapping_at_layers=stop_mapping_at_layers,
-                                            r_init=r_init,
-                                            f_init=f_init
-                                            )
-        self._analyzed = True
+        ret = self._analyzer_model.apply(X,
+                                        neuron_selection=neuron_selection,
+                                        explained_layer_names=explained_layer_names,
+                                        stop_mapping_at_layers=stop_mapping_at_layers,
+                                        r_init=r_init,
+                                        f_init = f_init
+                                        )
+        self._analyzed=True
         ret = self._postprocess_analysis(ret)
 
         return ret
 
     def _postprocess_analysis(self, hm):
         return hm
+
 
     def get_explanations(self, explained_layer_names=None):
 
@@ -378,50 +373,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
             # not list and not None
             raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
 
-        hm = reverse_map.get_explanations(self._analyzer_model, explained_layer_names)
+        hm = self._analyzer_model.get_explanations(explained_layer_names)
         hm = self._postprocess_analysis(hm)
 
         return hm
-
-    def _is_resnet_like(self, layer, stop_mapping_at_layers, after_stop_mapping):
-        """
-        recursive function to check if there are layers that have connections reaching layers behind stop_mapping_at_layers
-        param layer: start point
-        """
-
-        next_layers = layer.layer_next
-
-        if len(next_layers) == 0:
-            # reached last node, return "everything ok" as default
-            return 1
-
-        # current layer is part of stop mapping
-        if layer.name in stop_mapping_at_layers:
-            # boolean signifies whether next layers are after a stop mapping layer
-            after_stop_mapping = True
-
-        result_child = 1
-        for nl in next_layers:
-
-            if nl.reached_after_stop_mapping is not None:
-                # next layer already visited before
-                if nl.reached_after_stop_mapping != after_stop_mapping:
-                    # layer before stop mapping is connected to layer after stop mapping!
-                    # conflict!!
-                    return 0
-
-            if nl.reached_after_stop_mapping is None:
-                # first time next layer is visited
-                if after_stop_mapping is True:
-                    # next layer is after stop mapping layer
-                    nl.reached_after_stop_mapping = True
-                else:
-                    # next layer is not after stop mapping layer
-                    nl.reached_after_stop_mapping = False
-
-                result_child = result_child and self._is_resnet_like(nl, stop_mapping_at_layers, after_stop_mapping)
-
-        return result_child
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
@@ -494,8 +449,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
-                    if (inspect.isclass(mapping["mapping"]) and issubclass(mapping["mapping"],
-                                                                           reverse_map.ReplacementLayer)):
+                    if (inspect.isclass(mapping["mapping"]) and issubclass(mapping["mapping"], reverse_map.ReplacementLayer)):
                         return mapping["mapping"]
                     elif callable(mapping["mapping"]):
                         return mapping["mapping"](layer)
@@ -509,10 +463,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return reverse_map.GradientReplacementLayer
 
     def _create_analysis(self, model):
-        inp, rep = reverse_map.reverse_map(
+        analyzer_model = reverse_map.ReverseModel(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
         )
 
-        return inp, rep
+        return analyzer_model
