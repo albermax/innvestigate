@@ -330,6 +330,15 @@ class AnalyzerNetworkBase(AnalyzerBase):
             # not list and not None
             raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
 
+        # check if a layer before layers in stop_mapping_layers are connected to layers
+        # after stop_mapping_at_layers
+        # if yes, forward pass has to be done for every layer in model
+        in_layers, rev_layer = self._analyzer_model._reverse_model
+        for il in in_layers:
+            if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
+                for rl in rev_layer:
+                    rl.base_forward_after_stopping = True
+
         ret = self._analyzer_model.apply(X,
                                         neuron_selection=neuron_selection,
                                         explained_layer_names=explained_layer_names,
@@ -344,6 +353,47 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def _postprocess_analysis(self, hm):
         return hm
+
+    def _is_resnet_like(self, layer, stop_mapping_at_layers, after_stop_mapping):
+        """
+        recursive function to check if there are layers that have connections reaching layers behind stop_mapping_at_layers
+        param layer: start point
+        """
+
+        next_layers = layer.layer_next
+
+        if len(next_layers) == 0:
+            # reached last node, return "everything ok" as default
+            return 1
+
+        # current layer is part of stop mapping
+        if layer.name in stop_mapping_at_layers:
+            # boolean signifies whether next layers are after a stop mapping layer
+            after_stop_mapping = True
+
+        result_child = 1
+        for nl in next_layers:
+
+            if nl.reached_after_stop_mapping is not None:
+                # next layer already visited before
+                if nl.reached_after_stop_mapping != after_stop_mapping:
+                    # layer before stop mapping is connected to layer after stop mapping!
+                    # conflict!!
+                    return 0
+
+            if nl.reached_after_stop_mapping is None:
+                # first time next layer is visited
+                if after_stop_mapping is True:
+                    # next layer is after stop mapping layer
+                    nl.reached_after_stop_mapping = True
+                else:
+                    # next layer is not after stop mapping layer
+                    nl.reached_after_stop_mapping = False
+
+                result_child = result_child and self._is_resnet_like(nl, stop_mapping_at_layers, after_stop_mapping)
+
+        return result_child
+
 
 
     def get_explanations(self, explained_layer_names=None):

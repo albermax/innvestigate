@@ -140,10 +140,10 @@ class ReplacementLayer():
 
             #########################
             # TODO: New Code, remove comments if it is good
-           # if self.base_forward_after_stopping:
+            #if self.base_forward_after_stopping:
 
-            #    for layer_n in self.layer_next:
-             #       layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
+             #   for layer_n in self.layer_next:
+              #    layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
 
             #########################
             # TODO: Leander checks if this code is still necessary
