@@ -257,6 +257,9 @@ class ReplacementLayer():
         if self.r_init is not None:
             r_init = self.r_init
 
+        if self.f_init is not None:
+            f_init = self.f_init
+
         # aggregate inputs
         if self.input_vals is None:
             self.input_vals = []
@@ -291,7 +294,7 @@ class ReplacementLayer():
             if len(input_vals) == 1:
                 input_vals = input_vals[0]
 
-            # adapt neuron_selection param for max efficiency
+            # adapt neuron_selection param
             if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
                 if neuron_selection is None:
                     neuron_selection_tmp = None
@@ -300,18 +303,11 @@ class ReplacementLayer():
                 elif isinstance(neuron_selection, str) and neuron_selection == "max_activation":
                     neuron_selection_tmp = "max_activation"
                 elif isinstance(neuron_selection, int):
-                    #if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
-                    #    raise ValueError("Expected last layer " + self.name + " to have only one output with shape dimension 2, but got " + str(self.output_shape))
-                    #else:
                     neuron_selection_tmp = [[neuron_selection] for n in range(self.input_vals[0].shape[0])]
                     neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 elif isinstance(neuron_selection, list) or (
                         hasattr(neuron_selection, "shape") and len(neuron_selection.shape) == 1):
-                    #if len(self.output_shape) > 1 or len(self.output_shape[0]) > 2:
-                    #    raise ValueError("Expected last layer " + self.name + " to have only one output with shape dimension 2, but got " + str(self.output_shape))
-                    #elif len(np.shape(neuron_selection)) < 1:
-                    #    raise ValueError("Expected parameter neuron_selection to have only one dimension, but got neuron_selection of shape " + str(np.shape(neuron_selection)))
-                    #else:
+
                     neuron_selection_tmp = [[n] for n in neuron_selection]
                     neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 else:
@@ -391,7 +387,6 @@ class GradientReplacementLayer(ReplacementLayer):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
     def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
-        #print("WRAP ", ins.shape, neuron_selection.shape)
         with tf.GradientTape(persistent=True) as tape:
             tape.watch(ins)
             outs = self.layer_func(ins)

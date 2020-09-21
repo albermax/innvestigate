@@ -410,3 +410,46 @@ def is_input_layer(layer, ignore_reshape_layers=True):
         return True
     else:
         return False
+
+
+def is_layer_at_idx(layer, index, ignore_reshape_layers=True):
+    """Checks if layer is a layer at index index."""
+    # Triggers if ALL inputs of layer are connected
+    # to a Keras input layer object.
+    # Note: In the sequential api the Sequential object
+    # adds the Input layer if the user does not.
+    kgraph = get_kgraph()
+
+    layer_inputs = [layer]
+    # We ignore certain layers, that do not modify
+    # the data content.
+    # todo: update this list!
+    IGNORED_LAYERS = (
+        keras_layers.Flatten,
+        keras_layers.Permute,
+        keras_layers.Reshape,
+    )
+
+    for i in range(index):
+
+        while any([isinstance(x, IGNORED_LAYERS) for x in layer_inputs]):
+            tmp = set()
+            for l in layer_inputs:
+                if (ignore_reshape_layers and
+                        isinstance(l, IGNORED_LAYERS)):
+                    tmp.update(kgraph.get_input_layers(l))
+                else:
+                    tmp.add(l)
+            layer_inputs = tmp
+
+        tmp = set()
+        for l in layer_inputs:
+            tmp.update(kgraph.get_input_layers(l))
+        layer_inputs = tmp
+
+        if any([isinstance(x, keras_layers.InputLayer)
+                for x in layer_inputs]):
+            return False
+
+    ret = all([is_input_layer(x, ignore_reshape_layers) for x in layer_inputs])
+    return ret

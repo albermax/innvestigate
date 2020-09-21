@@ -112,6 +112,10 @@ class LRP(base.ReverseAnalyzerBase):
     def __init__(self, model, *args, **kwargs):
         rule = kwargs.pop("rule", None)
         input_layer_rule = kwargs.pop("input_layer_rule", None)
+
+        until_layer_idx = kwargs.pop("until_layer_idx", None)
+        until_layer_rule = kwargs.pop("until_layer_rule", None)
+
         bn_layer_rule = kwargs.pop("bn_layer_rule", None)
         bn_layer_fuse_mode = kwargs.pop("bn_layer_fuse_mode", "one_linear")
         assert bn_layer_fuse_mode in ["one_linear", "two_linear"]
@@ -135,6 +139,8 @@ class LRP(base.ReverseAnalyzerBase):
         self._input_layer_rule = input_layer_rule
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
+        self._until_layer_rule = until_layer_rule
+        self._until_layer_idx = until_layer_idx
 
         if(
            isinstance(rule, six.string_types) or
@@ -153,6 +159,12 @@ class LRP(base.ReverseAnalyzerBase):
             use_conditions = True
             rules = rule
 
+        # apply rule to first self._until_layer_idx layers
+        if self._until_layer_rule is not None and self._until_layer_idx is not None:
+            for i in range(self._until_layer_idx + 1):
+                rules.insert(0,
+                             (lambda layer, foo, bound_i=i: kchecks.is_layer_at_idx(layer, bound_i),
+                              self._until_layer_rule))
 
         # create a BoundedRule for input layer handling from given tuple
         if self._input_layer_rule is not None:
@@ -599,7 +611,6 @@ class LRPSequentialCompositeB(_LRPFixedParams):
             bn_layer_rule=bn_layer_rule,
             **kwargs)
 
-#TODO: allow to pass input layer identification by index or id.
 class LRPSequentialPresetAFlat(LRPSequentialPresetA):
     """
         Special LRP-configuration for ConvNets
@@ -614,7 +625,6 @@ class LRPSequentialPresetAFlat(LRPSequentialPresetA):
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
-#TODO: allow to pass input layer identification by index or id.
 class LRPSequentialCompositeAFlat(LRPSequentialCompositeA):
     """Special LRP-configuration for ConvNets"""
 
@@ -625,7 +635,6 @@ class LRPSequentialCompositeAFlat(LRPSequentialCompositeA):
                                                 **kwargs)
 
 
-#TODO: allow to pass input layer identification by index or id.
 class LRPSequentialPresetBFlat(LRPSequentialPresetB):
     """
         Special LRP-configuration for ConvNets
@@ -640,7 +649,6 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
-#TODO: allow to pass input layer identification by index or id.
 class LRPSequentialCompositeBFlat(LRPSequentialCompositeB):
     """Special LRP-configuration for ConvNets"""
 
@@ -649,3 +657,33 @@ class LRPSequentialCompositeBFlat(LRPSequentialCompositeB):
                                                 *args,
                                                 input_layer_rule="Flat",
                                                 **kwargs)
+
+class LRPRuleUntilIndex():
+    """
+    Relatively dynamic rule interface
+
+    Applies the rule specified by until_index_rule to all layers up until and including the layer with the specified index
+    (counted in direction input --> output)
+
+    For all other layers, the specified LRP-configuration is applied.
+    """
+    def __init(self, model, *args, **kwargs):
+        until_layer_idx = kwargs.pop("until_layer_idx", 0)
+        until_index_rule = kwargs.pop("until_index_rule", rrule.FlatRule)
+        default_rule_configuration = kwargs.pop("default_rule_configuration", LRPSequentialCompositeBFlat)
+
+        self.default_rule_configuration = default_rule_configuration(model,
+                                                                     *args,
+                                                                     until_layer_idx=until_layer_idx,
+                                                                     until_index_rule=until_index_rule,
+                                                                     **kwargs
+                                                                     )
+
+    def create_rule_mapping(self, layer):
+        return self.default_rule_configuration.create_rule_mapping(layer)
+
+    def _create_analysis(self, layer):
+        return self.default_rule_configuration._create_analysis(layer)
+
+    def _default_reverse_mapping(self, layer):
+        return self.default_rule_configuration._default_reverse_mapping(layer)
