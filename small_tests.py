@@ -221,12 +221,13 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
     #innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
+    innvestigate.analyzer.LRPRuleUntilIndex,
     #innvestigate.analyzer.Gradient,
     #innvestigate.analyzer.InputTimesGradient,
     #innvestigate.analyzer.GuidedBackprop,
     #innvestigate.analyzer.Deconvnet,
-    innvestigate.analyzer.SmoothGrad,
-    innvestigate.analyzer.IntegratedGradients,
+    #innvestigate.analyzer.SmoothGrad,
+    #innvestigate.analyzer.IntegratedGradients,
 ]
 
 neuron_selection_cases = [

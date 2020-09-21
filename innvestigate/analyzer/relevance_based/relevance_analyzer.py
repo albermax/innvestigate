@@ -62,6 +62,8 @@ __all__ = [
 
     "LRPSequentialCompositeAFlat",
     "LRPSequentialCompositeBFlat",
+
+    "LRPRuleUntilIndex"
 ]
 
 
@@ -114,7 +116,7 @@ class LRP(base.ReverseAnalyzerBase):
         input_layer_rule = kwargs.pop("input_layer_rule", None)
 
         until_layer_idx = kwargs.pop("until_layer_idx", None)
-        until_layer_rule = kwargs.pop("until_layer_rule", None)
+        until_index_rule = kwargs.pop("until_index_rule", None)
 
         bn_layer_rule = kwargs.pop("bn_layer_rule", None)
         bn_layer_fuse_mode = kwargs.pop("bn_layer_fuse_mode", "one_linear")
@@ -139,7 +141,7 @@ class LRP(base.ReverseAnalyzerBase):
         self._input_layer_rule = input_layer_rule
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
-        self._until_layer_rule = until_layer_rule
+        self.until_index_rule = until_index_rule
         self._until_layer_idx = until_layer_idx
 
         if(
@@ -160,11 +162,9 @@ class LRP(base.ReverseAnalyzerBase):
             rules = rule
 
         # apply rule to first self._until_layer_idx layers
-        if self._until_layer_rule is not None and self._until_layer_idx is not None:
+        if self.until_index_rule is not None and self._until_layer_idx is not None:
             for i in range(self._until_layer_idx + 1):
-                rules.insert(0,
-                             (lambda layer, foo, bound_i=i: kchecks.is_layer_at_idx(layer, bound_i),
-                              self._until_layer_rule))
+                rules.insert(0, (lambda layer, bound_i=i: kchecks.is_layer_at_idx(layer, bound_i), self.until_index_rule))
 
         # create a BoundedRule for input layer handling from given tuple
         if self._input_layer_rule is not None:
@@ -658,17 +658,17 @@ class LRPSequentialCompositeBFlat(LRPSequentialCompositeB):
                                                 input_layer_rule="Flat",
                                                 **kwargs)
 
-class LRPRuleUntilIndex():
+class LRPRuleUntilIndex:
     """
-    Relatively dynamic rule interface
+    Relatively dynamic rule wrapper
 
     Applies the rule specified by until_index_rule to all layers up until and including the layer with the specified index
     (counted in direction input --> output)
 
     For all other layers, the specified LRP-configuration is applied.
     """
-    def __init(self, model, *args, **kwargs):
-        until_layer_idx = kwargs.pop("until_layer_idx", 0)
+    def __init__(self, model, *args, **kwargs):
+        until_layer_idx = kwargs.pop("until_layer_idx", 10)
         until_index_rule = kwargs.pop("until_index_rule", rrule.FlatRule)
         default_rule_configuration = kwargs.pop("default_rule_configuration", LRPSequentialCompositeBFlat)
 
@@ -679,11 +679,6 @@ class LRPRuleUntilIndex():
                                                                      **kwargs
                                                                      )
 
-    def create_rule_mapping(self, layer):
-        return self.default_rule_configuration.create_rule_mapping(layer)
+    def analyze(self, *args, **kwargs):
+        return self.default_rule_configuration.analyze(*args, **kwargs)
 
-    def _create_analysis(self, layer):
-        return self.default_rule_configuration._create_analysis(layer)
-
-    def _default_reverse_mapping(self, layer):
-        return self.default_rule_configuration._default_reverse_mapping(layer)

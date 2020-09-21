@@ -43,6 +43,7 @@ from .relevance_based.relevance_analyzer import LRPSequentialCompositeA
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeB
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeBFlat
+from .relevance_based.relevance_analyzer import LRPRuleUntilIndex
 # from .deeptaylor import DeepTaylor
 # from .deeptaylor import BoundedDeepTaylor
 from .wrapper import WrapperBase
@@ -103,6 +104,8 @@ analyzers = {
     "lrp.sequential_preset_b": LRPSequentialPresetB,
     "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
     "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
+
+    "lrp.rule_until_index": LRPRuleUntilIndex,
 
     # Deep Taylor
     #"deep_taylor": DeepTaylor,
