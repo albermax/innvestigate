@@ -209,10 +209,14 @@ class ReplacementLayer():
         :param model_output_value: output value of model / initialized value for explanation method
 
         """
-        if model_output_value != None:
-            Ys = self._toNumber(Ys, model_output_value)
-        elif model_output_value == None:
-            Ys = Ys
+        if model_output_value is not None:
+            if isinstance(model_output_value, dict):
+                if self.name in model_output_value.keys():
+                    # model_output_value should be int or array-like. Shape should fit.
+                    Ys = self._toNumber(Ys, model_output_value[self.name])
+            else:
+                # model_output_value should be int or array-like. Shape should fit.
+                Ys = self._toNumber(Ys, model_output_value)
 
         return Ys
 
@@ -269,6 +273,18 @@ class ReplacementLayer():
 
         # apply layer only if all inputs collected. Then reset inputs
         if len(self.input_vals) == len(self.input_shape):
+
+            # set inputs to f_init, if it is not None
+            if f_init is not None:
+                if isinstance(f_init, dict):
+                    if self.name in f_init.keys():
+                        # f_init should be int or array-like. Shape should fit.
+                        for i, in_val in enumerate(self.input_vals):
+                            self.input_vals[i] = self._toNumber(in_val, f_init[self.name])
+                else:
+                    # f_init should be int or array-like. Shape should fit.
+                    for i, in_val in enumerate(self.input_vals):
+                        self.input_vals[i] = self._toNumber(in_val, f_init)
 
             # tensorify wrap_hook inputs as much as possible for graph efficiency
             input_vals = self.input_vals
