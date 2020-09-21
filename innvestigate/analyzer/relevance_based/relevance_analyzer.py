@@ -668,7 +668,7 @@ class LRPRuleUntilIndex:
     For all other layers, the specified LRP-configuration is applied.
     """
     def __init__(self, model, *args, **kwargs):
-        until_layer_idx = kwargs.pop("until_layer_idx", 10)
+        until_layer_idx = kwargs.pop("until_layer_idx", 0)
         until_index_rule = kwargs.pop("until_index_rule", rrule.FlatRule)
         default_rule_configuration = kwargs.pop("default_rule_configuration", LRPSequentialCompositeBFlat)
 
