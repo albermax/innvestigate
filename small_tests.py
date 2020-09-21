@@ -119,7 +119,12 @@ def VGG16():
         include_top=True,
         weights="imagenet",
     )
-    inp = np.random.rand(3, 224, 224, 3)
+    loader = tf.keras.preprocessing.image_dataset_from_directory("/media/weber/f3ed2aae-a7bf-4a55-b50d-ea8fb534f1f5/Datasets/Imagenet/train/",
+                                                                 batch_size=3,
+                                                                 image_size=(224, 224), shuffle=False)
+    for (data, label) in loader:
+        inp = data
+        break
 
     model.summary()
 
@@ -154,6 +159,21 @@ def Densenet():
 #------------------------------------------------------------------------------------
 #Analysis
 
+def gregoire_black_firered(R, normalize=True):
+    if normalize:
+        R /= np.max(np.abs(R))
+    x = R
+
+    hrp  = np.clip(x-0.00,0,0.25)/0.25
+    hgp = np.clip(x-0.25,0,0.25)/0.25
+    hbp = np.clip(x-0.50,0,0.50)/0.50
+
+    hbn = np.clip(-x-0.00,0,0.25)/0.25
+    hgn = np.clip(-x-0.25,0,0.25)/0.25
+    hrn = np.clip(-x-0.50,0,0.50)/0.50
+
+    return np.concatenate([(hrp+hrn)[...,None],(hgp+hgn)[...,None],(hbp+hbn)[...,None]],axis = 2)
+
 def run_analysis(input, model, name, analyzer, neuron_selection):
     print("New Test")
     print("Model Name: ", name)
@@ -163,7 +183,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     model.summary()
     a = time.time()
     ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection, stop_mapping_at_layers=["dense"])
+    R = ana.analyze(input, neuron_selection=neuron_selection)
     b = time.time()
     print("Time Passed: ", b - a)
     print("explanation: ", np.shape(R))
@@ -173,18 +193,18 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    SimpleDense,
-    MultiIn,
-    MultiConnect,
-    MultiAdd,
-    ConcatModel,
-    #VGG16,
+    #SimpleDense,
+    #MultiIn,
+    #MultiConnect,
+    #MultiAdd,
+    #ConcatModel,
+    VGG16,
     #VGG16_modified
 ]
 
 analyzer_cases = [
     #innvestigate.analyzer.ReverseAnalyzerBase,
-    innvestigate.analyzer.LRPZ,
+    #innvestigate.analyzer.LRPZ,
     #innvestigate.analyzer.LRPZIgnoreBias,
     #innvestigate.analyzer.LRPZPlus,
     #innvestigate.analyzer.LRPZPlusFast,
@@ -210,12 +230,12 @@ analyzer_cases = [
 ]
 
 neuron_selection_cases = [
-    None,
+    #None,
     "max_activation",
-    "all",
-    0,
-    [0, 1, 2],
-    np.array([0, 1, 2])
+    #"all",
+    #0,
+    #[0, 1, 2],
+    #np.array([0, 1, 2])
 ]
 
 for model_case in model_cases:
@@ -235,11 +255,13 @@ for model_case in model_cases:
             #print("Explanation Shape:", np.shape(R_new))
             #print(R_new)
 
-            #for key in R_new.keys():
-            #    plt.figure("Heatmap")
-            #    img = R_new[key][0]/np.max(np.abs(R_new[key][0]))
-            #    plt.imshow(R_new[key][0], cmap="jet")
-            #    plt.show()
+            for key in R_new.keys():
+
+                plt.figure("Heatmap")
+                plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
+                img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
+                plt.imshow(img)
+                plt.show()
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

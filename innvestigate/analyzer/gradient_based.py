@@ -325,9 +325,10 @@ class IntegratedGradients(wrapper.PathIntegrator):
     :param steps: Number of steps to use average along integration path.
     """
 
-    def __init__(self, model, steps=64, **kwargs):
+    def __init__(self, model, steps=16, **kwargs):
+
         subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode", "postprocess"]
+        kwargs_keys = ["postprocess"]
         for key in kwargs_keys:
             if key in kwargs:
                 subanalyzer_kwargs[key] = kwargs.pop(key)
@@ -351,7 +352,7 @@ class SmoothGrad(wrapper.GaussianSmoother):
     :param augment_by_n: Number of distortions to average for smoothing.
     """
 
-    def __init__(self, model, augment_by_n=64, **kwargs):
+    def __init__(self, model, augment_by_n=16, **kwargs):
         subanalyzer_kwargs = {}
         kwargs_keys = ["postprocess"]
         for key in kwargs_keys:

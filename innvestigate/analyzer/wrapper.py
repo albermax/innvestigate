@@ -147,19 +147,19 @@ class AugmentReduceBase(WrapperBase):
 
     def analyze(self, X, *args, **kwargs):
         if self._keras_based_augment_reduce is True:
-            neuron_selection = kwargs.pop("neuron_selection", "max_activation")
-
-            if isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray):
-                neuron_selection = np.repeat(np.array(neuron_selection), self._augment_by_n, axis=0)
-
-            kwargs["neuron_selection"] = neuron_selection
 
             if not hasattr(self._subanalyzer, "_analyzer_model"):
                 self._subanalyzer.create_analyzer_model()
 
-            X = self._augment(X)
-            ret = self._subanalyzer.analyze(X, *args, **kwargs)
-            ret = self._reduce(ret)
+            augmented = self._augment(X)
+            analyzed = {}
+            for X in augmented:
+                hm = self._subanalyzer.analyze(X, *args, **kwargs)
+                for key in hm.keys():
+                    if key not in analyzed.keys():
+                        analyzed[key] = []
+                    analyzed[key].append(hm[key])
+            ret = self._reduce(analyzed)
 
             return ret
         else:
@@ -169,14 +169,7 @@ class AugmentReduceBase(WrapperBase):
         #creates augment_by_n samples for each original sample in X
 
         # X is array-like
-
-        ins, rev = self._subanalyzer._analyzer_model._reverse_model
-        if len(ins) == 1:
-            repeat = np.repeat(X, self._augment_by_n, axis=0)
-        else:
-            repeat = []
-            for x in X:
-                repeat.append(np.repeat(x, self._augment_by_n, axis=0))
+        repeat = [X for _ in range(self._augment_by_n)]
 
         return repeat
 
@@ -187,7 +180,7 @@ class AugmentReduceBase(WrapperBase):
 
         means = {}
         for key in X.keys():
-            means[key] = np.mean(X[key].reshape((-1, self._augment_by_n) + tuple(X[key].shape[1:])), axis=1).squeeze()
+            means[key] = np.mean(X[key], axis=0)
 
         return means
 
@@ -216,14 +209,15 @@ class GaussianSmoother(AugmentReduceBase):
         X = super(GaussianSmoother, self)._augment(X)
         ins, rev = self._subanalyzer._analyzer_model._reverse_model
         if len(ins) == 1:
-            noise = np.random.normal(0, self._noise_scale, X.shape)
-            ret = X + noise
+            for i, x in enumerate(X):
+                noise = np.random.normal(0, self._noise_scale, np.shape(x))
+                X[i] += noise
         else:
-            ret = []
-            for x in X:
-                noise = np.random.normal(0, self._noise_scale, x.shape)
-                ret.append(x + noise)
-        return ret
+            for i, x_ins in enumerate(X):
+                for j, x in enumerate(x_ins):
+                    noise = np.random.normal(0, self._noise_scale, np.shape(x))
+                    X[i][j] += noise
+        return X
 
 
 ###############################################################################
@@ -260,23 +254,31 @@ class PathIntegrator(AugmentReduceBase):
         if explained_layer_names is not None and len(explained_layer_names) > 0:
             raise ValueError("Intermediate explanations are not available for Integrated Gradients")
 
+        return super(PathIntegrator, self).analyze(X, *args, **kwargs)
+
     def _augment(self, X):
         X = super(PathIntegrator, self)._augment(X)
 
         ins, rev = self._subanalyzer._analyzer_model._reverse_model
         self.difference = {}
         if len(ins) == 1:
-            difference = (X - self._reference_inputs)
-            self.difference[ins[0].name] = difference
-            step_size = difference / (self._augment_by_n-1)
-            ret = self._reference_inputs + step_size*np.arange(0, self._augment_by_n)
-        else:
             ret = []
             for i, x in enumerate(X):
-                difference = (x - self._reference_inputs)
-                self.difference[ins[i].name] = difference
-                step_size = difference / (self._augment_by_n - 1)
-                ret.append(self._reference_inputs + step_size * np.arange(0, self._augment_by_n))
+                difference = (np.array(x) - self._reference_inputs)
+                #X is only repeated _augment_by_n times by superclass method --> difference is the same each time
+                self.difference[ins[0].name] = difference
+                step_size = difference / (self._augment_by_n-1)
+                ret.append(self._reference_inputs + step_size*i)
+        else:
+            ret = []
+            for i, x_ins in enumerate(X):
+                ret.append([])
+                for j, x in enumerate(x_ins):
+                    difference = (x - self._reference_inputs)
+                    # X is only repeated _augment_by_n times by superclass method --> difference is the same each time
+                    self.difference[ins[j].name] = difference
+                    step_size = difference / (self._augment_by_n - 1)
+                    ret[-1].append(self._reference_inputs + step_size * j)
 
         return ret
 

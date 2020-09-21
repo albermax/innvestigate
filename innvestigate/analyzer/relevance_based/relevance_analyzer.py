@@ -441,7 +441,7 @@ class LRPZPlusFast(_LRPFixedParams):
 class LRPGamma(LRP):
     """ Base class for LRP Gamma"""
 
-    def __init__(self, model, *args, gamma=None, bias=True, **kwargs):
+    def __init__(self, model, *args, gamma=0.5, bias=True, **kwargs):
         self._gamma = gamma
         self._bias = bias
 
