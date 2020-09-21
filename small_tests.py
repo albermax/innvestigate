@@ -110,8 +110,6 @@ def ConcatModel():
     model = keras.models.Model(inputs=inputs, outputs=x)
     inp = np.random.rand(3, 224, 224, 3)
 
-    model.summary()
-
     return inp, model, "ConcatModel"
 
 def VGG16():
@@ -125,8 +123,6 @@ def VGG16():
     for (data, label) in loader:
         inp = data
         break
-
-    model.summary()
 
     return inp, model, "VGG16"
 
@@ -183,7 +179,7 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     model.summary()
     a = time.time()
     ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection)
+    R = ana.analyze(input, neuron_selection=neuron_selection, f_init=1)
     b = time.time()
     print("Time Passed: ", b - a)
     print("explanation: ", np.shape(R))
@@ -193,18 +189,18 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
 #Tests
 
 model_cases = [
-    #SimpleDense,
-    #MultiIn,
-    #MultiConnect,
-    #MultiAdd,
-    #ConcatModel,
-    VGG16,
+    SimpleDense,
+    MultiIn,
+    MultiConnect,
+    MultiAdd,
+    ConcatModel,
+    #VGG16,
     #VGG16_modified
 ]
 
 analyzer_cases = [
     #innvestigate.analyzer.ReverseAnalyzerBase,
-    #innvestigate.analyzer.LRPZ,
+    innvestigate.analyzer.LRPZ,
     #innvestigate.analyzer.LRPZIgnoreBias,
     #innvestigate.analyzer.LRPZPlus,
     #innvestigate.analyzer.LRPZPlusFast,
@@ -221,7 +217,7 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
     #innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
-    innvestigate.analyzer.LRPRuleUntilIndex,
+    #innvestigate.analyzer.LRPRuleUntilIndex,
     #innvestigate.analyzer.Gradient,
     #innvestigate.analyzer.InputTimesGradient,
     #innvestigate.analyzer.GuidedBackprop,
@@ -256,13 +252,13 @@ for model_case in model_cases:
             #print("Explanation Shape:", np.shape(R_new))
             #print(R_new)
 
-            for key in R_new.keys():
-
-                plt.figure("Heatmap")
-                plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
-                img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
-                plt.imshow(img)
-                plt.show()
+            if name == "VGG16":
+                for key in R_new.keys():
+                    plt.figure("Heatmap")
+                    plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
+                    img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
+                    plt.imshow(img)
+                    plt.show()
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

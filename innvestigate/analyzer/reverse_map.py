@@ -121,7 +121,7 @@ class ReplacementLayer():
             self.callbacks = None
             self.hook_vals = None
 
-    def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None, r_init=None):
+    def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
         Forward Pass to all child layers
         * If this is the last layer, directly calls try_explain to compute own explanation
@@ -130,7 +130,8 @@ class ReplacementLayer():
         :param Ys: output of own forward pass
         :param neuron_selection: neuron_selection parameter (see try_apply)
         :param stop_mapping_at_layers: stop_mapping_at_layers parameter (see try_apply)
-        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+        :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+        :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
         """
         #print("Forward: ", self.name)
         if len(self.layer_next) == 0 :
@@ -159,13 +160,13 @@ class ReplacementLayer():
                     pass
 
                 for layer_n in self.layer_next:
-                    layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init)
+                    layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
             #############################
 
         else:
             # forward
             for layer_n in self.layer_next:
-                layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers, r_init)
+                layer_n.try_apply(Ys, self.try_explain, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
     @tf.custom_gradient
     def _toNumber(self, X, value):
@@ -321,9 +322,9 @@ class ReplacementLayer():
 
             # forward
             if isinstance(self.hook_vals, tuple):
-                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init)
+                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init, f_init)
             else:
-                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init)
+                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
     def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
         """
