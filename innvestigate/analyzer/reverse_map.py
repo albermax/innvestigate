@@ -57,11 +57,10 @@ class ReplacementLayer():
         self.explanation = None
 
         ###############
-        # TODO: remove one of the variables
-        self.forward_after_stopping = True
-        self.base_forward_after_stopping = False
-        #############
+        self.forward_after_stopping = False
         self.reached_after_stop_mapping = None
+        self.activations_saved = False
+        self.no_forward_pass = False
         self.debug = False
 
     def try_explain(self, reversed_outs):
@@ -74,6 +73,8 @@ class ReplacementLayer():
 
         :param reversed_outs: the child layer's explanation. None if this is the last layer.
         """
+        if self.debug == True:
+            print("enter try_explain for", self.name)
         # aggregate explanations
         if reversed_outs is not None:
             if self.reversed_output_vals is None:
@@ -95,8 +96,8 @@ class ReplacementLayer():
                 if len(rev_outs) == 1:
                     rev_outs = rev_outs[0]
             if self.debug == True:
-                print("Backward:", self.name)
-                print(self.name, len(self.layer_next))
+                print("Backward at: ", self.name)
+                print("layer_next:", len(self.layer_next))
                 print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
             self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
@@ -117,11 +118,18 @@ class ReplacementLayer():
                 else:
                     self.callbacks[0](self.explanation)
 
-            # reset
-            self.input_vals = None
+            if self.no_forward_pass == True:
+                # save activations
+                self.activations_saved = True
+            else:
+                # reset
+                self.input_vals = None
+                self.hook_vals = None
+                self.callbacks = None
+
             self.reversed_output_vals = None
-            self.callbacks = None
-            self.hook_vals = None
+
+
 
     def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
@@ -135,16 +143,15 @@ class ReplacementLayer():
         :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
         :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
         """
-        #print("Forward: ", self.name)
+        if self.debug == True:
+            print("Forward: ", self.name)
         if len(self.layer_next) == 0 :
             # last layer: directly compute explanation
             self.try_explain(None)
         elif stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers:
             self.try_explain(None)
 
-            #########################
-            # TODO: New Code, remove comments if it is good
-            if self.base_forward_after_stopping:
+            if self.forward_after_stopping:
 
                 # if the output was mapped, this restores the original for the forwarding
                 if self.original_output_vals is not None:
@@ -158,21 +165,6 @@ class ReplacementLayer():
                 for layer_n in self.layer_next:
                     layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
-            #########################
-            # TODO: Leander checks if this code is still necessary
-          #  if self.forward_after_stopping:
-                #if the output was mapped, this restores the original for the forwarding
-           #     if self.original_output_vals is not None:
-            #        Ys = self.original_output_vals
-             #       self.original_output_vals = None
-
-                #make a dummy callback so that logic does not get buggy
-              #  def dummyCallback(reversed_outs):
-               #     pass
-
-                #for layer_n in self.layer_next:
-                 #   layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
-            #############################
 
         else:
             # forward
@@ -265,6 +257,26 @@ class ReplacementLayer():
         # DEBUG
         # print(self.name, self.input_shape, np.shape(ins))
 
+
+        if self.no_forward_pass == True and self.activations_saved == True:
+            # calculate no forward pass, instead pass on to next layers
+
+            # aggregate callbacks
+           # if callback is not None:
+            #    if self.callbacks is None:
+             #       self.callbacks = []
+              #  self.callbacks.append(callback)
+
+            if isinstance(self.hook_vals, tuple):
+                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init, f_init)
+            else:
+                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+            return
+
+
+        self.reversed_output_vals = None
+
         #uses the class attribute, if it is not None.
         if self.r_init is not None:
             r_init = self.r_init
@@ -275,13 +287,15 @@ class ReplacementLayer():
         # aggregate inputs
         if self.input_vals is None:
             self.input_vals = []
-        self.input_vals.append(ins)
+        if self.activations_saved == False:
+            # do not append same activation and callbacks already saved!
+            self.input_vals.append(ins)
 
-        # aggregate callbacks
-        if callback is not None:
-            if self.callbacks is None:
-                self.callbacks = []
-            self.callbacks.append(callback)
+            # aggregate callbacks
+            if callback is not None:
+                if self.callbacks is None:
+                    self.callbacks = []
+                self.callbacks.append(callback)
 
         # reset explanation
         self.explanation = None

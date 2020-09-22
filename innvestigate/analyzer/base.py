@@ -292,7 +292,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None, no_forward_pass=False):
         """
         Takes an array-like input X and explains it. Also applies postprocessing to the explanation
 
@@ -308,6 +308,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
         :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
         :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
         :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
+        :param no_forward_pass: If True, no forward pass is calculated for the explanation, instead the activations are loaded from previous usages of the analyze method.
+                                First time using analyze method has no effect as activations have to be saved first time.
+                                Input data can not be changed afterwards and will be ignored! Please make sure that if you change stop_mapping_at_layers, that these layers
+                                were already analyzed before!
 
         :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
         """
@@ -333,12 +337,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         # check if a layer before layers in stop_mapping_layers are connected to layers
         # after stop_mapping_at_layers
         # if yes, forward pass has to be done for every layer in model
-        if stop_mapping_at_layers is not None:
-            in_layers, rev_layer = self._analyzer_model._reverse_model
-            for il in in_layers:
-                if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
-                    for rl in rev_layer:
-                        rl.base_forward_after_stopping = True
+        self._check_stop_mapping(stop_mapping_at_layers, neuron_selection, no_forward_pass)
 
         ret = self._analyzer_model.apply(X,
                                         neuron_selection=neuron_selection,
@@ -347,7 +346,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                                         r_init=r_init,
                                         f_init = f_init
                                         )
-        self._analyzed= True
+        self._analyzed = True
         ret = self._postprocess_analysis(ret)
 
         return ret
@@ -355,7 +354,56 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def _postprocess_analysis(self, hm):
         return hm
 
-    def _is_resnet_like(self, layer, stop_mapping_at_layers, after_stop_mapping):
+    def _check_stop_mapping(self, stop_mapping_at_layers, neuron_selection, no_forward_pass):
+
+        in_layers, rev_layer = self._analyzer_model._reverse_model
+
+        # reset no_forward_pass variable if stop_mapping_at_layers changed
+        if hasattr(self, "_old_stop_mapping_at_layers"):
+            if self._old_stop_mapping_at_layers != stop_mapping_at_layers:
+                class NoForwardWarning(RuntimeWarning):
+                    pass
+                warnings.warn("stop_mapping_at_layers changed. Make sure new layers are behind old layers, otherwise"
+                              "unexpected behaviour.", NoForwardWarning)
+                for rv in rev_layer:
+                    rv.no_forward_pass = False
+
+
+        if stop_mapping_at_layers is not None:
+            for il in in_layers:
+                if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
+                    for rl in rev_layer:
+                        rl.forward_after_stopping = True
+
+
+        if no_forward_pass == True:
+            if stop_mapping_at_layers == None:
+                # skip forward pass for all layers except output layers
+                # because neuron_selection might change
+                for rl in rev_layer:
+                    if len(rl.layer_next) == 0:
+                        # one last layer
+                        rl.no_forward_pass = False
+                    else:
+                        # not last layer
+                        rl.no_forward_pass = True
+                   # print("No Forward in ", rl.name, rl.no_forward_pass)
+            else:
+                for rl in rev_layer:
+                    if rl.name not in stop_mapping_at_layers:
+                        # skip forward pass in all layers except layers in stop_mapping_at_layers
+                        # because neuron_selection might change
+                        rl.no_forward_pass = True
+
+
+        # save stop_mapping_at_layers and neuron_selection for comparison in future
+        self._old_stop_mapping_at_layers = stop_mapping_at_layers
+        self._old_neuron_selection = neuron_selection
+
+
+
+
+    def _is_resnet_like(self, layer, stop_mapping_at_layers, after_stop_mapping, no_forward_pass=False):
         """
         recursive function to check if there are layers that have connections reaching layers behind stop_mapping_at_layers
         param layer: start point
