@@ -347,7 +347,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
                                         r_init=r_init,
                                         f_init = f_init
                                         )
-        self._analyzed=True
+        self._analyzed= True
         ret = self._postprocess_analysis(ret)
 
         return ret

@@ -62,6 +62,7 @@ class ReplacementLayer():
         self.base_forward_after_stopping = False
         #############
         self.reached_after_stop_mapping = None
+        self.debug = False
 
     def try_explain(self, reversed_outs):
         """
@@ -93,9 +94,10 @@ class ReplacementLayer():
             if rev_outs is not None:
                 if len(rev_outs) == 1:
                     rev_outs = rev_outs[0]
-            #print("Backward:", self.name)
-            #print(self.name, len(self.layer_next))
-            #print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
+            if self.debug == True:
+                print("Backward:", self.name)
+                print(self.name, len(self.layer_next))
+                print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
             self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
             # callbacks
@@ -142,25 +144,34 @@ class ReplacementLayer():
 
             #########################
             # TODO: New Code, remove comments if it is good
-            #if self.base_forward_after_stopping:
+            if self.base_forward_after_stopping:
 
-             #   for layer_n in self.layer_next:
-              #    layer_n.try_apply(Ys, None, neuron_selection, stop_mapping_at_layers, r_init)
-
-            #########################
-            # TODO: Leander checks if this code is still necessary
-            if self.forward_after_stopping:
-                #if the output was mapped, this restores the original for the forwarding
+                # if the output was mapped, this restores the original for the forwarding
                 if self.original_output_vals is not None:
                     Ys = self.original_output_vals
                     self.original_output_vals = None
 
-                #make a dummy callback so that logic does not get buggy
+                # make a dummy callback so that logic does not get buggy
                 def dummyCallback(reversed_outs):
                     pass
 
                 for layer_n in self.layer_next:
                     layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+            #########################
+            # TODO: Leander checks if this code is still necessary
+          #  if self.forward_after_stopping:
+                #if the output was mapped, this restores the original for the forwarding
+           #     if self.original_output_vals is not None:
+            #        Ys = self.original_output_vals
+             #       self.original_output_vals = None
+
+                #make a dummy callback so that logic does not get buggy
+              #  def dummyCallback(reversed_outs):
+               #     pass
+
+                #for layer_n in self.layer_next:
+                 #   layer_n.try_apply(Ys, dummyCallback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
             #############################
 
         else:
@@ -318,6 +329,8 @@ class ReplacementLayer():
                 neuron_selection_tmp = neuron_selection
 
             # apply and wrappers
+            if self.debug == True:
+                print("forward hook", self.name)
             self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
 
             # forward
