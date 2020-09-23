@@ -328,7 +328,7 @@ class ReplacementLayer():
                     neuron_selection_tmp = None
                 elif isinstance(neuron_selection, str) and neuron_selection == "max_activation":
                     neuron_selection_tmp = "max_activation"
-                elif isinstance(neuron_selection, int):
+                elif isinstance(neuron_selection, int) or isinstance(neuron_selection, np.int32):
                     neuron_selection_tmp = [[neuron_selection] for n in range(self.input_vals[0].shape[0])]
                     neuron_selection_tmp = tf.constant(neuron_selection_tmp)
                 elif isinstance(neuron_selection, list) or (
