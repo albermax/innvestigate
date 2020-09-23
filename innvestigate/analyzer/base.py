@@ -451,8 +451,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Get results of (previously computed) explanation.
         explanation of layer i has shape equal to input_shape of layer i.
 
-        :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
-                            if explained_layer_names == 'all', explanations of all layers are returned.
+        :param explained_layer_names: None or "all"] or list of strings containing the names of the layers.
+                            if explained_layer_names == 'all' or None, explanations of all layers are returned.
 
         :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
 
@@ -468,7 +468,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             for l in explained_layer_names:
                 if not isinstance(l, str):
                     raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
-        elif explained_layer_names is not None:
+        elif (explained_layer_names is not None) and type(explained_layer_names) != str:
             # not list and not None
             raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
 
