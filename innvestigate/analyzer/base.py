@@ -451,7 +451,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Get results of (previously computed) explanation.
         explanation of layer i has shape equal to input_shape of layer i.
 
-        :param explained_layer_names: None or "all"] or list of strings containing the names of the layers.
+        :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
                             if explained_layer_names == 'all' or None, explanations of all layers are returned.
 
         :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
