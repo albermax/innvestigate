@@ -47,6 +47,7 @@ def setup():
         version="1.0.9",
         description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
+        long_description_content_type='text/markdown',
         classifiers=[
             "License :: OSI Approved :: BSD License",
             "Development Status :: 5 - Production/Stable",
