@@ -173,7 +173,19 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ... can be found here:
 
-* [Software and application patterns for explanation methods](https://arxiv.org/abs/1904.04734)
+* [Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans; 20(93):1−8, 2019.](https://jmlr.org/papers/v20/18-540.html)
+  ```
+  @article{JMLR:v20:18-540,
+  author  = {Maximilian Alber and Sebastian Lapuschkin and Philipp Seegerer and Miriam H{{\"a}}gele and Kristof T. Sch{{\"u}}tt and Gr{{\'e}}goire Montavon and Wojciech Samek and Klaus-Robert M{{\"u}}ller and Sven D{{\"a}}hne and Pieter-Jan Kindermans},
+  title   = {iNNvestigate Neural Networks!},
+  journal = {Journal of Machine Learning Research},
+  year    = {2019},
+  volume  = {20},
+  number  = {93},
+  pages   = {1-8},
+  url     = {http://jmlr.org/papers/v20/18-540.html}
+  }
+  ```
 * [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
 
 ## Contributing
