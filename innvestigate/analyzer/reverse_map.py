@@ -182,7 +182,7 @@ class ReplacementLayer():
 
         def grad(dy, variables=None):  # variables=None and None as output necessary as toNumber requires two arguments
 
-            return dy * tf.ones(X.shape) * value, None
+            return dy * tf.sign(X) * value, None
 
         return y, grad
 
