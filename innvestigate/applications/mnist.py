@@ -18,12 +18,12 @@ from __future__ import\
 
 
 import os
-import keras.utils.data_utils
+import tensorflow.keras.utils.data_utils
 import numpy as np
 
-import keras.models
-from keras.models import load_model, clone_model
-#from keras.utils import get_file
+import tensorflow.keras.models
+from tensorflow.keras.models import load_model, clone_model
+#from tensorflow.keras.utils import get_file
 
 
 
@@ -76,20 +76,20 @@ def _load_pretrained_net(modelname, new_input_shape):
 
     model = load_model(model_path)
     #create replacement input layer with new shape.
-    model.layers[0] = keras.layers.InputLayer(input_shape=new_input_shape, name="input_1")
+    model.layers[0] = tensorflow.keras.layers.InputLayer(input_shape=new_input_shape, name="input_1")
     for l in model.layers:
         l.name = "%s_workaround" % l.name
-    model = keras.models.Sequential(layers=model.layers)
+    model = tensorflow.keras.models.Sequential(layers=model.layers)
 
     model_w_sm = clone_model(model)
 
-    #NOTE: perform forward pass to fix a keras 2.2.0 related issue with improper weight initialization
+    #NOTE: perform forward pass to fix a tensorflow.keras 2.2.0 related issue with improper weight initialization
     #See: https://github.com/albermax/innvestigate/issues/88
     x_dummy = np.zeros(new_input_shape)[None, ...]
     model_w_sm.predict(x_dummy)
 
     model_w_sm.set_weights(model.get_weights())
-    model_w_sm.add(keras.layers.Activation("softmax"))
+    model_w_sm.add(tensorflow.keras.layers.Activation("softmax"))
     return model, model_w_sm
 
 

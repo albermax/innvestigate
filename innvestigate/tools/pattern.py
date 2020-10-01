@@ -10,11 +10,11 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
-import keras.layers
-import keras.models
-import keras.optimizers
-import keras.utils
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers
+import tensorflow.keras.models
+import tensorflow.keras.optimizers
+import tensorflow.keras.utils
 import numpy as np
 
 
@@ -113,7 +113,7 @@ def get_active_neuron_io(layer, active_node_indices,
         raise NotImplementedError("This code seems not to handle several Ys.")
         # Layer is applied several times in model.
         # Concatenate the io of the applications.
-        concatenate = keras.layers.Concatenate(axis=0)
+        concatenate = tensorflow.keras.layers.Concatenate(axis=0)
 
         if return_i and return_o:
             return (concatenate([x[0] for x in tmp]),
@@ -243,7 +243,7 @@ class LinearPattern(BasePattern):
 
         # Compute mask and active neuron counts.
         mask = ilayers.AsFloatX()(self._get_neuron_mask())
-        Y_masked = keras.layers.multiply([Y, mask])
+        Y_masked = tensorflow.keras.layers.multiply([Y, mask])
         count = ilayers.CountNonZero(axis=0)(mask)
         count_all = ilayers.Sum(axis=0)(ilayers.OnesLike()(mask))
 
@@ -265,7 +265,7 @@ class LinearPattern(BasePattern):
 
         # Create a dummy output to have a connected graph.
         # Needs to have the shape (mb_size, 1)
-        dummy = keras.layers.Average()([a, b, c])
+        dummy = tensorflow.keras.layers.Average()([a, b, c])
         return ilayers.Sum(axis=None)(dummy)
 
     def compute_pattern(self):
@@ -427,12 +427,12 @@ class PatternComputer(object):
         self._n_computer_outputs = len(computer_outputs)
         if self.compute_layers_in_parallel is True:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
+                tensorflow.keras.models.Model(inputs=self.model.inputs,
                                    outputs=computer_outputs)
             ]
         else:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
+                tensorflow.keras.models.Model(inputs=self.model.inputs,
                                    outputs=computer_output)
                 for computer_output in computer_outputs
             ]
@@ -440,7 +440,7 @@ class PatternComputer(object):
         # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
-            self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
+            self._computers = [tensorflow.keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
                                for tmp in self._computers]
 
     def compute(self, X, batch_size=32, verbose=0):
@@ -449,7 +449,7 @@ class PatternComputer(object):
 
         :param X: Data to compute patterns.
         :param batch_size: Batch size to use.
-        :param verbose: As for keras model.fit.
+        :param verbose: As for tensorflow.keras model.fit.
         """
         generator = iutils.BatchSequence(X, batch_size)
         return self.compute_generator(generator, verbose=verbose)
@@ -459,12 +459,12 @@ class PatternComputer(object):
         Compute and return the patterns for the model and the data `X`.
 
         :param generator: Data to compute patterns.
-        :param kwargs: Same as for keras model.fit_generator.
+        :param kwargs: Same as for tensorflow.keras model.fit_generator.
         """
         self._create_computers()
 
         # We don't do gradient updates.
-        class NoOptimizer(keras.optimizers.Optimizer):
+        class NoOptimizer(tensorflow.keras.optimizers.Optimizer):
             def get_updates(self, *args, **kwargs):
                 return []
         optimizer = NoOptimizer()
@@ -486,7 +486,7 @@ class PatternComputer(object):
             dummy = np.ones(shape=(n, 1), dtype=dtype)
             return [dummy for _ in range(n_dummy_outputs)]
 
-        if isinstance(generator, keras.utils.Sequence):
+        if isinstance(generator, tensorflow.keras.utils.Sequence):
             generator = iutils.TargetAugmentedSequence(generator,
                                                        get_dummy_targets)
         else:

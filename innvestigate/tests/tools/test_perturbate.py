@@ -8,8 +8,8 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.layers
-import keras.models
+import tensorflow.keras.layers
+import tensorflow.keras.models
 import numpy as np
 import pytest
 
@@ -26,7 +26,7 @@ import innvestigate.utils as iutils
 @pytest.mark.precommit
 def test_fast__PerturbationAnalysis():
     # Some test data
-    if keras.backend.image_data_format() == "channels_first":
+    if tensorflow.keras.backend.image_data_format() == "channels_first":
         input_shape = (2, 1, 4, 4)
     else:
         input_shape = (2, 4, 4, 1)
@@ -34,9 +34,9 @@ def test_fast__PerturbationAnalysis():
     generator = iutils.BatchSequence([x, np.zeros(x.shape[0])], batch_size=x.shape[0])
 
     # Simple model
-    model = keras.models.Sequential([
-            keras.layers.Flatten(input_shape=x.shape[1:]),
-            keras.layers.Dense(1, use_bias=False),
+    model = tensorflow.keras.models.Sequential([
+            tensorflow.keras.layers.Flatten(input_shape=x.shape[1:]),
+            tensorflow.keras.layers.Dense(1, use_bias=False),
     ])
 
     weights = np.arange(4 * 4 * 1).reshape((4 * 4, 1))
@@ -66,7 +66,7 @@ def test_fast__PerturbationAnalysis():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Perturbation():
-    if keras.backend.image_data_format() == "channels_first":
+    if tensorflow.keras.backend.image_data_format() == "channels_first":
         input_shape = (1, 1, 4, 4)
     else:
         input_shape = (1, 4, 4, 1)
@@ -80,7 +80,7 @@ def test_fast__Perturbation():
     analysis[2:, 2:] = 3
     analysis = analysis.reshape(input_shape)
 
-    if keras.backend.image_data_format() == "channels_last":
+    if tensorflow.keras.backend.image_data_format() == "channels_last":
         x = np.moveaxis(x, 3, 1)
         analysis = np.moveaxis(analysis, 3, 1)
 

@@ -9,9 +9,9 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
-import keras.layers
-import keras.models
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers
+import tensorflow.keras.models
 import numpy as np
 import warnings
 
@@ -49,7 +49,7 @@ class AnalyzerBase(object):
 
     This class defines the basic interface for analyzers:
 
-    >>> model = create_keras_model()
+    >>> model = create_tensorflow.keras_model()
     >>> a = Analyzer(model)
     >>> a.fit(X_train)  # If analyzer needs training.
     >>> analysis = a.analyze(X_test)
@@ -190,7 +190,7 @@ class AnalyzerBase(object):
         disable_model_checks = state.pop("disable_model_checks")
         assert len(state) == 0
 
-        model = keras.models.model_from_json(model_json)
+        model = tensorflow.keras.models.model_from_json(model_json)
         model.set_weights(model_weights)
         return {"model": model,
                 "disable_model_checks": disable_model_checks}
@@ -330,7 +330,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._allow_lambda_layers = allow_lambda_layers
         self._add_model_check(
             lambda layer: (not self._allow_lambda_layers and
-                           isinstance(layer, keras.layers.core.Lambda)),
+                           isinstance(layer, tensorflow.keras.layers.Lambda)),
             ("Lamda layers are not allowed. "
              "To force use set allow_lambda_layers parameter."),
             check_type="exception",
@@ -368,18 +368,18 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         # Flatten to form (batch_size, other_dimensions):
         if K.ndim(model_output[0]) > 2:
-            model_output = keras.layers.Flatten()(model_output)
+            model_output = tensorflow.keras.layers.Flatten()(model_output[0])
 
         if neuron_selection_mode == "max_activation":
             l = ilayers.Max(name="iNNvestigate_max")
             model_output = l(model_output)
             self._special_helper_layers.append(l)
         elif neuron_selection_mode == "index":
-            neuron_indexing = keras.layers.Input(
+            neuron_indexing = tensorflow.keras.layers.Input(
                 batch_shape=[None, None], dtype=np.int32,
                 name='iNNvestigate_neuron_indexing')
             self._special_helper_layers.append(
-                neuron_indexing._keras_history[0])
+                neuron_indexing._tensorflow.keras_history[0])
             analysis_inputs.append(neuron_indexing)
             # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
@@ -392,7 +392,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         else:
             raise NotImplementedError()
 
-        model = keras.models.Model(inputs=model_inputs+analysis_inputs,
+        model = tensorflow.keras.models.Model(inputs=model_inputs+analysis_inputs,
                                    outputs=model_output)
         return model, analysis_inputs, stop_analysis_at_tensors
 
@@ -432,7 +432,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
-        self._analyzer_model = keras.models.Model(
+        self._analyzer_model = tensorflow.keras.models.Model(
             inputs=model_inputs+analysis_inputs+constant_inputs,
             outputs=analysis_outputs+debug_outputs)
 

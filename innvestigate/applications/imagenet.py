@@ -1,7 +1,7 @@
 """Example applications for image classifcation.
 
 Each function returns a pretrained ImageNet model.
-The models are based on keras.applications models and
+The models are based on tensorflow.keras.applications models and
 contain additionally pretrained patterns.
 
 The returned dictionary contains the following
@@ -26,15 +26,15 @@ from builtins import range
 ###############################################################################
 
 
-import keras.backend as K
-import keras.applications.resnet50
-import keras.applications.vgg16
-import keras.applications.vgg19
-import keras.applications.inception_v3
-import keras.applications.inception_resnet_v2
-import keras.applications.densenet
-import keras.applications.nasnet
-import keras.utils.data_utils
+import tensorflow.keras.backend as K
+import tensorflow.keras.applications.resnet50
+import tensorflow.keras.applications.vgg16
+import tensorflow.keras.applications.vgg19
+import tensorflow.keras.applications.inception_v3
+import tensorflow.keras.applications.inception_resnet_v2
+import tensorflow.keras.applications.densenet
+import tensorflow.keras.applications.nasnet
+import tensorflow.keras.utils.data_utils
 import numpy as np
 import warnings
 
@@ -89,7 +89,7 @@ def _get_patterns_info(netname, pattern_type):
 ###############################################################################
 
 
-def _prepare_keras_net(netname,
+def _prepare_tensorflow.keras_net(netname,
                        clazz,
                        image_shape,
                        preprocess_f,
@@ -133,7 +133,7 @@ def _prepare_keras_net(netname,
         except KeyError:
             warnings.warn("There are no patterns for network '%s'." % netname)
         else:
-            patterns_path = keras.utils.data_utils.get_file(
+            patterns_path = tensorflow.keras.utils.data_utils.get_file(
                 pattern_info["file_name"],
                 pattern_info["url"],
                 cache_subdir="innvestigate_patterns",
@@ -152,11 +152,11 @@ def _prepare_keras_net(netname,
 
 
 def vgg16(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "vgg16",
-        keras.applications.vgg16.VGG16,
+        tensorflow.keras.applications.vgg16.VGG16,
         [224, 224],
-        preprocess_f=keras.applications.vgg16.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.vgg16.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -164,11 +164,11 @@ def vgg16(load_weights=False, load_patterns=False):
 
 
 def vgg19(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "vgg19",
-        keras.applications.vgg19.VGG19,
+        tensorflow.keras.applications.vgg19.VGG19,
         [224, 224],
-        preprocess_f=keras.applications.vgg19.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.vgg19.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -181,11 +181,11 @@ def vgg19(load_weights=False, load_patterns=False):
 
 
 def resnet50(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "resnet50",
-        keras.applications.resnet50.ResNet50,
+        tensorflow.keras.applications.resnet50.ResNet50,
         [224, 224],
-        preprocess_f=keras.applications.resnet50.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.resnet50.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -198,11 +198,11 @@ def resnet50(load_weights=False, load_patterns=False):
 
 
 def inception_v3(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "inception_v3",
-        keras.applications.inception_v3.InceptionV3,
+        tensorflow.keras.applications.inception_v3.InceptionV3,
         [299, 299],
-        preprocess_f=keras.applications.inception_v3.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.inception_v3.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -214,11 +214,11 @@ def inception_v3(load_weights=False, load_patterns=False):
 
 
 def inception_resnet_v2(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "inception_resnet_v2",
-        keras.applications.inception_resnet_v2.InceptionResNetV2,
+        tensorflow.keras.applications.inception_resnet_v2.InceptionResNetV2,
         [299, 299],
-        preprocess_f=keras.applications.inception_resnet_v2.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.inception_resnet_v2.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -230,33 +230,33 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
 
 
 def densenet121(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "densenet121",
-        keras.applications.densenet.DenseNet121,
+        tensorflow.keras.applications.densenet.DenseNet121,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
 
 def densenet169(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "densenet169",
-        keras.applications.densenet.DenseNet169,
+        tensorflow.keras.applications.densenet.DenseNet169,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
 
 
 def densenet201(load_weights=False, load_patterns=False):
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "densenet201",
-        keras.applications.densenet.DenseNet201,
+        tensorflow.keras.applications.densenet.DenseNet201,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -271,12 +271,12 @@ def nasnet_large(load_weights=False, load_patterns=False):
     if K.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "nasnet_large",
-        keras.applications.nasnet.NASNetLarge,
+        tensorflow.keras.applications.nasnet.NASNetLarge,
         [331, 331],
         color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.nasnet.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)
@@ -286,12 +286,12 @@ def nasnet_mobile(load_weights=False, load_patterns=False):
     if K.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
-    return _prepare_keras_net(
+    return _prepare_tensorflow.keras_net(
         "nasnet_mobile",
-        keras.applications.nasnet.NASNetMobile,
+        tensorflow.keras.applications.nasnet.NASNetMobile,
         [224, 224],
         color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_f=tensorflow.keras.applications.nasnet.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns)

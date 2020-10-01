@@ -8,8 +8,8 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.layers
-import keras.models
+import tensorflow.keras.layers
+import tensorflow.keras.models
 import numpy as np
 import pytest
 try:
@@ -51,13 +51,13 @@ def test_precommit__DeepLIFT():
 def test_precommit__DeepLIFT_Rescale():
 
     def method(model):
-        if keras.backend.image_data_format() == "channels_first":
+        if tensorflow.keras.backend.image_data_format() == "channels_first":
             input_shape = (1, 28, 28)
         else:
             input_shape = (28, 28, 1)
-        model = keras.models.Sequential([
-            keras.layers.Dense(10, input_shape=input_shape),
-            keras.layers.ReLU(),
+        model = tensorflow.keras.models.Sequential([
+            tensorflow.keras.layers.Dense(10, input_shape=input_shape),
+            tensorflow.keras.layers.ReLU(),
         ])
         return DeepLIFT(model)
 

@@ -8,7 +8,7 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.layers
+import tensorflow.keras.layers
 
 from . import base
 
@@ -50,10 +50,10 @@ def skip_connection():
 
     net = {}
     net["in"] = base.input_layer(shape=input_shape)
-    dense = keras.layers.Dense(units=output_n,
+    dense = tensorflow.keras.layers.Dense(units=output_n,
                                activation="linear",
                                use_bias=False)
-    net["out"] = keras.layers.Add()([net["in"], dense(net["in"])])
+    net["out"] = tensorflow.keras.layers.Add()([net["in"], dense(net["in"])])
 
     net.update({
         "input_shape": input_shape,

@@ -9,7 +9,7 @@ from builtins import zip
 ###############################################################################
 
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 
 __all__ = [

@@ -7,13 +7,10 @@ from __future__ import\
 ###############################################################################
 ###############################################################################
 
-import keras.activations
-import keras.engine.topology
-import keras.layers
-import keras.layers.core
-import keras.layers.pooling
-import keras.models
-import keras
+import tensorflow.keras.activations
+import tensorflow.keras.layers
+import tensorflow.keras.models
+import tensorflow.keras
 import numpy as np
 import warnings
 
@@ -39,21 +36,21 @@ __all__ = [
 
 
 SUPPORTED_LAYER_PATTERNNET = (
-    keras.engine.topology.InputLayer,
-    keras.layers.convolutional.Conv2D,
-    keras.layers.core.Dense,
-    keras.layers.core.Dropout,
-    keras.layers.core.Flatten,
-    keras.layers.core.Masking,
-    keras.layers.core.Permute,
-    keras.layers.core.Reshape,
-    keras.layers.Concatenate,
-    keras.layers.pooling.GlobalMaxPooling1D,
-    keras.layers.pooling.GlobalMaxPooling2D,
-    keras.layers.pooling.GlobalMaxPooling3D,
-    keras.layers.pooling.MaxPooling1D,
-    keras.layers.pooling.MaxPooling2D,
-    keras.layers.pooling.MaxPooling3D,
+    tensorflow.keras.layers.InputLayer,
+    tensorflow.keras.layers.Conv2D,
+    tensorflow.keras.layers.Dense,
+    tensorflow.keras.layers.Dropout,
+    tensorflow.keras.layers.Flatten,
+    tensorflow.keras.layers.Masking,
+    tensorflow.keras.layers.Permute,
+    tensorflow.keras.layers.Reshape,
+    tensorflow.keras.layers.Concatenate,
+    tensorflow.keras.layers.GlobalMaxPooling1D,
+    tensorflow.keras.layers.GlobalMaxPooling2D,
+    tensorflow.keras.layers.GlobalMaxPooling3D,
+    tensorflow.keras.layers.MaxPooling1D,
+    tensorflow.keras.layers.MaxPooling2D,
+    tensorflow.keras.layers.MaxPooling3D,
 )
 
 
@@ -75,7 +72,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
         if "activation" in config:
             activation = config["activation"]
             config["activation"] = None
-        self._act_layer = keras.layers.Activation(
+        self._act_layer = tensorflow.keras.layers.Activation(
             activation,
             name="reversed_act_%s" % config["name"])
         self._filter_layer = kgraph.copy_layer_wo_activation(
@@ -106,7 +103,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
 
         # First step: propagate through the activation layer.
         # Workaround for linear activations.
-        linear_activations = [None, keras.activations.get("linear")]
+        linear_activations = [None, tensorflow.keras.activations.get("linear")]
         if self._act_layer.activation in linear_activations:
             tmp = reversed_Ys
         else:

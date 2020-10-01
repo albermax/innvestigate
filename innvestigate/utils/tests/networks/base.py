@@ -8,7 +8,7 @@ from builtins import range
 ###############################################################################
 ###############################################################################
 
-import keras.layers
+import tensorflow.keras.layers
 
 
 __all__ = [
@@ -32,15 +32,15 @@ __all__ = [
 # TODO: more consistent nameing
 
 def input_layer(shape, *args, **kwargs):
-    return keras.layers.Input(shape=shape[1:], *args, **kwargs)
+    return tensorflow.keras.layers.Input(shape=shape[1:], *args, **kwargs)
 
 
 def dense_layer(layer_in, *args, **kwargs):
-    return keras.layers.Dense(*args, **kwargs)(layer_in)
+    return tensorflow.keras.layers.Dense(*args, **kwargs)(layer_in)
 
 
 def conv_layer(layer_in, *args, **kwargs):
-    return keras.layers.Conv2D(*args, **kwargs)(layer_in)
+    return tensorflow.keras.layers.Conv2D(*args, **kwargs)(layer_in)
 
 
 def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
@@ -55,7 +55,7 @@ def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
         current_layer = conv
         ret[conv_prefix % i] = conv
 
-        ret["%s_pool" % prefix] = keras.layers.MaxPooling2D(
+        ret["%s_pool" % prefix] = tensorflow.keras.layers.MaxPooling2D(
             pool_size=(2, 2),
             strides=(2, 2),
         )(current_layer)
@@ -63,11 +63,11 @@ def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
 
 
 def dropout_layer(layer_in, *args, **kwargs):
-    return keras.layers.Dropout(*args, **kwargs)(layer_in)
+    return tensorflow.keras.layers.Dropout(*args, **kwargs)(layer_in)
 
 
 def softmax(layer_in):
-    return keras.layers.Activation("softmax")(layer_in)
+    return tensorflow.keras.layers.Activation("softmax")(layer_in)
 
 
 ###############################################################################
@@ -81,7 +81,7 @@ def log_reg(input_shape, output_n, activation=None):
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["in_flat"] = tensorflow.keras.layers.Flatten()(net["in"])
     net["out"] = dense_layer(net["in_flat"], units=output_n,
                              kernel_initializer="glorot_uniform")
     net["sm_out"] = softmax(net["out"])
@@ -106,7 +106,7 @@ def mlp_2dense(input_shape, output_n, activation=None,
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["in_flat"] = tensorflow.keras.layers.Flatten()(net["in"])
     net["dense_1"] = dense_layer(net["in_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
@@ -130,7 +130,7 @@ def mlp_3dense(input_shape, output_n, activation=None,
 
     net = {}
     net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = keras.layers.Flatten()(net["in"])
+    net["in_flat"] = tensorflow.keras.layers.Flatten()(net["in"])
     net["dense_1"] = dense_layer(net["in_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
@@ -165,7 +165,7 @@ def cnn_1convb_2dense(input_shape, output_n, activation=None,
     net["in"] = input_layer(shape=input_shape)
     net.update(conv_pool(net["in"], 2, "conv_1", 128,
                          activation=activation))
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_1_pool"])
+    net["conv_flat"] = tensorflow.keras.layers.Flatten()(net["conv_1_pool"])
     net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
@@ -193,7 +193,7 @@ def cnn_2convb_2dense(input_shape, output_n, activation=None,
                          activation=activation))
     net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
                          activation=activation))
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_2_pool"])
+    net["conv_flat"] = tensorflow.keras.layers.Flatten()(net["conv_2_pool"])
     net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
@@ -221,7 +221,7 @@ def cnn_2convb_3dense(input_shape, output_n, activation=None,
                          activation=activation))
     net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128,
                          activation=activation))
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_2_pool"])
+    net["conv_flat"] = tensorflow.keras.layers.Flatten()(net["conv_2_pool"])
     net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")
@@ -255,7 +255,7 @@ def cnn_3convb_3dense(input_shape, output_n, activation=None,
                          activation=activation))
     net.update(conv_pool(net["conv_2_pool"], 2, "conv_3", 128,
                          activation=activation))
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_3_pool"])
+    net["conv_flat"] = tensorflow.keras.layers.Flatten()(net["conv_3_pool"])
     net["dense_1"] = dense_layer(net["conv_flat"], units=dense_units,
                                  activation=activation,
                                  kernel_initializer="glorot_uniform")

@@ -10,8 +10,8 @@ from __future__ import \
 
 import pytest
 
-import keras.layers
-import keras.models
+import tensorflow.keras.layers
+import tensorflow.keras.models
 
 from innvestigate import create_analyzer
 from innvestigate.analyzer import analyzers
@@ -26,8 +26,8 @@ from innvestigate.analyzer import analyzers
 @pytest.mark.precommit
 def test_fast__create_analyzers():
 
-    fake_model = keras.models.Sequential([
-        keras.layers.Dense(10, input_shape=(10,))
+    fake_model = tensorflow.keras.models.Sequential([
+        tensorflow.keras.layers.Dense(10, input_shape=(10,))
     ])
     for name in analyzers.keys():
         try:
@@ -44,8 +44,8 @@ def test_fast__create_analyzers():
 @pytest.mark.precommit
 def test_fast__create_analyzers_wrong_name():
 
-    fake_model = keras.models.Sequential([
-        keras.layers.Dense(10, input_shape=(10,))
+    fake_model = tensorflow.keras.models.Sequential([
+        tensorflow.keras.layers.Dense(10, input_shape=(10,))
     ])
     with pytest.raises(KeyError):
         create_analyzer("wrong name", fake_model)

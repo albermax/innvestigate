@@ -8,9 +8,9 @@ import numpy as np
 import warnings
 import time
 
-import keras.backend as K
-from keras.utils import Sequence
-from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
+import tensorflow.keras.backend as K
+from tensorflow.keras.utils import Sequence
+from tensorflow.python.keras.utils import OrderedEnqueuer, GeneratorEnqueuer
 
 import innvestigate.utils
 
@@ -191,7 +191,7 @@ class PerturbationAnalysis:
     :param analyzer: Analyzer.
     :type analyzer: innvestigate.analyzer.base.AnalyzerBase
     :param model: Trained Keras model.
-    :type model: keras.engine.training.Model
+    :type model: tensorflow.keras.engine.training.Model
     :param generator: Data generator.
     :type generator: innvestigate.utils.BatchSequence
     :param perturbation: Instance of Perturbation class that performs the perturbation.
@@ -278,7 +278,7 @@ class PerturbationAnalysis:
 
         The generator should return the same kind of data
         as accepted by `test_on_batch`.
-        For documentation, refer to keras.engine.training.evaluate_generator (https://keras.io/models/model/)
+        For documentation, refer to tensorflow.keras.engine.training.evaluate_generator (https://tensorflow.keras.io/models/model/)
         """
 
         steps_done = 0
@@ -290,16 +290,16 @@ class PerturbationAnalysis:
             warnings.warn(
                 UserWarning('Using a generator with `use_multiprocessing=True`'
                             ' and multiple workers may duplicate your data.'
-                            ' Please consider using the`keras.utils.Sequence'
+                            ' Please consider using the`tensorflow.keras.utils.Sequence'
                             ' class.'))
         if steps is None:
             if is_sequence:
                 steps = len(generator)
             else:
                 raise ValueError('`steps=None` is only valid for a generator'
-                                 ' based on the `keras.utils.Sequence` class.'
+                                 ' based on the `tensorflow.keras.utils.Sequence` class.'
                                  ' Please specify `steps` or use the'
-                                 ' `keras.utils.Sequence` class.')
+                                 ' `tensorflow.keras.utils.Sequence` class.')
         enqueuer = None
 
         try:

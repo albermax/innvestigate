@@ -9,8 +9,8 @@ import six
 ###############################################################################
 
 
-import keras.backend as K
-import keras.models
+import tensorflow.keras.backend as K
+import tensorflow.keras.models
 import numpy as np
 import unittest
 
@@ -101,7 +101,7 @@ class AnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
@@ -146,7 +146,7 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
@@ -203,7 +203,7 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
@@ -267,7 +267,7 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
@@ -318,7 +318,7 @@ class PatternComputerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = tensorflow.keras.models.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get computer.
         computer = self._method(model)

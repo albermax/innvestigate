@@ -9,7 +9,7 @@ from builtins import zip
 ###############################################################################
 
 
-import keras.backend as K
+import tensorflow.keras.backend as K
 import numpy as np
 
 
@@ -38,7 +38,6 @@ def apply(layer, inputs):
     :param layer: A Keras layer instance.
     :param inputs: A list of input tensors or a single tensor.
     """
-
     if isinstance(inputs, list) and len(inputs) > 1:
         try:
             ret = layer(inputs)
@@ -46,6 +45,8 @@ def apply(layer, inputs):
             # layer expects a single tensor.
             if len(inputs) != 1:
                 raise ValueError("Layer expects only a single input!")
+            ret = layer(inputs[0])
+
             ret = layer(inputs[0])
     else:
         ret = layer(inputs[0])
@@ -56,7 +57,7 @@ def apply(layer, inputs):
 def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
     """Broadcasts numpy tensors to the shape of Keras tensors.
 
-    :param keras_tensors: The Keras tensors with the target shapes.
+    :param tensorflow.keras_tensors: The Keras tensors with the target shapes.
     :param np_tensors: Numpy tensors that should be broadcasted.
     :return: The broadcasted Numpy tensors.
     """

@@ -9,8 +9,8 @@ from builtins import range
 ###############################################################################
 
 
-import keras.models
-import keras.engine.topology
+import tensorflow.keras.models
+import tensorflow.keras.engine.topology
 
 
 from ... import utils as iutils
@@ -36,19 +36,19 @@ class TestAnalysisHelper(object):
           In this case a sequntial model will be build. The first layer
           must have set input_shape or batch_input_shape.
           Alternatively a tuple with input and output tensors, in which
-          case the keras modle api will be used.
+          case the tensorflow.keras modle api will be used.
         :param analyzer: Either an analyzer class or a function
-          that takes a keras model and returns an analyzer.
+          that takes a tensorflow.keras model and returns an analyzer.
         :param weights: After creating the model set the given weights.
         """
 
-        if isinstance(model, keras.engine.topology.Layer):
+        if isinstance(model, tensorflow.keras.engine.topology.Layer):
             model = [model]
 
         if isinstance(model, list):
-            self._model = keras.models.Sequential(model)
+            self._model = tensorflow.keras.models.Sequential(model)
         else:
-            self._model = keras.models.Model(*model)
+            self._model = tensorflow.keras.models.Model(*model)
 
         self._input_shapes = iutils.to_list(self._model.input_shape)
 

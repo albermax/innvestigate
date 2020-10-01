@@ -8,8 +8,8 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.backend as K
-import keras.layers
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers
 import numpy as np
 import warnings
 
@@ -89,7 +89,7 @@ def vgg16_custom(activation=None):
         activation=activation,
     ))
 
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_5_pool"])
+    net["conv_flat"] = tensorflow.keras.layers.Flatten()(net["conv_5_pool"])
     net["dense_1"] = base.dense_layer(net["conv_flat"], units=4096,
                                       activation=activation,
                                       kernel_initializer="glorot_uniform")

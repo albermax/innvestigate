@@ -8,7 +8,7 @@ from __future__ import\
 ###############################################################################
 
 
-import keras.models
+import tensorflow.keras.models
 import pytest
 
 
@@ -29,7 +29,7 @@ def test_fast__get_model_execution_graph():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
 
         graph = kgraph.get_model_execution_graph(model)
@@ -43,7 +43,7 @@ def test_commit__get_model_execution_graph():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
 
         graph = kgraph.get_model_execution_graph(model)
@@ -57,7 +57,7 @@ def test_precommit__get_model_execution_graph_resnet50():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
 
         graph = kgraph.get_model_execution_graph(model)
@@ -72,7 +72,7 @@ def test_fast__get_model_execution_graph_with_inputs():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"],
+        model = tensorflow.keras.models.Model(inputs=network["in"],
                                    outputs=network["out"])
 
         graph = kgraph.get_model_execution_graph(model,

@@ -11,10 +11,10 @@ import six
 
 
 import inspect
-import keras.backend as K
-import keras.engine.topology
-import keras.layers
-import keras.models
+import tensorflow as tf
+import tensorflow.keras.backend as K
+import tensorflow.keras.layers
+import tensorflow.keras.models
 import numpy as np
 
 
@@ -69,7 +69,10 @@ def get_input_layers(layer):
     for node_index in range(len(layer._inbound_nodes)):
         Xs = iutils.to_list(layer.get_input_at(node_index))
         for X in Xs:
-            ret.add(X._keras_history[0])
+            try:
+                ret.add(X._tensorflow.keras_history[0])
+            except AttributeError:
+                ret.add(X._keras_history[0])
 
     return ret
 
@@ -121,11 +124,11 @@ def get_layer_neuronwise_io(layer,
     if Ys is None:
         Ys = iutils.to_list(layer.get_output_at(node_index))
 
-    if isinstance(layer, keras.layers.Dense):
+    if isinstance(layer, tensorflow.keras.layers.Dense):
         # Xs and Ys are already in shape.
         ret_Xs = Xs
         ret_Ys = Ys
-    elif isinstance(layer, keras.layers.Conv2D):
+    elif isinstance(layer, tensorflow.keras.layers.Conv2D):
         kernel = get_kernel(layer)
         # Expect filter dimension to be last.
         n_channels = kernel.shape[-1]
@@ -362,10 +365,10 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
     Xs = iutils.to_list(Xs)
     ret = []
     for x in Xs:
-        layer, node_index, tensor_index = x._keras_history
+        layer, node_index, tensor_index = x._tensorflow.keras_history
         if kchecks.contains_activation(layer, activation="softmax"):
             softmax_found = True
-            if isinstance(layer, keras.layers.Activation):
+            if isinstance(layer, tensorflow.keras.layers.Activation):
                 ret.append(layer.get_input_at(node_index))
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
@@ -379,7 +382,7 @@ def pre_softmax_tensors(Xs, should_find_softmax=True):
 
 def model_wo_softmax(model):
     """Creates a new model w/o the final softmax activation."""
-    return keras.models.Model(inputs=model.inputs,
+    return tensorflow.keras.models.Model(inputs=model.inputs,
                               outputs=pre_softmax_tensors(model.outputs),
                               name=model.name)
 
@@ -394,7 +397,10 @@ def get_model_layers(model):
     ret = []
 
     def collect_layers(container):
-        for layer in container.layers:
+        layers = container.layers if hasattr(container, 'layers') else container._layers
+        for layer in layers:
+            if hasattr(layer, "__iter__"):
+                continue
             assert layer not in ret
             ret.append(layer)
             if kchecks.is_network(layer):
@@ -429,6 +435,28 @@ def model_contains(model, layer_condition, return_only_counts=False):
 ###############################################################################
 ###############################################################################
 
+def _get_executed_nodes(executed_nodes, outputs):
+    # This list contains potentially nodes that are not part
+    # final execution graph.
+    # E.g., a layer was also applied outside of the model. Then its
+    # node list contains nodes that do not contribute to the model's output.
+    # Those nodes are filtered here.
+    used_as_input = []
+    for x in outputs:
+        used_as_input.append(x)
+
+#    used_as_input = [x for x in outputs]
+    tmp = []
+    for l, Xs, Ys in reversed(list(executed_nodes)):
+        part_of_graph = []
+        for y in Ys:
+            part_of_graph.append(y in used_as_input)
+        if all(part_of_graph):
+            used_as_input += Xs
+            tmp.append((l, Xs, Ys))
+    executed_nodes = list(reversed(tmp))
+    return executed_nodes
+
 
 def trace_model_execution(model, reapply_on_copied_layers=False):
     """
@@ -442,7 +470,6 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
       reapply with copied layers. Might be slow. Prevents changes of the
       original layer's node lists.
     """
-
     # Get all layers in model.
     layers = get_model_layers(model)
 
@@ -493,7 +520,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 setattr(layer, "call", patch(layer, getattr(layer, "call")))
 
             # Trigger reapplication of model.
-            model_copy = keras.models.Model(inputs=model.inputs,
+            model_copy = tensorflow.keras.models.Model(inputs=model.inputs,
                                             outputs=model.outputs)
             outputs = iutils.to_list(model_copy(model.inputs))
         finally:
@@ -502,7 +529,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
                 setattr(layer, "call", old_method)
 
         # Now we have the problem that all the tensors
-        # do not have a keras_history attribute as they are not part
+        # do not have a tensorflow.keras_history attribute as they are not part
         # of any node. Apply the flat model to get it.
         from . import apply as kapply
         new_executed_nodes = []
@@ -516,7 +543,7 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
             layer = layer_mapping[layer]
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
 
-            if isinstance(layer, keras.layers.InputLayer):
+            if isinstance(layer, tensorflow.keras.layers.InputLayer):
                 # Special case. Do nothing.
                 new_Xs, new_Ys = Xs, Ys
             else:
@@ -531,27 +558,24 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
         executed_nodes = new_executed_nodes
     else:
         # Easy and safe way.
-        reverse_executed_nodes = [
-            (node.outbound_layer, node.input_tensors, node.output_tensors)
-            for depth in sorted(model._nodes_by_depth.keys())
-            for node in model._nodes_by_depth[depth]
-        ]
+        #reverse_executed_nodes = [
+        #    (node.outbound_layer, node.input_tensors, node.output_tensors)
+        #    for depth in sorted(model._nodes_by_depth.keys())
+        #    for node in model._nodes_by_depth[depth]
+        #]
+        reverse_executed_nodes = []
+        for depth in sorted(model._nodes_by_depth.keys()):
+            for node in model._nodes_by_depth[depth]:
+                reverse_executed_nodes.append(
+                    (node.outbound_layer, node.input_tensors, node.output_tensors))
+
         outputs = model.outputs
 
         executed_nodes = reversed(reverse_executed_nodes)
 
-    # This list contains potentially nodes that are not part
-    # final execution graph.
-    # E.g., a layer was also applied outside of the model. Then its
-    # node list contains nodes that do not contribute to the model's output.
-    # Those nodes are filtered here.
-    used_as_input = [x for x in outputs]
-    tmp = []
-    for l, Xs, Ys in reversed(list(executed_nodes)):
-        if all([y in used_as_input for y in Ys]):
-            used_as_input += Xs
-            tmp.append((l, Xs, Ys))
-    executed_nodes = list(reversed(tmp))
+    # TODO: tutaj jescze wszystko jest
+    # import ipdb; ipdb.set_trace()
+    executed_nodes = _get_executed_nodes(executed_nodes, outputs)
 
     return layers, executed_nodes, outputs
 
@@ -588,7 +612,7 @@ def get_model_execution_trace(model,
     current_nid = 0
     tmp = []
     for l, Xs, Ys in execution_trace:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, tensorflow.keras.layers.InputLayer):
             tmp.append((None, l, Xs, Ys))
         else:
             tmp.append((current_nid, l, Xs, Ys))
@@ -618,7 +642,7 @@ def get_model_execution_trace(model,
     nid_to_nodes = {t[0]: t for t in execution_trace}
     tmp = []
     for nid, l, Xs, Ys in execution_trace:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, tensorflow.keras.layers.InputLayer):
             # The nids that created or receive the tensors.
             Xs_nids = []  # Input layer does not receive.
             Ys_nids = [inputs_to_node[id(Y)] for Y in Ys]
@@ -724,7 +748,7 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
 
     forward_connections = {}
     for l, Xs, Ys in execution_list:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, tensorflow.keras.layers.InputLayer):
             # Special case, do nothing.
             continue
 
@@ -741,7 +765,7 @@ def get_bottleneck_nodes(inputs, outputs, execution_list):
 
     ret = list()
     for l, Xs, Ys in execution_list:
-        if isinstance(l, keras.layers.InputLayer):
+        if isinstance(l, tensorflow.keras.layers.InputLayer):
             # Special case, do nothing.
             # Note: if a single input branches
             # this is not detected.
@@ -891,11 +915,13 @@ def reverse_model(model, reverse_mappings,
             add_reversed_tensor(i, X, reversed_X)
 
     def get_reversed_tensor(tensor):
-        tmp = reversed_tensors[tensor]
-
+        try:
+            tmp = reversed_tensors[tensor]
+        except:
+            raise Exception
         if "final_tensor" not in tmp:
             if "tensor" not in tmp:
-                final_tensor = keras.layers.Add()(tmp["tensors"])
+                final_tensor = tensorflow.keras.layers.Add()(tmp["tensors"])
             else:
                 final_tensor = tmp["tensor"]
 
@@ -923,7 +949,7 @@ def reverse_model(model, reverse_mappings,
     layers, execution_list, outputs = execution_trace
     len_execution_list = len(execution_list)
     num_input_layers = len([_ for l, _, _ in execution_list
-                            if isinstance(l, keras.layers.InputLayer)])
+                            if isinstance(l, tensorflow.keras.layers.InputLayer)])
     len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
     reverse_execution_list = reversed(execution_list)
 
@@ -996,11 +1022,12 @@ def reverse_model(model, reverse_mappings,
     for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):
         nid = len_execution_list_wo_inputs_layers - _nid - 1
 
-        if isinstance(layer, keras.layers.InputLayer):
+        if isinstance(layer, tensorflow.keras.layers.InputLayer):
             # Special case. Do nothing.
             pass
-        elif kchecks.is_network(layer):
-            raise Exception("This is not supposed to happen!")
+        # TODO: Czy to ma być wykomentowane - czy może trzeba jakoś wyeleminować kontenery wcześniej?
+        # elif kchecks.is_network(layer):
+        #     raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
             if not all([ys in reversed_tensors for ys in Ys]):
