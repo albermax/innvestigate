@@ -460,6 +460,7 @@ class ReverseModel():
         - build
         - apply
         - get precomputed explanations from
+        - get activations
         - save
         - load
     the ReverseModel
@@ -579,6 +580,7 @@ class ReverseModel():
 
         :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
                             if explained_layer_names == 'all', explanations of all layers are returned.
+                            if None, return explanations of input layer only.
 
         :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
 
@@ -612,6 +614,45 @@ class ReverseModel():
                 hm[name] = layer[0].explanation.numpy()
 
         return hm
+
+    def get_hook_activations(self, layer_names=None):
+
+        """
+        Get results of (previously computed) activations.
+        activations of layer i has shape equal to output_shape of layer i.
+
+        :param layer_names: None or list of strings containing the names of the layers.
+                            if activations of last layer or layer after and inclusive stop_mapping_at are NOT available.
+                            if None, return activations of input layer only.
+
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
+
+        """
+
+        reverse_ins, reverse_layers = self._reverse_model
+
+        activations = {}
+
+        if layer_names is None:
+            # just explain input layers
+            for layer in reverse_ins:
+                if layer.activations_saved == False:
+                    raise AttributeError("activations have to be saved first! Use for instance 'no_forward_pass=True'")
+                activations[layer.name] = layer.hook_vals
+
+            return activations
+
+
+        # otherwise, obtain explanations for specified layers
+        for name in layer_names:
+            layer = [layer for layer in reverse_layers if layer.name == name]
+            if len(layer) > 0:
+                if layer[0].activations_saved == False:
+                    raise AttributeError(f"activations of <<{name}>> have to be saved first! Use for instance 'no_forward_pass=True'")
+                activations[name] = layer[0].hook_vals
+
+        return activations
+
 
     #TODO
     def save(self):
