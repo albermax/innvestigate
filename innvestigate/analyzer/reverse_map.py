@@ -642,6 +642,14 @@ class ReverseModel():
 
             return activations
 
+        # output everything possible
+        if layer_names is "all":
+            for layer in reverse_layers:
+                if layer.activations_saved == True:
+                    activations[layer.name] = layer.hook_vals
+
+            return activations
+
 
         # otherwise, obtain explanations for specified layers
         for name in layer_names:
