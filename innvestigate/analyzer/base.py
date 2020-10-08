@@ -553,8 +553,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
           Form: f(layer) -> bool
         :param mapping: The mapping can be of the following forms:
           * A function of form f(layer) that returns
-            a class:`ReverseMappingBase` subclass..
-          * A :class:`ReverseMappingBase` subclass.
+            a class:`reverse_map.ReplacementLayer` subclass..
         :param priority: The higher the earlier the condition gets
           evaluated.
         :param name: An identifying name.

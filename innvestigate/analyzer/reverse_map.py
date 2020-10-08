@@ -261,7 +261,7 @@ class ReplacementLayer():
         """
         Tries to apply own forward pass:
         * Aggregates inputs and callbacks of all parent layers
-        * Performs a canonization  of the neuron_selection parameter
+        * Performs a canonization of the neuron_selection parameter
         * Calls wrap_hook (wrapped forward pass(es))
         * Calls _forward (forward result of forward pass to child layers)
 
