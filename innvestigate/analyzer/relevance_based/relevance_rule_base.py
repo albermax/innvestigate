@@ -1057,7 +1057,14 @@ class AddReverseRule(reverse_map.ReplacementLayer):
 
         return ret
 
-# TODO not tested in tf2.0 yet
+# TODO: kick out of code completely!
+### code in relevance_analayzer.py deleted
+## # self._add_conditional_reverse_mapping(
+        #    kchecks.is_average_pooling,
+         #   rrule.AveragePoolingReverseRule,
+        #name="lrp_average_pooling_mapping",
+        #)
+########################################
 class AveragePoolingReverseRule(reverse_map.ReplacementLayer):
     """Special AveragePooling handler that applies the Z-Rule"""
 
