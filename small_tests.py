@@ -56,6 +56,16 @@ def SimpleDense():
 
     return inp, model, "SimpleDense"
 
+def Concat():
+    inputs1 = tf.keras.Input(shape=(1,))
+    inputs2 = tf.keras.Input(shape=(1,))
+    z = tf.keras.layers.Concatenate()([inputs1, inputs2])
+    outputs = tf.keras.layers.Dense(5, activation="softmax")(z)
+    model = tf.keras.Model(inputs=[inputs1, inputs2], outputs=outputs)
+    inp = [np.random.rand(3, 1), np.random.rand(3, 1)]
+
+    return inp, model, "Concat"
+
 def MultiIn():
     inputs1 = tf.keras.Input(shape=(1,))
     inputs2 = tf.keras.Input(shape=(1,))
@@ -118,7 +128,7 @@ def VGG16():
         weights="imagenet",
     )
     loader = tf.keras.preprocessing.image_dataset_from_directory("/media/weber/f3ed2aae-a7bf-4a55-b50d-ea8fb534f1f5/Datasets/Imagenet/train/",
-                                                                 batch_size=3,
+                                                                 batch_size=10,
                                                                  image_size=(224, 224), shuffle=False)
     for (data, label) in loader:
         inp = data
@@ -177,30 +187,31 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     print("Param neuron_selection: ", neuron_selection)
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
     model.summary()
-    a = time.time()
-    ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection, f_init=1)
-    b = time.time()
-    print("Time Passed: ", b - a)
-    print("explanation: ", np.shape(R))
+    for i in range(3):
+        a = time.time()
+        ana = analyzer(model)
+        R = ana.analyze(input, neuron_selection=neuron_selection)
+        b = time.time()
+        print("Iteration ", i, "Time Passed: ", b - a)
     return R
 
 #----------------------------------------------------------------------------------
 #Tests
 
 model_cases = [
-    SimpleDense,
-    MultiIn,
-    MultiConnect,
-    MultiAdd,
-    ConcatModel,
-    #VGG16,
+    #SimpleDense,
+    #Concat,
+    #MultiIn,
+    #MultiConnect,
+    #MultiAdd,
+    #ConcatModel,
+    VGG16,
     #VGG16_modified
 ]
 
 analyzer_cases = [
     #innvestigate.analyzer.ReverseAnalyzerBase,
-    innvestigate.analyzer.LRPZ,
+    #innvestigate.analyzer.LRPZ,
     #innvestigate.analyzer.LRPZIgnoreBias,
     #innvestigate.analyzer.LRPZPlus,
     #innvestigate.analyzer.LRPZPlusFast,
@@ -218,17 +229,17 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
     #innvestigate.analyzer.LRPRuleUntilIndex,
-    #innvestigate.analyzer.Gradient,
-    #innvestigate.analyzer.InputTimesGradient,
-    #innvestigate.analyzer.GuidedBackprop,
-    #innvestigate.analyzer.Deconvnet,
-    #innvestigate.analyzer.SmoothGrad,
-    #innvestigate.analyzer.IntegratedGradients,
+    innvestigate.analyzer.Gradient,
+    innvestigate.analyzer.InputTimesGradient,
+    innvestigate.analyzer.GuidedBackprop,
+    innvestigate.analyzer.Deconvnet,
+    innvestigate.analyzer.SmoothGrad,
+    innvestigate.analyzer.IntegratedGradients,
 ]
 
 neuron_selection_cases = [
-    #None,
-    "max_activation",
+    None,
+    #"max_activation",
     #"all",
     #0,
     #[0, 1, 2],
@@ -252,13 +263,13 @@ for model_case in model_cases:
             #print("Explanation Shape:", np.shape(R_new))
             #print(R_new)
 
-            if name == "VGG16":
-                for key in R_new.keys():
-                    plt.figure("Heatmap")
-                    plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
-                    img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
-                    plt.imshow(img)
-                    plt.show()
+            #if name == "VGG16":
+            #    for key in R_new.keys():
+            #        plt.figure("Heatmap")
+            #        plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
+            #        img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
+            #        plt.imshow(img)
+            #        plt.show()
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")

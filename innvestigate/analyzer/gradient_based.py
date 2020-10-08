@@ -16,6 +16,7 @@ from . import wrapper
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
+from ..utils.keras import functional as kfunctional
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
@@ -32,6 +33,8 @@ __all__ = [
     "SmoothGrad",
 ]
 
+
+layer_mapping = {}
 
 ###############################################################################
 ###############################################################################
@@ -176,50 +179,61 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
 
     def __init__(self, layer, *args, **kwargs):
         self._activation = keras_layers.Activation("relu")
-        self._layer_wo_relu = kgraph.copy_layer_wo_activation(
-            layer,
-            name_template="reversed_%s",
-        )
+
+        # this avoids creating a new object each time and reduces tracing
+        if (layer.name, type(self).__name__) in layer_mapping.keys():
+            self._layer_wo_relu = layer_mapping[(layer.name, type(self).__name__)][0]
+            self._activation = layer_mapping[(layer.name, type(self).__name__)][1]
+        else:
+            self._layer_wo_relu = kgraph.copy_layer_wo_activation(
+                layer,
+                name_template="reversed_%s",
+            )
+            self._activation = keras_layers.Activation("relu")
+            layer_mapping[(layer.name, type(self).__name__)] = [self._layer_wo_relu, self._activation]
+
         super(DeconvnetReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
-        with tf.GradientTape(persistent=True) as tape:
-            tape.watch(ins)
-            outs = self.layer_func(ins)
-            Ys = self._layer_wo_relu(ins)
-
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
-                outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
-                Ys = self._neuron_sel_and_head_map(Ys, neuron_selection, r_init)
-
-        return outs, Ys, tape
-
-    def explain_hook(self, ins, reversed_outs, args):
-
-        outs, Ys, tape = args
-
-        # last layer
-        if reversed_outs is None:
-            reversed_outs = Ys
-
-        # Apply relus conditioned on backpropagated values.
-        Ys_wo_relu = self._layer_wo_relu(ins)
-
-        if len(self.layer_next) > 1:
-            reversed_outs = [self._activation(r) for r in reversed_outs]
-            # Apply gradient.
-            if len(self.input_shape) > 1:
-                ret = [keras_layers.Add()([tape.gradient(Ys_wo_relu, i, output_gradients=r) for r in reversed_outs]) for i in ins]
-            else:
-                ret = keras_layers.Add()([tape.gradient(Ys_wo_relu, ins, output_gradients=r)  for r in reversed_outs])
+    def get_explain_functions(self, stop_mapping_at_layers):
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
+            self._explain_func = kfunctional.final_deconvnet_explanation
         else:
-            reversed_outs = self._activation(reversed_outs)
-            # Apply gradient.
-            if len(self.input_shape) > 1:
-                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
-            else:
-                ret = tape.gradient(Ys_wo_relu, ins, output_gradients=reversed_outs)
+            self._explain_func = kfunctional.deconvnet_explanation
+
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        self.get_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(DeconvnetReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
+
+        #some preparation
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
+        if reversed_outs is None:
+            reversed_outs = self.hook_vals["outs"]
+
+        if len(self.layer_next) == 0 or (self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals["stop_mapping_at_layers"]):
+            ret = self._explain_func(ins,
+                                     self._layer_wo_relu,
+                                     self._activation,
+                                     self._neuron_sel_and_head_map,
+                                     self._out_func,
+                                     reversed_outs,
+                                     len(self.input_shape),
+                                     len(self.layer_next),
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
+                                     )
+        else:
+            ret = self._explain_func(ins, self._layer_wo_relu, self._activation, self._out_func, reversed_outs, len(self.input_shape),
+                                     len(self.layer_next))
+
+        # apply correct explanation function
         return ret
 
 class Deconvnet(base.ReverseAnalyzerBase):
@@ -257,28 +271,45 @@ class GuidedBackpropReplacementLayer(reverse_map.GradientReplacementLayer):
         self._activation = keras_layers.Activation("relu")
         super(GuidedBackpropReplacementLayer, self).__init__(layer, *args, **kwargs)
 
-    def explain_hook(self, ins, reversed_outs, args):
-
-        outs, tape = args
-
-        # last layer
-        if reversed_outs is None:
-            reversed_outs = outs
-
-        if len(self.layer_next) > 1:
-            reversed_outs = [self._activation(r) for r in reversed_outs]
-            # Apply gradient.
-            if len(self.input_shape) > 1:
-                ret = [keras_layers.Add()([tape.gradient(outs, i, output_gradients=r) for r in reversed_outs]) for i in ins]
-            else:
-                ret = keras_layers.Add()([tape.gradient(outs, ins, output_gradients=r)  for r in reversed_outs])
+    def get_explain_functions(self, stop_mapping_at_layers):
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
+            self._explain_func = kfunctional.final_deconvnet_explanation
         else:
-            reversed_outs = self._activation(reversed_outs)
-            # Apply gradient.
-            if len(self.input_shape) > 1:
-                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
-            else:
-                ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+            self._explain_func = kfunctional.deconvnet_explanation
+
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        self.get_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(GuidedBackpropReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
+
+        #some preparation
+        if len(self.input_shape) > 1:
+            raise ValueError("This Layer should only have one input!")
+
+        if reversed_outs is None:
+            reversed_outs = self.hook_vals["outs"]
+
+        if len(self.layer_next) == 0 or (self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals["stop_mapping_at_layers"]):
+            ret = self._explain_func(ins,
+                                     self._activation,
+                                     self._neuron_sel_and_head_map,
+                                     self._out_func,
+                                     reversed_outs,
+                                     len(self.input_shape),
+                                     len(self.layer_next),
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
+                                     )
+        else:
+            ret = self._explain_func(ins, self._activation, self._out_func, reversed_outs, len(self.input_shape),
+                                     len(self.layer_next))
+
+        # apply correct explanation function
         return ret
 
 class GuidedBackprop(base.ReverseAnalyzerBase):

@@ -1,16 +1,22 @@
 import warnings
+warnings.simplefilter("ignore")
+#warnings.simplefilter("always")
 import tensorflow as tf
+import logging
+tf.get_logger().setLevel(logging.ERROR)
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
 
 import tensorflow.keras.backend as K
 import numpy as np
 from ..utils.keras import graph as kgraph
+from ..utils.keras import functional as kfunctional
 
 import tensorflow.keras.layers as keras_layers
+
+#---------------------------------------------------Classes------------------------------------
 
 class ReplacementLayer():
     """
@@ -36,11 +42,17 @@ class ReplacementLayer():
     """
     def __init__(self, layer, layer_next=[], r_init_constant=None, f_init_constant=None):
 
+        #params
         self.layer_func = layer
         self.layer_next = layer_next
         self.name = layer.name
         self.r_init = r_init_constant
         self.f_init = f_init_constant
+
+        #functions
+        self._neuron_select = kfunctional.neuron_select
+        self._out_func = None
+        self._explain_func = None
 
         self.input_shape = layer.input_shape
         if not isinstance(self.input_shape, list):
@@ -98,8 +110,8 @@ class ReplacementLayer():
             if self.debug == True:
                 print("Backward at: ", self.name)
                 print("layer_next:", len(self.layer_next))
-                print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals[0]))
-            self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
+                print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals["outs"]))
+            self.explanation = self.explain_hook(input_vals, rev_outs)
 
             # callbacks
             if self.callbacks is not None:
@@ -128,8 +140,6 @@ class ReplacementLayer():
                 self.callbacks = None
 
             self.reversed_output_vals = None
-
-
 
     def _forward(self, Ys, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
@@ -186,25 +196,7 @@ class ReplacementLayer():
 
         return y, grad
 
-    def _neuron_select(self, Ys, neuron_selection):
-        """
-        Performs neuron_selection on Ys
-
-        :param Ys: output of own forward pass
-        :param neuron_selection: neuron_selection parameter (see try_apply)
-        """
-        #error handling is done before, in try_apply
-
-        if neuron_selection is None:
-            Ys = Ys
-        elif isinstance(neuron_selection, tf.Tensor):
-            # flatten and then filter neuron_selection index
-            Ys = tf.reshape(Ys, (Ys.shape[0], np.prod(Ys.shape[1:])))
-            Ys = tf.gather_nd(Ys, neuron_selection, batch_dims=1)
-        else:
-            Ys = K.max(Ys, axis=1, keepdims=True)
-        return Ys
-
+    #@tf.function
     def _head_mapping(self, Ys, model_output_value=None):
         """
         Sets the model output to a fixed value. Used as initialization
@@ -213,6 +205,7 @@ class ReplacementLayer():
         :param model_output_value: output value of model / initialized value for explanation method
 
         """
+
         if model_output_value is not None:
             if isinstance(model_output_value, dict):
                 if self.name in model_output_value.keys():
@@ -235,6 +228,35 @@ class ReplacementLayer():
 
         return Ys
 
+    def compute_output(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
+        """
+        hook that wraps and applies the layer function.
+        E.g., by defining a GradientTape
+        * should contain a call to self._neuron_select.
+        * may define any wrappers around
+
+        :param ins: input(s) of this layer
+        :param neuron_selection: neuron_selection parameter (see try_apply)
+        :param stop_mapping_at_layers: None or stop_mapping_at_layers parameter (see try_apply)
+        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
+
+        :returns output of layer function + any wrappers that were defined and are needed in explain_hook
+
+        To be extended for specific XAI methods
+        """
+        # check if final layer (i.e., no next layers)
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
+            self._out_func = kfunctional.final_out_func
+        else:
+            self._out_func = kfunctional.out_func
+
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
+            outs = self._out_func(ins, self.layer_func, self._neuron_sel_and_head_map, neuron_selection, r_init)
+        else:
+            outs = self._out_func(ins, self.layer_func)
+
+        return outs
+
     def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
         """
         Tries to apply own forward pass:
@@ -255,25 +277,13 @@ class ReplacementLayer():
         :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
         """
         # DEBUG
-        # print(self.name, self.input_shape, np.shape(ins))
-
+        #print(self.name, self.input_shape, np.shape(ins))
 
         if self.no_forward_pass == True and self.activations_saved == True:
             # calculate no forward pass, instead pass on to next layers
-
-            # aggregate callbacks
-           # if callback is not None:
-            #    if self.callbacks is None:
-             #       self.callbacks = []
-              #  self.callbacks.append(callback)
-
-            if isinstance(self.hook_vals, tuple):
-                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init, f_init)
-            else:
-                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+            self._forward(self.hook_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
             return
-
 
         self.reversed_output_vals = None
 
@@ -302,6 +312,9 @@ class ReplacementLayer():
 
         # apply layer only if all inputs collected. Then reset inputs
         if len(self.input_vals) == len(self.input_shape):
+
+            # initialize explanation functions
+            self.get_explain_functions(stop_mapping_at_layers)
 
             # set inputs to f_init, if it is not None
             if f_init is not None:
@@ -345,39 +358,18 @@ class ReplacementLayer():
             # apply and wrappers
             if self.debug == True:
                 print("forward hook", self.name)
-            self.hook_vals = self.wrap_hook(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
+            if self.hook_vals is None:
+                self.hook_vals = {}
+            self.hook_vals["neuron_selection"] = neuron_selection_tmp
+            self.hook_vals["outs"] = self.compute_output(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
 
             # forward
-            if isinstance(self.hook_vals, tuple):
-                self._forward(self.hook_vals[0], neuron_selection, stop_mapping_at_layers, r_init, f_init)
-            else:
-                self._forward(self.hook_vals, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+            self._forward(self.hook_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
-        """
-        hook that wraps and applies the layer function.
-        E.g., by defining a GradientTape
-        * should contain a call to self._neuron_select.
-        * may define any wrappers around
+    def get_explain_functions(self, stop_mapping_at_layers):
+        self._explain_func = kfunctional.base_explanation
 
-        :param ins: input(s) of this layer
-        :param neuron_selection: neuron_selection parameter (see try_apply)
-        :param stop_mapping_at_layers: None or stop_mapping_at_layers parameter (see try_apply)
-        :param r_init: reverse initialization value. Value with with explanation is initialized (i.e., head_mapping).
-
-        :returns output of layer function + any wrappers that were defined and are needed in explain_hook
-
-        To be extended for specific XAI methods
-        """
-        outs = self.layer_func(ins)
-
-        # check if final layer (i.e., no next layers)
-        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
-            outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
-
-        return outs
-
-    def explain_hook(self, ins, reversed_outs, args):
+    def explain_hook(self, ins, reversed_outs):
         """
         hook that computes the explanations.
         * Core XAI functionality
@@ -390,20 +382,14 @@ class ReplacementLayer():
 
         To be extended for specific XAI methods
         """
-        outs = args
+        #some preparation
+        outs = self.hook_vals["outs"]
 
         if reversed_outs is None:
             reversed_outs = outs
 
-        if len(self.layer_next) > 1:
-            #TODO is this addition correct?
-            ret = keras_layers.Add(dtype=tf.float32)([r for r in reversed_outs])
-        elif len(self.input_shape) > 1:
-            ret = [reversed_outs for i in self.input_shape]
-            ret = tf.keras.layers.concatenate(ret, axis=1)
-        else:
-            ret = reversed_outs
-        return ret
+        #apply correct explanation function
+        return self._explain_func(reversed_outs, len(self.input_shape), len(self.layer_next))
 
 
 class GradientReplacementLayer(ReplacementLayer):
@@ -414,37 +400,41 @@ class GradientReplacementLayer(ReplacementLayer):
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
-    def wrap_hook(self, ins, neuron_selection, stop_mapping_at_layers, r_init):
-        with tf.GradientTape(persistent=True) as tape:
-            tape.watch(ins)
-            outs = self.layer_func(ins)
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        self.get_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(GradientReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
-            # check if final layer (i.e., no next layers)
-            if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
-                outs = self._neuron_sel_and_head_map(outs, neuron_selection, r_init)
+    def get_explain_functions(self, stop_mapping_at_layers):
+        if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
+            self._explain_func = kfunctional.final_gradient_explanation
+        else:
+            self._explain_func = kfunctional.gradient_explanation
 
-        return outs, tape
-
-    def explain_hook(self, ins, reversed_outs, args):
-        outs, tape = args
+    def explain_hook(self, ins, reversed_outs):
+        # some preparation
+        outs = self.hook_vals["outs"]
 
         if reversed_outs is None:
             reversed_outs = outs
 
-        # correct number of outs
-        if len(self.layer_next) > 1:
-            outs = [outs for l in self.layer_next]
-
-        if len(self.layer_next) > 1:
-            if len(self.input_shape) > 1:
-                ret = [keras_layers.Add(dtype=tf.float32)([tape.gradient(o, i, output_gradients=r) for o, r in zip(outs, reversed_outs)]) for i in ins]
-            else:
-                ret = keras_layers.Add(dtype=tf.float32)([tape.gradient(o, ins, output_gradients=r) for o, r in zip(outs, reversed_outs)])
+        # apply correct explanation function
+        if len(self.layer_next) == 0 or (self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals["stop_mapping_at_layers"]):
+            ret = self._explain_func(ins,
+                                     self.layer_func,
+                                     self._neuron_sel_and_head_map,
+                                     self._out_func,
+                                     reversed_outs,
+                                     len(self.input_shape),
+                                     len(self.layer_next),
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
+                                     )
         else:
-            if len(self.input_shape) > 1:
-                ret = [tape.gradient(outs, i, output_gradients=reversed_outs) for i in ins]
-            else:
-                ret = tape.gradient(outs, ins, output_gradients=reversed_outs)
+            ret = self._explain_func(ins, self.layer_func, self._out_func, reversed_outs, len(self.input_shape),
+                                     len(self.layer_next))
 
         return ret
 
@@ -544,7 +534,6 @@ class ReverseModel():
 
         reverse_ins, reverse_layers = self._reverse_model
 
-        warnings.simplefilter("always")
         if stop_mapping_at_layers is not None and (isinstance(neuron_selection, int) or isinstance(neuron_selection, list) or isinstance(neuron_selection, np.ndarray)):
             warnings.warn("You are specifying layers to stop forward pass at, and also neuron-selecting by index. Please make sure the corresponding shapes fit together!")
 
@@ -591,7 +580,7 @@ class ReverseModel():
         if explained_layer_names is None:
             # just explain input layers
             for layer in reverse_ins:
-                hm[layer.name] = layer.explanation.numpy()
+                hm[layer.name] = np.array(layer.explanation)
 
             return hm
 

@@ -243,21 +243,22 @@ class LRP(base.ReverseAnalyzerBase):
                 bn_layer_rule,
                 fuse_mode=self._bn_layer_fuse_mode,
             )
-        self._add_conditional_reverse_mapping(
-            kchecks.is_batch_normalization_layer,
-            bn_mapping,
-            name="lrp_batch_norm_mapping",
-        )
-        self._add_conditional_reverse_mapping(
-            kchecks.is_average_pooling,
-            rrule.AveragePoolingReverseRule,
-        name="lrp_average_pooling_mapping",
-        )
-        self._add_conditional_reverse_mapping(
-            kchecks.is_add_layer,
-            rrule.AddReverseRule,
-            name="lrp_add_layer_mapping",
-        )
+
+        # self._add_conditional_reverse_mapping(
+        #     kchecks.is_batch_normalization_layer,
+        #     bn_mapping,
+        #     name="lrp_batch_norm_mapping",
+        # )
+        # self._add_conditional_reverse_mapping(
+        #     kchecks.is_average_pooling,
+        #     rrule.AveragePoolingReverseRule,
+        # name="lrp_average_pooling_mapping",
+        # )
+        # self._add_conditional_reverse_mapping(
+        #     kchecks.is_add_layer,
+        #     rrule.AddReverseRule,
+        #     name="lrp_add_layer_mapping",
+        # )
 
         # FINALIZED constructor.
         return super(LRP, self)._create_analysis(*args, **kwargs)

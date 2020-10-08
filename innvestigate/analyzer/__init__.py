@@ -10,12 +10,12 @@ from __future__ import\
 from .base import NotAnalyzeableModelException
 from .base import ReverseAnalyzerBase
 # from .deeplift import DeepLIFTWrapper
-from .gradient_based import Gradient
-from .gradient_based import InputTimesGradient
-from .gradient_based import GuidedBackprop
-from .gradient_based import Deconvnet
-from .gradient_based import IntegratedGradients
-from .gradient_based import SmoothGrad
+#from .gradient_based import Gradient
+#from .gradient_based import InputTimesGradient
+#from .gradient_based import GuidedBackprop
+#from .gradient_based import Deconvnet
+#from .gradient_based import IntegratedGradients
+#from .gradient_based import SmoothGrad
 # from .misc import Input
 # from .misc import Random
 # from .pattern_based import PatternNet
@@ -72,13 +72,13 @@ analyzers = {
     # "random": Random,
     #
     # # Gradient based
-    "gradient": Gradient,
+    #"gradient": Gradient,
     # "gradient.baseline": BaselineGradient,
-    "input_t_gradient": InputTimesGradient,
-    "deconvnet": Deconvnet,
-    "guided_backprop": GuidedBackprop,
-    "integrated_gradients": IntegratedGradients,
-    "smoothgrad": SmoothGrad,
+    #"input_t_gradient": InputTimesGradient,
+    #"deconvnet": Deconvnet,
+    #"guided_backprop": GuidedBackprop,
+    #"integrated_gradients": IntegratedGradients,
+    #"smoothgrad": SmoothGrad,
 
     # Relevance based
     "lrp": LRP,
