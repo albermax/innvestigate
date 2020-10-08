@@ -477,6 +477,40 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         return hm
 
+
+    def get_hook_activations(self, layer_names=None):
+
+        """
+        Get results of (previously computed) activations after wrap_hook function.
+        activations of layer i has shape equal to output_shape of layer i.
+        Only for advanced users!
+
+        :param layer_names: None or list of strings containing the names of the layers.
+                            if activations of last layer or layer after and inclusive stop_mapping_at are NOT available.
+                            if None, return activations of input layer only.
+
+        :returns Dict of the form {layer name (string): activations (type depends on XAI method)}
+
+        """
+
+        if not hasattr(self, "_analyzer_model"):
+            self.create_analyzer_model()
+
+        if not self._analyzed:
+            raise AttributeError("You have to analyze the model before intermediate results are available!")
+
+        if isinstance(layer_names, list):
+            for l in layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter layer_names has to be None or a list of strings")
+        elif (layer_names is not None) and type(layer_names) != str:
+            # not list and not None
+            raise AttributeError("Parameter layer_names has to be None or a list of strings")
+
+        activations = self._analyzer_model.get_hook_activations(layer_names)
+
+        return activations
+
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
     This class contains many helper functions around the graph

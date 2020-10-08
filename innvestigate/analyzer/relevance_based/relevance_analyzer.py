@@ -279,6 +279,7 @@ class LRP(base.ReverseAnalyzerBase):
             return reverse_map.ReplacementLayer
         else:
             # This branch covers:
+            # AvgPooling
             # MaxPooling
             # Max
             # Flatten

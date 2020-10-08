@@ -998,7 +998,6 @@ class GammaRule(reverse_map.ReplacementLayer):
 #
 #         return ret
 #
-# # TODO not tested in tf2.0 yet
 # class AddReverseRule(reverse_map.ReplacementLayer):
 #     """Special Add layer handler that applies the Z-Rule"""
 #
@@ -1056,7 +1055,6 @@ class GammaRule(reverse_map.ReplacementLayer):
 #
 #         return ret
 #
-# # TODO not tested in tf2.0 yet
 # class AveragePoolingReverseRule(reverse_map.ReplacementLayer):
 #     """Special AveragePooling handler that applies the Z-Rule"""
 #
