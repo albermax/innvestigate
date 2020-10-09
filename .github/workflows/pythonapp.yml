@@ -10,7 +10,9 @@ jobs:
       matrix:
         python-version: [3.6, 3.7]
         tensorflow-version: [1.12.0, 1.13.2]
-
+        exclude:
+          - python-version: 3.7
+            tensorflow-version: 1.12.0
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
