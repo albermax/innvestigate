@@ -573,8 +573,6 @@ def trace_model_execution(model, reapply_on_copied_layers=False):
 
         executed_nodes = reversed(reverse_executed_nodes)
 
-    # TODO: tutaj jescze wszystko jest
-    # import ipdb; ipdb.set_trace()
     executed_nodes = _get_executed_nodes(executed_nodes, outputs)
 
     return layers, executed_nodes, outputs
