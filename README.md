@@ -29,7 +29,19 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 ### If you use this code please star the repository and cite the following paper:
 
-**["iNNvestigate neural networks!"](http://arxiv.org/abs/1808.04260)([http://arxiv.org/abs/1808.04260](http://arxiv.org/abs/1808.04260)) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam H&auml;gele, Kristof T. Sch&uuml;tt, Gr&eacute;goire Montavon, Wojciech Samek, Klaus-Robert M&uuml;ller, Sven D&auml;hne, Pieter-Jan Kindermans**
+[Alber, M., Lapuschkin, S., Seegerer, P., Hägele, M., Schütt, K. T., Montavon, G., Samek, W., Müller, K. R., Dähne, S., & Kindermans, P. J. (2019). **iNNvestigate neural networks!** Journal of Machine Learning Research, 20.](https://jmlr.org/papers/v20/18-540.html)
+  ```
+  @article{JMLR:v20:18-540,
+  author  = {Maximilian Alber and Sebastian Lapuschkin and Philipp Seegerer and Miriam H{{\"a}}gele and Kristof T. Sch{{\"u}}tt and Gr{{\'e}}goire Montavon and Wojciech Samek and Klaus-Robert M{{\"u}}ller and Sven D{{\"a}}hne and Pieter-Jan Kindermans},
+  title   = {iNNvestigate Neural Networks!},
+  journal = {Journal of Machine Learning Research},
+  year    = {2019},
+  volume  = {20},
+  number  = {93},
+  pages   = {1-8},
+  url     = {http://jmlr.org/papers/v20/18-540.html}
+  }
+  ```
 
 ## Installation
 
@@ -173,7 +185,7 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ... can be found here:
 
-* [Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans; 20(93):1−8, 2019.](https://jmlr.org/papers/v20/18-540.html)
+* Alber, M., Lapuschkin, S., Seegerer, P., Hägele, M., Schütt, K. T., Montavon, G., Samek, W., Müller, K. R., Dähne, S., & Kindermans, P. J. (2019). INNvestigate neural networks! Journal of Machine Learning Research, 20.](https://jmlr.org/papers/v20/18-540.html)
   ```
   @article{JMLR:v20:18-540,
   author  = {Maximilian Alber and Sebastian Lapuschkin and Philipp Seegerer and Miriam H{{\"a}}gele and Kristof T. Sch{{\"u}}tt and Gr{{\'e}}goire Montavon and Wojciech Samek and Klaus-Robert M{{\"u}}ller and Sven D{{\"a}}hne and Pieter-Jan Kindermans},
@@ -190,7 +202,8 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ## Contributing
 
-If you would like to contribute or add your analysis method please get in touch with us!
+If you would like to contribute or add your analysis method 
+please open an issue or submit a pull request.
 
 ## Releases
 
