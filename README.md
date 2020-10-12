@@ -28,8 +28,28 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 
 ### If you use this code please star the repository and cite the following paper:
+**["iNNvestigate Neural Networks!"](https://www.jmlr.org/papers/v20/18-540.html)**
+```
+@article{alber2019innvestigate,
+  title={iNNvestigate neural networks!},
+  author={Alber, Maximilian and
+          Lapuschkin, Sebastian and
+          Seegerer, Philipp and
+          H{\"a}gele, Miriam and
+          Sch{\"u}tt, Kristof T and
+          Montavon, Gr{\'e}goire and
+          Samek, Wojciech and
+          M{\"u}ller, Klaus-Robert and
+          D{\"a}hne, Sven and
+          Kindermans, Pieter-Jan},
+  journal={Journal of Machine Learning Research},
+  volume={20},
+  number={93},
+  pages={1--8},
+  year={2019}
+}
 
-**["iNNvestigate neural networks!"](http://arxiv.org/abs/1808.04260)([http://arxiv.org/abs/1808.04260](http://arxiv.org/abs/1808.04260)) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam H&auml;gele, Kristof T. Sch&uuml;tt, Gr&eacute;goire Montavon, Wojciech Samek, Klaus-Robert M&uuml;ller, Sven D&auml;hne, Pieter-Jan Kindermans**
+```
 
 ## Installation
 
@@ -171,7 +191,10 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ## More documentation
 
-... can be found here: [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
+... can be found here:
+
+* [Software and application patterns for explanation methods](https://arxiv.org/abs/1904.04734)
+* [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
 
 ## Contributing
 
