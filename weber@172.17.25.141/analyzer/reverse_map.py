@@ -65,7 +65,7 @@ class ReplacementLayer():
         self.original_output_vals = None
         self.reversed_output_vals = None
         self.callbacks = None
-        self.saved_forward_vals = None
+        self.hook_vals = None
         self.explanation = None
 
         ###############
@@ -96,7 +96,7 @@ class ReplacementLayer():
         # last layer or aggregation finished
         if self.reversed_output_vals is None or len(self.reversed_output_vals) == len(self.layer_next):
             # apply post hook: explain
-            if self.saved_forward_vals is None:
+            if self.hook_vals is None:
                 raise ValueError(
                     "self.saved_forward_vals should contain values at this point. Is self.wrap_hook working correctly?")
             input_vals = self.input_vals
@@ -110,8 +110,8 @@ class ReplacementLayer():
             if self.debug == True:
                 print("Backward at: ", self.name)
                 print("layer_next:", len(self.layer_next))
-                print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.saved_forward_vals["outs"]))
-            self.explanation = self.compute_explanation(input_vals, rev_outs)
+                print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.hook_vals["outs"]))
+            self.explanation = self.explain_hook(input_vals, rev_outs)
 
             # callbacks
             if self.callbacks is not None:
@@ -136,7 +136,7 @@ class ReplacementLayer():
             else:
                 # reset
                 self.input_vals = None
-                self.saved_forward_vals = None
+                self.hook_vals = None
                 self.callbacks = None
 
             self.reversed_output_vals = None
@@ -281,8 +281,7 @@ class ReplacementLayer():
 
         if self.no_forward_pass == True and self.activations_saved == True:
             # calculate no forward pass, instead pass on to next layers
-
-            self._forward(self.saved_forward_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
+            self._forward(self.hook_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
             return
 
@@ -359,20 +358,18 @@ class ReplacementLayer():
             # apply and wrappers
             if self.debug == True:
                 print("forward hook", self.name)
-            if self.saved_forward_vals is None:
-                self.saved_forward_vals = {}
-            self.saved_forward_vals["neuron_selection"] = neuron_selection_tmp
-            self.saved_forward_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
-            self.saved_forward_vals["r_init"] = r_init
-            self.saved_forward_vals["outs"] = self.compute_output(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
+            if self.hook_vals is None:
+                self.hook_vals = {}
+            self.hook_vals["neuron_selection"] = neuron_selection_tmp
+            self.hook_vals["outs"] = self.compute_output(input_vals, neuron_selection_tmp, stop_mapping_at_layers, r_init)
 
             # forward
-            self._forward(self.saved_forward_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
+            self._forward(self.hook_vals["outs"], neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
     def set_explain_functions(self, stop_mapping_at_layers):
         self._explain_func = kfunctional.base_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def explain_hook(self, ins, reversed_outs):
         """
         hook that computes the explanations.
         * Core XAI functionality
@@ -386,7 +383,7 @@ class ReplacementLayer():
         To be extended for specific XAI methods
         """
         #some preparation
-        outs = self.saved_forward_vals["outs"]
+        outs = self.hook_vals["outs"]
 
         if reversed_outs is None:
             reversed_outs = outs
@@ -403,21 +400,28 @@ class GradientReplacementLayer(ReplacementLayer):
     def __init__(self, *args, **kwargs):
         super(GradientReplacementLayer, self).__init__(*args, **kwargs)
 
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(GradientReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
     def set_explain_functions(self, stop_mapping_at_layers):
         if len(self.layer_next) == 0 or (stop_mapping_at_layers is not None and self.name in stop_mapping_at_layers):
             self._explain_func = kfunctional.final_gradient_explanation
         else:
             self._explain_func = kfunctional.gradient_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def explain_hook(self, ins, reversed_outs):
         # some preparation
-        outs = self.saved_forward_vals["outs"]
+        outs = self.hook_vals["outs"]
 
         if reversed_outs is None:
             reversed_outs = outs
 
         # apply correct explanation function
-        if len(self.layer_next) == 0 or (self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals["stop_mapping_at_layers"]):
+        if len(self.layer_next) == 0 or (self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals["stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self.layer_func,
                                      self._neuron_sel_and_head_map,
@@ -425,8 +429,8 @@ class GradientReplacementLayer(ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      )
         else:
             ret = self._explain_func(ins, self.layer_func, self._out_func, reversed_outs, len(self.input_shape),
@@ -623,7 +627,7 @@ class ReverseModel():
             for layer in reverse_ins:
                 if layer.activations_saved == False:
                     raise AttributeError("activations have to be saved first! Use for instance 'no_forward_pass=True'")
-                activations[layer.name] = layer.saved_forward_vals
+                activations[layer.name] = layer.hook_vals
 
             return activations
 
@@ -631,7 +635,7 @@ class ReverseModel():
         if layer_names is "all":
             for layer in reverse_layers:
                 if layer.activations_saved == True:
-                    activations[layer.name] = layer.saved_forward_vals
+                    activations[layer.name] = layer.hook_vals
 
             return activations
 
@@ -642,7 +646,7 @@ class ReverseModel():
             if len(layer) > 0:
                 if layer[0].activations_saved == False:
                     raise AttributeError(f"activations of <<{name}>> have to be saved first! Use for instance 'no_forward_pass=True'")
-                activations[name] = layer[0].saved_forward_vals
+                activations[name] = layer[0].hook_vals
 
         return activations
 

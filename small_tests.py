@@ -5,6 +5,7 @@ import innvestigate
 import tensorflow.keras as keras
 import numpy as np
 import time
+import tracemalloc
 
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -187,13 +188,25 @@ def run_analysis(input, model, name, analyzer, neuron_selection):
     print("Param neuron_selection: ", neuron_selection)
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
     model.summary()
-    for i in range(3):
+    tracemalloc.start()
+    ana = analyzer(model)
+    R = ana.analyze(input, neuron_selection=neuron_selection, no_forward_pass=True)
+    snapshot1 = tracemalloc.take_snapshot()
+    for i in range(50):
         a = time.time()
-        ana = analyzer(model)
-        R = ana.analyze(input, neuron_selection=neuron_selection)
+        R = ana.analyze(input, neuron_selection=neuron_selection, no_forward_pass=True)
         b = time.time()
+
         print("Iteration ", i, "Time Passed: ", b - a)
-    return R
+
+    snapshot2 = tracemalloc.take_snapshot()
+    top_stats1 = snapshot2.compare_to(snapshot1, 'lineno')
+    print("-----------------------------------------------------------------------------------------")
+    print("[ Top 10 differences ]")
+    for stat in top_stats1[:10]:
+        print(stat)
+
+    return None  # R
 
 #----------------------------------------------------------------------------------
 #Tests
@@ -226,15 +239,15 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeA,
     #innvestigate.analyzer.LRPSequentialCompositeB,
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
-    #innvestigate.analyzer.LRPSequentialCompositeBFlat,
+    innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
     #innvestigate.analyzer.LRPRuleUntilIndex,
-    innvestigate.analyzer.Gradient,
-    innvestigate.analyzer.InputTimesGradient,
-    innvestigate.analyzer.GuidedBackprop,
-    innvestigate.analyzer.Deconvnet,
-    innvestigate.analyzer.SmoothGrad,
-    innvestigate.analyzer.IntegratedGradients,
+    #innvestigate.analyzer.Gradient,
+    #innvestigate.analyzer.InputTimesGradient,
+    #innvestigate.analyzer.GuidedBackprop,
+    #innvestigate.analyzer.Deconvnet,
+    #innvestigate.analyzer.SmoothGrad,
+    #innvestigate.analyzer.IntegratedGradients,
 ]
 
 neuron_selection_cases = [

@@ -123,7 +123,7 @@ class InputTimesGradientReplacementLayer(GradientOnesReplacementLayer):
                     rev_outs = rev_outs[0]
 
             # print(self.name, np.shape(input_vals), np.shape(rev_outs), np.shape(self.saved_forward_vals[0]))
-            self.explanation = self.compute_explanation(input_vals, rev_outs, self.hook_vals)
+            self.explanation = self.explain_hook(input_vals, rev_outs, self.hook_vals)
 
             #gradient*input specific
             explanation = self.explanation
@@ -208,7 +208,7 @@ class DeconvnetReplacementLayer(reverse_map.ReplacementLayer):
         self.hook_vals["r_init"] = r_init
         super(DeconvnetReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
-    def compute_explanation(self, ins, reversed_outs):
+    def explain_hook(self, ins, reversed_outs):
 
         #some preparation
         if len(self.input_shape) > 1:
@@ -285,7 +285,7 @@ class GuidedBackpropReplacementLayer(reverse_map.GradientReplacementLayer):
         self.hook_vals["r_init"] = r_init
         super(GuidedBackpropReplacementLayer, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
 
-    def compute_explanation(self, ins, reversed_outs):
+    def explain_hook(self, ins, reversed_outs):
 
         #some preparation
         if len(self.input_shape) > 1:

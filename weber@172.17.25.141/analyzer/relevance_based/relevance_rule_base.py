@@ -89,16 +89,23 @@ class ZRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.zrule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None, f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(ZRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         #some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
-        if len(self.layer_next) == 0 or (self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals["stop_mapping_at_layers"]):
+        if len(self.layer_next) == 0 or (self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals["stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act,
                                      self._neuron_sel_and_head_map,
@@ -106,8 +113,8 @@ class ZRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      )
         else:
             ret = self._explain_func(ins, self._layer_wo_act, self._out_func, reversed_outs, len(self.input_shape),
@@ -156,17 +163,25 @@ class EpsilonRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.epsilonrule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(EpsilonRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act,
@@ -175,8 +190,8 @@ class EpsilonRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      self._epsilon
                                      )
         else:
@@ -225,17 +240,25 @@ class WSquareRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.wsquarerule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(WSquareRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act_b,
@@ -244,8 +267,8 @@ class WSquareRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      )
         else:
             ret = self._explain_func(ins, self._layer_wo_act_b, self._out_func, reversed_outs, len(self.input_shape),
@@ -275,7 +298,7 @@ class FlatRule(WSquareRule):
         if (layer.name, type(self).__name__, False) in layer_mapping.keys():
             self._layer_wo_act_b = layer_mapping[(layer.name, type(self).__name__, False)]
         else:
-            #print((layer.name, type(self).__name__, False))
+            print((layer.name, type(self).__name__, False))
             self._layer_wo_act_b = kgraph.copy_layer_wo_activation(
                 layer,
                 keep_bias=False,
@@ -358,17 +381,25 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.alphabetarule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(AlphaBetaRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act_positive,
@@ -378,8 +409,8 @@ class AlphaBetaRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      self._alpha,
                                      self._beta
                                      )
@@ -498,17 +529,25 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.alphabetaxrule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(AlphaBetaXRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act_positive,
@@ -518,8 +557,8 @@ class AlphaBetaXRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      self._alpha,
                                      self._beta
                                      )
@@ -630,17 +669,25 @@ class BoundedRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.boundedrule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(BoundedRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act,
@@ -651,8 +698,8 @@ class BoundedRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      self._low,
                                      self._high
                                      )
@@ -724,17 +771,25 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.zplusfastrule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(ZPlusFastRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act_b_positive,
@@ -743,8 +798,8 @@ class ZPlusFastRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"]
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"]
                                      )
         else:
             ret = self._explain_func(ins,
@@ -817,17 +872,25 @@ class GammaRule(reverse_map.ReplacementLayer):
         else:
             self._explain_func = kfunctional.gammarule_explanation
 
-    def compute_explanation(self, ins, reversed_outs):
+    def try_apply(self, ins, callback=None, neuron_selection=None, stop_mapping_at_layers=None, r_init=None,
+                  f_init=None):
+        self.set_explain_functions(stop_mapping_at_layers)
+        self.hook_vals = {}
+        self.hook_vals["stop_mapping_at_layers"] = stop_mapping_at_layers
+        self.hook_vals["r_init"] = r_init
+        super(GammaRule, self).try_apply(ins, callback, neuron_selection, stop_mapping_at_layers, r_init, f_init)
+
+    def explain_hook(self, ins, reversed_outs):
 
         # some preparation
         if len(self.input_shape) > 1:
             raise ValueError("This Layer should only have one input!")
 
         if reversed_outs is None:
-            reversed_outs = self.saved_forward_vals["outs"]
+            reversed_outs = self.hook_vals["outs"]
 
         if len(self.layer_next) == 0 or (
-                self.saved_forward_vals["stop_mapping_at_layers"] is not None and self.name in self.saved_forward_vals[
+                self.hook_vals["stop_mapping_at_layers"] is not None and self.name in self.hook_vals[
             "stop_mapping_at_layers"]):
             ret = self._explain_func(ins,
                                      self._layer_wo_act,
@@ -837,8 +900,8 @@ class GammaRule(reverse_map.ReplacementLayer):
                                      reversed_outs,
                                      len(self.input_shape),
                                      len(self.layer_next),
-                                     self.saved_forward_vals["neuron_selection"],
-                                     self.saved_forward_vals["r_init"],
+                                     self.hook_vals["neuron_selection"],
+                                     self.hook_vals["r_init"],
                                      self._gamma
                                      )
         else:
