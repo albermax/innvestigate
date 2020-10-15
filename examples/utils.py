@@ -73,7 +73,7 @@ def get_imagenet_data(size=224):
     images = [(load_image(os.path.join(base_dir, "images", f), size),
                get_class(f))
               for f in os.listdir(os.path.join(base_dir, "images"))
-              if f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")]
+              if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")) and get_class(f) != "--"]
     return images, image_label_mapping
 
 
