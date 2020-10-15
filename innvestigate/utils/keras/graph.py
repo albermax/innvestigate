@@ -933,257 +933,257 @@ def get_bottleneck_tensors(inputs, outputs, execution_list):
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-class ReverseMappingBase(object):
-
-    def __init__(self, layer, state):
-        pass
-
-    def apply(self, Xs, Yx, reversed_Ys, reverse_state):
-        raise NotImplementedError()
-
-
-def reverse_model(model, reverse_mappings,
-                  default_reverse_mapping=None,
-                  head_mapping=None,
-                  stop_mapping_at_tensors=[],
-                  verbose=False,
-                  return_all_reversed_tensors=False,
-                  clip_all_reversed_tensors=False,
-                  project_bottleneck_tensors=False,
-                  execution_trace=None,
-                  reapply_on_copied_layers=False):
-    """
-    Reverses a Keras model based on the given reverse functions.
-    It returns the reverted tensors for the according model inputs.
-
-    :param model: A Keras model.
-    :param reverse_mappings: Either a callable that matches layers to
-      mappings or a dictionary with layers as keys and mappings as values.
-      Allowed as mapping forms are:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
-          * A :class:`ReverseMappingBase` subclass.
-    :param default_reverse_mapping: A function that reverses layers for
-      which no mapping was given by param "reverse_mappings".
-    :param head_mapping: Map output tensors to new values before passing
-      them into the reverted network.
-    :param stop_mapping_at_tensors: Tensors at which to stop the mapping.
-      Similar to stop_gradient parameters for gradient computation.
-    :param verbose: Print what's going on.
-    :param return_all_reversed_tensors: Return all reverted tensors in addition
-      to reverted model input tensors.
-    :param clip_all_reversed_tensors: Clip each reverted tensor. False or tuple
-      with min/max value.
-    :param project_bottleneck_tensors: Project bottleneck layers in the
-      reverting process into a given value range. False, True or (a, b) for
-      projection range.
-    :param reapply_on_copied_layers: When a model execution needs to
-      linearized and copy layers before reapplying them. See
-      :func:`trace_model_execution`.
-    """
-
-    # Set default values ######################################################
-    stop_mapping_at_tensors = [id(x) for x in stop_mapping_at_tensors]
-
-    if head_mapping is None:
-        def head_mapping(X):
-            return X
-
-    if not callable(reverse_mappings):
-        # not callable, assume a dict that maps from layer to mapping
-        reverse_mapping_data = reverse_mappings
-
-        def reverse_mappings(layer):
-            try:
-                return reverse_mapping_data[type(layer)]
-            except KeyError:
-                return None
-
-    def _print(s):
-        if verbose is True:
-            print(s)
-
-    # Initialize structure that keeps track of reversed tensors ###############
-
-    reversed_tensors = {}
-    bottleneck_tensors = set()
-
-    def add_reversed_tensors(nid,
-                             tensors_list,
-                             reversed_tensors_list):
-
-        def add_reversed_tensor(i, X, reversed_X):
-            # Do not keep tensors that should stop the mapping.
-            if id(X) in stop_mapping_at_tensors:
-                return
-
-            if id(X) not in reversed_tensors:
-                reversed_tensors[id(X)] = {"id": (nid, i),
-                                           "tensor": reversed_X}
-            else:
-                tmp = reversed_tensors[id(X)]
-                if "tensor" in tmp and "tensors" in tmp:
-                    raise Exception("Wrong order, tensors already aggregated!")
-                if "tensor" in tmp:
-                    tmp["tensors"] = [tmp["tensor"], reversed_X]
-                    del tmp["tensor"]
-                else:
-                    tmp["tensors"].append(reversed_X)
-
-        tmp = zip(tensors_list, reversed_tensors_list)
-        for i, (X, reversed_X) in enumerate(tmp):
-            add_reversed_tensor(i, X, reversed_X)
-
-    def get_reversed_tensor(tensor):
-        tmp = reversed_tensors[id(tensor)]
-
-        if "final_tensor" not in tmp:
-            if "tensor" not in tmp:
-                final_tensor = keras_layers.Add()(tmp["tensors"])
-            else:
-                final_tensor = tmp["tensor"]
-
-            if project_bottleneck_tensors is not False:
-                if id(tensor) in bottleneck_tensors:
-                    project = ilayers.Project(project_bottleneck_tensors)
-                    final_tensor = project(final_tensor)
-
-            if clip_all_reversed_tensors is not False:
-                clip = ilayers.Clip(*clip_all_reversed_tensors)
-                final_tensor = clip(final_tensor)
-
-            tmp["final_tensor"] = final_tensor
-
-        return tmp["final_tensor"]
-
-    # Reverse the model #######################################################
-    _print("Reverse model: {}".format(model))
-
-    # Create a list with nodes in reverse execution order.
-    if execution_trace is None:
-        execution_trace = trace_model_execution(
-            model,
-            reapply_on_copied_layers=reapply_on_copied_layers)
-    layers, execution_list, outputs = execution_trace
-    len_execution_list = len(execution_list)
-    num_input_layers = len([_ for l, _, _ in execution_list
-                            if isinstance(l, InputLayer)])
-    len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
-    reverse_execution_list = reversed(execution_list)
-
-    # Initialize the reverse mapping functions.
-    initialized_reverse_mappings = {}
-    for layer in layers:
-        # A layer can be shared, i.e., applied several times.
-        # Allow to share a ReverMappingBase for each layer instance
-        # in order to reduce the overhead.
-
-        meta_reverse_mapping = reverse_mappings(layer)
-        if meta_reverse_mapping is None:
-            reverse_mapping = default_reverse_mapping
-        elif(inspect.isclass(meta_reverse_mapping) and
-             issubclass(meta_reverse_mapping, ReverseMappingBase)):
-            # Mapping is a class
-            reverse_mapping_obj = meta_reverse_mapping(
-                layer,
-                {
-                    "model": model,
-                    "layer": layer,
-                }
-            )
-            reverse_mapping = reverse_mapping_obj.apply
-        else:
-            def parameter_count(func):
-                if hasattr(inspect, "signature"):
-                    ret = len(inspect.signature(func).parameters)
-                else:
-                    spec = inspect.getargspec(func)
-                    ret = len(spec.args)
-                    if spec.varargs is not None:
-                        ret += len(spec.varargs)
-                    if spec.keywords is not None:
-                        ret += len(spec.keywords)
-                    if ret == 3:
-                        # assume class function with self
-                        ret -= 1
-                return ret
-
-            if(callable(meta_reverse_mapping) and
-               parameter_count(meta_reverse_mapping) == 2):
-                # Function that returns mapping
-                reverse_mapping = meta_reverse_mapping(
-                    layer,
-                    {
-                        "model": model,
-                        "layer": layer,
-                    }
-                )
-            else:
-                # Nothing meta here
-                reverse_mapping = meta_reverse_mapping
-
-        initialized_reverse_mappings[layer] = reverse_mapping
-
-    if project_bottleneck_tensors:
-        bottleneck_tensors.update(
-            get_bottleneck_tensors(
-                model.inputs,
-                outputs,
-                execution_list))
-
-    # Initialize the reverse tensor mappings.
-    add_reversed_tensors(-1,
-                         outputs,
-                         [fake_keras_layer([tmp], [head_mapping(tmp)])[0]
-                          for tmp in outputs])
-
-    # Follow the list and revert the graph.
-    for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):
-        nid = len_execution_list_wo_inputs_layers - _nid - 1
-
-        if isinstance(layer, keras_layers.InputLayer):
-            # Special case. Do nothing.
-            pass
-        elif kchecks.is_network(layer):
-            raise Exception("This is not supposed to happen!")
-        else:
-            Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
-            if not all([id(ys) in reversed_tensors for ys in Ys]):
-                # This node is not part of our computational graph.
-                # The (node-)world is bigger than this model.
-                # Potentially this node is also not part of the
-                # reversed tensor set because it depends on a tensor
-                # that is listed in stop_mapping_at_tensors.
-                continue
-            reversed_Ys = [get_reversed_tensor(ys)
-                           for ys in Ys]
-            local_stop_mapping_at_tensors = [
-                id(x) for x in Xs
-                if id(x) in stop_mapping_at_tensors
-            ]
-
-            _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
-            reverse_mapping = initialized_reverse_mappings[layer]
-            reversed_Xs = reverse_mapping(
-                Xs, Ys, reversed_Ys,
-                {
-                    "nid": nid,
-                    "model": model,
-                    "layer": layer,
-                    "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
-                })
-            reversed_Xs = iutils.to_list(reversed_Xs)
-            reversed_Xs = fake_keras_layer(Xs+Ys+reversed_Ys, reversed_Xs)
-            add_reversed_tensors(nid, Xs, reversed_Xs)
-
-    # Return requested values #################################################
-    reversed_input_tensors = [get_reversed_tensor(tmp)
-                              for tmp in model.inputs
-                              if id(tmp) not in stop_mapping_at_tensors]
-    if return_all_reversed_tensors is True:
-        return reversed_input_tensors, reversed_tensors
-    else:
-        return reversed_input_tensors
+#
+#
+# class ReverseMappingBase(object):
+#
+#     def __init__(self, layer, state):
+#         pass
+#
+#     def apply(self, Xs, Yx, reversed_Ys, reverse_state):
+#         raise NotImplementedError()
+#
+#
+# def reverse_model(model, reverse_mappings,
+#                   default_reverse_mapping=None,
+#                   head_mapping=None,
+#                   stop_mapping_at_tensors=[],
+#                   verbose=False,
+#                   return_all_reversed_tensors=False,
+#                   clip_all_reversed_tensors=False,
+#                   project_bottleneck_tensors=False,
+#                   execution_trace=None,
+#                   reapply_on_copied_layers=False):
+#     """
+#     Reverses a Keras model based on the given reverse functions.
+#     It returns the reverted tensors for the according model inputs.
+#
+#     :param model: A Keras model.
+#     :param reverse_mappings: Either a callable that matches layers to
+#       mappings or a dictionary with layers as keys and mappings as values.
+#       Allowed as mapping forms are:
+#           * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state).
+#           * A function of form f(B) f(layer, reverse_state) that returns
+#             a function of form (A).
+#           * A :class:`ReverseMappingBase` subclass.
+#     :param default_reverse_mapping: A function that reverses layers for
+#       which no mapping was given by param "reverse_mappings".
+#     :param head_mapping: Map output tensors to new values before passing
+#       them into the reverted network.
+#     :param stop_mapping_at_tensors: Tensors at which to stop the mapping.
+#       Similar to stop_gradient parameters for gradient computation.
+#     :param verbose: Print what's going on.
+#     :param return_all_reversed_tensors: Return all reverted tensors in addition
+#       to reverted model input tensors.
+#     :param clip_all_reversed_tensors: Clip each reverted tensor. False or tuple
+#       with min/max value.
+#     :param project_bottleneck_tensors: Project bottleneck layers in the
+#       reverting process into a given value range. False, True or (a, b) for
+#       projection range.
+#     :param reapply_on_copied_layers: When a model execution needs to
+#       linearized and copy layers before reapplying them. See
+#       :func:`trace_model_execution`.
+#     """
+#
+#     # Set default values ######################################################
+#     stop_mapping_at_tensors = [id(x) for x in stop_mapping_at_tensors]
+#
+#     if head_mapping is None:
+#         def head_mapping(X):
+#             return X
+#
+#     if not callable(reverse_mappings):
+#         # not callable, assume a dict that maps from layer to mapping
+#         reverse_mapping_data = reverse_mappings
+#
+#         def reverse_mappings(layer):
+#             try:
+#                 return reverse_mapping_data[type(layer)]
+#             except KeyError:
+#                 return None
+#
+#     def _print(s):
+#         if verbose is True:
+#             print(s)
+#
+#     # Initialize structure that keeps track of reversed tensors ###############
+#
+#     reversed_tensors = {}
+#     bottleneck_tensors = set()
+#
+#     def add_reversed_tensors(nid,
+#                              tensors_list,
+#                              reversed_tensors_list):
+#
+#         def add_reversed_tensor(i, X, reversed_X):
+#             # Do not keep tensors that should stop the mapping.
+#             if id(X) in stop_mapping_at_tensors:
+#                 return
+#
+#             if id(X) not in reversed_tensors:
+#                 reversed_tensors[id(X)] = {"id": (nid, i),
+#                                            "tensor": reversed_X}
+#             else:
+#                 tmp = reversed_tensors[id(X)]
+#                 if "tensor" in tmp and "tensors" in tmp:
+#                     raise Exception("Wrong order, tensors already aggregated!")
+#                 if "tensor" in tmp:
+#                     tmp["tensors"] = [tmp["tensor"], reversed_X]
+#                     del tmp["tensor"]
+#                 else:
+#                     tmp["tensors"].append(reversed_X)
+#
+#         tmp = zip(tensors_list, reversed_tensors_list)
+#         for i, (X, reversed_X) in enumerate(tmp):
+#             add_reversed_tensor(i, X, reversed_X)
+#
+#     def get_reversed_tensor(tensor):
+#         tmp = reversed_tensors[id(tensor)]
+#
+#         if "final_tensor" not in tmp:
+#             if "tensor" not in tmp:
+#                 final_tensor = keras_layers.Add()(tmp["tensors"])
+#             else:
+#                 final_tensor = tmp["tensor"]
+#
+#             if project_bottleneck_tensors is not False:
+#                 if id(tensor) in bottleneck_tensors:
+#                     project = ilayers.Project(project_bottleneck_tensors)
+#                     final_tensor = project(final_tensor)
+#
+#             if clip_all_reversed_tensors is not False:
+#                 clip = ilayers.Clip(*clip_all_reversed_tensors)
+#                 final_tensor = clip(final_tensor)
+#
+#             tmp["final_tensor"] = final_tensor
+#
+#         return tmp["final_tensor"]
+#
+#     # Reverse the model #######################################################
+#     _print("Reverse model: {}".format(model))
+#
+#     # Create a list with nodes in reverse execution order.
+#     if execution_trace is None:
+#         execution_trace = trace_model_execution(
+#             model,
+#             reapply_on_copied_layers=reapply_on_copied_layers)
+#     layers, execution_list, outputs = execution_trace
+#     len_execution_list = len(execution_list)
+#     num_input_layers = len([_ for l, _, _ in execution_list
+#                             if isinstance(l, InputLayer)])
+#     len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
+#     reverse_execution_list = reversed(execution_list)
+#
+#     # Initialize the reverse mapping functions.
+#     initialized_reverse_mappings = {}
+#     for layer in layers:
+#         # A layer can be shared, i.e., applied several times.
+#         # Allow to share a ReverMappingBase for each layer instance
+#         # in order to reduce the overhead.
+#
+#         meta_reverse_mapping = reverse_mappings(layer)
+#         if meta_reverse_mapping is None:
+#             reverse_mapping = default_reverse_mapping
+#         elif(inspect.isclass(meta_reverse_mapping) and
+#              issubclass(meta_reverse_mapping, ReverseMappingBase)):
+#             # Mapping is a class
+#             reverse_mapping_obj = meta_reverse_mapping(
+#                 layer,
+#                 {
+#                     "model": model,
+#                     "layer": layer,
+#                 }
+#             )
+#             reverse_mapping = reverse_mapping_obj.apply
+#         else:
+#             def parameter_count(func):
+#                 if hasattr(inspect, "signature"):
+#                     ret = len(inspect.signature(func).parameters)
+#                 else:
+#                     spec = inspect.getargspec(func)
+#                     ret = len(spec.args)
+#                     if spec.varargs is not None:
+#                         ret += len(spec.varargs)
+#                     if spec.keywords is not None:
+#                         ret += len(spec.keywords)
+#                     if ret == 3:
+#                         # assume class function with self
+#                         ret -= 1
+#                 return ret
+#
+#             if(callable(meta_reverse_mapping) and
+#                parameter_count(meta_reverse_mapping) == 2):
+#                 # Function that returns mapping
+#                 reverse_mapping = meta_reverse_mapping(
+#                     layer,
+#                     {
+#                         "model": model,
+#                         "layer": layer,
+#                     }
+#                 )
+#             else:
+#                 # Nothing meta here
+#                 reverse_mapping = meta_reverse_mapping
+#
+#         initialized_reverse_mappings[layer] = reverse_mapping
+#
+#     if project_bottleneck_tensors:
+#         bottleneck_tensors.update(
+#             get_bottleneck_tensors(
+#                 model.inputs,
+#                 outputs,
+#                 execution_list))
+#
+#     # Initialize the reverse tensor mappings.
+#     add_reversed_tensors(-1,
+#                          outputs,
+#                          [fake_keras_layer([tmp], [head_mapping(tmp)])[0]
+#                           for tmp in outputs])
+#
+#     # Follow the list and revert the graph.
+#     for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):
+#         nid = len_execution_list_wo_inputs_layers - _nid - 1
+#
+#         if isinstance(layer, keras_layers.InputLayer):
+#             # Special case. Do nothing.
+#             pass
+#         elif kchecks.is_network(layer):
+#             raise Exception("This is not supposed to happen!")
+#         else:
+#             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
+#             if not all([id(ys) in reversed_tensors for ys in Ys]):
+#                 # This node is not part of our computational graph.
+#                 # The (node-)world is bigger than this model.
+#                 # Potentially this node is also not part of the
+#                 # reversed tensor set because it depends on a tensor
+#                 # that is listed in stop_mapping_at_tensors.
+#                 continue
+#             reversed_Ys = [get_reversed_tensor(ys)
+#                            for ys in Ys]
+#             local_stop_mapping_at_tensors = [
+#                 id(x) for x in Xs
+#                 if id(x) in stop_mapping_at_tensors
+#             ]
+#
+#             _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
+#             reverse_mapping = initialized_reverse_mappings[layer]
+#             reversed_Xs = reverse_mapping(
+#                 Xs, Ys, reversed_Ys,
+#                 {
+#                     "nid": nid,
+#                     "model": model,
+#                     "layer": layer,
+#                     "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
+#                 })
+#             reversed_Xs = iutils.to_list(reversed_Xs)
+#             reversed_Xs = fake_keras_layer(Xs+Ys+reversed_Ys, reversed_Xs)
+#             add_reversed_tensors(nid, Xs, reversed_Xs)
+#
+#     # Return requested values #################################################
+#     reversed_input_tensors = [get_reversed_tensor(tmp)
+#                               for tmp in model.inputs
+#                               if id(tmp) not in stop_mapping_at_tensors]
+#     if return_all_reversed_tensors is True:
+#         return reversed_input_tensors, reversed_tensors
+#     else:
+#         return reversed_input_tensors

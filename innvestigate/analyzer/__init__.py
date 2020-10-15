@@ -8,19 +8,18 @@ from __future__ import\
 ###############################################################################
 
 from .base import NotAnalyzeableModelException
-from .deeplift import DeepLIFTWrapper
-from .gradient_based import BaselineGradient
-from .gradient_based import Gradient
-from .gradient_based import InputTimesGradient
-from .gradient_based import GuidedBackprop
-from .gradient_based import Deconvnet
-from .gradient_based import IntegratedGradients
-from .gradient_based import SmoothGrad
-from .misc import Input
-from .misc import Random
-from .pattern_based import PatternNet
-from .pattern_based import PatternAttribution
-from .relevance_based.relevance_analyzer import BaselineLRPZ
+from .base import ReverseAnalyzerBase
+# from .deeplift import DeepLIFTWrapper
+#from .gradient_based import Gradient
+#from .gradient_based import InputTimesGradient
+#from .gradient_based import GuidedBackprop
+#from .gradient_based import Deconvnet
+#from .gradient_based import IntegratedGradients
+#from .gradient_based import SmoothGrad
+# from .misc import Input
+# from .misc import Random
+# from .pattern_based import PatternNet
+# from .pattern_based import PatternAttribution
 from .relevance_based.relevance_analyzer import LRP
 from .relevance_based.relevance_analyzer import LRPZ
 from .relevance_based.relevance_analyzer import LRPZIgnoreBias
@@ -31,6 +30,7 @@ from .relevance_based.relevance_analyzer import LRPEpsilonIgnoreBias
 from .relevance_based.relevance_analyzer import LRPWSquare
 from .relevance_based.relevance_analyzer import LRPFlat
 from .relevance_based.relevance_analyzer import LRPAlphaBeta
+from .relevance_based.relevance_analyzer import LRPGamma
 from .relevance_based.relevance_analyzer import LRPAlpha2Beta1
 from .relevance_based.relevance_analyzer import LRPAlpha2Beta1IgnoreBias
 from .relevance_based.relevance_analyzer import LRPAlpha1Beta0
@@ -39,8 +39,13 @@ from .relevance_based.relevance_analyzer import LRPSequentialPresetA
 from .relevance_based.relevance_analyzer import LRPSequentialPresetB
 from .relevance_based.relevance_analyzer import LRPSequentialPresetAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
-from .deeptaylor import DeepTaylor
-from .deeptaylor import BoundedDeepTaylor
+from .relevance_based.relevance_analyzer import LRPSequentialCompositeA
+from .relevance_based.relevance_analyzer import LRPSequentialCompositeB
+from .relevance_based.relevance_analyzer import LRPSequentialCompositeAFlat
+from .relevance_based.relevance_analyzer import LRPSequentialCompositeBFlat
+from .relevance_based.relevance_analyzer import LRPRuleUntilIndex
+# from .deeptaylor import DeepTaylor
+# from .deeptaylor import BoundedDeepTaylor
 from .wrapper import WrapperBase
 from .wrapper import AugmentReduceBase
 from .wrapper import GaussianSmoother
@@ -49,11 +54,11 @@ from .wrapper import PathIntegrator
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
-assert BaselineLRPZ
-assert WrapperBase
-assert AugmentReduceBase
-assert GaussianSmoother
-assert PathIntegrator
+#assert BaselineLRPZ
+# assert WrapperBase
+# assert AugmentReduceBase
+# assert GaussianSmoother
+# assert PathIntegrator
 
 
 ###############################################################################
@@ -63,17 +68,17 @@ assert PathIntegrator
 
 analyzers = {
     # Utility.
-    "input": Input,
-    "random": Random,
-
-    # Gradient based
-    "gradient": Gradient,
-    "gradient.baseline": BaselineGradient,
-    "input_t_gradient": InputTimesGradient,
-    "deconvnet": Deconvnet,
-    "guided_backprop": GuidedBackprop,
-    "integrated_gradients": IntegratedGradients,
-    "smoothgrad": SmoothGrad,
+    # "input": Input,
+    # "random": Random,
+    #
+    # # Gradient based
+    #"gradient": Gradient,
+    # "gradient.baseline": BaselineGradient,
+    #"input_t_gradient": InputTimesGradient,
+    #"deconvnet": Deconvnet,
+    #"guided_backprop": GuidedBackprop,
+    #"integrated_gradients": IntegratedGradients,
+    #"smoothgrad": SmoothGrad,
 
     # Relevance based
     "lrp": LRP,
@@ -100,16 +105,18 @@ analyzers = {
     "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
     "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
 
+    "lrp.rule_until_index": LRPRuleUntilIndex,
+
     # Deep Taylor
-    "deep_taylor": DeepTaylor,
-    "deep_taylor.bounded": BoundedDeepTaylor,
+    #"deep_taylor": DeepTaylor,
+    #"deep_taylor.bounded": BoundedDeepTaylor,
 
-    # DeepLIFT
-    "deep_lift.wrapper": DeepLIFTWrapper,
-
-    # Pattern based
-    "pattern.net": PatternNet,
-    "pattern.attribution": PatternAttribution,
+    # # DeepLIFT
+    # "deep_lift.wrapper": DeepLIFTWrapper,
+    #
+    # # Pattern based
+    # "pattern.net": PatternNet,
+    # "pattern.attribution": PatternAttribution,
 }
 
 

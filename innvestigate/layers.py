@@ -97,7 +97,7 @@ class ZerosLike(keras_layers.Layer):
 
 class OnesLike(keras_layers.Layer):
     def call(self, x):
-        return [K.ones_like(tmp) for tmp in iutils.to_list(x)]
+        return K.ones_like(x)#[K.ones_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class AsFloatX(keras_layers.Layer):
@@ -229,6 +229,7 @@ class _Reduce(keras_layers.Layer):
             if self.keepdims is False:
                 for i in iutils.to_list(self.axis):
                     axes = np.delete(axes, i, 0)
+
             else:
                 for i in iutils.to_list(self.axis):
                     axes[i] = 1

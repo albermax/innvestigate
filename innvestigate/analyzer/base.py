@@ -1,23 +1,21 @@
-# Get Python six functionality:
 from __future__ import\
     absolute_import, print_function, division, unicode_literals
-from builtins import zip
-import six
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
+###############################################################################
+###############################################################################
+###############################################################################
 
-import tensorflow.keras.backend as K
 import tensorflow.keras.layers as keras_layers
-import tensorflow.keras.models as keras_models
-import numpy as np
 import warnings
 
-
-from .. import layers as ilayers
+import inspect
 from .. import utils as iutils
+from . import reverse_map
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
@@ -58,7 +56,7 @@ class AnalyzerBase(object):
     >>> a_new = A.load(*state)
     >>> analysis = a_new.analyze(X_test)
 
-    :param model: A Keras model.
+    :param model: A tf.keras model.
     :param disable_model_checks: Do not execute model checks that enforce
       compatibility of analyzer and model.
 
@@ -241,21 +239,15 @@ class AnalyzerNetworkBase(AnalyzerBase):
     * allows :func:`_create_analysis` to return tensors
       that are intercept for debugging purposes.
 
-    :param neuron_selection_mode: How to select the neuron to analyze.
-      Possible values are 'max_activation', 'index' for the neuron
-      (expects indices at :func:`analyze` calls), 'all' take all neurons.
     :param allow_lambda_layers: Allow the model to contain lambda layers.
     """
 
     def __init__(self, model,
-                 neuron_selection_mode="max_activation",
                  allow_lambda_layers=False,
                  **kwargs):
-        if neuron_selection_mode not in ["max_activation", "index", "all"]:
-            raise ValueError("neuron_selection parameter is not valid.")
-        self._neuron_selection_mode = neuron_selection_mode
 
         self._allow_lambda_layers = allow_lambda_layers
+        self._analyzed = False
         self._add_model_check(
             lambda layer: (not self._allow_lambda_layers and
                            isinstance(layer, keras_layers.Lambda)),
@@ -264,7 +256,6 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-        self._special_helper_layers = []
 
         super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
 
@@ -279,213 +270,262 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-    def _prepare_model(self, model):
-        """
-        Prepares the model to analyze before it gets actually analyzed.
-
-        This class adds the code to select a specific output neuron.
-        """
-        neuron_selection_mode = self._neuron_selection_mode
-        model_inputs = model.inputs
-
-        model_output = model.outputs
-        if len(model_output) > 1:
-            raise ValueError("Only models with one output tensor are allowed.")
-        analysis_inputs = []
-        stop_analysis_at_tensors = []
-
-        # Flatten to form (batch_size, other_dimensions):
-        if K.ndim(model_output[0]) > 2:
-            model_output = keras_layers.Flatten()(model_output)
-
-        if neuron_selection_mode == "max_activation":
-            l = ilayers.Max(name="iNNvestigate_max")
-            model_output = l(model_output)
-            self._special_helper_layers.append(l)
-        elif neuron_selection_mode == "index":
-            neuron_indexing = keras_layers.Input(
-                batch_shape=[None, None], dtype=np.int32,
-                name='iNNvestigate_neuron_indexing')
-            self._special_helper_layers.append(
-                neuron_indexing._keras_history[0])
-            analysis_inputs.append(neuron_indexing)
-            # The indexing tensor should not be analyzed.
-            stop_analysis_at_tensors.append(neuron_indexing)
-
-            l = ilayers.GatherND(name="iNNvestigate_gather_nd")
-            model_output = l(model_output+[neuron_indexing])
-            self._special_helper_layers.append(l)
-        elif neuron_selection_mode == "all":
-            pass
-        else:
-            raise NotImplementedError()
-
-        model = keras_models.Model(inputs=model_inputs+analysis_inputs,
-                                   outputs=model_output)
-        return model, analysis_inputs, stop_analysis_at_tensors
-
     def create_analyzer_model(self):
         """
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
-        model_inputs = self._model.inputs
-        tmp = self._prepare_model(self._model)
-        model, analysis_inputs, stop_analysis_at_tensors = tmp
-        self._analysis_inputs = analysis_inputs
-        self._prepared_model = model
 
-        tmp = self._create_analysis(
-            model, stop_analysis_at_tensors=stop_analysis_at_tensors)
-        if isinstance(tmp, tuple):
-            if len(tmp) == 3:
-                analysis_outputs, debug_outputs, constant_inputs = tmp
-            elif len(tmp) == 2:
-                analysis_outputs, debug_outputs = tmp
-                constant_inputs = list()
-            elif len(tmp) == 1:
-                analysis_outputs = iutils.to_list(tmp[0])
-                constant_inputs, debug_outputs = list(), list()
-            else:
-                raise Exception("Unexpected output from _create_analysis.")
-        else:
-            analysis_outputs = tmp
-            constant_inputs, debug_outputs = list(), list()
+        self._analyzer_model = self._create_analysis(self._model)
 
-        analysis_outputs = iutils.to_list(analysis_outputs)
-        debug_outputs = iutils.to_list(debug_outputs)
-        constant_inputs = iutils.to_list(constant_inputs)
-
-        self._n_data_input = len(model_inputs)
-        self._n_constant_input = len(constant_inputs)
-        self._n_data_output = len(analysis_outputs)
-        self._n_debug_output = len(debug_outputs)
-
-        inputs = model_inputs+analysis_inputs+constant_inputs
-        outputs = analysis_outputs+debug_outputs
-        outputs = kgraph.fake_keras_layer(inputs, outputs)
-        self._analyzer_model = keras_models.Model(inputs=inputs,
-                                                  outputs=outputs)
-
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+    def _create_analysis(self, model):
         """
         Interface that needs to be implemented by a derived class.
 
-        This function is expected to create a Keras graph that creates
-        a custom analysis for the model inputs given the model outputs.
+        This function is expected to create a custom analysis for the model inputs given the model outputs.
 
         :param model: Target of analysis.
-        :param stop_analysis_at_tensors: A list of tensors where to stop the
-          analysis. Similar to stop_gradient arguments when computing the
-          gradient of a graph.
-        :return: Either one-, two- or three-tuple of lists of tensors.
-          * The first list of tensors represents the analysis for each
-            model input tensor. Tensors present in stop_analysis_at_tensors
-            should be omitted.
-          * The second list, if present, is a list of debug tensors that will
-            be passed to :func:`_handle_debug_output` after the analysis
-            is executed.
-          * The third list, if present, is a list of constant input tensors
-            added to the analysis model.
+        :return: reversed "model" as a list of input layers and a list of wrapped layers
         """
         raise NotImplementedError()
 
     def _handle_debug_output(self, debug_values):
         raise NotImplementedError()
 
-    def analyze(self, X, neuron_selection=None):
+    def analyze(self, X, neuron_selection="max_activation", explained_layer_names=None, stop_mapping_at_layers=None, r_init=None, f_init=None, no_forward_pass=False):
         """
-        Same interface as :class:`Analyzer` besides
+        Takes an array-like input X and explains it. Also applies postprocessing to the explanation
 
-        :param neuron_selection: If neuron_selection_mode is 'index' this
-          should be an integer with the index for the chosen neuron.
+        :param X: tensor or np.array of Input to be explained. Shape (n_ins, batch_size, ...) in model has multiple inputs, or (batch_size, ...) otherwise
+        :param neuron_selection: neuron_selection parameter. Used to only compute explanation w.r.t. specific output neurons. One of the following:
+                - None or "all"
+                - "max_activation"
+                - int
+                - list or np.array of int, with length equal to batch size
+        :param explained_layer_names: None or "all" or list of layer names whose explanations should be returned.
+                                      Can be used to obtain intermediate explanations or explanations of multiple layers
+                                      if layer names provided, a dictionary is returned
+        :param stop_mapping_at_layers: None or list of layers to stop mapping at ("output" layers)
+        :param r_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} reverse initialization value. Value with which the explanation is initialized.
+        :param f_init: None or Scalar or Array-Like or Dict {layer_name:scalar or array-like} forward initialization value. Value with which the forward is initialized.
+        :param no_forward_pass: If True, no forward pass is calculated for the explanation, instead the activations are loaded from previous usages of the analyze method.
+                                First time using analyze method has no effect as activations have to be saved first time.
+                                Input data can not be changed afterwards and will be ignored! Please make sure that if you change stop_mapping_at_layers, that these layers
+                                were already analyzed before!
+
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
         """
         if not hasattr(self, "_analyzer_model"):
             self.create_analyzer_model()
 
-        X = iutils.to_list(X)
+        if isinstance(explained_layer_names, list):
+            for l in explained_layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+        elif explained_layer_names is not None:
+            # not list and not None
+            raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
 
-        if(neuron_selection is not None and
-           self._neuron_selection_mode != "index"):
-            raise ValueError("Only neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
-        if(neuron_selection is None and
-           self._neuron_selection_mode == "index"):
-            raise ValueError("neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
+        if isinstance(stop_mapping_at_layers, list):
+            for l in stop_mapping_at_layers:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
+        elif stop_mapping_at_layers is not None:
+            # not list and not None
+            raise AttributeError("Parameter stop_mapping_at_layers has to be None or a list of strings")
 
-        if self._neuron_selection_mode == "index":
-            neuron_selection = np.asarray(neuron_selection).flatten()
-            if neuron_selection.size == 1:
-                neuron_selection = np.repeat(neuron_selection, len(X[0]))
+        # check if a layer before layers in stop_mapping_layers are connected to layers
+        # after stop_mapping_at_layers
+        # if yes, forward pass has to be done for every layer in model
+        self._check_stop_mapping(stop_mapping_at_layers, neuron_selection, no_forward_pass)
 
-            # Add first axis indices for gather_nd
-            neuron_selection = np.hstack(
-                (np.arange(len(neuron_selection)).reshape((-1, 1)),
-                 neuron_selection.reshape((-1, 1)))
-            )
+        ret = self._analyzer_model.apply(X,
+                                        neuron_selection=neuron_selection,
+                                        explained_layer_names=explained_layer_names,
+                                        stop_mapping_at_layers=stop_mapping_at_layers,
+                                        r_init=r_init,
+                                        f_init = f_init
+                                        )
+        self._analyzed = True
+        ret = self._postprocess_analysis(ret)
 
-            ret = self._analyzer_model.predict_on_batch(X+[neuron_selection])
-        else:
-            ret = self._analyzer_model.predict_on_batch(X)
-
-        if self._n_debug_output > 0:
-            self._handle_debug_output(ret[-self._n_debug_output:])
-            ret = ret[:-self._n_debug_output]
-
-        if isinstance(ret, list) and len(ret) == 1:
-            ret = ret[0]
         return ret
 
+    def _postprocess_analysis(self, hm):
+        return hm
+
+    def _check_stop_mapping(self, stop_mapping_at_layers, neuron_selection, no_forward_pass):
+
+        in_layers, rev_layer = self._analyzer_model._reverse_model
+
+        # reset no_forward_pass variable if stop_mapping_at_layers changed
+        if hasattr(self, "_old_stop_mapping_at_layers"):
+            if self._old_stop_mapping_at_layers != stop_mapping_at_layers:
+                class NoForwardWarning(RuntimeWarning):
+                    pass
+                warnings.warn("stop_mapping_at_layers changed. Make sure new layers are behind old layers, otherwise"
+                              "unexpected behaviour.", NoForwardWarning)
+                for rv in rev_layer:
+                    rv.no_forward_pass = False
+
+
+        if stop_mapping_at_layers is not None:
+            for il in in_layers:
+                if self._is_resnet_like(il, stop_mapping_at_layers, False) == 0:
+                    for rl in rev_layer:
+                        rl.forward_after_stopping = True
+
+
+        if no_forward_pass == True:
+            if stop_mapping_at_layers == None:
+                # skip forward pass for all layers except output layers
+                # because neuron_selection might change
+                for rl in rev_layer:
+                    if len(rl.layer_next) == 0:
+                        # one last layer
+                        rl.no_forward_pass = False
+                    else:
+                        # not last layer
+                        rl.no_forward_pass = True
+                   # print("No Forward in ", rl.name, rl.no_forward_pass)
+            else:
+                for rl in rev_layer:
+                    if rl.name not in stop_mapping_at_layers:
+                        # skip forward pass in all layers except layers in stop_mapping_at_layers
+                        # because neuron_selection might change
+                        rl.no_forward_pass = True
+
+
+        # save stop_mapping_at_layers and neuron_selection for comparison in future
+        self._old_stop_mapping_at_layers = stop_mapping_at_layers
+        self._old_neuron_selection = neuron_selection
+
+
+
+
+    def _is_resnet_like(self, layer, stop_mapping_at_layers, after_stop_mapping, no_forward_pass=False):
+        """
+        recursive function to check if there are layers that have connections reaching layers behind stop_mapping_at_layers
+        param layer: start point
+        """
+
+        next_layers = layer.layer_next
+
+        if len(next_layers) == 0:
+            # reached last node, return "everything ok" as default
+            return 1
+
+        # current layer is part of stop mapping
+        if stop_mapping_at_layers is not None and layer.name in stop_mapping_at_layers:
+            # boolean signifies whether next layers are after a stop mapping layer
+            after_stop_mapping = True
+
+        result_child = 1
+        for nl in next_layers:
+
+            if nl.reached_after_stop_mapping is not None:
+                # next layer already visited before
+                if nl.reached_after_stop_mapping != after_stop_mapping:
+                    # layer before stop mapping is connected to layer after stop mapping!
+                    # conflict!!
+                    return 0
+
+            if nl.reached_after_stop_mapping is None:
+                # first time next layer is visited
+                if after_stop_mapping is True:
+                    # next layer is after stop mapping layer
+                    nl.reached_after_stop_mapping = True
+                else:
+                    # next layer is not after stop mapping layer
+                    nl.reached_after_stop_mapping = False
+
+                result_child = result_child and self._is_resnet_like(nl, stop_mapping_at_layers, after_stop_mapping)
+
+        return result_child
+
+
+
+    def get_explanations(self, explained_layer_names=None):
+
+        """
+        Get results of (previously computed) explanation.
+        explanation of layer i has shape equal to input_shape of layer i.
+
+        :param explained_layer_names: None or "all" or list of strings containing the names of the layers.
+                            if explained_layer_names == 'all' or None, explanations of all layers are returned.
+
+        :returns Dict of the form {layer name (string): explanation (numpy.ndarray)}
+
+        """
+
+        if not hasattr(self, "_analyzer_model"):
+            self.create_analyzer_model()
+
+        if not self._analyzed:
+            raise AttributeError("You have to analyze the model before intermediate results are available!")
+
+        if isinstance(explained_layer_names, list):
+            for l in explained_layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+        elif (explained_layer_names is not None) and type(explained_layer_names) != str:
+            # not list and not None
+            raise AttributeError("Parameter explained_layer_names has to be None or a list of strings")
+
+        hm = self._analyzer_model.get_explanations(explained_layer_names)
+        hm = self._postprocess_analysis(hm)
+
+        return hm
+
+
+    def get_hook_activations(self, layer_names=None):
+
+        """
+        Get results of (previously computed) activations after wrap_hook function.
+        activations of layer i has shape equal to output_shape of layer i.
+        Only for advanced users!
+
+        :param layer_names: None or list of strings containing the names of the layers.
+                            if activations of last layer or layer after and inclusive stop_mapping_at are NOT available.
+                            if None, return activations of input layer only.
+
+        :returns Dict of the form {layer name (string): activations (type depends on XAI method)}
+
+        """
+
+        if not hasattr(self, "_analyzer_model"):
+            self.create_analyzer_model()
+
+        if not self._analyzed:
+            raise AttributeError("You have to analyze the model before intermediate results are available!")
+
+        if isinstance(layer_names, list):
+            for l in layer_names:
+                if not isinstance(l, str):
+                    raise AttributeError("Parameter layer_names has to be None or a list of strings")
+        elif (layer_names is not None) and type(layer_names) != str:
+            # not list and not None
+            raise AttributeError("Parameter layer_names has to be None or a list of strings")
+
+        activations = self._analyzer_model.get_hook_activations(layer_names)
+
+        return activations
 
 class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
-
     This class contains many helper functions around the graph
     reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
-
-    The deriving classes should specify how the graph should be reverted
-    by implementing the following functions:
-
-    * :func:`_reverse_mapping(layer)` given a layer this function
-      returns a reverse mapping for the layer as specified in
-      :func:`innvestigate.utils.keras.graph.reverse_model` or None.
-
-      This function can be implemented, but it is encouraged to
-      implement a default mapping and add additional changes with
-      the function :func:`_add_conditional_reverse_mapping` (see below).
-
-      The default behavior is finding a conditional mapping (see below),
-      if none is found, :func:`_default_reverse_mapping` is applied.
-    * :func:`_default_reverse_mapping` defines the default
-      reverse mapping.
-    * :func:`_head_mapping` defines how the outputs of the model
-      should be instantiated before the are passed to the reversed
-      network.
-
-    Furthermore other parameters of the function
-    :func:`innvestigate.utils.keras.graph.reverse_model` can
-    be changed by setting the according parameters of the
-    init function:
-
-    :param reverse_verbose: Print information on the reverse process.
-    :param reverse_reapply_on_copied_layers: See
-      :func:`innvestigate.utils.keras.graph.reverse_model`.
+    The deriving classes should specify how the graph should be reverted.
     """
 
     def __init__(self,
                  model,
-                 reverse_verbose=False,
-                 reverse_reapply_on_copied_layers=False,
                  **kwargs):
-        self._reverse_verbose = reverse_verbose
-        self._reverse_reapply_on_copied_layers = (
-            reverse_reapply_on_copied_layers)
+
         super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
 
-    def _gradient_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
-        mask = [id(x) not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
-        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs+Ys+reversed_Ys)
+    def _gradient_reverse_mapping(self):
+        return reverse_map.GradientReplacementLayer
 
     def _reverse_mapping(self, layer):
         """
@@ -496,17 +536,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         :param layer: The layer for which a mapping should be returned.
         :return: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
-          * A :class:`ReverseMappingBase` subclass.
+          * A :class:`ReplacementLayer` subclass.
         """
-        if layer in self._special_helper_layers:
-            # Special layers added by AnalyzerNetworkBase
-            # that should not be exposed to user.
-            return self._gradient_reverse_mapping
 
         return self._apply_conditional_reverse_mappings(layer)
 
@@ -521,12 +552,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         :param condition: Condition when this mapping should be applied.
           Form: f(layer) -> bool
         :param mapping: The mapping can be of the following forms:
-          * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state)
-            that maps reversed_Ys to reversed_Xs (which should contain
-            tensors of the same shape and type).
-          * A function of form f(B) f(layer, reverse_state) that returns
-            a function of form (A).
-          * A :class:`ReverseMappingBase` subclass.
+          * A function of form f(layer) that returns
+            a class:`reverse_map.ReplacementLayer` subclass..
         :param priority: The higher the earlier the condition gets
           evaluated.
         :param name: An identifying name.
@@ -554,37 +581,24 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
-                    return mapping["mapping"]
+                    if (inspect.isclass(mapping["mapping"]) and issubclass(mapping["mapping"], reverse_map.ReplacementLayer)):
+                        return mapping["mapping"]
+                    elif callable(mapping["mapping"]):
+                        return mapping["mapping"](layer)
 
         return None
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self, layer):
         """
-        Fallback function to map reversed_Ys to reversed_Xs
-        (which should contain tensors of the same shape and type).
+        Fallback function to map layer
         """
-        return self._gradient_reverse_mapping(
-            Xs, Ys, reversed_Ys, reverse_state)
+        return reverse_map.GradientReplacementLayer
 
-    def _head_mapping(self, X):
-        """
-        Map output tensors to new values before passing
-        them into the reverted network.
-        """
-        return X
-
-    def _postprocess_analysis(self, X):
-        return X
-
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        ret = kgraph.reverse_model(
+    def _create_analysis(self, model):
+        analyzer_model = reverse_map.ReverseModel(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
-            head_mapping=self._head_mapping,
-            stop_mapping_at_tensors=stop_analysis_at_tensors,
-            verbose=self._reverse_verbose)
+        )
 
-        ret = self._postprocess_analysis(ret)
-
-        return ret
+        return analyzer_model

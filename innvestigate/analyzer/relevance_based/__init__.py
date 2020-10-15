@@ -1,1 +1,1 @@
-__all__ = ["relevance_analyzer", "relevance_rule", "utils"]
+__all__ = ["relevance_analyzer", "relevance_rule_base", "utils"]
