@@ -10,9 +10,6 @@ model.add(GlobalMaxPooling1D())
 model.add(Dense(16, activation='relu'))
 model.add(Dense(2, activation=None))
 
-# print(model.layers[0].get_weights()[0].shape)
-# exit()
-
 #test
 model.predict(np.random.randint(1, 219, (1,100)))  # [[0.04913538 0.04234646]]
 
