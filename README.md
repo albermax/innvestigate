@@ -1,7 +1,7 @@
 # [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
 
 
-[![GitHub package version](https://img.shields.io/badge/Version-v1.0.8-green.svg)](https://github.com/albermax/innvestigate)
+[![GitHub package version](https://img.shields.io/badge/Version-v1.0.9-green.svg)](https://github.com/albermax/innvestigate)
 [![Keras package version](https://img.shields.io/badge/KerasVersion-v2.2.4-green.svg)](https://github.com/albermax/innvestigate)
 [![License: BSD-2](https://img.shields.io/badge/License-BSD--2-blue.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/albermax/innvestigate.svg?branch=master)](https://travis-ci.org/albermax/innvestigate)
@@ -29,7 +29,19 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 ### If you use this code please star the repository and cite the following paper:
 
-**["iNNvestigate neural networks!"](http://arxiv.org/abs/1808.04260)([http://arxiv.org/abs/1808.04260](http://arxiv.org/abs/1808.04260)) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam H&auml;gele, Kristof T. Sch&uuml;tt, Gr&eacute;goire Montavon, Wojciech Samek, Klaus-Robert M&uuml;ller, Sven D&auml;hne, Pieter-Jan Kindermans**
+[Alber, M., Lapuschkin, S., Seegerer, P., Hägele, M., Schütt, K. T., Montavon, G., Samek, W., Müller, K. R., Dähne, S., & Kindermans, P. J. (2019). **iNNvestigate neural networks!** Journal of Machine Learning Research, 20.](https://jmlr.org/papers/v20/18-540.html)
+  ```
+  @article{JMLR:v20:18-540,
+  author  = {Maximilian Alber and Sebastian Lapuschkin and Philipp Seegerer and Miriam H{{\"a}}gele and Kristof T. Sch{{\"u}}tt and Gr{{\'e}}goire Montavon and Wojciech Samek and Klaus-Robert M{{\"u}}ller and Sven D{{\"a}}hne and Pieter-Jan Kindermans},
+  title   = {iNNvestigate Neural Networks!},
+  journal = {Journal of Machine Learning Research},
+  year    = {2019},
+  volume  = {20},
+  number  = {93},
+  pages   = {1-8},
+  url     = {http://jmlr.org/papers/v20/18-540.html}
+  }
+  ```
 
 ## Installation
 
@@ -171,11 +183,27 @@ In the directory [examples](https://github.com/albermax/innvestigate/blob/master
 
 ## More documentation
 
-... can be found here: [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
+... can be found here:
+
+* Alber, M., Lapuschkin, S., Seegerer, P., Hägele, M., Schütt, K. T., Montavon, G., Samek, W., Müller, K. R., Dähne, S., & Kindermans, P. J. (2019). INNvestigate neural networks! Journal of Machine Learning Research, 20.](https://jmlr.org/papers/v20/18-540.html)
+  ```
+  @article{JMLR:v20:18-540,
+  author  = {Maximilian Alber and Sebastian Lapuschkin and Philipp Seegerer and Miriam H{{\"a}}gele and Kristof T. Sch{{\"u}}tt and Gr{{\'e}}goire Montavon and Wojciech Samek and Klaus-Robert M{{\"u}}ller and Sven D{{\"a}}hne and Pieter-Jan Kindermans},
+  title   = {iNNvestigate Neural Networks!},
+  journal = {Journal of Machine Learning Research},
+  year    = {2019},
+  volume  = {20},
+  number  = {93},
+  pages   = {1-8},
+  url     = {http://jmlr.org/papers/v20/18-540.html}
+  }
+  ```
+* [https://innvestigate.readthedocs.io/en/latest/](https://innvestigate.readthedocs.io/en/latest/)
 
 ## Contributing
 
-If you would like to contribute or add your analysis method please get in touch with us!
+If you would like to contribute or add your analysis method 
+please open an issue or submit a pull request.
 
 ## Releases
 

@@ -39,6 +39,7 @@ def load_image(path, size):
     ret = ret.resize((size, size))
     ret = np.asarray(ret, dtype=np.uint8).astype(np.float32)
     if ret.ndim == 2:
+        # Convert gray scale image to color channels.
         ret.resize((size, size, 1))
         ret = np.repeat(ret, 3, axis=-1)
     return ret
@@ -72,7 +73,7 @@ def get_imagenet_data(size=224):
     images = [(load_image(os.path.join(base_dir, "images", f), size),
                get_class(f))
               for f in os.listdir(os.path.join(base_dir, "images"))
-              if f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")]
+              if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")) and get_class(f) != "--"]
     return images, image_label_mapping
 
 
@@ -95,6 +96,9 @@ def plot_image_grid(grid,
     for r in range(n_rows):
         for c in range(n_cols):
             ax = plt.subplot2grid(shape=[n_rows+1, n_cols], loc=[r+1, c])
+            # No border around subplots
+            for spine in ax.spines.values():
+                spine.set_visible(False)
             # TODO controlled color mapping wrt all grid entries,
             # or individually. make input param
             if grid[r][c] is not None:
@@ -128,6 +132,9 @@ def plot_image_grid(grid,
                 if row_labels_right != []:
                     txt_right = [l+'\n' for l in row_labels_right[r]]
                     ax2 = ax.twinx()
+                    # No border around subplots
+                    for spine in ax2.spines.values():
+                        spine.set_visible(False)
                     ax2.set_xticks([])
                     ax2.set_yticks([])
                     ax2.set_ylabel(
@@ -141,4 +148,5 @@ def plot_image_grid(grid,
         plt.show()
     else:
         print('Saving figure to {}'.format(file_name))
-        plt.savefig(file_name, orientation='landscape', dpi=dpi)
+        plt.savefig(file_name, orientation='landscape', dpi=dpi, bbox_inches='tight')
+        plt.show()

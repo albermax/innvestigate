@@ -44,9 +44,10 @@ def readme():
 def setup():
     setuptools.setup(
         name="innvestigate",
-        version="1.0.8",
+        version="1.0.9",
         description="A toolbox to innvestigate neural networks' predictions.",
         long_description=readme(),
+        long_description_content_type='text/markdown',
         classifiers=[
             "License :: OSI Approved :: BSD License",
             "Development Status :: 5 - Production/Stable",
@@ -60,7 +61,7 @@ def setup():
         url="https://github.com/albermax/innvestigate",
         author=("Maxmilian Alber, Sebastian Lapuschkin, Miriam Haegele, " +
                 "Kristof Schuett, Philipp Seegerer, Pieter-Jan Kindermans, " +
-                "and others"),
+                "Henry Webel, Leander Weber and others"),
         author_email="workDoTalberDoTmaximilian@gmail.com",
         license="BSD-2",
         packages=setuptools.find_packages(),

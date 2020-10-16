@@ -109,19 +109,15 @@ bin3.5*
 sak*.py
 nosetests.cfg
 
+# data files
 *.pdf
+*.npy
 *.npz
 *.jpg
 *.jpeg
 *.JPEG
-
-# lapuschkin development ignores
-gamma_test.py
-.vscode
 *.h5
 *.png
-examples/logs
-examples/gpu-logs
 
 # ignore nbconvert script output
 examples/nbconvert_tmp
