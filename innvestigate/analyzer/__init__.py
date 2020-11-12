@@ -43,12 +43,13 @@ from .relevance_based.relevance_analyzer import LRPSequentialCompositeA
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeB
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeBFlat
+from .relevance_based.relevance_analyzer import LRPRuleUntilIndex
 from .deeptaylor import DeepTaylor
 from .deeptaylor import BoundedDeepTaylor
-# from .wrapper import WrapperBase
-# from .wrapper import AugmentReduceBase
-# from .wrapper import GaussianSmoother
-# from .wrapper import PathIntegrator
+from .wrapper import WrapperBase
+from .wrapper import AugmentReduceBase
+from .wrapper import GaussianSmoother
+from .wrapper import PathIntegrator
 
 
 # Disable pyflaks warnings:
@@ -71,13 +72,13 @@ analyzers = {
     # "random": Random,
     #
     # # Gradient based
-    # "gradient": Gradient,
+    #"gradient": Gradient,
     # "gradient.baseline": BaselineGradient,
-    # "input_t_gradient": InputTimesGradient,
-    # "deconvnet": Deconvnet,
-    # "guided_backprop": GuidedBackprop,
-    # "integrated_gradients": IntegratedGradients,
-    # "smoothgrad": SmoothGrad,
+    #"input_t_gradient": InputTimesGradient,
+    #"deconvnet": Deconvnet,
+    #"guided_backprop": GuidedBackprop,
+    #"integrated_gradients": IntegratedGradients,
+    #"smoothgrad": SmoothGrad,
 
     # Relevance based
     "lrp": LRP,
@@ -103,6 +104,8 @@ analyzers = {
     "lrp.sequential_preset_b": LRPSequentialPresetB,
     "lrp.sequential_preset_a_flat": LRPSequentialPresetAFlat,
     "lrp.sequential_preset_b_flat": LRPSequentialPresetBFlat,
+
+    "lrp.rule_until_index": LRPRuleUntilIndex,
 
     # Deep Taylor
     "deep_taylor": DeepTaylor,

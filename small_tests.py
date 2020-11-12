@@ -5,6 +5,7 @@ import innvestigate
 import tensorflow.keras as keras
 import numpy as np
 import time
+import tracemalloc
 
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -56,6 +57,16 @@ def SimpleDense():
 
     return inp, model, "SimpleDense"
 
+def Concat():
+    inputs1 = tf.keras.Input(shape=(1,))
+    inputs2 = tf.keras.Input(shape=(1,))
+    z = tf.keras.layers.Concatenate()([inputs1, inputs2])
+    outputs = tf.keras.layers.Dense(5, activation="softmax")(z)
+    model = tf.keras.Model(inputs=[inputs1, inputs2], outputs=outputs)
+    inp = [np.random.rand(3, 1), np.random.rand(3, 1)]
+
+    return inp, model, "Concat"
+
 def MultiIn():
     inputs1 = tf.keras.Input(shape=(1,))
     inputs2 = tf.keras.Input(shape=(1,))
@@ -79,14 +90,50 @@ def MultiConnect():
 
     return inp, model, "MultiConnect"
 
+def MultiAdd():
+    inputs = tf.keras.Input(shape=(10,))
+    x1 = keras.layers.Dense(120, use_bias=False)(inputs)
+    x2 = keras.layers.Dense(190, use_bias=False)(inputs)
+    x = keras.layers.Concatenate(axis=-1)([x1, x2])
+    x = keras.layers.Dense(240, use_bias=False)(x)
+    x1 = keras.layers.Dense(120, use_bias=False)(x)
+    x2 = keras.layers.Dense(120, use_bias=False)(x)
+    x = keras.layers.Add()([x1, x2])
+    x = keras.layers.Dense(10, use_bias=False, activation="softmax")(x)
+    model = tf.keras.Model(inputs=inputs, outputs=x)
+    inp = np.random.rand(3, 10)
+
+    return inp, model, "MultiAdd"
+
+def ConcatModel():
+    inputs = keras.layers.Input(shape=(224, 224, 3))
+    x = keras.layers.Conv2D(16, (5, 5), use_bias=False, activation="linear")(inputs)
+    x = keras.layers.AvgPool2D()(x)
+    x = keras.layers.Conv2D(32, (5, 5), use_bias=False, activation="linear")(x)
+    x = keras.layers.AvgPool2D()(x)
+    x = keras.layers.Flatten()(x)
+    x1 = keras.layers.Dense(120, use_bias=False)(x)
+    x2 = keras.layers.Dense(120, use_bias=False)(x)
+    x = keras.layers.Concatenate()([x1, x2])
+
+    x = keras.layers.Dense(10, use_bias=False, activation="softmax")(x)
+
+    model = keras.models.Model(inputs=inputs, outputs=x)
+    inp = np.random.rand(3, 224, 224, 3)
+
+    return inp, model, "ConcatModel"
+
 def VGG16():
     model = tf.keras.applications.VGG16(
         include_top=True,
         weights="imagenet",
     )
-    inp = np.random.rand(3, 224, 224, 3)
-
-    model.summary()
+    loader = tf.keras.preprocessing.image_dataset_from_directory("/media/weber/f3ed2aae-a7bf-4a55-b50d-ea8fb534f1f5/Datasets/Imagenet/train/",
+                                                                 batch_size=10,
+                                                                 image_size=(224, 224), shuffle=False)
+    for (data, label) in loader:
+        inp = data
+        break
 
     return inp, model, "VGG16"
 
@@ -108,8 +155,6 @@ def VGG16_modified():
 
     model = tf.keras.models.Model(keras_model.input, x)
 
-    model.summary()
-
     return inp, model, "VGG16"
 
 def Resnet50():
@@ -121,33 +166,65 @@ def Densenet():
 #------------------------------------------------------------------------------------
 #Analysis
 
+def gregoire_black_firered(R, normalize=True):
+    if normalize:
+        R /= np.max(np.abs(R))
+    x = R
+
+    hrp  = np.clip(x-0.00,0,0.25)/0.25
+    hgp = np.clip(x-0.25,0,0.25)/0.25
+    hbp = np.clip(x-0.50,0,0.50)/0.50
+
+    hbn = np.clip(-x-0.00,0,0.25)/0.25
+    hgn = np.clip(-x-0.25,0,0.25)/0.25
+    hrn = np.clip(-x-0.50,0,0.50)/0.50
+
+    return np.concatenate([(hrp+hrn)[...,None],(hgp+hgn)[...,None],(hbp+hbn)[...,None]],axis = 2)
+
 def run_analysis(input, model, name, analyzer, neuron_selection):
     print("New Test")
     print("Model Name: ", name)
     print("Analyzer Class: ", analyzer)
     print("Param neuron_selection: ", neuron_selection)
     model = innvestigate.utils.keras.graph.model_wo_softmax(model)
-    a = time.time()
+    model.summary()
+    tracemalloc.start()
     ana = analyzer(model)
-    R = ana.analyze(input, neuron_selection=neuron_selection)
-    b = time.time()
-    print("Time Passed: ", b - a)
-    print("explanation: ", np.shape(R))
-    return R
+    R = ana.analyze(input, neuron_selection=neuron_selection, no_forward_pass=True)
+    snapshot1 = tracemalloc.take_snapshot()
+    for i in range(50):
+        a = time.time()
+        R = ana.analyze(input, neuron_selection=neuron_selection, no_forward_pass=True)
+        b = time.time()
+
+        print("Iteration ", i, "Time Passed: ", b - a)
+
+    snapshot2 = tracemalloc.take_snapshot()
+    top_stats1 = snapshot2.compare_to(snapshot1, 'lineno')
+    print("-----------------------------------------------------------------------------------------")
+    print("[ Top 10 differences ]")
+    for stat in top_stats1[:10]:
+        print(stat)
+
+    return None  # R
 
 #----------------------------------------------------------------------------------
 #Tests
 
 model_cases = [
     #SimpleDense,
+    #Concat,
     #MultiIn,
     #MultiConnect,
-    VGG16_modified
+    #MultiAdd,
+    #ConcatModel,
+    VGG16,
+    #VGG16_modified
 ]
 
 analyzer_cases = [
     #innvestigate.analyzer.ReverseAnalyzerBase,
-    innvestigate.analyzer.LRPZ,
+    #innvestigate.analyzer.LRPZ,
     #innvestigate.analyzer.LRPZIgnoreBias,
     #innvestigate.analyzer.LRPZPlus,
     #innvestigate.analyzer.LRPZPlusFast,
@@ -162,21 +239,24 @@ analyzer_cases = [
     #innvestigate.analyzer.LRPSequentialCompositeA,
     #innvestigate.analyzer.LRPSequentialCompositeB,
     #innvestigate.analyzer.LRPSequentialCompositeAFlat,
-    #innvestigate.analyzer.LRPSequentialCompositeBFlat,
+    innvestigate.analyzer.LRPSequentialCompositeBFlat,
     #innvestigate.analyzer.LRPGamma,
-    innvestigate.analyzer.Gradient,
-    innvestigate.analyzer.InputTimesGradient,
-    innvestigate.analyzer.GuidedBackprop,
-    innvestigate.analyzer.Deconvnet,
+    #innvestigate.analyzer.LRPRuleUntilIndex,
+    #innvestigate.analyzer.Gradient,
+    #innvestigate.analyzer.InputTimesGradient,
+    #innvestigate.analyzer.GuidedBackprop,
+    #innvestigate.analyzer.Deconvnet,
+    #innvestigate.analyzer.SmoothGrad,
+    #innvestigate.analyzer.IntegratedGradients,
 ]
 
 neuron_selection_cases = [
     None,
-    "max_activation",
-    "all",
-    0,
-    [0, 1, 2],
-    np.array([0, 1, 2])
+    #"max_activation",
+    #"all",
+    #0,
+    #[0, 1, 2],
+    #np.array([0, 1, 2])
 ]
 
 for model_case in model_cases:
@@ -193,7 +273,16 @@ for model_case in model_cases:
             tf.keras.backend.clear_session()
 
 
-            print("Explanation Shape:", np.shape(R_new))
+            #print("Explanation Shape:", np.shape(R_new))
+            #print(R_new)
+
+            #if name == "VGG16":
+            #    for key in R_new.keys():
+            #        plt.figure("Heatmap")
+            #        plt.title(str(name) + " " + str(analyzer_case) + " " + str(neuron_selection_case) + " " + str(key))
+            #        img = gregoire_black_firered(np.mean(R_new  [key][0], axis=-1))
+            #        plt.imshow(img)
+            #        plt.show()
             print("----------------------------------------------------------------------------------")
 
 print("----------------------------------------------------------------------------------")
