@@ -76,13 +76,18 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         )
 
         # Assume conv layer beforehand -> unbounded
-        bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
-            lrp_rules.WSquareRule,
-            fuse_mode="one_linear",
-        )
+        # bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
+        #     lrp_rules.WSquareRule,
+        #     fuse_mode="one_linear",
+        # )
+        # self._add_conditional_reverse_mapping(
+        #     kchecks.is_batch_normalization_layer,
+        #     bn_mapping,
+        #     name="deep_taylor_batch_norm",
+        # )
         self._add_conditional_reverse_mapping(
             kchecks.is_batch_normalization_layer,
-            bn_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_batch_norm",
         )
         # Special layers.
