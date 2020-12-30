@@ -615,8 +615,8 @@ def boundedrule_explanation(ins, layer_func, layer_func_pos, layer_func_neg, out
     #print("TRACING bound")
     to_low = keras_layers.Lambda(lambda x: x * 0 + low_param)
     to_high = keras_layers.Lambda(lambda x: x * 0 + high_param)
-    low = [to_low(x) for x in ins]
-    high = [to_high(x) for x in ins]
+    low = tf.map_fn(to_low, ins)
+    high = tf.map_fn(to_high, ins)
 
     A = out_func(ins, layer_func)
     B = out_func(low, layer_func_pos)

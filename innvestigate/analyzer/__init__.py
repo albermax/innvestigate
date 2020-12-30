@@ -10,12 +10,12 @@ from __future__ import\
 from .base import NotAnalyzeableModelException
 from .base import ReverseAnalyzerBase
 # from .deeplift import DeepLIFTWrapper
-#from .gradient_based import Gradient
-#from .gradient_based import InputTimesGradient
-#from .gradient_based import GuidedBackprop
-#from .gradient_based import Deconvnet
-#from .gradient_based import IntegratedGradients
-#from .gradient_based import SmoothGrad
+from .gradient_based import Gradient
+from .gradient_based import InputTimesGradient
+from .gradient_based import GuidedBackprop
+from .gradient_based import Deconvnet
+# from .gradient_based import IntegratedGradients
+# from .gradient_based import SmoothGrad
 # from .misc import Input
 # from .misc import Random
 # from .pattern_based import PatternNet
@@ -44,8 +44,8 @@ from .relevance_based.relevance_analyzer import LRPSequentialCompositeB
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeAFlat
 from .relevance_based.relevance_analyzer import LRPSequentialCompositeBFlat
 from .relevance_based.relevance_analyzer import LRPRuleUntilIndex
-# from .deeptaylor import DeepTaylor
-# from .deeptaylor import BoundedDeepTaylor
+from .deeptaylor import DeepTaylor
+from .deeptaylor import BoundedDeepTaylor
 from .wrapper import WrapperBase
 from .wrapper import AugmentReduceBase
 from .wrapper import GaussianSmoother
@@ -108,8 +108,8 @@ analyzers = {
     "lrp.rule_until_index": LRPRuleUntilIndex,
 
     # Deep Taylor
-    #"deep_taylor": DeepTaylor,
-    #"deep_taylor.bounded": BoundedDeepTaylor,
+    "deep_taylor": DeepTaylor,
+    "deep_taylor.bounded": BoundedDeepTaylor,
 
     # # DeepLIFT
     # "deep_lift.wrapper": DeepLIFTWrapper,

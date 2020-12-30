@@ -13,7 +13,7 @@ import tensorflow.keras.models as keras_models
 from tensorflow.python.keras.engine.input_layer import InputLayer
 
 from . import base
-from .relevance_based import relevance_rule as lrp_rules
+from .relevance_based import relevance_rule_base as lrp_rules
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
@@ -71,35 +71,40 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         self._add_conditional_reverse_mapping(
             lambda l: (not kchecks.contains_kernel(l) and
                        kchecks.contains_activation(l)),
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_relu",
         )
 
         # Assume conv layer beforehand -> unbounded
-        bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
-            lrp_rules.WSquareRule,
-            fuse_mode="one_linear",
-        )
+        # bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
+        #     lrp_rules.WSquareRule,
+        #     fuse_mode="one_linear",
+        # )
+        # self._add_conditional_reverse_mapping(
+        #     kchecks.is_batch_normalization_layer,
+        #     bn_mapping,
+        #     name="deep_taylor_batch_norm",
+        # )
         self._add_conditional_reverse_mapping(
             kchecks.is_batch_normalization_layer,
-            bn_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_batch_norm",
         )
         # Special layers.
         self._add_conditional_reverse_mapping(
             kchecks.is_max_pooling,
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_max_pooling",
         )
         self._add_conditional_reverse_mapping(
             kchecks.is_average_pooling,
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_average_pooling",
         )
         self._add_conditional_reverse_mapping(
             lambda l: isinstance(l, keras_layers.Add),
             # Ignore scaling with 0.5
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_add",
         )
         self._add_conditional_reverse_mapping(
@@ -112,7 +117,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
                 keras_layers.SpatialDropout2D,
                 keras_layers.SpatialDropout3D,
             )),
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_special_layers",
         )
 
@@ -133,19 +138,19 @@ class DeepTaylor(base.ReverseAnalyzerBase):
                 keras_layers.RepeatVector,
                 keras_layers.Reshape,
             )),
-            self._gradient_reverse_mapping,
+            self._gradient_reverse_mapping(),
             name="deep_taylor_no_transform",
         )
 
         return super(DeepTaylor, self)._create_analysis(
             *args, **kwargs)
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self, layer):
         """
         Block all default mappings.
         """
         raise NotImplementedError(
-            "Layer %s not supported." % reverse_state["layer"])
+            "Layer %s not supported." % layer)
 
     def _prepare_model(self, model):
         """

@@ -349,6 +349,9 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._analyzed = True
         ret = self._postprocess_analysis(ret)
 
+        if isinstance(ret, list) and len(ret) == 1:
+            ret = ret[0]
+
         return ret
 
     def _postprocess_analysis(self, hm):
