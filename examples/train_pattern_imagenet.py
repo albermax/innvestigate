@@ -202,29 +202,28 @@ if __name__ == "__main__":
     # Methods we use and some properties.
     methods = [
         # NAME             POSTPROCESSING     TITLE
-
         # Show input.
-        ("input",                 {},                       image,   "Input"),
-
+        ("input", {}, image, "Input"),
         # Function
-        ("gradient",              {},                       graymap, "Gradient"),
-
+        ("gradient", {}, graymap, "Gradient"),
         # Signal
-        ("deconvnet",             {},                       bk_proj, "Deconvnet"),
-        ("guided_backprop",       {},                       bk_proj, ("Guided", "Backprop"),),
-        ("pattern.net",           {"patterns": patterns},   bk_proj, "PatterNet"),
-
+        ("deconvnet", {}, bk_proj, "Deconvnet"),
+        (
+            "guided_backprop",
+            {},
+            bk_proj,
+            ("Guided", "Backprop"),
+        ),
+        ("pattern.net", {"patterns": patterns}, bk_proj, "PatterNet"),
         # Interaction
-        ("pattern.attribution",   {"patterns": patterns},   heatmap, "PatternAttribution"),
-        ("lrp.z",                 {},                       heatmap, "LRP-Z"),
+        ("pattern.attribution", {"patterns": patterns}, heatmap, "PatternAttribution"),
+        ("lrp.z", {}, heatmap, "LRP-Z"),
     ]
 
     # Create analyzers.
     analyzers = []
     for method in methods:
-        analyzers.append(innvestigate.create_analyzer(method[0],
-                                                      model,
-                                                      **method[1]))
+        analyzers.append(innvestigate.create_analyzer(method[0], model, **method[1]))
 
     # Create analysis.
     analysis = np.zeros([len(images), len(analyzers), 224, 224, 3])
