@@ -12,7 +12,7 @@ Welcome to iNNvestigate's documentation!
 
 This is the API documentation for the iNNvestigate library.
 It contains a references for the most important functions and classes of the library.
-For a usage guide and more information about the interplay of the componentes
+For a usage guide and more information about the interplay of the components
 please visit the `GitHub repo <https://github.com/albermax/innvestigate>`_.
 
 API reference
