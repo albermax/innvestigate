@@ -1,0 +1,42 @@
+name: Test iNNvestigate for TF1
+
+on: 
+  - push
+  - pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: 
+          - 3.7
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: x64
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.1.2
+      with:
+        version: 1.1.5
+        virtualenvs-create: false
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    - name: Format check with Black
+      run: black --check .
+    - name: Format check with isort
+      run: isort --check .
+    - name: Test with pytest
+      run: |
+        pip install .
+        python -m pytest tests -v --cov=src --cov-report=xml:./coverage.xml --cov-report term-missing
+    - name: Upload code coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        name: innvestigate
+        env_vars: OS,PYTHON
