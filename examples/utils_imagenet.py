@@ -14,7 +14,8 @@ def preprocess(X, net):
 def postprocess(X, color_conversion, channels_first):
     X = X.copy()
     X = iutils.postprocess_images(
-        X, color_coding=color_conversion, channels_first=channels_first)
+        X, color_coding=color_conversion, channels_first=channels_first
+    )
     return X
 
 
@@ -29,7 +30,7 @@ def bk_proj(X):
 
 
 def heatmap(X):
-    #X = ivis.gamma(X, minamp=0, gamma=0.95)
+    # X = ivis.gamma(X, minamp=0, gamma=0.95)
     return ivis.heatmap(X)
 
 

@@ -1,19 +1,19 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from builtins import zip
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 import keras.backend as K
 import numpy as np
 
-
 from ... import utils as iutils
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -67,11 +67,14 @@ def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
     keras_tensors = iutils.to_list(keras_tensors)
 
     if isinstance(np_tensors, list):
-        ret = [np.broadcast_to(ri, none_to_one(K.int_shape(x)))
-               for x, ri in zip(keras_tensors, np_tensors)]
+        ret = [
+            np.broadcast_to(ri, none_to_one(K.int_shape(x)))
+            for x, ri in zip(keras_tensors, np_tensors)
+        ]
     else:
-        ret = [np.broadcast_to(np_tensors,
-                               none_to_one(K.int_shape(x)))
-               for x in keras_tensors]
+        ret = [
+            np.broadcast_to(np_tensors, none_to_one(K.int_shape(x)))
+            for x in keras_tensors
+        ]
 
     return ret

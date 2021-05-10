@@ -1,12 +1,26 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import argparse
+import os
+import subprocess
+import sys
+
 # catch exception with: except Exception as e
-from builtins import range, map, zip, filter
+from builtins import filter
+from builtins import map
+from builtins import range
+from builtins import zip
 from io import open
+
 import six
+from future.utils import raise_from
+from future.utils import raise_with_traceback
+
 # End: Python 2/3 compatability header small
 
 
@@ -15,20 +29,15 @@ import six
 ###############################################################################
 
 
-import argparse
-import os
-import sys
-import subprocess
-
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
 
 if __name__ == "__main__":
+
     def is_executable(filepath):
-        #determine whether the target file exists and is executable
+        # determine whether the target file exists and is executable
         return os.path.isfile(filepath) and os.access(filepath, os.X_OK)
 
     # Try jupyter binary that is the same directory as the running python.
@@ -38,13 +47,14 @@ if __name__ == "__main__":
 
     if not is_executable(jupyter_executable):
         # Fallback to find any jupyter (and hope for the best).
-        jupyter_executable = subprocess.check_output(["which jupyter"],
-                                                     shell=True).strip()
+        jupyter_executable = subprocess.check_output(
+            ["which jupyter"], shell=True
+        ).strip()
 
-    #assert a valid executable of jupyter has been found
-    assert is_executable(jupyter_executable), 'No executable for "jupyter" could be found'
-
-
+    # assert a valid executable of jupyter has been found
+    assert is_executable(
+        jupyter_executable
+    ), 'No executable for "jupyter" could be found'
 
     # Get all notebooks
     notebook_dir = os.path.join(os.path.dirname(__file__), "notebooks")
@@ -55,10 +65,13 @@ if __name__ == "__main__":
         os.makedirs(output_dir)
 
     parser = argparse.ArgumentParser(
-        description="Script to handle the example notebooks via command line.")
+        description="Script to handle the example notebooks via command line."
+    )
     parser.add_argument(
-        'command', choices=["execute", "to_script", "to_script_and_execute"],
-        help="What to do.")
+        "command",
+        choices=["execute", "to_script", "to_script_and_execute"],
+        help="What to do.",
+    )
     args = parser.parse_args()
 
     if args.command == "execute":
@@ -71,24 +84,28 @@ if __name__ == "__main__":
             print()
 
             call = [
-                jupyter_executable, "nbconvert",
+                jupyter_executable,
+                "nbconvert",
                 "--output-dir='%s'" % output_dir,
                 "--ExecutePreprocessor.timeout=-1",
-                "--to", "notebook", "--execute",
-                os.path.join(notebook_dir, notebook)
+                "--to",
+                "notebook",
+                "--execute",
+                os.path.join(notebook_dir, notebook),
             ]
             subprocess.check_call(call)
     elif args.command in ["to_script", "to_script_and_execute"]:
         for notebook in notebooks:
             print("Convert notebook:", notebook)
             input_file = os.path.join(notebook_dir, notebook)
-            output_file = os.path.join(
-                output_dir, notebook.replace(".ipynb", ".py"))
+            output_file = os.path.join(output_dir, notebook.replace(".ipynb", ".py"))
 
             call = [
-                jupyter_executable, "nbconvert",
+                jupyter_executable,
+                "nbconvert",
                 "--output-dir='%s'" % output_dir,
-                "--to", "script",
+                "--to",
+                "script",
                 input_file,
             ]
             subprocess.check_call(call)
@@ -108,7 +125,7 @@ if __name__ == "__main__":
 
             if args.command == "to_script_and_execute":
                 subprocess.check_call(
-                    [sys.executable, notebook.replace(".ipynb", ".py")],
-                    cwd=output_dir)
+                    [sys.executable, notebook.replace(".ipynb", ".py")], cwd=output_dir
+                )
     else:
         raise ValueError("Command not recognized")

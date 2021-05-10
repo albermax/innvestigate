@@ -1,37 +1,44 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
-# catch exception with: except Exception as e
-from builtins import range, map, zip, filter
-from io import open
-import six
-# End: Python 2/3 compatability header small
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-import matplotlib
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import imp
+import os
+import sys
+
+# catch exception with: except Exception as e
+from builtins import filter
+from builtins import map
+from builtins import range
+from builtins import zip
+from io import open
+
 import keras.backend
 import keras.models
 import keras.preprocessing.image
 import keras.utils
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
-import os
+import six
+from future.utils import raise_from
+from future.utils import raise_with_traceback
 
 import innvestigate
 import innvestigate.tools
 import innvestigate.utils as iutils
 import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
+
+# End: Python 2/3 compatability header small
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -76,13 +83,14 @@ if __name__ == "__main__":
     model = keras.models.Model(inputs=net["in"], outputs=net["out"])
     model.compile(optimizer="adam", loss="categorical_crossentropy")
     modelp = keras.models.Model(inputs=net["in"], outputs=net["sm_out"])
-    modelp.compile(optimizer="adam", loss="categorical_crossentropy",
-                   metrics=["accuracy"])
+    modelp.compile(
+        optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+    )
     if gpu_count > 1:
         modelp = keras.utils.multi_gpu_model(modelp, gpus=gpu_count)
-        modelp.compile(optimizer="adam",
-                       loss="categorical_crossentropy",
-                       metrics=["accuracy"])
+        modelp.compile(
+            optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
+        )
 
     ###########################################################################
     # Create data loaders.
@@ -99,21 +107,24 @@ if __name__ == "__main__":
         return X
 
     train_data_generator = keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function=preprocess,
-        horizontal_flip=True)
+        preprocessing_function=preprocess, horizontal_flip=True
+    )
     test_data_generator = keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function=preprocess)
+        preprocessing_function=preprocess
+    )
 
     train_generator = train_data_generator.flow_from_directory(
         imagenet_train_dir,
         target_size=target_size,
-        batch_size=32*gpu_count,
-        class_mode=None)
+        batch_size=32 * gpu_count,
+        class_mode=None,
+    )
     val_generator = test_data_generator.flow_from_directory(
         imagenet_val_dir,
         target_size=target_size,
-        batch_size=32*gpu_count,
-        class_mode='categorical')
+        batch_size=32 * gpu_count,
+        class_mode="categorical",
+    )
 
     ###########################################################################
     # Evaluate and compute patterns.
@@ -126,7 +137,8 @@ if __name__ == "__main__":
         steps=steps,
         max_queue_size=max_queue_size,
         workers=workers,
-        use_multiprocessing=use_multiprocessing)
+        use_multiprocessing=use_multiprocessing,
+    )
     print(val_evaluation)
 
     print("Compute patterns:")
@@ -134,18 +146,21 @@ if __name__ == "__main__":
         model,
         pattern_type=pattern_type,
         compute_layers_in_parallel=True,
-        gpus=gpu_count)
+        gpus=gpu_count,
+    )
     patterns = pattern_computer.compute_generator(
         train_generator,
         steps_per_epoch=steps,
         max_queue_size=max_queue_size,
         workers=workers,
         use_multiprocessing=use_multiprocessing,
-        verbose=1)
+        verbose=1,
+    )
 
-    np.savez("%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" %
-             (netname, pattern_type),
-             *patterns)
+    np.savez(
+        "%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" % (netname, pattern_type),
+        *patterns
+    )
 
     ###########################################################################
     # Utility functions.
@@ -160,9 +175,9 @@ if __name__ == "__main__":
 
     def postprocess(X):
         X = X.copy()
-        X = iutils.postprocess_images(X,
-                                      color_coding=color_conversion,
-                                      channels_first=channels_first)
+        X = iutils.postprocess_images(
+            X, color_coding=color_conversion, channels_first=channels_first
+        )
         return X
 
     def image(X):
@@ -221,9 +236,13 @@ if __name__ == "__main__":
         prob = modelp.predict_on_batch(x)[0]
         y_hat = prob.argmax()
 
-        text.append((r"\textbf{%s}" % label_to_class_name[y],
-                     r"\textit{(%.2f)}" % prob.max(),
-                     r"\textit{%s}" % label_to_class_name[y_hat]))
+        text.append(
+            (
+                r"\textbf{%s}" % label_to_class_name[y],
+                r"\textit{(%.2f)}" % prob.max(),
+                r"\textit{%s}" % label_to_class_name[y_hat],
+            )
+        )
 
         for aidx, analyzer in enumerate(analyzers):
             is_input_analyzer = methods[aidx][0] == "input"
@@ -231,9 +250,10 @@ if __name__ == "__main__":
             a = analyzer.analyze(image if is_input_analyzer else x)
             # Postprocess.
             if not np.all(np.isfinite(a)):
-                print("Image %i, analysis of %s not finite: nan %s inf %s" %
-                      (i, methods[aidx][3],
-                       np.any(np.isnan(a)), np.any(np.isinf(a))))
+                print(
+                    "Image %i, analysis of %s not finite: nan %s inf %s"
+                    % (i, methods[aidx][3], np.any(np.isnan(a)), np.any(np.isinf(a)))
+                )
             if not is_input_analyzer:
                 a = postprocess(a)
             a = methods[aidx][2](a)
@@ -243,13 +263,20 @@ if __name__ == "__main__":
     # Plot the analysis.
     ###########################################################################
 
-    grid = [[analysis[i, j] for j in range(analysis.shape[1])]
-            for i in range(analysis.shape[0])]
+    grid = [
+        [analysis[i, j] for j in range(analysis.shape[1])]
+        for i in range(analysis.shape[0])
+    ]
     row_labels = text
     col_labels = [method[3] for method in methods]
 
     file_name = "all_methods_%s_%s.pdf" % (netname, pattern_type)
-    eutils.plot_image_grid(grid, row_labels, col_labels,
-                           row_label_offset=50,
-                           col_label_offset=-50,
-                           usetex=True, file_name=file_name)
+    eutils.plot_image_grid(
+        grid,
+        row_labels,
+        col_labels,
+        row_label_offset=50,
+        col_label_offset=-50,
+        usetex=True,
+        file_name=file_name,
+    )

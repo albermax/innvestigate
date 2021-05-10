@@ -1,14 +1,10 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from builtins import range
-import six
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 import keras.backend as K
 import keras.layers
@@ -16,24 +12,26 @@ import keras.models
 import keras.optimizers
 import keras.utils
 import numpy as np
-
+import six
 
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
 
+###############################################################################
+###############################################################################
+###############################################################################
+
 
 __all__ = [
     "get_active_neuron_io",
     "get_pattern_class",
-
     "BasePattern",
     "DummyPattern",
     "LinearPattern",
     "ReLUPositivePattern",
     "ReLUNegativePattern",
-
     "PatternComputer",
 ]
 
@@ -43,9 +41,9 @@ __all__ = [
 ###############################################################################
 
 
-def get_active_neuron_io(layer, active_node_indices,
-                         return_i=True, return_o=True,
-                         do_activation_search=False):
+def get_active_neuron_io(
+    layer, active_node_indices, return_i=True, return_o=True, do_activation_search=False
+):
     """
     Returns the neuron-wise input output for the passed layer.
     This is done while taking care of only considering layer nodes that
@@ -58,16 +56,16 @@ def get_active_neuron_io(layer, active_node_indices,
     """
 
     def contains_activation(layer):
-        return (kchecks.contains_activation(layer) and
-                not kchecks.contains_activation(layer, "linear"))
+        return kchecks.contains_activation(layer) and not kchecks.contains_activation(
+            layer, "linear"
+        )
 
     def get_Xs(node_index):
         return iutils.to_list(layer.get_input_at(node_index))
 
     def get_Ys(node_index):
         ret = iutils.to_list(layer.get_output_at(node_index))
-        if(do_activation_search is not False and
-           not contains_activation(layer)):
+        if do_activation_search is not False and not contains_activation(layer):
             # Walk along execution graph until we find an activation function,
             # if current layer has none.
             execution_list = do_activation_search
@@ -84,12 +82,10 @@ def get_active_neuron_io(layer, active_node_indices,
             input_to_next_layer = ret[0]
 
             found = False
-            for i in range(layer_i+1, len(execution_list)):
+            for i in range(layer_i + 1, len(execution_list)):
                 l, Xs, Ys = execution_list[i]
                 if input_to_next_layer in Xs:
-                    if not isinstance(
-                            l,
-                            kchecks.get_activation_search_safe_layers()):
+                    if not isinstance(l, kchecks.get_activation_search_safe_layers()):
                         break
                     if contains_activation(l):
                         found = Ys
@@ -103,9 +99,12 @@ def get_active_neuron_io(layer, active_node_indices,
         return ret
 
     # Get neuron-wise io for active layer nodes.
-    tmp = [kgraph.get_layer_neuronwise_io(layer, Xs=get_Xs(i), Ys=get_Ys(i),
-                                          return_i=return_i, return_o=return_o)
-           for i in active_node_indices]
+    tmp = [
+        kgraph.get_layer_neuronwise_io(
+            layer, Xs=get_Xs(i), Ys=get_Ys(i), return_i=return_i, return_o=return_o
+        )
+        for i in active_node_indices
+    ]
 
     if len(tmp) == 1:
         return tmp[0]
@@ -116,8 +115,7 @@ def get_active_neuron_io(layer, active_node_indices,
         concatenate = keras.layers.Concatenate(axis=0)
 
         if return_i and return_o:
-            return (concatenate([x[0] for x in tmp]),
-                    concatenate([x[1] for x in tmp]))
+            return (concatenate([x[0] for x in tmp]), concatenate([x[1] for x in tmp]))
         else:
             return concatenate([x[0] for x in tmp])
 
@@ -136,11 +134,7 @@ class BasePattern(object):
     passed layer, which are then used to compute the final pattern.
     """
 
-    def __init__(self,
-                 model,
-                 layer,
-                 model_tensors=None,
-                 execution_list=None):
+    def __init__(self, model, layer, model_tensors=None, execution_list=None):
         self.model = model
         self.layer = layer
         # All the tensors used by the model.
@@ -167,8 +161,7 @@ class BasePattern(object):
             for i in range(n_nodes):
                 output_tensors = iutils.to_list(self.layer.get_output_at(i))
                 # Check if output is used in the model.
-                if all([tmp in self.model_tensors
-                        for tmp in output_tensors]):
+                if all([tmp in self.model_tensors for tmp in output_tensors]):
                     ret.append(i)
             return ret
 
@@ -195,8 +188,7 @@ class DummyPattern(BasePattern):
     """
 
     def get_stats_from_batch(self):
-        Xs, Ys = get_active_neuron_io(self.layer,
-                                      self._active_node_indices)
+        Xs, Ys = get_active_neuron_io(self.layer, self._active_node_indices)
         self.mean_x = ilayers.RunningMeans()
 
         count = ilayers.CountNonZero(axis=0)(Ys[0])
@@ -212,22 +204,21 @@ class DummyPattern(BasePattern):
 
 
 class LinearPattern(BasePattern):
-
     def _get_neuron_mask(self):
         """
         Select which neurons are considered for the pattern computation.
         """
-        Ys = get_active_neuron_io(self.layer,
-                                  self._active_node_indices,
-                                  return_i=False, return_o=True)
+        Ys = get_active_neuron_io(
+            self.layer, self._active_node_indices, return_i=False, return_o=True
+        )
 
         return ilayers.OnesLike()(Ys[0])
 
     def get_stats_from_batch(self):
         # Get the neuron-wise I/O for this layer.
-        layer = kgraph.copy_layer_wo_activation(self.layer,
-                                                keep_bias=False,
-                                                reuse_symbolic_tensors=False)
+        layer = kgraph.copy_layer_wo_activation(
+            self.layer, keep_bias=False, reuse_symbolic_tensors=False
+        )
         # Readjust the layer nodes.
         for i in range(kgraph.get_layer_inbound_count(self.layer)):
             layer(self.layer.get_input_at(i))
@@ -253,8 +244,7 @@ class LinearPattern(BasePattern):
 
         # ... along active neurons.
         mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]), count)
-        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]),
-                       count)
+        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]), count)
 
         _, a = self.mean_x([mean_x, count])
         _, b = self.mean_xy([mean_xy, count])
@@ -270,6 +260,7 @@ class LinearPattern(BasePattern):
 
     def compute_pattern(self):
         """Computes the patterns according to the formula in the paper."""
+
         def safe_divide(a, b):
             return a / (b + (b == 0))
 
@@ -300,29 +291,32 @@ class LinearPattern(BasePattern):
 
 
 class ReLUPositivePattern(LinearPattern):
-
     def _get_neuron_mask(self):
-        Ys = get_active_neuron_io(self.layer,
-                                  self._active_node_indices,
-                                  return_i=False, return_o=True,
-                                  do_activation_search=self.execution_list)
+        Ys = get_active_neuron_io(
+            self.layer,
+            self._active_node_indices,
+            return_i=False,
+            return_o=True,
+            do_activation_search=self.execution_list,
+        )
         return ilayers.GreaterThanZero()(Ys[0])
 
 
 class ReLUNegativePattern(LinearPattern):
-
     def _get_neuron_mask(self):
-        Ys = get_active_neuron_io(self.layer,
-                                  self._active_node_indices,
-                                  return_i=False, return_o=True,
-                                  do_activation_search=self.execution_list)
+        Ys = get_active_neuron_io(
+            self.layer,
+            self._active_node_indices,
+            return_i=False,
+            return_o=True,
+            do_activation_search=self.execution_list,
+        )
         return ilayers.LessEqualThanZero()(Ys[0])
 
 
 def get_pattern_class(pattern_type):
     return {
         "dummy": DummyPattern,
-
         "linear": LinearPattern,
         "relu": ReLUPositivePattern,
         "relu.positive": ReLUPositivePattern,
@@ -349,26 +343,29 @@ class PatternComputer(object):
     :param gpus: Not supported yet. Gpus to use.
     """
 
-    def __init__(self, model,
-                 pattern_type="linear",
-                 # todo: this options seems to be buggy,
-                 # if it sequential tensorflow still pushes all models to gpus
-                 compute_layers_in_parallel=True,
-                 gpus=None):
+    def __init__(
+        self,
+        model,
+        pattern_type="linear",
+        # todo: this options seems to be buggy,
+        # if it sequential tensorflow still pushes all models to gpus
+        compute_layers_in_parallel=True,
+        gpus=None,
+    ):
         self.model = model
 
         # Break cyclic import.
         import innvestigate.analyzer.pattern_based
+
         supported_layers = (
-            innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET)
+            innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET
+        )
         for layer in self.model.layers:
             if not isinstance(layer, supported_layers):
-                raise Exception("Model contains not supported layer: %s"
-                                % layer)
+                raise Exception("Model contains not supported layer: %s" % layer)
 
         pattern_types = iutils.to_list(pattern_type)
-        self.pattern_types = {k: get_pattern_class(k)
-                              for k in pattern_types}
+        self.pattern_types = {k: get_pattern_class(k) for k in pattern_types}
         self.compute_layers_in_parallel = compute_layers_in_parallel
         self.gpus = gpus
 
@@ -391,8 +388,9 @@ class PatternComputer(object):
         # the dummy outputs.
         # Broadcaster has shape (mini_batch_size, 1)
         reduce_axes = list(range(len(K.int_shape(self.model.inputs[0]))))[1:]
-        dummy_broadcaster = ilayers.Sum(axis=reduce_axes,
-                                        keepdims=True)(self.model.inputs[0])
+        dummy_broadcaster = ilayers.Sum(axis=reduce_axes, keepdims=True)(
+            self.model.inputs[0]
+        )
 
         def broadcast(x):
             return ilayers.Broadcast()([dummy_broadcaster, x])
@@ -401,7 +399,7 @@ class PatternComputer(object):
         layers, execution_list, _ = kgraph.trace_model_execution(self.model)
         model_tensors = set()
         for _, input_tensors, output_tensors in execution_list:
-            for t in input_tensors+output_tensors:
+            for t in input_tensors + output_tensors:
                 model_tensors.add(t)
 
         # Create pattern instances and collect the dummy outputs.
@@ -413,9 +411,12 @@ class PatternComputer(object):
             if kchecks.is_network(layer):
                 raise Exception("Network in network is not suppored!")
             for pattern_type, clazz in six.iteritems(self.pattern_types):
-                pinstance = clazz(self.model, layer,
-                                  model_tensors=model_tensors,
-                                  execution_list=execution_list)
+                pinstance = clazz(
+                    self.model,
+                    layer,
+                    model_tensors=model_tensors,
+                    execution_list=execution_list,
+                )
                 if pinstance.has_pattern() is False:
                     continue
                 self._pattern_instances[pattern_type].append(pinstance)
@@ -427,21 +428,21 @@ class PatternComputer(object):
         self._n_computer_outputs = len(computer_outputs)
         if self.compute_layers_in_parallel is True:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
-                                   outputs=computer_outputs)
+                keras.models.Model(inputs=self.model.inputs, outputs=computer_outputs)
             ]
         else:
             self._computers = [
-                keras.models.Model(inputs=self.model.inputs,
-                                   outputs=computer_output)
+                keras.models.Model(inputs=self.model.inputs, outputs=computer_output)
                 for computer_output in computer_outputs
             ]
 
         # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
-            self._computers = [keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
-                               for tmp in self._computers]
+            self._computers = [
+                keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
+                for tmp in self._computers
+            ]
 
     def compute(self, X, batch_size=32, verbose=0):
         """
@@ -467,12 +468,15 @@ class PatternComputer(object):
         class NoOptimizer(keras.optimizers.Optimizer):
             def get_updates(self, *args, **kwargs):
                 return []
+
         optimizer = NoOptimizer()
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
-            raise ValueError("Pattern are computed with "
-                             "a closed form solution. "
-                             "Only need to do one epoch.")
+            raise ValueError(
+                "Pattern are computed with "
+                "a closed form solution. "
+                "Only need to do one epoch."
+            )
         kwargs["epochs"] = 1
 
         if self.compute_layers_in_parallel is True:
@@ -487,8 +491,7 @@ class PatternComputer(object):
             return [dummy for _ in range(n_dummy_outputs)]
 
         if isinstance(generator, keras.utils.Sequence):
-            generator = iutils.TargetAugmentedSequence(generator,
-                                                       get_dummy_targets)
+            generator = iutils.TargetAugmentedSequence(generator, get_dummy_targets)
         else:
             base_generator = generator
 
@@ -507,8 +510,10 @@ class PatternComputer(object):
 
         # Compute and retrieve the actual patterns.
         pis = self._pattern_instances
-        patterns = {ptype: [tmp.compute_pattern() for tmp in pis[ptype]]
-                    for ptype in self.pattern_types}
+        patterns = {
+            ptype: [tmp.compute_pattern() for tmp in pis[ptype]]
+            for ptype in self.pattern_types
+        }
 
         # Free memory.
         del self._computers

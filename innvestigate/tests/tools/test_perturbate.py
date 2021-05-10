@@ -1,12 +1,8 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import keras.layers
 import keras.models
@@ -15,6 +11,10 @@ import pytest
 
 import innvestigate.tools.perturbate
 import innvestigate.utils as iutils
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -34,28 +34,38 @@ def test_fast__PerturbationAnalysis():
     generator = iutils.BatchSequence([x, np.zeros(x.shape[0])], batch_size=x.shape[0])
 
     # Simple model
-    model = keras.models.Sequential([
+    model = keras.models.Sequential(
+        [
             keras.layers.Flatten(input_shape=x.shape[1:]),
             keras.layers.Dense(1, use_bias=False),
-    ])
+        ]
+    )
 
     weights = np.arange(4 * 4 * 1).reshape((4 * 4, 1))
     model.layers[-1].set_weights([weights])
-    model.compile(loss='mean_squared_error', optimizer='sgd')
+    model.compile(loss="mean_squared_error", optimizer="sgd")
 
-    expected_output = np.array([[1240.], [3160.]])
+    expected_output = np.array([[1240.0], [3160.0]])
     assert np.all(np.isclose(model.predict(x), expected_output))
 
     # Analyzer
-    analyzer = innvestigate.create_analyzer("gradient",
-                                              model,
-                                              postprocess="abs")
+    analyzer = innvestigate.create_analyzer("gradient", model, postprocess="abs")
 
     # Run perturbation analysis
-    perturbation = innvestigate.tools.perturbate.Perturbation("zeros", region_shape=(2, 2), in_place=False)
+    perturbation = innvestigate.tools.perturbate.Perturbation(
+        "zeros", region_shape=(2, 2), in_place=False
+    )
 
-    perturbation_analysis = innvestigate.tools.perturbate.PerturbationAnalysis(analyzer, model, generator, perturbation, recompute_analysis=False,
-                                                 steps=3, regions_per_step=1, verbose=False)
+    perturbation_analysis = innvestigate.tools.perturbate.PerturbationAnalysis(
+        analyzer,
+        model,
+        generator,
+        perturbation,
+        recompute_analysis=False,
+        steps=3,
+        regions_per_step=1,
+        verbose=False,
+    )
 
     scores = perturbation_analysis.compute_perturbation_analysis()
 
@@ -72,7 +82,9 @@ def test_fast__Perturbation():
         input_shape = (1, 4, 4, 1)
     x = np.arange(1 * 4 * 4).reshape(input_shape)
 
-    perturbation = innvestigate.tools.perturbate.Perturbation("zeros", region_shape=(2, 2), in_place=False)
+    perturbation = innvestigate.tools.perturbate.Perturbation(
+        "zeros", region_shape=(2, 2), in_place=False
+    )
 
     analysis = np.zeros((4, 4))
     analysis[:2, 2:] = 1
@@ -87,7 +99,9 @@ def test_fast__Perturbation():
     analysis = perturbation.reduce_function(analysis, axis=1, keepdims=True)
 
     aggregated_regions = perturbation.aggregate_regions(analysis)
-    assert np.all(np.isclose(aggregated_regions[0, 0, :, :], np.array([[0, 1], [2, 3]])))
+    assert np.all(
+        np.isclose(aggregated_regions[0, 0, :, :], np.array([[0, 1], [2, 3]]))
+    )
 
     ranks = perturbation.compute_region_ordering(aggregated_regions)
     assert np.all(np.isclose(ranks[0, 0, :, :], np.array([[3, 2], [1, 0]])))

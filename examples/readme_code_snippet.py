@@ -1,12 +1,26 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import imp
+import os
+
 # catch exception with: except Exception as e
-from builtins import range, map, zip, filter
+from builtins import filter
+from builtins import map
+from builtins import range
+from builtins import zip
 from io import open
+
+import matplotlib.pyplot as plt
+import numpy as np
 import six
+from future.utils import raise_from
+from future.utils import raise_with_traceback
+
 # End: Python 2/3 compatability header small
 
 
@@ -14,11 +28,6 @@ import six
 ###############################################################################
 ###############################################################################
 
-
-import imp
-import matplotlib.pyplot as plt
-import numpy as np
-import os
 
 base_dir = os.path.dirname(__file__)
 utils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
@@ -34,16 +43,18 @@ if __name__ == "__main__":
     # Need to download examples images first.
     # See script in images directory.
     image = utils.load_image(
-        os.path.join(base_dir, "images", "ILSVRC2012_val_00011670.JPEG"), 224)
+        os.path.join(base_dir, "images", "ILSVRC2012_val_00011670.JPEG"), 224
+    )
 
     # Code snippet.
-    plt.imshow(image/255)
-    plt.axis('off')
+    plt.imshow(image / 255)
+    plt.axis("off")
     plt.savefig("readme_example_input.png")
+
+    import keras.applications.vgg16 as vgg16
 
     import innvestigate
     import innvestigate.utils
-    import keras.applications.vgg16 as vgg16
 
     # Get model
     model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
@@ -63,5 +74,5 @@ if __name__ == "__main__":
     a /= np.max(np.abs(a))
     # Plot
     plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
-    plt.axis('off')
+    plt.axis("off")
     plt.savefig("readme_example_analysis.png")

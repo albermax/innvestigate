@@ -1,16 +1,16 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-from .base import AnalyzerNetworkBase
 from .. import layers as ilayers
 from .. import utils as iutils
+from .base import AnalyzerNetworkBase
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = ["Random", "Input"]
@@ -30,8 +30,9 @@ class Input(AnalyzerNetworkBase):
     """
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
-        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
-                              if x not in stop_analysis_at_tensors]
+        tensors_to_analyze = [
+            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+        ]
         return [ilayers.Identity()(x) for x in tensors_to_analyze]
 
 
@@ -51,8 +52,9 @@ class Random(AnalyzerNetworkBase):
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         noise = ilayers.TestPhaseGaussianNoise(stddev=self._stddev)
-        tensors_to_analyze = [x for x in iutils.to_list(model.inputs)
-                              if x not in stop_analysis_at_tensors]
+        tensors_to_analyze = [
+            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+        ]
         return [noise(x) for x in tensors_to_analyze]
 
     def _get_state(self):

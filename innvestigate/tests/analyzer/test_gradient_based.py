@@ -1,29 +1,23 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import pytest
 
-
+from innvestigate.analyzer import BaselineGradient
+from innvestigate.analyzer import Deconvnet
+from innvestigate.analyzer import Gradient
+from innvestigate.analyzer import GuidedBackprop
+from innvestigate.analyzer import InputTimesGradient
+from innvestigate.analyzer import IntegratedGradients
+from innvestigate.analyzer import SmoothGrad
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import BaselineGradient
-from innvestigate.analyzer import Gradient
-
-from innvestigate.analyzer import InputTimesGradient
-
-from innvestigate.analyzer import Deconvnet
-from innvestigate.analyzer import GuidedBackprop
-
-from innvestigate.analyzer import IntegratedGradients
-
-from innvestigate.analyzer import SmoothGrad
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -34,7 +28,6 @@ from innvestigate.analyzer import SmoothGrad
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaselineGradient():
-
     def method(model):
         return BaselineGradient(model)
 
@@ -43,7 +36,6 @@ def test_fast__BaselineGradient():
 
 @pytest.mark.precommit
 def test_precommit__BaselineGradient():
-
     def method(model):
         return BaselineGradient(model)
 
@@ -54,7 +46,6 @@ def test_precommit__BaselineGradient():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__BaselineGradient():
-
     def method(model):
         return BaselineGradient(model)
 
@@ -64,7 +55,6 @@ def test_imagenet__BaselineGradient():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaselineGradient_pp_None():
-
     def method(model):
         return BaselineGradient(model, postprocess=None)
 
@@ -73,7 +63,6 @@ def test_fast__BaselineGradient_pp_None():
 
 @pytest.mark.precommit
 def test_precommit__BaselineGradient_pp_None():
-
     def method(model):
         return BaselineGradient(model, postprocess=None)
 
@@ -83,7 +72,6 @@ def test_precommit__BaselineGradient_pp_None():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BaselineGradient_pp_square():
-
     def method(model):
         return BaselineGradient(model, postprocess="square")
 
@@ -92,7 +80,6 @@ def test_fast__BaselineGradient_pp_square():
 
 @pytest.mark.precommit
 def test_precommit__BaselineGradient_pp_square():
-
     def method(model):
         return BaselineGradient(model, postprocess="square")
 
@@ -102,7 +89,6 @@ def test_precommit__BaselineGradient_pp_square():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Gradient():
-
     def method(model):
         return Gradient(model)
 
@@ -111,7 +97,6 @@ def test_fast__Gradient():
 
 @pytest.mark.precommit
 def test_precommit__Gradient():
-
     def method(model):
         return Gradient(model)
 
@@ -122,7 +107,6 @@ def test_precommit__Gradient():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__Gradient():
-
     def method(model):
         return Gradient(model)
 
@@ -132,7 +116,6 @@ def test_imagenet__Gradient():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Gradient_pp_None():
-
     def method(model):
         return Gradient(model, postprocess=None)
 
@@ -141,7 +124,6 @@ def test_fast__Gradient_pp_None():
 
 @pytest.mark.precommit
 def test_precommit__Gradient_pp_None():
-
     def method(model):
         return Gradient(model, postprocess=None)
 
@@ -151,7 +133,6 @@ def test_precommit__Gradient_pp_None():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Gradient_pp_square():
-
     def method(model):
         return Gradient(model, postprocess="square")
 
@@ -160,7 +141,6 @@ def test_fast__Gradient_pp_square():
 
 @pytest.mark.precommit
 def test_precommit__Gradient_pp_square():
-
     def method(model):
         return Gradient(model, postprocess="square")
 
@@ -175,7 +155,6 @@ def test_precommit__Gradient_pp_square():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__InputTimesGradient():
-
     def method(model):
         return InputTimesGradient(model)
 
@@ -184,7 +163,6 @@ def test_fast__InputTimesGradient():
 
 @pytest.mark.precommit
 def test_precommit__InputTimesGradient():
-
     def method(model):
         return InputTimesGradient(model)
 
@@ -195,7 +173,6 @@ def test_precommit__InputTimesGradient():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__InputTimesGradient():
-
     def method(model):
         return InputTimesGradient(model)
 
@@ -210,7 +187,6 @@ def test_imagenet__InputTimesGradient():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Deconvnet():
-
     def method(model):
         return Deconvnet(model)
 
@@ -219,7 +195,6 @@ def test_fast__Deconvnet():
 
 @pytest.mark.precommit
 def test_precommit__Deconvnet():
-
     def method(model):
         return Deconvnet(model)
 
@@ -230,7 +205,6 @@ def test_precommit__Deconvnet():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__Deconvnet():
-
     def method(model):
         return Deconvnet(model)
 
@@ -240,7 +214,6 @@ def test_imagenet__Deconvnet():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__GuidedBackprop():
-
     def method(model):
         return GuidedBackprop(model)
 
@@ -249,7 +222,6 @@ def test_fast__GuidedBackprop():
 
 @pytest.mark.precommit
 def test_precommit__GuidedBackprop():
-
     def method(model):
         return GuidedBackprop(model)
 
@@ -260,7 +232,6 @@ def test_precommit__GuidedBackprop():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__GuidedBackprop():
-
     def method(model):
         return GuidedBackprop(model)
 
@@ -275,7 +246,6 @@ def test_imagenet__GuidedBackprop():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__IntegratedGradients():
-
     def method(model):
         return IntegratedGradients(model)
 
@@ -284,7 +254,6 @@ def test_fast__IntegratedGradients():
 
 @pytest.mark.precommit
 def test_precommit__IntegratedGradients():
-
     def method(model):
         return IntegratedGradients(model)
 
@@ -295,7 +264,6 @@ def test_precommit__IntegratedGradients():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__IntegratedGradients():
-
     def method(model):
         return IntegratedGradients(model, steps=2)
 
@@ -310,7 +278,6 @@ def test_imagenet__IntegratedGradients():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__SmoothGrad():
-
     def method(model):
         return SmoothGrad(model)
 
@@ -319,7 +286,6 @@ def test_fast__SmoothGrad():
 
 @pytest.mark.precommit
 def test_precommit__SmoothGrad():
-
     def method(model):
         return SmoothGrad(model)
 
@@ -330,7 +296,6 @@ def test_precommit__SmoothGrad():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__SmoothGrad():
-
     def method(model):
         return SmoothGrad(model, augment_by_n=2)
 

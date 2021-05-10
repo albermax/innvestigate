@@ -1,37 +1,45 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 # catch exception with: except Exception as e
-from builtins import range, map, zip, filter
+from builtins import filter
+from builtins import map
+from builtins import range
+from builtins import zip
 from io import open
+
+import keras
+import numpy as np
 import six
+from future.utils import raise_from
+from future.utils import raise_with_traceback
+from keras import backend as K
+from keras.datasets import mnist
+from keras.layers import Activation
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import Input
+from keras.models import Model
+from keras.optimizers import Adam
+
+import innvestigate
+import innvestigate.applications.mnist
+import innvestigate.utils
+import innvestigate.utils as iutils
+import innvestigate.utils.tests
+import innvestigate.utils.tests.networks
+import innvestigate.utils.visualizations as ivis
+
 # End: Python 2/3 compatability header small
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
-
-import numpy as np
-
-import keras
-from keras import backend as K
-from keras.datasets import mnist
-from keras.models import Model
-from keras.layers import Dense, Dropout, Activation, Input
-from keras.optimizers import Adam
-
-import innvestigate
-import innvestigate.applications.mnist
-import innvestigate.utils as iutils
-import innvestigate.utils.visualizations as ivis
-
-import innvestigate.utils
-import innvestigate.utils.tests
-import innvestigate.utils.tests.networks
 
 
 ###############################################################################
@@ -65,12 +73,12 @@ def create_preprocessing_f(X, input_range=[0, 1]):
 
     if len(input_range) != 2:
         raise ValueError(
-            "Input range must be of length 2, but was {}".format(
-                len(input_range)))
+            "Input range must be of length 2, but was {}".format(len(input_range))
+        )
     if input_range[0] >= input_range[1]:
         raise ValueError(
-            "Values in input_range must be ascending. It is {}".format(
-                input_range))
+            "Values in input_range must be ascending. It is {}".format(input_range)
+        )
 
     a, b = X.min(), X.max()
     c, d = input_range
@@ -79,16 +87,16 @@ def create_preprocessing_f(X, input_range=[0, 1]):
         # shift original data to [0, b-a] (and copy)
         X = X - a
         # scale to new range gap [0, d-c]
-        X /= (b-a)
-        X *= (d-c)
+        X /= b - a
+        X *= d - c
         # shift to desired output range
         X += c
         return X
 
     def revert_preprocessing(X):
         X = X - c
-        X /= (d-c)
-        X *= (b-a)
+        X /= d - c
+        X *= b - a
         X += a
         return X
 
@@ -115,11 +123,8 @@ def create_model(modelname, **kwargs):
         model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
 
     elif modelname in innvestigate.utils.tests.networks.base.__all__:
-        network_init_fxn = getattr(innvestigate.utils.tests.networks.base,
-                                   modelname)
-        network = network_init_fxn(input_shape,
-                                   num_classes,
-                                   **kwargs)
+        network_init_fxn = getattr(innvestigate.utils.tests.networks.base, modelname)
+        network = network_init_fxn(input_shape, num_classes, **kwargs)
         model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
         model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
     else:
@@ -136,14 +141,13 @@ def train_model(model, data, batch_size=128, epochs=20):
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
-    model.compile(loss="categorical_crossentropy",
-                  optimizer=Adam(),
-                  metrics=["accuracy"])
+    model.compile(
+        loss="categorical_crossentropy", optimizer=Adam(), metrics=["accuracy"]
+    )
 
-    history = model.fit(x_train, y_train,
-                        batch_size=batch_size,
-                        epochs=epochs,
-                        verbose=1)
+    history = model.fit(
+        x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1
+    )
     score = model.evaluate(x_test, y_test, verbose=0)
     return score
 

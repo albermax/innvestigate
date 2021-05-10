@@ -1,16 +1,19 @@
 # Get Python six functionality:
-from __future__ import \
-    absolute_import, print_function, division, unicode_literals
-from builtins import range
-import six
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
-import numpy as np
-import warnings
 import time
+import warnings
+from builtins import range
 
 import keras.backend as K
+import numpy as np
+import six
 from keras.utils import Sequence
-from keras.utils.data_utils import OrderedEnqueuer, GeneratorEnqueuer
+from keras.utils.data_utils import GeneratorEnqueuer
+from keras.utils.data_utils import OrderedEnqueuer
 
 import innvestigate.utils
 
@@ -33,25 +36,44 @@ class Perturbation:
     :param value_range: Minimal and maximal value after perturbation as a tuple: (min_val, max_val). The input is clipped to this range
     :type value_range: tuple"""
 
-    def __init__(self, perturbation_function, num_perturbed_regions=0, region_shape=(9, 9), reduce_function=np.mean,
-                 aggregation_function=np.mean, pad_mode="reflect", in_place=False, value_range=None):
+    def __init__(
+        self,
+        perturbation_function,
+        num_perturbed_regions=0,
+        region_shape=(9, 9),
+        reduce_function=np.mean,
+        aggregation_function=np.mean,
+        pad_mode="reflect",
+        in_place=False,
+        value_range=None,
+    ):
         if isinstance(perturbation_function, six.string_types):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
             elif perturbation_function == "gaussian":
                 # If scale = 1/3, most of the values will be between -1 and 1
-                self.perturbation_function = lambda x: np.random.normal(loc=0.0, scale=0.3, size=x.shape)
+                self.perturbation_function = lambda x: np.random.normal(
+                    loc=0.0, scale=0.3, size=x.shape
+                )
             elif perturbation_function == "mean":
                 self.perturbation_function = np.mean
             elif perturbation_function == "invert":
                 self.perturbation_function = lambda x: -x
             else:
-                raise ValueError("Perturbation function type '{}' not known.".format(perturbation_function))
+                raise ValueError(
+                    "Perturbation function type '{}' not known.".format(
+                        perturbation_function
+                    )
+                )
         elif callable(perturbation_function):
             self.perturbation_function = perturbation_function
         else:
-            raise TypeError("Cannot handle perturbation function of type {}.".format(type(perturbation_function)))
+            raise TypeError(
+                "Cannot handle perturbation function of type {}.".format(
+                    type(perturbation_function)
+                )
+            )
 
         self.num_perturbed_regions = num_perturbed_regions
         self.region_shape = region_shape
@@ -82,17 +104,26 @@ class Perturbation:
         regions_reshaped = np.expand_dims(np.expand_dims(regions, axis=3), axis=5)
         region_pixels = np.repeat(regions_reshaped, self.region_shape[0], axis=3)
         region_pixels = np.repeat(region_pixels, self.region_shape[1], axis=5)
-        assert region_pixels.shape[0] == regions.shape[0] and region_pixels.shape[2:] == (
-            regions.shape[2], self.region_shape[0], regions.shape[3], self.region_shape[1]), region_pixels.shape
+        assert region_pixels.shape[0] == regions.shape[0] and region_pixels.shape[
+            2:
+        ] == (
+            regions.shape[2],
+            self.region_shape[0],
+            regions.shape[3],
+            self.region_shape[1],
+        ), region_pixels.shape
 
         return region_pixels
 
     def reshape_region_pixels(self, region_pixels, target_shape):
         # Reshape to output shape
         pixels = region_pixels.reshape(target_shape)
-        assert region_pixels.shape[0] == pixels.shape[0] and region_pixels.shape[1] == pixels.shape[1] and \
-               region_pixels.shape[2] * region_pixels.shape[3] == pixels.shape[2] and region_pixels.shape[4] * \
-               region_pixels.shape[5] == pixels.shape[3]
+        assert (
+            region_pixels.shape[0] == pixels.shape[0]
+            and region_pixels.shape[1] == pixels.shape[1]
+            and region_pixels.shape[2] * region_pixels.shape[3] == pixels.shape[2]
+            and region_pixels.shape[4] * region_pixels.shape[5] == pixels.shape[3]
+        )
         return pixels
 
     def pad(self, analysis):
@@ -103,16 +134,31 @@ class Perturbation:
         pad_shape_before = (pad_shape / 2).astype(int)
         pad_shape_after = pad_shape - pad_shape_before
         pad_shape = (
-            (0, 0), (0, 0), (pad_shape_before[0], pad_shape_after[0]), (pad_shape_before[1], pad_shape_after[1]))
+            (0, 0),
+            (0, 0),
+            (pad_shape_before[0], pad_shape_after[0]),
+            (pad_shape_before[1], pad_shape_after[1]),
+        )
         analysis = np.pad(analysis, pad_shape, self.pad_mode)
-        assert np.all(np.array(analysis.shape[2:]) % self.region_shape == 0), analysis.shape[2:]
+        assert np.all(
+            np.array(analysis.shape[2:]) % self.region_shape == 0
+        ), analysis.shape[2:]
         return analysis, pad_shape_before
 
     def reshape_to_regions(self, analysis):
-        aggregated_shape = tuple((np.array(analysis.shape[2:]) / self.region_shape).astype(int))
+        aggregated_shape = tuple(
+            (np.array(analysis.shape[2:]) / self.region_shape).astype(int)
+        )
         regions = analysis.reshape(
-            (analysis.shape[0], analysis.shape[1], aggregated_shape[0], self.region_shape[0], aggregated_shape[1],
-             self.region_shape[1]))
+            (
+                analysis.shape[0],
+                analysis.shape[1],
+                aggregated_shape[0],
+                self.region_shape[0],
+                aggregated_shape[1],
+                self.region_shape[1],
+            )
+        )
         return regions
 
     def aggregate_regions(self, analysis):
@@ -125,18 +171,27 @@ class Perturbation:
         # A single region (at region_x, region_y in sample) should be in mask[sample, channel, region_x, :, region_y, :]
 
         x_perturbated = self.reshape_to_regions(x)
-        for sample_idx, channel_idx, region_row, region_col in np.ndindex(perturbation_mask_regions.shape):
-            region = x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :]
-            region_mask = perturbation_mask_regions[sample_idx, channel_idx, region_row, region_col]
+        for sample_idx, channel_idx, region_row, region_col in np.ndindex(
+            perturbation_mask_regions.shape
+        ):
+            region = x_perturbated[
+                sample_idx, channel_idx, region_row, :, region_col, :
+            ]
+            region_mask = perturbation_mask_regions[
+                sample_idx, channel_idx, region_row, region_col
+            ]
             if region_mask:
-                x_perturbated[sample_idx, channel_idx, region_row, :, region_col, :] = self.perturbation_function(
-                    region)
+                x_perturbated[
+                    sample_idx, channel_idx, region_row, :, region_col, :
+                ] = self.perturbation_function(region)
 
                 if self.value_range is not None:
-                    np.clip(x_perturbated,
-                            self.value_range[0],
-                            self.value_range[1],
-                            x_perturbated)
+                    np.clip(
+                        x_perturbated,
+                        self.value_range[0],
+                        self.value_range[1],
+                        x_perturbated,
+                    )
         x_perturbated = self.reshape_region_pixels(x_perturbated, x.shape)
         return x_perturbated
 
@@ -168,14 +223,20 @@ class Perturbation:
 
         # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
         ranks = self.compute_region_ordering(aggregated_regions)
-        perturbation_mask_regions = self.compute_perturbation_mask(ranks, self.num_perturbed_regions)
+        perturbation_mask_regions = self.compute_perturbation_mask(
+            ranks, self.num_perturbed_regions
+        )
         # Perturbate each region
         x_perturbated = self.perturbate_regions(x, perturbation_mask_regions)
 
         # Crop the original image region to remove the padding
         if padding:
-            x_perturbated = x_perturbated[:, :, pad_shape_before_x[0]:pad_shape_before_x[0] + original_shape[2],
-                            pad_shape_before_x[1]:pad_shape_before_x[1] + original_shape[3]]
+            x_perturbated = x_perturbated[
+                :,
+                :,
+                pad_shape_before_x[0] : pad_shape_before_x[0] + original_shape[2],
+                pad_shape_before_x[1] : pad_shape_before_x[1] + original_shape[3],
+            ]
 
         if K.image_data_format() == "channels_last":
             x_perturbated = np.moveaxis(x_perturbated, 1, 3)
@@ -205,8 +266,17 @@ class PerturbationAnalysis:
     :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
 
-    def __init__(self, analyzer, model, generator, perturbation, steps=1, regions_per_step=1, recompute_analysis=False,
-                 verbose=False):
+    def __init__(
+        self,
+        analyzer,
+        model,
+        generator,
+        perturbation,
+        steps=1,
+        regions_per_step=1,
+        recompute_analysis=False,
+        verbose=False,
+    ):
         self.analyzer = analyzer
         self.model = model
         self.generator = generator
@@ -229,7 +299,9 @@ class PerturbationAnalysis:
             x = np.array(x)
             y = np.array(y)
             analysis = np.array(analysis)
-            self.analysis_generator = innvestigate.utils.BatchSequence([x, y, analysis], batch_size=256)
+            self.analysis_generator = innvestigate.utils.BatchSequence(
+                [x, y, analysis], batch_size=256
+            )
         self.verbose = verbose
 
     def compute_on_batch(self, x, analysis=None, return_analysis=False):
@@ -270,10 +342,14 @@ class PerturbationAnalysis:
         score = self.model.test_on_batch(x_perturbated, y, sample_weight=sample_weight)
         return score
 
-    def evaluate_generator(self, generator, steps=None,
-                           max_queue_size=10,
-                           workers=1,
-                           use_multiprocessing=False):
+    def evaluate_generator(
+        self,
+        generator,
+        steps=None,
+        max_queue_size=10,
+        workers=1,
+        use_multiprocessing=False,
+    ):
         """Evaluates the model on a data generator.
 
         The generator should return the same kind of data
@@ -288,29 +364,37 @@ class PerturbationAnalysis:
         is_sequence = isinstance(generator, Sequence)
         if not is_sequence and use_multiprocessing and workers > 1:
             warnings.warn(
-                UserWarning('Using a generator with `use_multiprocessing=True`'
-                            ' and multiple workers may duplicate your data.'
-                            ' Please consider using the`keras.utils.Sequence'
-                            ' class.'))
+                UserWarning(
+                    "Using a generator with `use_multiprocessing=True`"
+                    " and multiple workers may duplicate your data."
+                    " Please consider using the`keras.utils.Sequence"
+                    " class."
+                )
+            )
         if steps is None:
             if is_sequence:
                 steps = len(generator)
             else:
-                raise ValueError('`steps=None` is only valid for a generator'
-                                 ' based on the `keras.utils.Sequence` class.'
-                                 ' Please specify `steps` or use the'
-                                 ' `keras.utils.Sequence` class.')
+                raise ValueError(
+                    "`steps=None` is only valid for a generator"
+                    " based on the `keras.utils.Sequence` class."
+                    " Please specify `steps` or use the"
+                    " `keras.utils.Sequence` class."
+                )
         enqueuer = None
 
         try:
             if workers > 0:
                 if is_sequence:
-                    enqueuer = OrderedEnqueuer(generator,
-                                               use_multiprocessing=use_multiprocessing)
+                    enqueuer = OrderedEnqueuer(
+                        generator, use_multiprocessing=use_multiprocessing
+                    )
                 else:
-                    enqueuer = GeneratorEnqueuer(generator,
-                                                 use_multiprocessing=use_multiprocessing,
-                                                 wait_time=wait_time)
+                    enqueuer = GeneratorEnqueuer(
+                        generator,
+                        use_multiprocessing=use_multiprocessing,
+                        wait_time=wait_time,
+                    )
                 enqueuer.start(workers=workers, max_queue_size=max_queue_size)
                 output_generator = enqueuer.get()
             else:
@@ -318,22 +402,26 @@ class PerturbationAnalysis:
 
             while steps_done < steps:
                 generator_output = next(output_generator)
-                if not hasattr(generator_output, '__len__'):
-                    raise ValueError('Output of generator should be a tuple '
-                                     '(x, y, sample_weight) '
-                                     'or (x, y). Found: ' +
-                                     str(generator_output))
+                if not hasattr(generator_output, "__len__"):
+                    raise ValueError(
+                        "Output of generator should be a tuple "
+                        "(x, y, sample_weight) "
+                        "or (x, y). Found: " + str(generator_output)
+                    )
                 if len(generator_output) == 2:
                     x, y = generator_output
                     analysis = None
                 elif len(generator_output) == 3:
                     x, y, analysis = generator_output
                 else:
-                    raise ValueError('Output of generator should be a tuple '
-                                     '(x, y, analysis) '
-                                     'or (x, y). Found: ' +
-                                     str(generator_output))
-                outs = self.evaluate_on_batch(x, y, analysis=analysis, sample_weight=None)
+                    raise ValueError(
+                        "Output of generator should be a tuple "
+                        "(x, y, analysis) "
+                        "or (x, y). Found: " + str(generator_output)
+                    )
+                outs = self.evaluate_on_batch(
+                    x, y, analysis=analysis, sample_weight=None
+                )
 
                 if isinstance(x, list):
                     batch_size = x[0].shape[0]
@@ -342,8 +430,10 @@ class PerturbationAnalysis:
                 else:
                     batch_size = x.shape[0]
                 if batch_size == 0:
-                    raise ValueError('Received an empty batch. '
-                                     'Batches should at least contain one item.')
+                    raise ValueError(
+                        "Received an empty batch. "
+                        "Batches should at least contain one item."
+                    )
                 all_outs.append(outs)
 
                 steps_done += 1
@@ -354,13 +444,13 @@ class PerturbationAnalysis:
                 enqueuer.stop()
 
         if not isinstance(outs, list):
-            return np.average(np.asarray(all_outs),
-                              weights=batch_sizes)
+            return np.average(np.asarray(all_outs), weights=batch_sizes)
         else:
             averages = []
             for i in range(len(outs)):
-                averages.append(np.average([out[i] for out in all_outs],
-                                           weights=batch_sizes))
+                averages.append(
+                    np.average([out[i] for out in all_outs], weights=batch_sizes)
+                )
             return averages
 
     def compute_perturbation_analysis(self):
@@ -372,8 +462,12 @@ class PerturbationAnalysis:
         for step in range(self.steps):
             tic = time.time()
             if self.verbose:
-                print("Step {} of {}: {} regions perturbed.".format(step + 1, self.steps,
-                                                                    self.perturbation.num_perturbed_regions), end=" ")
+                print(
+                    "Step {} of {}: {} regions perturbed.".format(
+                        step + 1, self.steps, self.perturbation.num_perturbed_regions
+                    ),
+                    end=" ",
+                )
             scores.append(self.evaluate_generator(self.analysis_generator))
             self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
@@ -382,8 +476,11 @@ class PerturbationAnalysis:
         time_end = time.time()
 
         if self.verbose:
-            print("Time elapsed for {} steps: {:.3f} seconds.".format(step + 1,
-                                                                      time_end - time_start))  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
+            print(
+                "Time elapsed for {} steps: {:.3f} seconds.".format(
+                    step + 1, time_end - time_start
+                )
+            )  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
 
         self.perturbation.num_perturbed_regions = 1  # Reset to original value
         assert len(scores) == self.steps + 1
