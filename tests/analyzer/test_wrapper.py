@@ -1,25 +1,18 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import pytest
 
-from innvestigate.analyzer import (
-    AugmentReduceBase,
-    GaussianSmoother,
-    Gradient,
-    PathIntegrator,
-    WrapperBase,
-)
-from innvestigate.utils.tests import dryrun
+from innvestigate.analyzer import AugmentReduceBase
+from innvestigate.analyzer import GaussianSmoother
+from innvestigate.analyzer import Gradient
+from innvestigate.analyzer import PathIntegrator
+from innvestigate.analyzer import WrapperBase
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast

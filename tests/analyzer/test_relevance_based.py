@@ -1,33 +1,26 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import pytest
 
-from innvestigate.analyzer import (
-    LRPZ,
-    BaselineLRPZ,
-    LRPAlpha1Beta0,
-    LRPAlpha1Beta0IgnoreBias,
-    LRPAlpha2Beta1,
-    LRPAlpha2Beta1IgnoreBias,
-    LRPEpsilon,
-    LRPEpsilonIgnoreBias,
-    LRPFlat,
-    LRPWSquare,
-    LRPZIgnoreBias,
-    LRPZPlus,
-    LRPZPlusFast,
-)
-from innvestigate.utils.tests import dryrun
+from innvestigate.analyzer import BaselineLRPZ
+from innvestigate.analyzer import LRPAlpha1Beta0
+from innvestigate.analyzer import LRPAlpha1Beta0IgnoreBias
+from innvestigate.analyzer import LRPAlpha2Beta1
+from innvestigate.analyzer import LRPAlpha2Beta1IgnoreBias
+from innvestigate.analyzer import LRPEpsilon
+from innvestigate.analyzer import LRPEpsilonIgnoreBias
+from innvestigate.analyzer import LRPFlat
+from innvestigate.analyzer import LRPWSquare
+from innvestigate.analyzer import LRPZ
+from innvestigate.analyzer import LRPZIgnoreBias
+from innvestigate.analyzer import LRPZPlus
+from innvestigate.analyzer import LRPZPlusFast
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast
@@ -39,8 +32,6 @@ def test_fast__BaselineLRPZ():
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -199,8 +190,6 @@ def test_fast__LRPAlpha1Beta0IgnoreBias():
     dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 

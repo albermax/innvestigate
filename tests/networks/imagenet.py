@@ -1,5 +1,8 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import warnings
 
@@ -7,13 +10,10 @@ import keras.backend as K
 import keras.layers
 import numpy as np
 
-from ....applications import imagenet
-from . import base, mnist
+from innvestigate.applications import imagenet
 
-###############################################################################
-###############################################################################
-###############################################################################
-
+from tests.networks import base
+from tests.networks import mnist
 
 __all__ = [
     "vgg16_custom",
@@ -28,11 +28,6 @@ __all__ = [
     "nasnet_large",
     "nasnet_mobile",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 VGG16_OFFSET = np.array([103.939, 116.779, 123.68])

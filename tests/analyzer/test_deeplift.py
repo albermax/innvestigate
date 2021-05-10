@@ -1,27 +1,23 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import keras.layers
 import keras.models
 import numpy as np
 import pytest
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 try:
     import deeplift
 except ImportError:
     deeplift = None
 
-from innvestigate.analyzer import DeepLIFT, DeepLIFTWrapper
-from innvestigate.utils.tests import dryrun
+from innvestigate.analyzer import DeepLIFT
+from innvestigate.analyzer import DeepLIFTWrapper
 
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast
