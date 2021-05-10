@@ -1,43 +1,47 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 from .base import NotAnalyzeableModelException
-from .deeplift import DeepLIFT, DeepLIFTWrapper
-from .deeptaylor import BoundedDeepTaylor, DeepTaylor
-from .gradient_based import (
-    BaselineGradient,
-    Deconvnet,
-    Gradient,
-    GuidedBackprop,
-    InputTimesGradient,
-    IntegratedGradients,
-    SmoothGrad,
-)
-from .misc import Input, Random
-from .pattern_based import PatternAttribution, PatternNet
-from .relevance_based.relevance_analyzer import (
-    LRP,
-    LRPZ,
-    BaselineLRPZ,
-    LRPAlpha1Beta0,
-    LRPAlpha1Beta0IgnoreBias,
-    LRPAlpha2Beta1,
-    LRPAlpha2Beta1IgnoreBias,
-    LRPAlphaBeta,
-    LRPEpsilon,
-    LRPEpsilonIgnoreBias,
-    LRPFlat,
-    LRPSequentialPresetA,
-    LRPSequentialPresetAFlat,
-    LRPSequentialPresetB,
-    LRPSequentialPresetBFlat,
-    LRPSequentialPresetBFlatUntilIdx,
-    LRPWSquare,
-    LRPZIgnoreBias,
-    LRPZPlus,
-    LRPZPlusFast,
-)
-from .wrapper import AugmentReduceBase, GaussianSmoother, PathIntegrator, WrapperBase
+from .deeptaylor import BoundedDeepTaylor
+from .deeptaylor import DeepTaylor
+from .gradient_based import BaselineGradient
+from .gradient_based import Deconvnet
+from .gradient_based import Gradient
+from .gradient_based import GuidedBackprop
+from .gradient_based import InputTimesGradient
+from .gradient_based import IntegratedGradients
+from .gradient_based import SmoothGrad
+from .misc import Input
+from .misc import Random
+from .pattern_based import PatternAttribution
+from .pattern_based import PatternNet
+from .relevance_based.relevance_analyzer import BaselineLRPZ
+from .relevance_based.relevance_analyzer import LRP
+from .relevance_based.relevance_analyzer import LRPAlpha1Beta0
+from .relevance_based.relevance_analyzer import LRPAlpha1Beta0IgnoreBias
+from .relevance_based.relevance_analyzer import LRPAlpha2Beta1
+from .relevance_based.relevance_analyzer import LRPAlpha2Beta1IgnoreBias
+from .relevance_based.relevance_analyzer import LRPAlphaBeta
+from .relevance_based.relevance_analyzer import LRPEpsilon
+from .relevance_based.relevance_analyzer import LRPEpsilonIgnoreBias
+from .relevance_based.relevance_analyzer import LRPFlat
+from .relevance_based.relevance_analyzer import LRPSequentialPresetA
+from .relevance_based.relevance_analyzer import LRPSequentialPresetAFlat
+from .relevance_based.relevance_analyzer import LRPSequentialPresetB
+from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlat
+from .relevance_based.relevance_analyzer import LRPSequentialPresetBFlatUntilIdx
+from .relevance_based.relevance_analyzer import LRPWSquare
+from .relevance_based.relevance_analyzer import LRPZ
+from .relevance_based.relevance_analyzer import LRPZIgnoreBias
+from .relevance_based.relevance_analyzer import LRPZPlus
+from .relevance_based.relevance_analyzer import LRPZPlusFast
+from .wrapper import AugmentReduceBase
+from .wrapper import GaussianSmoother
+from .wrapper import PathIntegrator
+from .wrapper import WrapperBase
 
 ###############################################################################
 ###############################################################################
@@ -46,7 +50,6 @@ from .wrapper import AugmentReduceBase, GaussianSmoother, PathIntegrator, Wrappe
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
-assert DeepLIFT
 assert BaselineLRPZ
 assert WrapperBase
 assert AugmentReduceBase
@@ -94,9 +97,6 @@ analyzers = {
     # Deep Taylor
     "deep_taylor": DeepTaylor,
     "deep_taylor.bounded": BoundedDeepTaylor,
-    # DeepLIFT
-    # "deep_lift": DeepLIFT,
-    "deep_lift.wrapper": DeepLIFTWrapper,
     # Pattern based
     "pattern.net": PatternNet,
     "pattern.attribution": PatternAttribution,
