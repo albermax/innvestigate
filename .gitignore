@@ -91,6 +91,12 @@ ENV/
 .spyderproject
 .spyproject
 
+# VSCode settings
+.vscode
+
+# macOS settings
+*.DS_Store
+
 # Rope project settings
 .ropeproject
 
