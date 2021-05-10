@@ -39,7 +39,7 @@ def model_wo_softmax(*args, **kwargs):
 
 
 def to_list(l):
-    """ If not list, wraps parameter into a list."""
+    """If not list, wraps parameter into a list."""
     if not isinstance(l, list):
         return [
             l,
