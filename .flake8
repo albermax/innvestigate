@@ -1,0 +1,25 @@
+[flake8]
+select = 
+    # A: flake8-builtins
+    # B: flake8-bugbear
+    # B9: flake8-bugbear
+    # BLK: Black
+    # C: McCabe complexity
+    # E: pycodestyle / PEP8
+    # F: pyflakes
+    # I: flake8-isort
+    # N8: pep8-naming
+    # W: pycodestyle / PEP8
+    A, B, B9, BLK, C, E, F, I, W,
+    ; N,
+ignore = 
+    # E203: Whitespace before ':' (for Black)
+    # W503: Line break occurred before a binary operator (for Black)
+    # E741: Ignore warning "ambiguous variable name 'l'" as it is useful to iterate over layers
+    E203, W503, E741
+max-line-length = 
+    # for use with Black 
+    88
+max-complexity = 
+    # for McCabe complexity checker
+    10
