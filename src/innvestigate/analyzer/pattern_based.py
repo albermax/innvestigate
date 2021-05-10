@@ -184,7 +184,7 @@ class PatternNet(base.OneEpochTrainerMixin, base.ReverseAnalyzerBase):
         return self._patterns[layers.index(layer)]
 
     def _prepare_pattern(self, layer, state, pattern):
-        """""Prepares a pattern before it is set in the back-ward pass."""
+        """Prepares a pattern before it is set in the back-ward pass."""
         return pattern
 
     def _create_analysis(self, *args, **kwargs):

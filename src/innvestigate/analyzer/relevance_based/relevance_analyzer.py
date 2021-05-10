@@ -651,7 +651,7 @@ class LRPFlat(_LRPFixedParams):
 
 
 class LRPAlphaBeta(LRP):
-    """ Base class for LRP AlphaBeta"""
+    """Base class for LRP AlphaBeta"""
 
     def __init__(self, model, alpha=None, beta=None, bias=True, *args, **kwargs):
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
