@@ -11,8 +11,9 @@ import keras.models
 import numpy as np
 import six
 
-from ...analyzer.base import AnalyzerBase
-from . import networks
+from innvestigate.analyzer.base import AnalyzerBase
+
+from tests import networks
 
 ###############################################################################
 ###############################################################################

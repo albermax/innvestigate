@@ -11,16 +11,8 @@ from innvestigate.analyzer import GaussianSmoother
 from innvestigate.analyzer import Gradient
 from innvestigate.analyzer import PathIntegrator
 from innvestigate.analyzer import WrapperBase
-from innvestigate.utils.tests import dryrun
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast

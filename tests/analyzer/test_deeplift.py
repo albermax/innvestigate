@@ -9,11 +9,6 @@ import keras.models
 import numpy as np
 import pytest
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 try:
     import deeplift
 except ImportError:
@@ -21,11 +16,8 @@ except ImportError:
 
 from innvestigate.analyzer import DeepLIFT
 from innvestigate.analyzer import DeepLIFTWrapper
-from innvestigate.utils.tests import dryrun
 
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast

@@ -13,16 +13,8 @@ from innvestigate.analyzer import GuidedBackprop
 from innvestigate.analyzer import InputTimesGradient
 from innvestigate.analyzer import IntegratedGradients
 from innvestigate.analyzer import SmoothGrad
-from innvestigate.utils.tests import dryrun
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+from tests import dryrun
 
 
 @pytest.mark.fast

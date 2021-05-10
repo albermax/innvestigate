@@ -8,10 +8,10 @@ import fnmatch
 
 import keras.backend as K
 
-from . import cifar10
-from . import imagenet
-from . import mnist
-from . import trivia
+from tests.networks import cifar10
+from tests.networks import imagenet
+from tests.networks import mnist
+from tests.networks import trivia
 
 ###############################################################################
 ###############################################################################
