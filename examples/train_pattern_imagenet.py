@@ -1,19 +1,13 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import imp
 import os
 import sys
 
 # catch exception with: except Exception as e
-from builtins import filter
-from builtins import map
-from builtins import range
-from builtins import zip
+from builtins import filter, map, range, zip
 from io import open
 
 import keras.backend
@@ -24,8 +18,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import six
-from future.utils import raise_from
-from future.utils import raise_with_traceback
+from future.utils import raise_from, raise_with_traceback
 
 import innvestigate
 import innvestigate.tools

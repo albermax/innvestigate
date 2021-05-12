@@ -1,13 +1,9 @@
 # Get Python six functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import pytest
 
-from innvestigate.analyzer import Input
-from innvestigate.analyzer import Random
+from innvestigate.analyzer import Input, Random
 
 from tests import dryrun
 
