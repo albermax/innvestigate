@@ -1,28 +1,18 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 # catch exception with: except Exception as e
-from builtins import filter
-from builtins import map
-from builtins import range
-from builtins import zip
+from builtins import filter, map, range, zip
 from io import open
 
 import keras
 import numpy as np
 import six
-from future.utils import raise_from
-from future.utils import raise_with_traceback
+from future.utils import raise_from, raise_with_traceback
 from keras import backend as K
 from keras.datasets import mnist
-from keras.layers import Activation
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import Input
+from keras.layers import Activation, Dense, Dropout, Input
 from keras.models import Model
 from keras.optimizers import Adam
 

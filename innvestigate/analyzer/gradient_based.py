@@ -1,8 +1,5 @@
 # Get Python six functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import keras
 import keras.models
@@ -12,8 +9,7 @@ from .. import utils as iutils
 from ..utils import keras as kutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
-from . import base
-from . import wrapper
+from . import base, wrapper
 
 ###############################################################################
 ###############################################################################

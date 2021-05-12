@@ -1,8 +1,5 @@
 # Get Python six functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import keras.layers
 import keras.models
@@ -19,8 +16,7 @@ try:
 except ImportError:
     deeplift = None
 
-from innvestigate.analyzer import DeepLIFT
-from innvestigate.analyzer import DeepLIFTWrapper
+from innvestigate.analyzer import DeepLIFT, DeepLIFTWrapper
 from innvestigate.utils.tests import dryrun
 
 ###############################################################################

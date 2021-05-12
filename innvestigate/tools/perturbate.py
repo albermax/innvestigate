@@ -1,8 +1,5 @@
 # Get Python six functionality:
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import time
 import warnings
@@ -12,8 +9,7 @@ import keras.backend as K
 import numpy as np
 import six
 from keras.utils import Sequence
-from keras.utils.data_utils import GeneratorEnqueuer
-from keras.utils.data_utils import OrderedEnqueuer
+from keras.utils.data_utils import GeneratorEnqueuer, OrderedEnqueuer
 
 import innvestigate.utils
 
