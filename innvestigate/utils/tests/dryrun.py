@@ -1,21 +1,19 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-import six
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import unittest
 
 import keras.backend as K
 import keras.models
 import numpy as np
-import unittest
+import six
 
 from ...analyzer.base import AnalyzerBase
 from . import networks
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -68,8 +66,7 @@ class BaseLayerTestCase(unittest.TestCase):
         np.random.seed(2349784365)
         K.clear_session()
 
-        for network in networks.iterator(self._network_filter,
-                                         clear_sessions=True):
+        for network in networks.iterator(self._network_filter, clear_sessions=True):
             if six.PY2:
                 self._apply_test(network)
             else:
@@ -90,6 +87,7 @@ class AnalyzerTestCase(BaseLayerTestCase):
 
     :param method: A function that returns an Analyzer class.
     """
+
     def __init__(self, *args, **kwargs):
         method = kwargs.pop("method", None)
         if method is not None:
@@ -101,16 +99,16 @@ class AnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
         # Dryrun.
         x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
-        self.assertEqual(tuple(analysis.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertEqual(
+            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
+        )
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
 
@@ -119,8 +117,7 @@ def test_analyzer(method, network_filter):
     """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
-    test_case = AnalyzerTestCase(method=method,
-                                 network_filter=network_filter)
+    test_case = AnalyzerTestCase(method=method, network_filter=network_filter)
     test_result = unittest.TextTestRunner().run(test_case)
     assert len(test_result.errors) == 0
     assert len(test_result.failures) == 0
@@ -146,8 +143,7 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -156,8 +152,9 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
         analyzer.fit(x)
         x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
-        self.assertEqual(tuple(analysis.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertEqual(
+            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
+        )
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
         self.assertFalse(True)
@@ -167,8 +164,7 @@ def test_train_analyzer(method, network_filter):
     """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
-    test_case = AnalyzerTrainTestCase(method=method,
-                                      network_filter=network_filter)
+    test_case = AnalyzerTrainTestCase(method=method, network_filter=network_filter)
     test_result = unittest.TextTestRunner().run(test_case)
     assert len(test_result.errors) == 0
     assert len(test_result.failures) == 0
@@ -203,23 +199,24 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer1 = self._method1(model)
         analyzer2 = self._method2(model)
         # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:]))*100
+        x = np.random.rand(1, *(network["input_shape"][1:])) * 100
         analysis1 = analyzer1.analyze(x)
         analysis2 = analyzer2.analyze(x)
 
-        self.assertEqual(tuple(analysis1.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertEqual(
+            tuple(analysis1.shape), (1,) + tuple(network["input_shape"][1:])
+        )
         self.assertFalse(np.any(np.isinf(analysis1.ravel())))
         self.assertFalse(np.any(np.isnan(analysis1.ravel())))
-        self.assertEqual(tuple(analysis2.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertEqual(
+            tuple(analysis2.shape), (1,) + tuple(network["input_shape"][1:])
+        )
         self.assertFalse(np.any(np.isinf(analysis2.ravel())))
         self.assertFalse(np.any(np.isnan(analysis2.ravel())))
 
@@ -228,7 +225,7 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
             all_close_kwargs["rtol"] = self._all_close_rtol
         if hasattr(self, "_all_close_atol"):
             all_close_kwargs["atol"] = self._all_close_atol
-        #print(analysis1.sum(), analysis2.sum())
+        # print(analysis1.sum(), analysis2.sum())
         self.assertTrue(np.allclose(analysis1, analysis2, **all_close_kwargs))
 
 
@@ -236,9 +233,9 @@ def test_equal_analyzer(method1, method2, network_filter):
     """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
-    test_case = EqualAnalyzerTestCase(method1=method1,
-                                      method2=method2,
-                                      network_filter=network_filter)
+    test_case = EqualAnalyzerTestCase(
+        method1=method1, method2=method2, network_filter=network_filter
+    )
     test_result = unittest.TextTestRunner().run(test_case)
     assert len(test_result.errors) == 0
     assert len(test_result.failures) == 0
@@ -267,8 +264,7 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"],
-                                   outputs=network["out"])
+        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -279,8 +275,9 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
         new_analyzer = AnalyzerBase.load(class_name, state)
 
         analysis = new_analyzer.analyze(x)
-        self.assertEqual(tuple(analysis.shape),
-                         (1,)+tuple(network["input_shape"][1:]))
+        self.assertEqual(
+            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
+        )
         self.assertFalse(np.any(np.isinf(analysis.ravel())))
         self.assertFalse(np.any(np.isnan(analysis.ravel())))
 
@@ -289,8 +286,7 @@ def test_serialize_analyzer(method, network_filter):
     """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
-    test_case = SerializeAnalyzerTestCase(method=method,
-                                          network_filter=network_filter)
+    test_case = SerializeAnalyzerTestCase(method=method, network_filter=network_filter)
     test_result = unittest.TextTestRunner().run(test_case)
     assert len(test_result.errors) == 0
     assert len(test_result.failures) == 0
@@ -331,8 +327,7 @@ def test_pattern_computer(method, network_filter):
     """Workaround for move from unit-tests to pytest."""
     # todo: Mixing of pytest and unittest is not ideal.
     # Move completely to pytest.
-    test_case = PatternComputerTestCase(method=method,
-                                        network_filter=network_filter)
+    test_case = PatternComputerTestCase(method=method, network_filter=network_filter)
     test_result = unittest.TextTestRunner().run(test_case)
     assert len(test_result.errors) == 0
     assert len(test_result.failures) == 0

@@ -1,16 +1,14 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from builtins import range
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -41,8 +39,7 @@ def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
     """
 
     if absmax is None:
-        absmax = np.max(np.abs(X),
-                        axis=tuple(range(1, len(X.shape))))
+        absmax = np.max(np.abs(X), axis=tuple(range(1, len(X.shape))))
     absmax = np.asarray(absmax)
 
     mask = absmax != 0
@@ -50,14 +47,16 @@ def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):
         X[mask] /= absmax[mask]
 
     if input_is_positive_only is False:
-        X = (X+1)/2  # [0, 1]
+        X = (X + 1) / 2  # [0, 1]
     X = X.clip(0, 1)
 
-    X = output_range[0] + (X * (output_range[1]-output_range[0]))
+    X = output_range[0] + (X * (output_range[1] - output_range[0]))
     return X
 
 
-def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=False, **kwargs):
+def heatmap(
+    X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=False, **kwargs
+):
     """Creates a heatmap/color map.
 
     Create a heatmap or colormap out of the input tensor.
@@ -82,8 +81,9 @@ def heatmap(X, cmap_type="seismic", reduce_op="sum", reduce_axis=-1, alpha_cmap=
         pos_max = tmp.max(axis=reduce_axis)
         neg_max = (-tmp).max(axis=reduce_axis)
         abs_neg_max = -neg_max
-        tmp = np.select([pos_max >= abs_neg_max, pos_max < abs_neg_max],
-                        [pos_max, neg_max])
+        tmp = np.select(
+            [pos_max >= abs_neg_max, pos_max < abs_neg_max], [pos_max, neg_max]
+        )
     else:
         raise NotImplementedError()
 
@@ -126,20 +126,21 @@ def gamma(X, gamma=0.5, minamp=0, maxamp=None):
         if not given determined from the given data.
     """
 
-    #prepare return array
+    # prepare return array
     Y = np.zeros_like(X)
 
-    X = X - minamp # shift to given/assumed center
-    if maxamp is None: maxamp = np.abs(X).max() #infer maxamp if not given
-    X = X / maxamp # scale linearly
+    X = X - minamp  # shift to given/assumed center
+    if maxamp is None:
+        maxamp = np.abs(X).max()  # infer maxamp if not given
+    X = X / maxamp  # scale linearly
 
-    #apply gamma correction for both positive and negative values.
+    # apply gamma correction for both positive and negative values.
     i_pos = X > 0
     i_neg = np.invert(i_pos)
-    Y[i_pos] = X[i_pos]**gamma
-    Y[i_neg] = -(-X[i_neg])**gamma
+    Y[i_pos] = X[i_pos] ** gamma
+    Y[i_neg] = -((-X[i_neg]) ** gamma)
 
-    #reconstruct original scale and center
+    # reconstruct original scale and center
     Y *= maxamp
     Y += minamp
 
@@ -149,7 +150,7 @@ def gamma(X, gamma=0.5, minamp=0, maxamp=None):
 def clip_quantile(X, quantile=1):
     """Clip the values of X into the given quantile."""
     if not isinstance(quantile, (list, tuple)):
-        quantile = (quantile, 100-quantile)
+        quantile = (quantile, 100 - quantile)
 
     low = np.percentile(X, quantile[0])
     high = np.percentile(X, quantile[1])

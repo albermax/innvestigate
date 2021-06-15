@@ -1,20 +1,14 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import pytest
 
-
+from innvestigate.analyzer import BoundedDeepTaylor, DeepTaylor
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import DeepTaylor
-from innvestigate.analyzer import BoundedDeepTaylor
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -25,7 +19,6 @@ from innvestigate.analyzer import BoundedDeepTaylor
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__DeepTaylor():
-
     def method(model):
         return DeepTaylor(model)
 
@@ -34,7 +27,6 @@ def test_fast__DeepTaylor():
 
 @pytest.mark.precommit
 def test_precommit__DeepTaylor():
-
     def method(model):
         return DeepTaylor(model)
 
@@ -45,7 +37,6 @@ def test_precommit__DeepTaylor():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__DeepTaylor():
-
     def method(model):
         return DeepTaylor(model)
 
@@ -55,7 +46,6 @@ def test_imagenet__DeepTaylor():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BoundedDeepTaylor():
-
     def method(model):
         return BoundedDeepTaylor(model, low=-1, high=1)
 
@@ -64,7 +54,6 @@ def test_fast__BoundedDeepTaylor():
 
 @pytest.mark.precommit
 def test_precommit__BoundedDeepTaylor():
-
     def method(model):
         return BoundedDeepTaylor(model, low=-1, high=1)
 
@@ -75,7 +64,6 @@ def test_precommit__BoundedDeepTaylor():
 @pytest.mark.application
 @pytest.mark.imagenet
 def test_imagenet__BoundedDeepTaylor():
-
     def method(model):
         return BoundedDeepTaylor(model, low=-1, high=1)
 

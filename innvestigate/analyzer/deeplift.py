@@ -1,27 +1,24 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import importlib
-import keras.backend as K
-import keras.layers
-import numpy as np
 import tempfile
 import warnings
 
+import keras.backend as K
+import keras.layers
+import numpy as np
 
-from . import base
 from .. import layers as ilayers
 from .. import utils as iutils
 from ..utils import keras as kutils
 from ..utils.keras import checks as kchecks
 from ..utils.keras import graph as kgraph
+from . import base
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -38,42 +35,49 @@ __all__ = [
 def _create_deeplift_rules(reference_mapping, approximate_gradient=True):
     def RescaleRule(Xs, Ys, As, reverse_state, local_references={}):
         if approximate_gradient:
+
             def rescale_f(x):
                 a, dx, dy, g = x
-                return K.switch(K.less(K.abs(dx), K.epsilon()), g, a*(dy/dx))
+                return K.switch(K.less(K.abs(dx), K.epsilon()), g, a * (dy / dx))
+
         else:
+
             def rescale_f(x):
                 a, dx, dy, _ = x
-                return a*(dy/(dx + K.epsilon()))
+                return a * (dy / (dx + K.epsilon()))
 
         grad = ilayers.GradientWRT(len(Xs))
         rescale = keras.layers.Lambda(rescale_f)
 
         Xs_references = [
-            reference_mapping.get(x, local_references.get(x, None))
-            for x in Xs
+            reference_mapping.get(x, local_references.get(x, None)) for x in Xs
         ]
         Ys_references = [
-            reference_mapping.get(x, local_references.get(x, None))
-            for x in Ys
+            reference_mapping.get(x, local_references.get(x, None)) for x in Ys
         ]
 
-        Xs_differences = [keras.layers.Subtract()([x, r])
-                          for x, r in zip(Xs, Xs_references)]
-        Ys_differences = [keras.layers.Subtract()([x, r])
-                          for x, r in zip(Ys, Ys_references)]
-        gradients = iutils.to_list(grad(Xs+Ys+As))
+        Xs_differences = [
+            keras.layers.Subtract()([x, r]) for x, r in zip(Xs, Xs_references)
+        ]
+        Ys_differences = [
+            keras.layers.Subtract()([x, r]) for x, r in zip(Ys, Ys_references)
+        ]
+        gradients = iutils.to_list(grad(Xs + Ys + As))
 
-        return [rescale([a, dx, dy, g])
-                for a, dx, dy, g
-                in zip(As, Xs_differences, Ys_differences, gradients)]
+        return [
+            rescale([a, dx, dy, g])
+            for a, dx, dy, g in zip(As, Xs_differences, Ys_differences, gradients)
+        ]
 
     def LinearRule(Xs, Ys, As, reverse_state):
         if approximate_gradient:
+
             def switch_f(x):
                 dx, a, g = x
                 return K.switch(K.less(K.abs(dx), K.epsilon()), g, a)
+
         else:
+
             def switch_f(x):
                 _, a, _ = x
                 return a
@@ -85,29 +89,27 @@ def _create_deeplift_rules(reference_mapping, approximate_gradient=True):
 
         Ys_references = [reference_mapping[x] for x in Ys]
 
-        Xs_differences = [keras.layers.Subtract()([x, r])
-                          for x, r in zip(Xs, Xs_references)]
-        Ys_differences = [keras.layers.Subtract()([x, r])
-                          for x, r in zip(Ys, Ys_references)]
+        Xs_differences = [
+            keras.layers.Subtract()([x, r]) for x, r in zip(Xs, Xs_references)
+        ]
+        Ys_differences = [
+            keras.layers.Subtract()([x, r]) for x, r in zip(Ys, Ys_references)
+        ]
 
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b])
-               for a, b in zip(As, Ys_differences)]
+        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(As, Ys_differences)]
 
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs+Ys+tmp))
+        tmp = iutils.to_list(grad(Xs + Ys + tmp))
 
         # Re-weight relevance with the input values.
-        tmp = [keras.layers.Multiply()([a, b])
-               for a, b in zip(Xs_differences, tmp)]
+        tmp = [keras.layers.Multiply()([a, b]) for a, b in zip(Xs_differences, tmp)]
 
         # only the gradient
-        gradients = iutils.to_list(grad(Xs+Ys+As))
+        gradients = iutils.to_list(grad(Xs + Ys + As))
 
-        return [switch([dx, a, g])
-                for dx, a, g
-                in zip(Xs_differences, tmp, gradients)]
+        return [switch([dx, a, g]) for dx, a, g in zip(Xs_differences, tmp, gradients)]
 
     return RescaleRule, LinearRule
 
@@ -126,8 +128,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
     def __init__(self, model, *args, **kwargs):
         warnings.warn("This implementation contains bugs.")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
-        self._approximate_gradient = kwargs.pop(
-            "approximate_gradient", True)
+        self._approximate_gradient = kwargs.pop("approximate_gradient", True)
         self._add_model_softmax_check()
         super(DeepLIFT, self).__init__(model, *args, **kwargs)
 
@@ -145,12 +146,12 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
         # Create references and graph inputs.
         tmp = kutils.broadcast_np_tensors_to_keras_tensors(
-            model.inputs, self._reference_inputs)
+            model.inputs, self._reference_inputs
+        )
         tmp = [K.variable(x) for x in tmp]
 
         constant_reference_inputs = [
-            keras.layers.Input(tensor=x, shape=K.int_shape(x)[1:])
-            for x in tmp
+            keras.layers.Input(tensor=x, shape=K.int_shape(x)[1:]) for x in tmp
         ]
 
         for k, v in zip(model.inputs, constant_reference_inputs):
@@ -167,8 +168,7 @@ class DeepLIFT(base.ReverseAnalyzerBase):
                 # Special case. Do nothing.
                 next_activations = activations
             else:
-                next_activations = iutils.to_list(
-                    kutils.apply(layer, activations))
+                next_activations = iutils.to_list(kutils.apply(layer, activations))
 
             assert len(next_activations) == len(Ys)
             for k, v in zip(Ys, next_activations):
@@ -180,7 +180,8 @@ class DeepLIFT(base.ReverseAnalyzerBase):
         constant_reference_inputs = self._create_reference_activations(model)
 
         RescaleRule, LinearRule = _create_deeplift_rules(
-            self._reference_activations, self._approximate_gradient)
+            self._reference_activations, self._approximate_gradient
+        )
 
         # Kernel layers.
         self._add_conditional_reverse_mapping(
@@ -191,14 +192,14 @@ class DeepLIFT(base.ReverseAnalyzerBase):
 
         # Activation layers
         self._add_conditional_reverse_mapping(
-            lambda l: (not kchecks.contains_kernel(l) and
-                       kchecks.contains_activation(l)),
+            lambda l: (
+                not kchecks.contains_kernel(l) and kchecks.contains_activation(l)
+            ),
             RescaleRule,
             name="deeplift_activation_layer",
         )
 
-        tmp = super(DeepLIFT, self)._create_analysis(
-            model, *args, **kwargs)
+        tmp = super(DeepLIFT, self)._create_analysis(model, *args, **kwargs)
 
         if isinstance(tmp, tuple):
             if len(tmp) == 3:
@@ -215,17 +216,18 @@ class DeepLIFT(base.ReverseAnalyzerBase):
             analysis_outputs = tmp
             constant_inputs, debug_outputs = list(), list()
 
-        return (analysis_outputs,
-                debug_outputs,
-                constant_inputs+constant_reference_inputs)
+        return (
+            analysis_outputs,
+            debug_outputs,
+            constant_inputs + constant_reference_inputs,
+        )
 
     def _head_mapping(self, X):
         return keras.layers.Subtract()([X, self._reference_activations[X]])
 
-    def _reverse_model(self,
-                       model,
-                       stop_analysis_at_tensors=[],
-                       return_all_reversed_tensors=False):
+    def _reverse_model(
+        self, model, stop_analysis_at_tensors=[], return_all_reversed_tensors=False
+    ):
         return kgraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
@@ -236,7 +238,8 @@ class DeepLIFT(base.ReverseAnalyzerBase):
             clip_all_reversed_tensors=self._reverse_clip_values,
             project_bottleneck_tensors=self._reverse_project_bottleneck_layers,
             return_all_reversed_tensors=return_all_reversed_tensors,
-            execution_trace=self._model_execution_trace)
+            execution_trace=self._model_execution_trace,
+        )
 
     def _get_state(self):
         state = super(DeepLIFT, self)._get_state()
@@ -278,16 +281,18 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         self._nonlinear_mode = kwargs.pop("nonlinear_mode", "rescale")
         self._reference_inputs = kwargs.pop("reference_inputs", 0)
         self._verbose = kwargs.pop("verbose", False)
-        #relevant for "index" selection mode
+        # relevant for "index" selection mode
         self._batch_size = kwargs.pop("batch_size", 32)
         self._add_model_softmax_check()
 
         try:
             self._deeplift_module = importlib.import_module("deeplift")
         except ImportError:
-            raise ImportError("To use DeepLIFTWrapper please install "
-                              "the python module 'deeplift', e.g.: "
-                              "'pip install deeplift'")
+            raise ImportError(
+                "To use DeepLIFTWrapper please install "
+                "the python module 'deeplift', e.g.: "
+                "'pip install deeplift'"
+            )
 
         super(DeepLIFTWrapper, self).__init__(model, **kwargs)
 
@@ -306,8 +311,8 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         with tempfile.NamedTemporaryFile(suffix=".hdf5") as f:
             self._model.save(f.name)
             deeplift_model = kc.convert_model_from_saved_files(
-                f.name, nonlinear_mxts_mode=nonlinear_mxts_mode,
-                verbose=self._verbose)
+                f.name, nonlinear_mxts_mode=nonlinear_mxts_mode, verbose=self._verbose
+            )
 
         # Create function with respect to input layers
         def fix_name(s):
@@ -317,19 +322,23 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         if len(self._model.outputs) > 1:
             raise ValueError("Only a single output layer is supported.")
         tmp = self._model.outputs[0]._keras_history
-        target_layer_name = fix_name(tmp[0].name+"_%i" % tmp[1])
+        target_layer_name = fix_name(tmp[0].name + "_%i" % tmp[1])
         self._func = deeplift_model.get_target_contribs_func(
             find_scores_layer_name=score_layer_names,
-            pre_activation_target_layer_name=target_layer_name)
+            pre_activation_target_layer_name=target_layer_name,
+        )
         self._references = kutils.broadcast_np_tensors_to_keras_tensors(
-            self._model.inputs, self._reference_inputs)
+            self._model.inputs, self._reference_inputs
+        )
 
     def _analyze_with_deeplift(self, X, neuron_idx, batch_size):
-        return self._func(task_idx=neuron_idx,
-                          input_data_list=X,
-                          batch_size=batch_size,
-                          input_references_list=self._references,
-                          progress_update=None)
+        return self._func(
+            task_idx=neuron_idx,
+            input_data_list=X,
+            batch_size=batch_size,
+            input_references_list=self._references,
+            progress_update=None,
+        )
 
     def analyze(self, X, neuron_selection=None):
         if not hasattr(self, "_func"):
@@ -337,14 +346,16 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
 
         X = iutils.to_list(X)
 
-        if(neuron_selection is not None and
-           self._neuron_selection_mode != "index"):
-            raise ValueError("Only neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
-        if(neuron_selection is None and
-           self._neuron_selection_mode == "index"):
-            raise ValueError("neuron_selection_mode 'index' expects "
-                             "the neuron_selection parameter.")
+        if neuron_selection is not None and self._neuron_selection_mode != "index":
+            raise ValueError(
+                "Only neuron_selection_mode 'index' expects "
+                "the neuron_selection parameter."
+            )
+        if neuron_selection is None and self._neuron_selection_mode == "index":
+            raise ValueError(
+                "neuron_selection_mode 'index' expects "
+                "the neuron_selection parameter."
+            )
 
         if self._neuron_selection_mode == "index":
             neuron_selection = np.asarray(neuron_selection).flatten()
@@ -368,7 +379,7 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
             # run for each batch with its respective max activated neuron
             for i, ni in enumerate(neuron_idx):
                 # slice input tensors
-                tmp = [x[i:i+1] for x in X]
+                tmp = [x[i : i + 1] for x in X]
                 analysis.append(self._analyze_with_deeplift(tmp, ni, 1))
 
             # Parse the output.
@@ -377,8 +388,9 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
                 tmp = np.stack([a[i] for a in analysis]).reshape(x.shape)
                 ret.append(tmp)
         else:
-            raise ValueError("Only neuron_selection_mode index or "
-                             "max_activation are supported.")
+            raise ValueError(
+                "Only neuron_selection_mode index or " "max_activation are supported."
+            )
 
         if isinstance(ret, list) and len(ret) == 1:
             ret = ret[0]
@@ -397,9 +409,11 @@ class DeepLIFTWrapper(base.AnalyzerNetworkBase):
         reference_inputs = state.pop("reference_inputs")
         verbose = state.pop("verbose")
         kwargs = super(DeepLIFTWrapper, clazz)._state_to_kwargs(state)
-        kwargs.update({
-            "nonlinear_mode": nonlinear_mode,
-            "reference_inputs": reference_inputs,
-            "verbose": verbose,
-        })
+        kwargs.update(
+            {
+                "nonlinear_mode": nonlinear_mode,
+                "reference_inputs": reference_inputs,
+                "verbose": verbose,
+            }
+        )
         return kwargs

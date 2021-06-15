@@ -1,20 +1,14 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import pytest
 
-
+from innvestigate.analyzer import Input, Random
 from innvestigate.utils.tests import dryrun
 
-from innvestigate.analyzer import Input
-from innvestigate.analyzer import Random
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -25,7 +19,6 @@ from innvestigate.analyzer import Random
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Input():
-
     def method(model):
         return Input(model)
 
@@ -35,7 +28,6 @@ def test_fast__Input():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Random():
-
     def method(model):
         return Random(model)
 
@@ -50,7 +42,6 @@ def test_fast__Random():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__SerializeRandom():
-
     def method(model):
         return Random(model)
 

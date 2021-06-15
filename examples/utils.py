@@ -1,19 +1,21 @@
 # Begin: Python 2/3 compatibility header small
 # Get Python 3 functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-from future.utils import raise_with_traceback, raise_from
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import os
+import shutil
+
 # catch exception with: except Exception as e
-from builtins import range, map, zip, filter
+from builtins import filter, map, range, zip
 from io import open
-import six
-# End: Python 2/3 compatability header small
 
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import PIL.Image
-import shutil
+import six
+from future.utils import raise_from, raise_with_traceback
+
+# End: Python 2/3 compatability header small
 
 
 ###############################################################################
@@ -25,7 +27,7 @@ def download(url, filename):
     if not os.path.exists(filename):
         print("Download: %s ---> %s" % (url, filename))
         response = six.moves.urllib.request.urlopen(url)
-        with open(filename, 'wb') as out_file:
+        with open(filename, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
 
@@ -50,14 +52,19 @@ def get_imagenet_data(size=224):
 
     # ImageNet 2012 validation set images?
     with open(os.path.join(base_dir, "images", "ground_truth_val2012")) as f:
-        ground_truth_val2012 = {x.split()[0]: int(x.split()[1])
-                                for x in f.readlines() if len(x.strip()) > 0}
+        ground_truth_val2012 = {
+            x.split()[0]: int(x.split()[1]) for x in f.readlines() if len(x.strip()) > 0
+        }
     with open(os.path.join(base_dir, "images", "synset_id_to_class")) as f:
-        synset_to_class = {x.split()[1]: int(x.split()[0])
-                           for x in f.readlines() if len(x.strip()) > 0}
+        synset_to_class = {
+            x.split()[1]: int(x.split()[0]) for x in f.readlines() if len(x.strip()) > 0
+        }
     with open(os.path.join(base_dir, "images", "imagenet_label_mapping")) as f:
-        image_label_mapping = {int(x.split(":")[0]): x.split(":")[1].strip()
-                               for x in f.readlines() if len(x.strip()) > 0}
+        image_label_mapping = {
+            int(x.split(":")[0]): x.split(":")[1].strip()
+            for x in f.readlines()
+            if len(x.strip()) > 0
+        }
 
     def get_class(f):
         # File from ImageNet 2012 validation set
@@ -70,24 +77,28 @@ def get_imagenet_data(size=224):
             ret = "--"
         return ret
 
-    images = [(load_image(os.path.join(base_dir, "images", f), size),
-               get_class(f))
-              for f in os.listdir(os.path.join(base_dir, "images"))
-              if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg")) and get_class(f) != "--"]
+    images = [
+        (load_image(os.path.join(base_dir, "images", f), size), get_class(f))
+        for f in os.listdir(os.path.join(base_dir, "images"))
+        if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))
+        and get_class(f) != "--"
+    ]
     return images, image_label_mapping
 
 
-def plot_image_grid(grid,
-                    row_labels_left,
-                    row_labels_right,
-                    col_labels,
-                    file_name=None,
-                    figsize=None,
-                    dpi=224):
+def plot_image_grid(
+    grid,
+    row_labels_left,
+    row_labels_right,
+    col_labels,
+    file_name=None,
+    figsize=None,
+    dpi=224,
+):
     n_rows = len(grid)
     n_cols = len(grid[0])
     if figsize is None:
-        figsize = (n_cols, n_rows+1)
+        figsize = (n_cols, n_rows + 1)
 
     plt.clf()
     plt.rc("font", family="sans-serif")
@@ -95,14 +106,14 @@ def plot_image_grid(grid,
     plt.figure(figsize=figsize)
     for r in range(n_rows):
         for c in range(n_cols):
-            ax = plt.subplot2grid(shape=[n_rows+1, n_cols], loc=[r+1, c])
+            ax = plt.subplot2grid(shape=[n_rows + 1, n_cols], loc=[r + 1, c])
             # No border around subplots
             for spine in ax.spines.values():
                 spine.set_visible(False)
             # TODO controlled color mapping wrt all grid entries,
             # or individually. make input param
             if grid[r][c] is not None:
-                ax.imshow(grid[r][c], interpolation='none')
+                ax.imshow(grid[r][c], interpolation="none")
             else:
                 for spine in plt.gca().spines.values():
                     spine.set_visible(False)
@@ -112,25 +123,27 @@ def plot_image_grid(grid,
             # column labels
             if not r:
                 if col_labels != []:
-                    ax.set_title(col_labels[c],
-                                 rotation=22.5,
-                                 horizontalalignment='left',
-                                 verticalalignment='bottom')
+                    ax.set_title(
+                        col_labels[c],
+                        rotation=22.5,
+                        horizontalalignment="left",
+                        verticalalignment="bottom",
+                    )
 
             # row labels
             if not c:
                 if row_labels_left != []:
-                    txt_left = [l+'\n' for l in row_labels_left[r]]
+                    txt_left = [l + "\n" for l in row_labels_left[r]]
                     ax.set_ylabel(
-                        ''.join(txt_left),
+                        "".join(txt_left),
                         rotation=0,
-                        verticalalignment='center',
-                        horizontalalignment='right',
+                        verticalalignment="center",
+                        horizontalalignment="right",
                     )
 
-            if c == n_cols-1:
+            if c == n_cols - 1:
                 if row_labels_right != []:
-                    txt_right = [l+'\n' for l in row_labels_right[r]]
+                    txt_right = [l + "\n" for l in row_labels_right[r]]
                     ax2 = ax.twinx()
                     # No border around subplots
                     for spine in ax2.spines.values():
@@ -138,15 +151,15 @@ def plot_image_grid(grid,
                     ax2.set_xticks([])
                     ax2.set_yticks([])
                     ax2.set_ylabel(
-                        ''.join(txt_right),
+                        "".join(txt_right),
                         rotation=0,
-                        verticalalignment='center',
-                        horizontalalignment='left'
+                        verticalalignment="center",
+                        horizontalalignment="left",
                     )
 
     if file_name is None:
         plt.show()
     else:
-        print('Saving figure to {}'.format(file_name))
-        plt.savefig(file_name, orientation='landscape', dpi=dpi, bbox_inches='tight')
+        print("Saving figure to {}".format(file_name))
+        plt.savefig(file_name, orientation="landscape", dpi=dpi, bbox_inches="tight")
         plt.show()

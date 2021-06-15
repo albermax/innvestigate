@@ -1,21 +1,19 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import warnings
 
 import keras.backend as K
 import keras.layers
 import numpy as np
-import warnings
 
-from . import base
-from . import mnist
 from ....applications import imagenet
+from . import base, mnist
+
+###############################################################################
+###############################################################################
+###############################################################################
+
 
 __all__ = [
     "vgg16_custom",
@@ -42,6 +40,7 @@ VGG16_OFFSET = np.array([103.939, 116.779, 123.68])
 
 def vgg16_custom_preprocess(X):
     import innvestigate.utils.visualizations as ivis
+
     X = ivis.preprocess_images(X, color_coding="RGBtoBGR")
 
     if X.shape[1] == 3:
@@ -68,45 +67,79 @@ def vgg16_custom(activation=None):
     net = {}
     net["in"] = base.input_layer(shape=input_shape)
 
-    net.update(base.conv_pool(
-        net["in"], 2, "conv_1", 64,
-        activation=activation,
-    ))
-    net.update(base.conv_pool(
-        net["conv_1_pool"], 2, "conv_2", 128,
-        activation=activation,
-    ))
-    net.update(base.conv_pool(
-        net["conv_2_pool"], 3, "conv_3", 256,
-        activation=activation,
-    ))
-    net.update(base.conv_pool(
-        net["conv_3_pool"], 3, "conv_4", 512,
-        activation=activation,
-    ))
-    net.update(base.conv_pool(
-        net["conv_4_pool"], 3, "conv_5", 512,
-        activation=activation,
-    ))
+    net.update(
+        base.conv_pool(
+            net["in"],
+            2,
+            "conv_1",
+            64,
+            activation=activation,
+        )
+    )
+    net.update(
+        base.conv_pool(
+            net["conv_1_pool"],
+            2,
+            "conv_2",
+            128,
+            activation=activation,
+        )
+    )
+    net.update(
+        base.conv_pool(
+            net["conv_2_pool"],
+            3,
+            "conv_3",
+            256,
+            activation=activation,
+        )
+    )
+    net.update(
+        base.conv_pool(
+            net["conv_3_pool"],
+            3,
+            "conv_4",
+            512,
+            activation=activation,
+        )
+    )
+    net.update(
+        base.conv_pool(
+            net["conv_4_pool"],
+            3,
+            "conv_5",
+            512,
+            activation=activation,
+        )
+    )
 
     net["conv_flat"] = keras.layers.Flatten()(net["conv_5_pool"])
-    net["dense_1"] = base.dense_layer(net["conv_flat"], units=4096,
-                                      activation=activation,
-                                      kernel_initializer="glorot_uniform")
+    net["dense_1"] = base.dense_layer(
+        net["conv_flat"],
+        units=4096,
+        activation=activation,
+        kernel_initializer="glorot_uniform",
+    )
     net["dense_1_dropout"] = base.dropout_layer(net["dense_1"], 0.5)
-    net["dense_2"] = base.dense_layer(net["dense_1_dropout"], units=4096,
-                                      activation=activation,
-                                      kernel_initializer="glorot_uniform")
+    net["dense_2"] = base.dense_layer(
+        net["dense_1_dropout"],
+        units=4096,
+        activation=activation,
+        kernel_initializer="glorot_uniform",
+    )
     net["dense_2_dropout"] = base.dropout_layer(net["dense_2"], 0.5)
-    net["out"] = base.dense_layer(net["dense_2_dropout"], units=output_n,
-                                  kernel_initializer="glorot_uniform")
+    net["out"] = base.dense_layer(
+        net["dense_2_dropout"], units=output_n, kernel_initializer="glorot_uniform"
+    )
     net["sm_out"] = base.softmax(net["out"])
 
-    net.update({
-        "input_shape": input_shape,
-        "preprocess_f": vgg16_custom_preprocess,
-        "output_n": output_n,
-    })
+    net.update(
+        {
+            "input_shape": input_shape,
+            "preprocess_f": vgg16_custom_preprocess,
+            "output_n": output_n,
+        }
+    )
     return net
 
 
@@ -190,8 +223,9 @@ def densenet201():
 
 def nasnet_large():
     if K.image_data_format() == "channels_first":
-        warnings.warn("NASNet is not available for channels first. "
-                      "Return dummy net.")
+        warnings.warn(
+            "NASNet is not available for channels first. " "Return dummy net."
+        )
         return mnist.log_reg()
 
     ret = imagenet.nasnet_large()
@@ -201,8 +235,9 @@ def nasnet_large():
 
 def nasnet_mobile():
     if K.image_data_format() == "channels_first":
-        warnings.warn("NASNet is not available for channels first. "
-                      "Return dummy net.")
+        warnings.warn(
+            "NASNet is not available for channels first. " "Return dummy net."
+        )
         return mnist.log_reg()
 
     ret = imagenet.nasnet_mobile()

@@ -1,28 +1,23 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-import pytest
-
-
-from keras.datasets import mnist
-import keras.layers
-import keras.models
-from keras.models import Model
-import keras.optimizers
-import numpy as np
 import unittest
 
-from innvestigate.utils.tests import dryrun
+import keras.layers
+import keras.models
+import keras.optimizers
+import numpy as np
+import pytest
+from keras.datasets import mnist
+from keras.models import Model
 
 import innvestigate
 from innvestigate.tools import PatternComputer
+from innvestigate.utils.tests import dryrun
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 ###############################################################################
@@ -33,10 +28,10 @@ from innvestigate.tools import PatternComputer
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_dummy_parallel():
-
     def method(model):
-        return PatternComputer(model, pattern_type="dummy",
-                               compute_layers_in_parallel=True)
+        return PatternComputer(
+            model, pattern_type="dummy", compute_layers_in_parallel=True
+        )
 
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
@@ -45,10 +40,10 @@ def test_fast__PatternComputer_dummy_parallel():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_dummy_sequential():
-
     def method(model):
-        return PatternComputer(model, pattern_type="dummy",
-                               compute_layers_in_parallel=False)
+        return PatternComputer(
+            model, pattern_type="dummy", compute_layers_in_parallel=False
+        )
 
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
@@ -61,7 +56,6 @@ def test_fast__PatternComputer_dummy_sequential():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_linear():
-
     def method(model):
         return PatternComputer(model, pattern_type="linear")
 
@@ -70,7 +64,6 @@ def test_fast__PatternComputer_linear():
 
 @pytest.mark.precommit
 def test_precommit__PatternComputer_linear():
-
     def method(model):
         return PatternComputer(model, pattern_type="linear")
 
@@ -80,7 +73,6 @@ def test_precommit__PatternComputer_linear():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_relupositive():
-
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
 
@@ -89,7 +81,6 @@ def test_fast__PatternComputer_relupositive():
 
 @pytest.mark.precommit
 def test_precommit__PatternComputer_relupositive():
-
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
 
@@ -99,7 +90,6 @@ def test_precommit__PatternComputer_relupositive():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PatternComputer_relunegative():
-
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
 
@@ -108,7 +98,6 @@ def test_fast__PatternComputer_relunegative():
 
 @pytest.mark.precommit
 def test_precommit__PatternComputer_relunegative():
-
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
 
@@ -123,7 +112,6 @@ def test_precommit__PatternComputer_relunegative():
 @pytest.mark.fast
 @pytest.mark.precommit
 class HaufePatternExample(unittest.TestCase):
-
     def test(self):
         np.random.seed(234354346)
         # need many samples to get close to optimum and stable numbers
@@ -137,7 +125,9 @@ class HaufePatternExample(unittest.TestCase):
         X = y * a_s + eps * a_d
 
         model = keras.models.Sequential(
-            [keras.layers.Dense(1, input_shape=(2,), use_bias=True), ]
+            [
+                keras.layers.Dense(1, input_shape=(2,), use_bias=True),
+            ]
         )
         model.compile(optimizer=keras.optimizers.Adam(lr=1), loss="mse")
         model.fit(X, y, epochs=20, verbose=0).history
@@ -147,8 +137,8 @@ class HaufePatternExample(unittest.TestCase):
         A = pc.compute(X)[0]
         W = model.get_weights()[0]
 
-        #print(a_d, model.get_weights()[0])
-        #print(a_s, A)
+        # print(a_d, model.get_weights()[0])
+        # print(a_s, A)
 
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
@@ -170,8 +160,8 @@ def fetch_data():
 
     x_train = (x_train.reshape(60000, 1, 28, 28) - 127.5) / 127.5
     x_test = (x_test.reshape(10000, 1, 28, 28) - 127.5) / 127.5
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
+    x_train = x_train.astype("float32")
+    x_test = x_test.astype("float32")
 
     return x_train[:100], y_train[:100], x_test[:10], y_test[:10]
 
@@ -179,11 +169,7 @@ def fetch_data():
 def create_model(clazz):
     num_classes = 10
 
-    network = clazz(
-        (None, 1, 28, 28),
-        num_classes,
-        dense_units=1024,
-        dropout_rate=0.25)
+    network = clazz((None, 1, 28, 28), num_classes, dense_units=1024, dropout_rate=0.25)
     model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
     model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
     return model_wo_sm, model_w_sm
@@ -198,21 +184,19 @@ def train_model(model, data, epochs=20):
     y_train = keras.utils.to_categorical(y_train, num_classes)
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=keras.optimizers.RMSprop(),
-                  metrics=['accuracy'])
+    model.compile(
+        loss="categorical_crossentropy",
+        optimizer=keras.optimizers.RMSprop(),
+        metrics=["accuracy"],
+    )
 
-    model.fit(x_train, y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              verbose=0)
+    model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=0)
     model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
 class MnistPatternExample_dense_linear(unittest.TestCase):
-
     def test(self):
         np.random.seed(234354346)
         model_class = innvestigate.utils.tests.networks.base.mlp_2dense
@@ -222,8 +206,9 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
-        analyzer = innvestigate.create_analyzer("pattern.net", model,
-                                                pattern_type="linear")
+        analyzer = innvestigate.create_analyzer(
+            "pattern.net", model, pattern_type="linear"
+        )
         analyzer.fit(data[0], batch_size=256, verbose=0)
 
         patterns = analyzer._patterns
@@ -245,14 +230,14 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
 
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
-        #print(A.sum(), patterns[0].sum())
+
+        # print(A.sum(), patterns[0].sum())
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
 class MnistPatternExample_dense_relu(unittest.TestCase):
-
     def test(self):
         np.random.seed(234354346)
         model_class = innvestigate.utils.tests.networks.base.mlp_2dense
@@ -262,8 +247,9 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         train_model(modelp, data, epochs=10)
         model.set_weights(modelp.get_weights())
 
-        analyzer = innvestigate.create_analyzer("pattern.net", model,
-                                                pattern_type="relu")
+        analyzer = innvestigate.create_analyzer(
+            "pattern.net", model, pattern_type="relu"
+        )
         analyzer.fit(data[0], batch_size=256, verbose=0)
         patterns = analyzer._patterns
         W, b = model.get_weights()[:2]
@@ -289,7 +275,8 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
 
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
-        #print(A.sum(), patterns[0].sum())
+
+        # print(A.sum(), patterns[0].sum())
         self.assertTrue(allclose(A.ravel(), patterns[0].ravel()))
 
 

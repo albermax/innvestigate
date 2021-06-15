@@ -1,24 +1,22 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from builtins import range, zip
-
-
-###############################################################################
-###############################################################################
-###############################################################################
 
 import keras
 import keras.backend as K
 import keras.constraints
 import keras.layers
 import keras.regularizers
-from keras.utils import conv_utils
 import numpy as np
-
+from keras.utils import conv_utils
 
 from . import utils as iutils
 from .utils.keras import backend as iK
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -29,10 +27,8 @@ __all__ = [
     "OnesLike",
     "AsFloatX",
     "FiniteCheck",
-
     "Gradient",
     "GradientWRT",
-
     "Min",
     "Max",
     "Greater",
@@ -46,18 +42,15 @@ __all__ = [
     "Sum",
     "Mean",
     "CountNonZero",
-
     "Identity",
     "Abs",
     "Square",
     "Clip",
     "Project",
     "Print",
-
     "Transpose",
     "Dot",
     "SafeDivide",
-
     "Repeat",
     "Reshape",
     "MultiplyWithLinspace",
@@ -108,8 +101,7 @@ class AsFloatX(keras.layers.Layer):
 
 class FiniteCheck(keras.layers.Layer):
     def call(self, x):
-        return [K.sum(iK.to_floatx(iK.is_not_finite(tmp)))
-                for tmp in iutils.to_list(x)]
+        return [K.sum(iK.to_floatx(iK.is_not_finite(tmp))) for tmp in iutils.to_list(x)]
 
 
 ###############################################################################
@@ -139,7 +131,7 @@ class GradientWRT(keras.layers.Layer):
 
     def call(self, x):
         assert isinstance(x, (list, tuple))
-        Xs, tmp_Ys = x[:self.n_inputs], x[self.n_inputs:]
+        Xs, tmp_Ys = x[: self.n_inputs], x[self.n_inputs :]
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2
         Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
@@ -151,10 +143,9 @@ class GradientWRT(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         if self.mask is None:
-            return input_shapes[:self.n_inputs]
+            return input_shapes[: self.n_inputs]
         else:
-            return [x for c, x in zip(self.mask, input_shapes[:self.n_inputs])
-                    if c]
+            return [x for c, x in zip(self.mask, input_shapes[: self.n_inputs]) if c]
 
     # todo: remove once keras is fixed.
     # this is a workaround for cases when
@@ -176,15 +167,15 @@ class GradientWRT(keras.layers.Layer):
             if mask is not None:
                 if isinstance(mask, list):
                     if any(m is not None for m in mask):
-                        raise TypeError('Layer ' + self.name +
-                                        ' does not support masking, '
-                                        'but was passed an input_mask: ' +
-                                        str(mask))
+                        raise TypeError(
+                            "Layer " + self.name + " does not support masking, "
+                            "but was passed an input_mask: " + str(mask)
+                        )
                 else:
-                    raise TypeError('Layer ' + self.name +
-                                    ' does not support masking, '
-                                    'but was passed an input_mask: ' +
-                                    str(mask))
+                    raise TypeError(
+                        "Layer " + self.name + " does not support masking, "
+                        "but was passed an input_mask: " + str(mask)
+                    )
             # masking not explicitly supported: return None as mask
 
             # this is the workaround for model.run_internal_graph.
@@ -201,7 +192,6 @@ class GradientWRT(keras.layers.Layer):
 
 
 class _Reduce(keras.layers.Layer):
-
     def __init__(self, axis=-1, keepdims=False, *args, **kwargs):
         self.axis = axis
         self.keepdims = keepdims
@@ -224,9 +214,7 @@ class _Reduce(keras.layers.Layer):
             else:
                 for i in iutils.to_list(self.axis):
                     axes[i] = 1
-            return tuple([idx
-                          for i, idx in enumerate(input_shape)
-                          if i in axes])
+            return tuple([idx for i, idx in enumerate(input_shape) if i in axes])
 
     def _apply_reduce(self, x, axis, keepdims):
         raise NotImplementedError()
@@ -254,9 +242,9 @@ class Mean(_Reduce):
 
 class CountNonZero(_Reduce):
     def _apply_reduce(self, x, axis, keepdims):
-        return K.sum(iK.to_floatx(K.not_equal(x, K.constant(0))),
-                     axis=axis,
-                     keepdims=keepdims)
+        return K.sum(
+            iK.to_floatx(K.not_equal(x, K.constant(0))), axis=axis, keepdims=keepdims
+        )
 
 
 ###############################################################################
@@ -265,7 +253,6 @@ class CountNonZero(_Reduce):
 
 
 class _Map(keras.layers.Layer):
-
     def call(self, x):
         if isinstance(x, list) and len(x) == 1:
             x = x[0]
@@ -294,7 +281,6 @@ class Square(_Map):
 
 
 class Clip(_Map):
-
     def __init__(self, min_value, max_value):
         self._min_value = min_value
         self._max_value = max_value
@@ -305,7 +291,6 @@ class Clip(_Map):
 
 
 class Project(_Map):
-
     def __init__(self, output_range=False, input_is_postive_only=False):
         self._output_range = output_range
         self._input_is_positive_only = input_is_postive_only
@@ -324,19 +309,17 @@ class Project(_Map):
             # Cannot reduce
             return x
 
-        absmax = K.max(K.abs(x),
-                       axis=axes,
-                       keepdims=True)
+        absmax = K.max(K.abs(x), axis=axes, keepdims=True)
         x = safe_divide(x, absmax)
 
         if self._output_range not in (False, True):  # True = (-1, +1)
             output_range = self._output_range
 
             if not self._input_is_positive_only:
-                x = (x+1) / 2
+                x = (x + 1) / 2
             x = K.clip(x, 0, 1)
 
-            x = output_range[0] + (x * (output_range[1]-output_range[0]))
+            x = output_range[0] + (x * (output_range[1] - output_range[0]))
         else:
             x = K.clip(x, -1, 1)
 
@@ -398,7 +381,6 @@ class LessEqualThanZero(keras.layers.Layer):
 
 
 class Transpose(keras.layers.Layer):
-
     def __init__(self, axes=None, **kwargs):
         self._axes = axes
         super(Transpose, self).__init__(**kwargs)
@@ -417,7 +399,6 @@ class Transpose(keras.layers.Layer):
 
 
 class Dot(keras.layers.Layer):
-
     def call(self, x):
         a, b = x
         return K.dot(a, b)
@@ -427,7 +408,6 @@ class Dot(keras.layers.Layer):
 
 
 class Divide(keras.layers.Layer):
-
     def call(self, x):
         a, b = x
         return a / b
@@ -437,7 +417,6 @@ class Divide(keras.layers.Layer):
 
 
 class SafeDivide(keras.layers.Layer):
-
     def __init__(self, *args, **kwargs):
         factor = kwargs.pop("factor", None)
         if factor is None:
@@ -460,7 +439,6 @@ class SafeDivide(keras.layers.Layer):
 
 
 class Repeat(keras.layers.Layer):
-
     def __init__(self, n, axis, *args, **kwargs):
         self._n = n
         self._axis = axis
@@ -478,11 +456,10 @@ class Repeat(keras.layers.Layer):
         if input_shape[0] is None:
             return input_shape
         else:
-            return (input_shape[0]*self._n,)+input_shape[1:]
+            return (input_shape[0] * self._n,) + input_shape[1:]
 
 
 class Reshape(keras.layers.Layer):
-
     def __init__(self, shape, *args, **kwargs):
         self._shape = shape
         return super(Reshape, self).__init__(*args, **kwargs)
@@ -495,7 +472,6 @@ class Reshape(keras.layers.Layer):
 
 
 class MultiplyWithLinspace(keras.layers.Layer):
-
     def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
         self._start = start
         self._end = end
@@ -504,9 +480,9 @@ class MultiplyWithLinspace(keras.layers.Layer):
         return super(MultiplyWithLinspace, self).__init__(*args, **kwargs)
 
     def call(self, x):
-        linspace = (self._start +
-                    (self._end-self._start) *
-                    (K.arange(self._n, dtype=K.floatx())/self._n))
+        linspace = self._start + (self._end - self._start) * (
+            K.arange(self._n, dtype=K.floatx()) / self._n
+        )
 
         # Make broadcastable.
         shape = np.ones(len(K.int_shape(x)))
@@ -516,29 +492,20 @@ class MultiplyWithLinspace(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes):
         ret = input_shapes[:]
-        ret = (ret[:self._axis] +
-               (max(self._n, ret[self._axis]),) +
-               ret[self._axis+1:])
+        ret = (
+            ret[: self._axis] + (max(self._n, ret[self._axis]),) + ret[self._axis + 1 :]
+        )
         return ret
 
 
 class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
-
     def call(self, inputs):
         # Always add Gaussian noise!
         return super(TestPhaseGaussianNoise, self).call(inputs, training=True)
 
 
 class ExtractConv2DPatches(keras.layers.Layer):
-
-    def __init__(self,
-                 kernel_shape,
-                 depth,
-                 strides,
-                 rates,
-                 padding,
-                 *args,
-                 **kwargs):
+    def __init__(self, kernel_shape, depth, strides, rates, padding, *args, **kwargs):
         self._kernel_shape = kernel_shape
         self._depth = depth
         self._strides = strides
@@ -547,14 +514,12 @@ class ExtractConv2DPatches(keras.layers.Layer):
         return super(ExtractConv2DPatches, self).__init__(*args, **kwargs)
 
     def call(self, x):
-        return iK.extract_conv2d_patches(x,
-                                         self._kernel_shape,
-                                         self._strides,
-                                         self._rates,
-                                         self._padding)
+        return iK.extract_conv2d_patches(
+            x, self._kernel_shape, self._strides, self._rates, self._padding
+        )
 
     def compute_output_shape(self, input_shapes):
-        if K.image_data_format() == 'channels_first':
+        if K.image_data_format() == "channels_first":
             space = input_shapes[2:]
             new_space = []
             for i in range(len(space)):
@@ -563,10 +528,11 @@ class ExtractConv2DPatches(keras.layers.Layer):
                     self._kernel_shape[i],
                     padding=self._padding,
                     stride=self._strides[i],
-                    dilation=self._rates[i])
+                    dilation=self._rates[i],
+                )
                 new_space.append(new_dim)
 
-        if K.image_data_format() == 'channels_last':
+        if K.image_data_format() == "channels_last":
             space = input_shapes[1:-1]
             new_space = []
             for i in range(len(space)):
@@ -575,16 +541,18 @@ class ExtractConv2DPatches(keras.layers.Layer):
                     self._kernel_shape[i],
                     padding=self._padding,
                     stride=self._strides[i],
-                    dilation=self._rates[i])
+                    dilation=self._rates[i],
+                )
                 new_space.append(new_dim)
 
-        return ((input_shapes[0],) +
-                tuple(new_space) +
-                (np.product(self._kernel_shape) * self._depth,))
+        return (
+            (input_shapes[0],)
+            + tuple(new_space)
+            + (np.product(self._kernel_shape) * self._depth,)
+        )
 
 
 class RunningMeans(keras.layers.Layer):
-
     def __init__(self, *args, **kwargs):
         self.stateful = True
         super(RunningMeans, self).__init__(*args, **kwargs)
@@ -592,14 +560,12 @@ class RunningMeans(keras.layers.Layer):
     def build(self, input_shapes):
         means_shape, counts_shape = input_shapes
 
-        self.means = self.add_weight(shape=means_shape,
-                                     initializer="zeros",
-                                     name="means",
-                                     trainable=False)
-        self.counts = self.add_weight(shape=counts_shape,
-                                      initializer="zeros",
-                                      name="counts",
-                                      trainable=False)
+        self.means = self.add_weight(
+            shape=means_shape, initializer="zeros", name="means", trainable=False
+        )
+        self.counts = self.add_weight(
+            shape=counts_shape, initializer="zeros", name="counts", trainable=False
+        )
         self.built = True
 
     def call(self, x):
@@ -619,10 +585,12 @@ class RunningMeans(keras.layers.Layer):
         new_means = self.means * factor_old + means * factor_new
 
         # Update state.
-        self.add_update([
-            K.update(self.means, new_means),
-            K.update(self.counts, new_counts),
-        ])
+        self.add_update(
+            [
+                K.update(self.means, new_means),
+                K.update(self.counts, new_counts),
+            ]
+        )
 
         return [new_means, new_counts]
 
@@ -631,7 +599,6 @@ class RunningMeans(keras.layers.Layer):
 
 
 class Broadcast(keras.layers.Layer):
-
     def call(self, x):
         target_shapped, x = x
         return target_shapped * 0 + x
@@ -641,20 +608,18 @@ class Broadcast(keras.layers.Layer):
 
 
 class Gather(keras.layers.Layer):
-
     def call(self, inputs):
         x, index = inputs
         return iK.gather(x, 1, index)
 
     def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[1][0])+input_shapes[0][2:]
+        return (input_shapes[0][0], input_shapes[1][0]) + input_shapes[0][2:]
 
 
 class GatherND(keras.layers.Layer):
-
     def call(self, inputs):
         x, indices = inputs
         return iK.gather_nd(x, indices)
 
     def compute_output_shape(self, input_shapes):
-        return input_shapes[1][:2]+input_shapes[0][2:]
+        return input_shapes[1][:2] + input_shapes[0][2:]

@@ -1,19 +1,16 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from builtins import range
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-import keras.models
 import keras.engine.topology
-
+import keras.models
 
 from ... import utils as iutils
+
+###############################################################################
+###############################################################################
+###############################################################################
 
 
 __all__ = [
@@ -27,10 +24,9 @@ __all__ = [
 
 
 class TestAnalysisHelper(object):
-
     def __init__(self, model, analyzer, weights=None):
-        """ Helper class for retrieving output and analysis in test cases.
-        
+        """Helper class for retrieving output and analysis in test cases.
+
 
         :param model: A Keras layer object or a list of layer objects.
           In this case a sequntial model will be build. The first layer
@@ -60,7 +56,7 @@ class TestAnalysisHelper(object):
     @property
     def weights(self):
         return self._model.get_weights()
-    
+
     def run(self, inputs):
         """Runs the model given the inputs.
 
@@ -73,10 +69,10 @@ class TestAnalysisHelper(object):
 
         augmented = []
         for i in range(len(inputs)):
-            if len(inputs[i].shape) == len(self._input_shapes[i])-1:
+            if len(inputs[i].shape) == len(self._input_shapes[i]) - 1:
                 # Augment by batch axis.
                 augmented.append(i)
-                inputs[i] = inputs[i].reshape((1,)+inputs[i].shape)
+                inputs[i] = inputs[i].reshape((1,) + inputs[i].shape)
 
         outputs = iutils.to_list(self._model.predict_on_batch(inputs))
         analysis = iutils.to_list(self._analyzer.analyze(inputs))
@@ -85,7 +81,7 @@ class TestAnalysisHelper(object):
             # Remove batch axis.
             outputs[i] = outputs[i][0]
             analysis[i] = analysis[i][0]
-        
+
         if return_list:
             return outputs, analysis
         else:

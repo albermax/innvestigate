@@ -1,14 +1,8 @@
 # Get Python six functionality:
-from __future__ import\
-    absolute_import, print_function, division, unicode_literals
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import inspect
+
 import keras.engine.topology
 import keras.layers
 import keras.layers.advanced_activations
@@ -25,10 +19,15 @@ import keras.layers.recurrent
 import keras.layers.wrappers
 import keras.legacy.layers
 
+###############################################################################
+###############################################################################
+###############################################################################
+
 
 # Prevents circular imports.
 def get_kgraph():
     from . import graph as kgraph
+
     return kgraph
 
 
@@ -36,7 +35,6 @@ __all__ = [
     "get_current_layers",
     "get_known_layers",
     "get_activation_search_safe_layers",
-
     "contains_activation",
     "contains_kernel",
     "only_relu_activation",
@@ -47,7 +45,7 @@ __all__ = [
     "is_max_pooling",
     "is_input_layer",
     "is_batch_normalization_layer",
-    "is_embedding_layer"
+    "is_embedding_layer",
 ]
 
 
@@ -60,11 +58,16 @@ def get_current_layers():
     """
     Returns a list of currently available layers in Keras.
     """
-    class_set = set([(getattr(keras.layers, name), name)
-                     for name in dir(keras.layers)
-                     if (inspect.isclass(getattr(keras.layers, name)) and
-                         issubclass(getattr(keras.layers, name),
-                                    keras.engine.topology.Layer))])
+    class_set = set(
+        [
+            (getattr(keras.layers, name), name)
+            for name in dir(keras.layers)
+            if (
+                inspect.isclass(getattr(keras.layers, name))
+                and issubclass(getattr(keras.layers, name), keras.engine.topology.Layer)
+            )
+        ]
+    )
     return [x[1] for x in sorted((str(x[0]), x[1]) for x in class_set)]
 
 
@@ -205,16 +208,19 @@ def contains_activation(layer, activation=None):
             return True
     elif isinstance(layer, keras.layers.ReLU):
         if activation is not None:
-            return (keras.activations.get("relu") ==
-                    keras.activations.get(activation))
+            return keras.activations.get("relu") == keras.activations.get(activation)
         else:
             return True
-    elif isinstance(layer, (
+    elif isinstance(
+        layer,
+        (
             keras.layers.advanced_activations.ELU,
             keras.layers.advanced_activations.LeakyReLU,
             keras.layers.advanced_activations.PReLU,
             keras.layers.advanced_activations.Softmax,
-            keras.layers.advanced_activations.ThresholdedReLU)):
+            keras.layers.advanced_activations.ThresholdedReLU,
+        ),
+    ):
         if activation is not None:
             raise Exception("Cannot detect activation type.")
         else:
@@ -230,7 +236,11 @@ def contains_kernel(layer):
 
     # TODO: add test and check this more throughroughly.
     # rely on Keras convention.
-    if hasattr(layer, "kernel") or hasattr(layer, "depthwise_kernel") or hasattr(layer, "pointwise_kernel"):
+    if (
+        hasattr(layer, "kernel")
+        or hasattr(layer, "depthwise_kernel")
+        or hasattr(layer, "pointwise_kernel")
+    ):
         return True
     else:
         return False
@@ -251,10 +261,12 @@ def contains_bias(layer):
 
 def only_relu_activation(layer):
     """Checks if layer contains no or only a ReLU activation."""
-    return (not contains_activation(layer) or
-            contains_activation(layer, None) or
-            contains_activation(layer, "linear") or
-            contains_activation(layer, "relu"))
+    return (
+        not contains_activation(layer)
+        or contains_activation(layer, None)
+        or contains_activation(layer, "linear")
+        or contains_activation(layer, "relu")
+    )
 
 
 def is_network(layer):
@@ -274,12 +286,14 @@ def is_conv_layer(layer, *args, **kwargs):
         keras.layers.convolutional.Conv3DTranspose,
         keras.layers.convolutional.SeparableConv1D,
         keras.layers.convolutional.SeparableConv2D,
-        keras.layers.convolutional.DepthwiseConv2D
+        keras.layers.convolutional.DepthwiseConv2D,
     )
     return isinstance(layer, CONV_LAYERS)
 
+
 def is_embedding_layer(layer, *args, **kwargs):
     return isinstance(layer, keras.layers.Embedding)
+
 
 def is_batch_normalization_layer(layer, *args, **kwargs):
     """Checks if layer is a batchnorm layer."""
@@ -368,7 +382,7 @@ def is_convnet_layer(layer):
 
 def is_relu_convnet_layer(layer):
     """Checks if layer is from a convolutional network with ReLUs."""
-    return (is_convnet_layer(layer) and only_relu_activation(layer))
+    return is_convnet_layer(layer) and only_relu_activation(layer)
 
 
 def is_average_pooling(layer):
@@ -417,18 +431,17 @@ def is_input_layer(layer, ignore_reshape_layers=True):
     while any([isinstance(x, IGNORED_LAYERS) for x in layer_inputs]):
         tmp = set()
         for l in layer_inputs:
-            if(ignore_reshape_layers and
-               isinstance(l, IGNORED_LAYERS)):
+            if ignore_reshape_layers and isinstance(l, IGNORED_LAYERS):
                 tmp.update(kgraph.get_input_layers(l))
             else:
                 tmp.add(l)
         layer_inputs = tmp
 
-    if all([isinstance(x, keras.layers.InputLayer)
-            for x in layer_inputs]):
+    if all([isinstance(x, keras.layers.InputLayer) for x in layer_inputs]):
         return True
     else:
         return False
+
 
 def is_layer_at_idx(layer, index, ignore_reshape_layers=True):
     """Checks if layer is a layer at index index, by repeatedly applying is_input_layer()."""
