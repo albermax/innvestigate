@@ -31,9 +31,9 @@ jobs:
       matrix:
         os: [ "ubuntu-latest", "windows-latest" ]
         python-version: [ "3.7", "3.8" ]
-      defaults:
-        run:
-          shell: bash
+    defaults:
+      run:
+        shell: bash
     runs-on: ${{ matrix.os }}
     steps:
       # Check-out repo and set-up python     
@@ -66,5 +66,4 @@ jobs:
       - name: Run tests
         run: |
           source $VENV
-          pytest tests/ -m fast 
-          
+          pytest ./tests -m fast 
