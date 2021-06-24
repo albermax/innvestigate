@@ -1,0 +1,46 @@
+name: Coverage
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  codecov:
+    runs-on: ubuntu-latest
+    steps:
+      # Check-out repo and set-up python     
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      # Install & configure poetry      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.1.6
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      # Load cached venv if cache exists      
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      # Install dependencies if cache does not exist
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+      # Install your root project, if required      
+      - name: Install library
+        run: poetry install --no-interaction
+      # Run test suite and output coverage file   
+      - name: Test with pytest
+        run: poetry run pytest ./tests -m fast --cov=./src/innvestigate --cov-report=xml
+      # Upload coverage stats
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          name: iNNvestigate
+          fail_ci_if_error: true

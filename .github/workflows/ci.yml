@@ -1,42 +1,69 @@
-name: Test iNNvestigate for TF1
+name: Test iNNvestigate
 
 on: 
   - push
   - pull_request
 
 jobs:
-  build:
+  linting:
+    # Run linting outside of matrix
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: 
-          - 3.7
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-        architecture: x64
-    - name: Install Poetry
-      uses: snok/install-poetry@v1.1.2
-      with:
-        version: 1.1.5
-        virtualenvs-create: false
-    - name: Install dependencies
-      run: poetry install --no-interaction
-    - name: Format check with Black
-      run: black --check .
-    - name: Format check with isort
-      run: isort --check .
-    - name: Test with pytest
-      run: |
-        pip install .
-        python -m pytest tests -v --cov=src --cov-report=xml:./coverage.xml --cov-report term-missing
-    - name: Upload code coverage
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-        name: innvestigate
-        env_vars: OS,PYTHON
+      # Check-out repo and set-up python  
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      # Load pip cache if it exists
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip
+          restore-keys: ${{ runner.os }}-pip
+      # Install and run linters
+      - run: python -m pip install black isort
+      - name: Format check with Black
+        run: black --check .
+      - name: Format check with isort
+        run: isort --check .
+  test:
+    needs: linting
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ "ubuntu-latest", "windows-latest" ]
+        python-version: [ "3.7", ]
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Check-out repo and set-up python     
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Install & configure poetry      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.1.6
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      # Load cached venv if cache exists      
+      - name: Load cached venv
+        id: cached-pip-wheels
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      # Install dependencies
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+      # Install your root project, if required 
+      - name: Install library
+        run: poetry install --no-interaction
+      # Run fast tests on matrix, full tests for coverage
+      - name: Run tests
+        run: |
+          source $VENV
+          pytest ./tests -m fast 
