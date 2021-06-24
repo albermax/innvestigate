@@ -1,0 +1,100 @@
+[tool.poetry]
+name = "innvestigate"
+version = "1.1.0"
+description = "A toolbox to innvestigate neural networks' predictions."
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console", 
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.7",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+authors = [
+    "Maxmilian Alber <workDoTalberDoTmaximilian@gmail.com>",
+    "Sebastian Lapuschkin",
+    "Miriam Haegele",
+    "Kristof Schuett",
+    "Philipp Seegerer",
+    "Pieter-Jan Kindermans",
+    "Henry Webel",
+    "Leander Weber",
+    "Adrian Hill <hill@campus.tu-berlin.de>",
+    "and others",
+]
+maintainers = ["Adrian Hill <hill@campus.tu-berlin.de>"]
+license = "BSD-2-Clause"
+readme = "README.md"
+homepage = "https://github.com/albermax/innvestigate"
+repository = "https://github.com/albermax/innvestigate"
+documentation = "https://innvestigate.readthedocs.io/en/latest/"
+keywords = ["XAI", "LRP", "Deep Taylor",]
+
+[tool.poetry.dependencies]
+python = "3.7.*"
+Keras = "2.3.*"
+tensorflow = "1.15.*"
+Pillow = "^8.1.1"
+numpy = "^1.18.5"
+matplotlib = "^3.4.0"
+typing-extensions = "^3.7.4"
+
+[tool.poetry.dev-dependencies]
+bandit = "^1.7.0"
+black  = { version = "*", allow-prereleases = true }
+flake8 = "^3.8.4"
+flake8-black = "^0.2.1"
+flake8-bugbear = "^21.3.1"
+flake8-builtins = "^1.5.3"
+flake8-docstrings = "^1.5.0"
+flake8-isort = "^4.0.0"
+pep8-naming = "^0.11.1"
+pytest = "^6.2.2"
+pytest-cov = "^2.11.1"
+coverage = {extras = ["toml"], version = "^5.5"}
+codecov = "^2.1.11"
+rope = "^0.18.0"
+pylint = "^2.7.3"
+ipykernel = "^5.5.0"
+isort = "^5.8.0"
+mypy = "^0.812"
+MonkeyType = "^20.5.0"
+vulture = "^2.3"
+Sphinx = "^4.0.0"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3 
+known_first_party = "innvestigate"
+known_local_folder = "tests"
+
+[tool.pytest.ini_options]
+addopts = "-v -m fast --strict-markers --cov"
+# addopts = "-v -m precommit --strict-markers --cov"
+filterwarnings = [
+    "ignore::DeprecationWarning:tensorflow",
+    "ignore::DeprecationWarning:keras",
+]
+markers = [
+    "precommit",
+    "slow",
+    "fast",
+    "application",
+    "imagenet",
+]
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.run]
+branch = true
+source = ["innvestigate"]
+
+[tool.coverage.report]
+show_missing = false
+
+# Build with Poetry
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

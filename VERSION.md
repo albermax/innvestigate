@@ -1,3 +1,15 @@
+## Version 1.10.0
+Spring cleaning release in preparation of iNNvestigate 2.0:
+- switch setup to Poetry
+- adopt `src` layout
+- move tests to separate `tests` folder
+- format code with Black
+- update dependencies to Python 3.7, TF 1.15 and Keras 2.3
+- setup tox
+
+Backwards compatibility breaking changes:
+- remove DeepLIFT
+
 ## Version 1.0.9
 
 - BatchNormalization Layer compatible with LRP
@@ -9,7 +21,7 @@ for details see [PR #222](https://github.com/albermax/innvestigate/pull/222)
 
 ## Version 1.0.8
 
-Bugfixes, increased code covervage, CI.
+Bugfixes, increased code coverage, CI.
 
 ## Version 1.0.7
 

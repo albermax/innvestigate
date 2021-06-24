@@ -1,23 +1,25 @@
 ## Todos
 
 - Run the tests.
+  ```bash
+  poetry run tox
+  ```
 - Check if docs are compilable:
-  `cd docs; make html`
-- Update release in VERSION.md, setup.py and button of README.md.
+  ```bash
+  poetry run sphinx-build docs/source docs/_build
+  ```
+- Update release in `VERSION.md`, `setup.py` and button of `README.md`.
 - Make release
 - Push master and develop branch, and tags
 - Switch to master branch
 - Upload new packages to test server:
   ```bash
-  pip install --upgrade setuptools wheel
-  python3 setup.py sdist bdist_wheel
-  pip install --upgrade twine
-  twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-  pip install --index-url https://test.pypi.org/simple/ innvestigate
+  poetry build
+  poetry config repositories.testpypi https://test.pypi.org/legacy/
+  poetry publish -r testpypi
   ```
 - Check that everything works
 - Upload new packages to real server:
-```bash
-twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
-pip install innvestigate
-```
+  ```bash
+  poetry publish
+  ```
