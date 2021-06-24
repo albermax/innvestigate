@@ -32,7 +32,7 @@ documentation = "https://innvestigate.readthedocs.io/en/latest/"
 keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "~3.7"
 Keras = "~2.3"
 tensorflow = "~1.15"
 Pillow = "^8.1.1"
