@@ -44,4 +44,3 @@ jobs:
           file: ./coverage.xml
           name: iNNvestigate
           fail_ci_if_error: true
-          verbose: true

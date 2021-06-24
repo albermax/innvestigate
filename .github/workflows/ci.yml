@@ -30,7 +30,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ "ubuntu-latest", "windows-latest" ]
-        python-version: [ "3.7", "3.8" ]
+        python-version: [ "3.7", ]
     defaults:
       run:
         shell: bash
