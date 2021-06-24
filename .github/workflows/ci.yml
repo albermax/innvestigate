@@ -1,4 +1,4 @@
-name: Test iNNvestigate for TF1
+name: Test iNNvestigate
 
 on: 
   - push

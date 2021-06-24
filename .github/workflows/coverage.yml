@@ -35,7 +35,7 @@ jobs:
         run: poetry install --no-interaction
       # Run test suite and output coverage file   
       - name: Test with pytest
-        run: poetry run pytest ./tests -m precommit --cov=./src/innvestigate --cov-report=xml
+        run: poetry run pytest ./tests -m fast --cov=./src/innvestigate --cov-report=xml
       # Upload coverage stats
       - name: Upload coverage
         uses: codecov/codecov-action@v1
