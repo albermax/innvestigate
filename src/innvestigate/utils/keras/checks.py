@@ -22,14 +22,6 @@ import keras.legacy.layers
 import innvestigate.utils.keras.graph as kgraph
 from innvestigate.utils.types import Layer
 
-
-# Prevents circular imports.
-def get_kgraph():
-    from . import graph as kgraph
-
-    return kgraph
-
-
 __all__ = [
     "get_current_layers",
     "get_known_layers",
@@ -414,7 +406,6 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     # to a Keras input layer object.
     # Note: In the sequential api the Sequential object
     # adds the Input layer if the user does not.
-    kgraph = get_kgraph()
 
     layer_inputs = kgraph.get_input_layers(layer)
     # We ignore certain layers, that do not modify
@@ -437,6 +428,8 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     return all(isinstance(x, keras.layers.InputLayer) for x in layer_inputs)
 
 
-def is_layer_at_idx(layer, index, ignore_reshape_layers=True):
-    """Checks if layer is a layer at index index, by repeatedly applying is_input_layer()."""
-    kgraph = get_kgraph()
+def is_layer_at_idx(layer: Layer, index, ignore_reshape_layers=True) -> bool:
+    """Checks if layer is a layer at index index,
+    by repeatedly applying is_input_layer()."""
+    # TODO: implement layer index check
+    raise NotImplementedError("Layer index checking hasn't been implemented yet.")
