@@ -9,10 +9,10 @@ from keras import backend
 from innvestigate.utils.keras.graph import model_wo_softmax
 from innvestigate.utils.types import OptionalList, Tensor
 
-
 __all__ = [
     "model_wo_softmax",
     "to_list",
+    "unpack_singleton",
     "BatchSequence",
     "TargetAugmentedSequence",
     "preprocess_images",
@@ -20,31 +20,30 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
+T = TypeVar("T")  # Generic type, can be anything
 
 
-def model_wo_softmax(*args, **kwargs):
-    # Break cyclic import
-    from .keras.graph import model_wo_softmax
-
-    return model_wo_softmax(*args, **kwargs)
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+def to_list(X: OptionalList[T]) -> List[T]:
+    """Wraps tensor `X` into a list, if it isn't a list of Tensors yet."""
+    if isinstance(X, list):
+        return X
+    return [X]
 
 
-def to_list(l):
-    """If not list, wraps parameter into a list."""
-    if not isinstance(l, list):
-        return [
-            l,
-        ]
-    else:
-        return l
+def unpack_singleton(x: OptionalList[T]) -> OptionalList[T]:
+    """Gets the first element of a list if it has only one value.
+
+    Otherwise return the list.
+
+    # Argument
+        x: A list or singleton.
+
+    # Returns
+        The same list or the first element.
+    """
+    if isinstance(x, list) and len(x) == 1:
+        return x[0]
+    return x
 
 
 ###############################################################################
