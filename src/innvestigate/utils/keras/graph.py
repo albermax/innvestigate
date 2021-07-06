@@ -625,7 +625,6 @@ def trace_model_execution(
         # Now we have the problem that all the tensors
         # do not have a keras_history attribute as they are not part
         # of any node. Apply the flat model to get it.
-        from . import apply as kapply
 
         tensor_mapping: Dict[Tensor, Tensor] = {tmp: tmp for tmp in model.inputs}
         layer_mapping: Dict[Layer, Layer]
