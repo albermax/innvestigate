@@ -4,14 +4,13 @@ Each function returns a pretrained ImageNet model.
 The models are based on keras.applications models and
 contain additionally pretrained patterns.
 
-The returned dictionary contains the following
-keys\: model, in, sm_out, out, image_shape, color_coding,
-preprocess_f, patterns.
+The returned dictionary contains the following keys:
+    model, in, sm_out, out, image_shape, color_coding,
+    preprocess_f, patterns.
 
-Function parameters\:
-
-:param load_weights: Download or access cached weights.
-:param load_patterns: Download or access cached patterns.
+Function parameters:
+    :param load_weights: Download or access cached weights.
+    :param load_patterns: Download or access cached patterns.
 """
 # TODO: rename in, sm_out, out to
 # TODO: input_tensors, output_tensors, softmax_output_tenors
@@ -34,11 +33,6 @@ from keras import backend
 
 from ..utils.keras import graph as kgraph
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 __all__ = [
     "vgg16",
     "vgg19",
@@ -54,17 +48,15 @@ __all__ = [
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 PATTERNS = {
     "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
-        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",  # noqa
         "hash": "8c2abe648e116a93fd5027fab49177b0",
     },
     "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
-        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",  # noqa
         "hash": "3258b6c64537156afe75ca7b3be44742",
     },
 }
@@ -86,8 +78,6 @@ def _get_patterns_info(netname, pattern_type):
     }
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -152,8 +142,6 @@ def _prepare_keras_net(
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def vgg16(load_weights=False, load_patterns=False):
@@ -183,8 +171,6 @@ def vgg19(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def resnet50(load_weights=False, load_patterns=False):
@@ -201,8 +187,6 @@ def resnet50(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def inception_v3(load_weights=False, load_patterns=False):
@@ -218,8 +202,6 @@ def inception_v3(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def inception_resnet_v2(load_weights=False, load_patterns=False):
@@ -234,8 +216,6 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
     )
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -275,8 +255,6 @@ def densenet201(load_weights=False, load_patterns=False):
     )
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 

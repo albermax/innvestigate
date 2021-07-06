@@ -150,9 +150,13 @@ class GradientWRT(keras.layers.Layer):
         if self.mask is None:
             return input_shapes[: self.n_inputs]
         else:
-            return [x for c, x in zip(self.mask, input_shapes[: self.n_inputs]) if c]
+            return [
+                shape
+                for shape, keep in zip(input_shapes[: self.n_inputs], self.mask)
+                if keep
+            ]
 
-    # todo: remove once keras is fixed.
+    # TODO: remove once keras is fixed.
     # this is a workaround for cases when
     # wrapper and skip connections are used together.
     # bring the fix into keras and remove once
@@ -272,10 +276,10 @@ class CountNonZero(_Reduce):
 
 
 class _Map(keras.layers.Layer):
-    def call(self, x):
-        if isinstance(x, list) and len(x) == 1:
-            x = x[0]
-        return self._apply_map(x)
+    def call(self, X: OptionalList[Tensor]) -> OptionalList[Tensor]:
+        if isinstance(X, list) and len(X) == 1:
+            X = X[0]
+        return self._apply_map(X)
 
     def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
         return input_shape
@@ -307,8 +311,8 @@ class Clip(_Map):
         self._max_value = max_value
         return super(Clip, self).__init__()
 
-    def _apply_map(self, x):
-        return K.clip(x, self._min_value, self._max_value)
+    def _apply_map(self, X: Tensor) -> Tensor:
+        return K.clip(X, self._min_value, self._max_value)
 
 
 class Project(_Map):
@@ -318,39 +322,35 @@ class Project(_Map):
         self._input_is_positive_only = input_is_postive_only
         return super(Project, self).__init__()
 
-    def _apply_map(self, x):
-        def safe_divide(a, b):
-            return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
+    def _apply_map(self, X: Tensor):
+        def safe_divide(A: Tensor, B: Tensor) -> Tensor:
+            return A / (B + iK.to_floatx(K.equal(B, K.constant(0))) * 1)
 
-        dims = K.int_shape(x)
-        n_dim = len(dims)
+        dims: Tuple[int] = K.int_shape(X)
+        n_dim: int = len(dims)
         axes = tuple(range(1, n_dim))
+
         if len(axes) == 1:
             # TODO(albermax): this is only the case when the dimension in this
             # axis is 1, fix this.
             # Cannot reduce
-            return x
+            return X
 
-        absmax = K.max(K.abs(x), axis=axes, keepdims=True)
-        x = safe_divide(x, absmax)
+        absmax = K.max(K.abs(X), axis=axes, keepdims=True)
+        X = safe_divide(X, absmax)
 
         if self._output_range not in (False, True):  # True = (-1, +1)
             output_range = self._output_range
 
             if not self._input_is_positive_only:
-                x = (x + 1) / 2
-            x = K.clip(x, 0, 1)
+                X = (X + 1) / 2
+            X = K.clip(X, 0, 1)
 
-            x = output_range[0] + (x * (output_range[1] - output_range[0]))
+            X = output_range[0] + (X * (output_range[1] - output_range[0]))
         else:
-            x = K.clip(x, -1, 1)
+            X = K.clip(X, -1, 1)
 
-        return x
-
-
-class Print(_Map):
-    def _apply_map(self, x):
-        return K.print_tensor(x)
+        return X
 
 
 ###############################################################################
@@ -512,12 +512,12 @@ class MultiplyWithLinspace(keras.layers.Layer):
         linspace = K.reshape(linspace, shape)
         return x * linspace
 
-    def compute_output_shape(self, input_shapes):
-        ret = input_shapes[:]
-        ret = (
-            ret[: self._axis] + (max(self._n, ret[self._axis]),) + ret[self._axis + 1 :]
+    def compute_output_shape(self, input_shapes: ShapeTuple) -> ShapeTuple:
+        return (
+            input_shapes[: self._axis]
+            + (max(self._n, input_shapes[self._axis]),)
+            + input_shapes[self._axis + 1 :]
         )
-        return ret
 
 
 class TestPhaseGaussianNoise(keras.layers.GaussianNoise):

@@ -125,7 +125,7 @@ class BasePattern(metaclass=ABCMeta):
     """
 
     def __init__(self, model, layer, model_tensors=None, execution_list=None):
-        self.model = model
+        self._model = model
         self.layer = layer
         # All the tensors used by the model.
         # Allows to filter nodes in layers that do not
@@ -158,18 +158,20 @@ class BasePattern(metaclass=ABCMeta):
     def has_pattern(self):
         return kchecks.contains_kernel(self.layer)
 
-    def stats_from_batch(self):
+    @abstractmethod
+    def get_stats_from_batch(self):
         """
         Creates statistics while the PatternComputer passes the
         dataset once.
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def compute_pattern(self):
         """
         Computes the pattern after computing the statistics.
         """
-        raise NotImplementedError()
+        pass
 
 
 class DummyPattern(BasePattern):
@@ -257,9 +259,9 @@ class LinearPattern(BasePattern):
         W = kgraph.get_kernel(self.layer)
         W2D = W.reshape((-1, W.shape[-1]))
 
-        mean_x, cnt_x = self.mean_x.get_weights()
-        mean_y, cnt_y = self.mean_y.get_weights()
-        mean_xy, cnt_xy = self.mean_xy.get_weights()
+        mean_x, _cnt_x = self.mean_x.get_weights()
+        mean_y, _cnt_y = self.mean_y.get_weights()
+        mean_xy, _cnt_xy = self.mean_xy.get_weights()
 
         ExEy = mean_x * mean_y
         cov_xy = mean_xy - ExEy
@@ -335,7 +337,7 @@ class PatternComputer(object):
         self,
         model,
         pattern_type="linear",
-        # todo: this options seems to be buggy,
+        # TODO: this options seems to be buggy,
         # if it sequential tensorflow still pushes all models to gpus
         compute_layers_in_parallel=True,
         gpus=None,
@@ -393,7 +395,7 @@ class PatternComputer(object):
         # Create pattern instances and collect the dummy outputs.
         self._pattern_instances = {k: [] for k in self.pattern_types}
         computer_outputs = []
-        for layer_id, layer in enumerate(layers):
+        for _layer_id, layer in enumerate(layers):
             # This does not work with containers!
             # They should be replaced by trace_model_execution.
             if kchecks.is_network(layer):
@@ -461,8 +463,7 @@ class PatternComputer(object):
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
             raise ValueError(
-                "Pattern are computed with "
-                "a closed form solution. "
+                "Pattern are computed with a closed form solution. "
                 "Only need to do one epoch."
             )
         kwargs["epochs"] = 1
