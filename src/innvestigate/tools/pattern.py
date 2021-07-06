@@ -100,16 +100,17 @@ def get_active_neuron_io(
 
     if len(tmp) == 1:
         return tmp[0]
-    else:
-        raise NotImplementedError("This code seems not to handle several Ys.")
-        # Layer is applied several times in model.
-        # Concatenate the io of the applications.
-        concatenate = keras.layers.Concatenate(axis=0)
 
-        if return_i and return_o:
-            return (concatenate([x[0] for x in tmp]), concatenate([x[1] for x in tmp]))
-        else:
-            return concatenate([x[0] for x in tmp])
+    # TODO: check implementation
+    raise NotImplementedError("This code seems not to handle several Ys.")
+    # # Layer is applied several times in model.
+    # # Concatenate the io of the applications.
+    # concatenate = keras.layers.Concatenate(axis=0)
+
+    # if return_i and return_o:
+    #     return (concatenate([x[0] for x in tmp]), concatenate([x[1] for x in tmp]))
+    # else:
+    #     return concatenate([x[0] for x in tmp])
 
 
 ###############################################################################
@@ -269,15 +270,16 @@ class LinearPattern(BasePattern):
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
         A = safe_divide(cov_xy, w_cov_xy[None, :])
 
-        # update length
-        if False:
-            norm = np.diag(np.dot(W2D.T, A))
-            A = safe_divide(A, norm)
+        # TODO: check implementation
+        # # update length
+        # if False:
+        #     norm = np.diag(np.dot(W2D.T, A))
+        #     A = safe_divide(A, norm)
 
-        # check pattern
-        if False:
-            tmp = np.diag(np.dot(W2D.T, A))
-            print("pattern_check", W.shape, tmp.min(), tmp.max())
+        # # check pattern
+        # if False:
+        #     tmp = np.diag(np.dot(W2D.T, A))
+        #     print("pattern_check", W.shape, tmp.min(), tmp.max())
 
         return A.reshape(W.shape)
 
@@ -343,9 +345,6 @@ class PatternComputer(object):
         gpus=None,
     ):
         self.model = model
-
-        # Break cyclic import.
-        import innvestigate.analyzer.pattern_based
 
         supported_layers = (
             innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET
@@ -429,10 +428,6 @@ class PatternComputer(object):
         # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
-            self._computers = [
-                keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
-                for tmp in self._computers
-            ]
 
     def compute(self, X, batch_size=32, verbose=0):
         """
