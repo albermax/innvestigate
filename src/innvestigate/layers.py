@@ -94,8 +94,8 @@ class GradientWRT(keras.layers.Layer):
         self.mask = mask
         super().__init__(**kwargs)
 
-    def call(self, x):
-        assert isinstance(x, (list, tuple))
+    def call(self, x: List[Tensor]) -> List[Tensor]:
+        assert isinstance(x, list)
         Xs, tmp_Ys = x[: self.n_inputs], x[self.n_inputs :]
         assert len(tmp_Ys) % 2 == 0
         len_Ys = len(tmp_Ys) // 2
