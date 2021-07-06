@@ -402,27 +402,29 @@ def get_model_layers(model: Model) -> List[Layer]:
     return layers
 
 
-def model_contains(model, layer_condition, return_only_counts=False):
-    if callable(layer_condition):
-        layer_condition = [
-            layer_condition,
-        ]
-        single_condition = True
-    else:
-        single_condition = False
+def model_contains(
+    model: Model,
+    layer_condition: OptionalList[LayerCheck],
+) -> List[List[Layer]]:
+    """
+    Collect layers in model which satisfy `layer_condition`.
+    If multiple conditions are given in `layer_condition`,
+    the collected layers are returned for each condition.
 
+    :param model: A Keras model.
+    :type model: Model
+    :param layer_condition: A boolean function or list of functions that
+        check Keras layers.
+    :type layer_condition: Union[LayerCheck, List[LayerCheck]]
+    :return: List, which for each condition in layer_condition
+        contains a list of layers which satisfy that condition.
+    :rtype: List[List[Layer]]
+    """
+    conditions = iutils.to_list(layer_condition)
     layers = get_model_layers(model)
-    collected_layers = []
-    for condition in layer_condition:
-        tmp = [layer for layer in layers if condition(layer)]
-        collected_layers.append(tmp)
-    if return_only_counts is True:
-        collected_layers = [len(v) for v in collected_layers]
 
-    if single_condition is True:
-        return collected_layers[0]
-    else:
-        return collected_layers
+    # return layers for which condition c holds true
+    return [[l for l in layers if c(l)] for c in conditions]
 
 
 ###############################################################################
