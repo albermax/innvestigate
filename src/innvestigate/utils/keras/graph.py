@@ -75,11 +75,6 @@ def get_layer_inbound_count(layer: Layer) -> int:
     return len(layer._inbound_nodes)
 
 
-def get_layer_outbound_count(layer):
-    """Returns the number outbound nodes of a layer."""
-    return len(layer.outbound_nodes)
-
-
 def get_layer_neuronwise_io(
     layer: Layer,
     node_index: int = 0,

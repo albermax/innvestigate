@@ -23,135 +23,18 @@ import innvestigate.utils.keras.graph as kgraph
 from innvestigate.utils.types import Layer
 
 __all__ = [
-    "get_current_layers",
-    "get_known_layers",
     "get_activation_search_safe_layers",
     "contains_activation",
     "contains_kernel",
     "only_relu_activation",
     "is_network",
     "is_convnet_layer",
-    "is_relu_convnet_layer",
     "is_average_pooling",
     "is_max_pooling",
     "is_input_layer",
     "is_batch_normalization_layer",
     "is_embedding_layer",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def get_current_layers():
-    """
-    Returns a list of currently available layers in Keras.
-    """
-    class_set = set(
-        [
-            (getattr(keras.layers, name), name)
-            for name in dir(keras.layers)
-            if (
-                inspect.isclass(getattr(keras.layers, name))
-                and issubclass(getattr(keras.layers, name), keras.engine.topology.Layer)
-            )
-        ]
-    )
-    return [x[1] for x in sorted((str(x[0]), x[1]) for x in class_set)]
-
-
-def get_known_layers():
-    """
-    Returns a list of keras layer we are aware of.
-    """
-
-    # Inside function to not break import if Keras changes.
-    KNOWN_LAYERS = (
-        keras.engine.topology.InputLayer,
-        keras.layers.advanced_activations.ELU,
-        keras.layers.advanced_activations.LeakyReLU,
-        keras.layers.advanced_activations.PReLU,
-        keras.layers.advanced_activations.Softmax,
-        keras.layers.advanced_activations.ThresholdedReLU,
-        keras.layers.convolutional.Conv1D,
-        keras.layers.convolutional.Conv2D,
-        keras.layers.convolutional.Conv2DTranspose,
-        keras.layers.convolutional.Conv3D,
-        keras.layers.convolutional.Conv3DTranspose,
-        keras.layers.convolutional.Cropping1D,
-        keras.layers.convolutional.Cropping2D,
-        keras.layers.convolutional.Cropping3D,
-        keras.layers.convolutional.SeparableConv1D,
-        keras.layers.convolutional.SeparableConv2D,
-        keras.layers.convolutional.UpSampling1D,
-        keras.layers.convolutional.UpSampling2D,
-        keras.layers.convolutional.UpSampling3D,
-        keras.layers.convolutional.ZeroPadding1D,
-        keras.layers.convolutional.ZeroPadding2D,
-        keras.layers.convolutional.ZeroPadding3D,
-        keras.layers.convolutional_recurrent.ConvLSTM2D,
-        keras.layers.convolutional_recurrent.ConvRecurrent2D,
-        keras.layers.core.Activation,
-        keras.layers.core.ActivityRegularization,
-        keras.layers.core.Dense,
-        keras.layers.core.Dropout,
-        keras.layers.core.Flatten,
-        keras.layers.core.Lambda,
-        keras.layers.core.Masking,
-        keras.layers.core.Permute,
-        keras.layers.core.RepeatVector,
-        keras.layers.core.Reshape,
-        keras.layers.core.SpatialDropout1D,
-        keras.layers.core.SpatialDropout2D,
-        keras.layers.core.SpatialDropout3D,
-        keras.layers.cudnn_recurrent.CuDNNGRU,
-        keras.layers.cudnn_recurrent.CuDNNLSTM,
-        keras.layers.embeddings.Embedding,
-        keras.layers.local.LocallyConnected1D,
-        keras.layers.local.LocallyConnected2D,
-        keras.layers.Add,
-        keras.layers.Average,
-        keras.layers.Concatenate,
-        keras.layers.Dot,
-        keras.layers.Maximum,
-        keras.layers.Minimum,
-        keras.layers.Multiply,
-        keras.layers.Subtract,
-        keras.layers.noise.AlphaDropout,
-        keras.layers.noise.GaussianDropout,
-        keras.layers.noise.GaussianNoise,
-        keras.layers.normalization.BatchNormalization,
-        keras.layers.pooling.AveragePooling1D,
-        keras.layers.pooling.AveragePooling2D,
-        keras.layers.pooling.AveragePooling3D,
-        keras.layers.pooling.GlobalAveragePooling1D,
-        keras.layers.pooling.GlobalAveragePooling2D,
-        keras.layers.pooling.GlobalAveragePooling3D,
-        keras.layers.pooling.GlobalMaxPooling1D,
-        keras.layers.pooling.GlobalMaxPooling2D,
-        keras.layers.pooling.GlobalMaxPooling3D,
-        keras.layers.pooling.MaxPooling1D,
-        keras.layers.pooling.MaxPooling2D,
-        keras.layers.pooling.MaxPooling3D,
-        keras.layers.recurrent.GRU,
-        keras.layers.recurrent.GRUCell,
-        keras.layers.recurrent.LSTM,
-        keras.layers.recurrent.LSTMCell,
-        keras.layers.recurrent.RNN,
-        keras.layers.recurrent.SimpleRNN,
-        keras.layers.recurrent.SimpleRNNCell,
-        keras.layers.recurrent.StackedRNNCells,
-        keras.layers.wrappers.Bidirectional,
-        keras.layers.wrappers.TimeDistributed,
-        keras.layers.wrappers.Wrapper,
-        keras.legacy.layers.Highway,
-        keras.legacy.layers.MaxoutDense,
-        keras.legacy.layers.Merge,
-        keras.legacy.layers.Recurrent,
-    )
-    return KNOWN_LAYERS
 
 
 def get_activation_search_safe_layers():
@@ -244,19 +127,6 @@ def contains_kernel(layer: Layer) -> bool:
         or hasattr(layer, "depthwise_kernel")
         or hasattr(layer, "pointwise_kernel")
     )
-
-
-def contains_bias(layer):
-    """
-    Check whether the layer contains a bias.
-    """
-
-    # todo: add test and check this more throughroughly.
-    # rely on Keras convention.
-    if hasattr(layer, "bias"):
-        return True
-    else:
-        return False
 
 
 def only_relu_activation(layer: Layer) -> bool:
@@ -379,11 +249,6 @@ def is_convnet_layer(layer: Layer) -> bool:
         keras.layers.pooling.MaxPooling3D,
     )
     return isinstance(layer, convnet_layers)
-
-
-def is_relu_convnet_layer(layer):
-    """Checks if layer is from a convolutional network with ReLUs."""
-    return is_convnet_layer(layer) and only_relu_activation(layer)
 
 
 def is_average_pooling(layer: Layer) -> bool:

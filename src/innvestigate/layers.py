@@ -15,16 +15,7 @@ import innvestigate.utils as iutils
 import innvestigate.utils.keras.backend as iK
 from innvestigate.utils.types import OptionalList, ShapeTuple, Tensor
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 __all__ = [
-    "Constant",
-    "Zero",
-    "One",
-    "ZerosLike",
     "OnesLike",
     "AsFloatX",
     "FiniteCheck",
@@ -32,13 +23,7 @@ __all__ = [
     "GradientWRT",
     "Min",
     "Max",
-    "Greater",
-    "Less",
     "GreaterThanZero",
-    "LessThanZero",
-    "GreaterEqual",
-    "LessEqual",
-    "GreaterEqualThanZero",
     "LessEqualThanZero",
     "Sum",
     "Mean",
@@ -48,7 +33,6 @@ __all__ = [
     "Square",
     "Clip",
     "Project",
-    "Print",
     "Transpose",
     "Dot",
     "SafeDivide",
@@ -59,35 +43,11 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
-    "Gather",
     "GatherND",
 ]
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
-
-
-def Constant(c, reference=None):
-    if reference is None:
-        return K.constant(c)
-    else:
-        dtype = K.dtype(reference)
-        return K.constant(np.dtype(dtype)(c), dtype=dtype)
-
-
-def Zero(reference=None):
-    return Constant(0, reference=reference)
-
-
-def One(reference=None):
-    return Constant(1, reference=reference)
-
-
-class ZerosLike(keras.layers.Layer):
-    def call(self, x):
-        return [K.zeros_like(tmp) for tmp in iutils.to_list(x)]
 
 
 class OnesLike(keras.layers.Layer):
@@ -354,47 +314,11 @@ class Project(_Map):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
-
-
-class Greater(keras.layers.Layer):
-    def call(self, x):
-        a, b = x
-        return K.greater(a, b)
-
-
-class Less(keras.layers.Layer):
-    def call(self, x):
-        a, b = x
-        return K.less(a, b)
 
 
 class GreaterThanZero(keras.layers.Layer):
     def call(self, x: Tensor) -> Tensor:
         return K.greater(x, K.constant(0))
-
-
-class LessThanZero(keras.layers.Layer):
-    def call(self, x):
-        return K.less(x, K.constant(0))
-
-
-class GreaterEqual(keras.layers.Layer):
-    def call(self, x):
-        a, b = x
-        return K.greater_equal(a, b)
-
-
-class LessEqual(keras.layers.Layer):
-    def call(self, x):
-        a, b = x
-        return K.less_equal(a, b)
-
-
-class GreaterEqualThanZero(keras.layers.Layer):
-    def call(self, x):
-        return K.greater_equal(x, K.constant(0))
 
 
 class LessEqualThanZero(keras.layers.Layer):
@@ -627,15 +551,6 @@ class Broadcast(keras.layers.Layer):
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
         return input_shapes[0]
-
-
-class Gather(keras.layers.Layer):
-    def call(self, inputs):
-        x, index = inputs
-        return iK.gather(x, 1, index)
-
-    def compute_output_shape(self, input_shapes):
-        return (input_shapes[0][0], input_shapes[1][0]) + input_shapes[0][2:]
 
 
 class GatherND(keras.layers.Layer):
