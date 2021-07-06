@@ -457,7 +457,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 self._kernel_to_be = _kernel
                 self._bias_to_be = _bias
                 self.use_bias = use_bias
-                super(ScaleLayer, self).__init__(**kwargs)
+                super().__init__(**kwargs)
 
             def build(self, input_shape):
                 self.kernel = self.add_weight(
@@ -473,7 +473,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                         initializer=lambda a, b=None: self._bias_to_be,
                         trainable=False,
                     )
-                super(ScaleLayer, self).build(input_shape)
+                super().build(input_shape)
 
             def call(self, x):
                 ret = x * self.kernel

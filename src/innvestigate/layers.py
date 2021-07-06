@@ -132,7 +132,7 @@ class GradientWRT(keras.layers.Layer):
     ) -> None:
         self.n_inputs = n_inputs
         self.mask = mask
-        super(GradientWRT, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def call(self, x):
         assert isinstance(x, (list, tuple))
@@ -309,7 +309,7 @@ class Clip(_Map):
     ) -> None:
         self._min_value = min_value
         self._max_value = max_value
-        return super(Clip, self).__init__()
+        super().__init__()
 
     def _apply_map(self, X: Tensor) -> Tensor:
         return K.clip(X, self._min_value, self._max_value)
@@ -320,7 +320,7 @@ class Project(_Map):
         # TODO: add type of output_range
         self._output_range = output_range
         self._input_is_positive_only = input_is_postive_only
-        return super(Project, self).__init__()
+        super().__init__()
 
     def _apply_map(self, X: Tensor):
         def safe_divide(A: Tensor, B: Tensor) -> Tensor:
@@ -405,7 +405,7 @@ class LessEqualThanZero(keras.layers.Layer):
 class Transpose(keras.layers.Layer):
     def __init__(self, axes=None, **kwargs) -> None:
         self._axes = axes
-        super(Transpose, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
     def call(self, x: Tensor) -> Tensor:
         if self._axes is None:
@@ -459,9 +459,9 @@ class SafeDivide(keras.layers.Layer):
 
 class Repeat(keras.layers.Layer):
     def __init__(self, n: int, axis, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._n = n
         self._axis = axis
-        return super(Repeat, self).__init__(*args, **kwargs)
 
     def call(self, x: Tensor) -> Tensor:
         return K.repeat_elements(x, self._n, self._axis)
@@ -483,8 +483,8 @@ class Repeat(keras.layers.Layer):
 
 class Reshape(keras.layers.Layer):
     def __init__(self, shape: Tuple[int, ...], *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._shape = shape
-        return super(Reshape, self).__init__(*args, **kwargs)
 
     def call(self, x: Tensor) -> Tensor:
         return K.reshape(x, self._shape)
@@ -495,11 +495,11 @@ class Reshape(keras.layers.Layer):
 
 class MultiplyWithLinspace(keras.layers.Layer):
     def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._start = start
         self._end = end
         self._n = n
         self._axis = axis
-        return super(MultiplyWithLinspace, self).__init__(*args, **kwargs)
 
     def call(self, x: Tensor) -> Tensor:
         linspace = self._start + (self._end - self._start) * (
@@ -523,17 +523,17 @@ class MultiplyWithLinspace(keras.layers.Layer):
 class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
     def call(self, inputs: Tensor) -> Tensor:
         # Always add Gaussian noise!
-        return super(TestPhaseGaussianNoise, self).call(inputs, training=True)
+        return super().call(inputs, training=True)
 
 
 class ExtractConv2DPatches(keras.layers.Layer):
     def __init__(self, kernel_shape, depth, strides, rates, padding, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._kernel_shape = kernel_shape
         self._depth = depth
         self._strides = strides
         self._rates = rates
         self._padding = padding
-        return super(ExtractConv2DPatches, self).__init__(*args, **kwargs)
 
     def call(self, x):
         return iK.extract_conv2d_patches(
