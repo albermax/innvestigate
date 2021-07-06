@@ -133,18 +133,11 @@ class GradientWRT(keras.layers.Layer):
                 one per output tensor of the layer).
         """
         if not self.supports_masking:
-            if mask is not None:
-                if isinstance(mask, list):
-                    if any(m is not None for m in mask):
-                        raise TypeError(
-                            "Layer " + self.name + " does not support masking, "
-                            "but was passed an input_mask: " + str(mask)
-                        )
-                else:
-                    raise TypeError(
-                        "Layer " + self.name + " does not support masking, "
-                        "but was passed an input_mask: " + str(mask)
-                    )
+            if not isinstance(mask, list) or any(m is not None for m in mask):
+                raise TypeError(
+                    f"Layer {self.name} does not support masking, ",
+                    f"but was passed an input_mask: {str(mask)}",
+                )
             # masking not explicitly supported: return None as mask
 
             # this is the workaround for model.run_internal_graph.
@@ -394,10 +387,15 @@ class Repeat(keras.layers.Layer):
         self, input_shapes: OptionalList[ShapeTuple]
     ) -> ShapeTuple:
         input_shape: ShapeTuple
+
         if isinstance(input_shapes, list):
             input_shape = input_shapes[0]
-        else:
+        elif isinstance(input_shapes, tuple):
             input_shape = input_shapes
+        else:
+            raise TypeError(
+                "Expected shape tuple (tuple of integers) or list of shape tuples."
+            )
 
         if input_shape[0] is None:
             return input_shape
