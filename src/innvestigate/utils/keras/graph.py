@@ -959,12 +959,19 @@ def get_bottleneck_tensors(
 ###############################################################################
 
 
-class ReverseMappingBase(object):
-    def __init__(self, layer, state):
+class ReverseMappingBase(metaclass=ABCMeta):
+    def __init__(self, layer: Layer, state: Dict[str, Any]) -> None:
         pass
 
-    def apply(self, Xs, Yx, reversed_Ys, reverse_state):
-        raise NotImplementedError()
+    @abstractmethod
+    def apply(
+        self,
+        Xs: List[Tensor],
+        Ys: List[Tensor],
+        Rs: List[Tensor],
+        reverse_state: Dict,
+    ) -> List[Tensor]:
+        pass
 
 
 def reverse_model(
