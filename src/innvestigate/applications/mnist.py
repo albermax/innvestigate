@@ -7,8 +7,8 @@ and http://jmlr.org/papers/v17/15-618.html.
 """
 # TODO: rename in, sm_out, out to input_tensors, output_tensors,
 # TODO: softmax_output_tenors
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+
+from __future__ import annotations
 
 import os
 

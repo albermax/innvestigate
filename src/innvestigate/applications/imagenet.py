@@ -13,10 +13,10 @@ Function parameters\:
 :param load_weights: Download or access cached weights.
 :param load_patterns: Download or access cached patterns.
 """
-# todo: rename in, sm_out, out to input_tensors, output_tensors,
-# todo: softmax_output_tenors
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+# TODO: rename in, sm_out, out to
+# TODO: input_tensors, output_tensors, softmax_output_tenors
+
+from __future__ import annotations
 
 import warnings
 from builtins import range
@@ -28,9 +28,9 @@ import keras.applications.nasnet
 import keras.applications.resnet50
 import keras.applications.vgg16
 import keras.applications.vgg19
-import keras.backend as K
 import keras.utils.data_utils
 import numpy as np
+from keras import backend
 
 from ..utils.keras import graph as kgraph
 
@@ -104,7 +104,7 @@ def _prepare_keras_net(
     net = {}
     net["name"] = netname
     net["image_shape"] = image_shape
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         net["input_shape"] = [None, 3] + image_shape
     else:
         net["input_shape"] = [None] + image_shape + [3]
@@ -281,7 +281,7 @@ def densenet201(load_weights=False, load_patterns=False):
 
 
 def nasnet_large(load_weights=False, load_patterns=False):
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(
@@ -297,7 +297,7 @@ def nasnet_large(load_weights=False, load_patterns=False):
 
 
 def nasnet_mobile(load_weights=False, load_patterns=False):
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(

@@ -1,13 +1,11 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
-from builtins import zip
+from typing import List
 
 import keras.backend as K
+import tensorflow as tf
 
-###############################################################################
-###############################################################################
-###############################################################################
+from innvestigate.utils.types import OptionalList, Tensor
 
 
 __all__ = [
@@ -20,21 +18,16 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
+def to_floatx(X: Tensor) -> Tensor:
+    """Cast Tensor to default float type."""
+    return K.cast(X, K.floatx())
 
 
-def to_floatx(x):
-    return K.cast(x, K.floatx())
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def gradients(Xs, Ys, known_Ys):
+def gradients(
+    Xs: OptionalList[Tensor],
+    Ys: OptionalList[Tensor],
+    known_Ys: List[Tensor],
+) -> List[Tensor]:
     """Partial derivatives
 
     Computes the partial derivatives between Ys and Xs and

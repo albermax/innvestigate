@@ -1,6 +1,7 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
+from abc import ABCMeta, abstractmethod
 from builtins import range
 
 import keras.backend as K
@@ -11,15 +12,11 @@ import keras.utils
 import numpy as np
 import six
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.analyzer.pattern_based
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
 
 __all__ = [
     "get_active_neuron_io",
@@ -33,8 +30,6 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -118,11 +113,9 @@ def get_active_neuron_io(
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
-class BasePattern(object):
+class BasePattern(metaclass=ABCMeta):
     """
     Interface for pattern objects used to compute patterns by the
     PatternComputer class.
@@ -321,8 +314,6 @@ def get_pattern_class(pattern_type):
     }.get(pattern_type, pattern_type)
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 

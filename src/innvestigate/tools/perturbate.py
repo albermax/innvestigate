@@ -1,13 +1,12 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import time
 import warnings
 from builtins import range
 
-import keras.backend as K
 import numpy as np
 import six
+from keras.backend import image_data_format
 from keras.utils import Sequence
 from keras.utils.data_utils import GeneratorEnqueuer, OrderedEnqueuer
 
@@ -200,7 +199,7 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
-        if K.image_data_format() == "channels_last":
+        if image_data_format() == "channels_last":
             x = np.moveaxis(x, 3, 1)
             analysis = np.moveaxis(analysis, 3, 1)
         if not self.in_place:
@@ -234,7 +233,7 @@ class Perturbation:
                 pad_shape_before_x[1] : pad_shape_before_x[1] + original_shape[3],
             ]
 
-        if K.image_data_format() == "channels_last":
+        if image_data_format() == "channels_last":
             x_perturbated = np.moveaxis(x_perturbated, 1, 3)
             x = np.moveaxis(x, 1, 3)
             analysis = np.moveaxis(analysis, 1, 3)

@@ -1,7 +1,7 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""Check Keras Layers for properties,
+e.g. if it is an input or a pooling layer"""
 
-import inspect
+from __future__ import annotations
 
 import keras.engine.topology
 import keras.layers
@@ -19,9 +19,8 @@ import keras.layers.recurrent
 import keras.layers.wrappers
 import keras.legacy.layers
 
-###############################################################################
-###############################################################################
-###############################################################################
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.utils.types import Layer
 
 
 # Prevents circular imports.
@@ -259,7 +258,7 @@ def contains_bias(layer):
         return False
 
 
-def only_relu_activation(layer):
+def only_relu_activation(layer: Layer) -> bool:
     """Checks if layer contains no or only a ReLU activation."""
     return (
         not contains_activation(layer)
@@ -269,14 +268,14 @@ def only_relu_activation(layer):
     )
 
 
-def is_network(layer):
+def is_network(layer: Layer) -> bool:
     """
     Is network in network?
     """
     return isinstance(layer, keras.engine.topology.Network)
 
 
-def is_conv_layer(layer, *args, **kwargs):
+def is_conv_layer(layer: Layer, *_args, **_kwargs) -> bool:
     """Checks if layer is a convolutional layer."""
     CONV_LAYERS = (
         keras.layers.convolutional.Conv1D,
@@ -291,26 +290,27 @@ def is_conv_layer(layer, *args, **kwargs):
     return isinstance(layer, CONV_LAYERS)
 
 
-def is_embedding_layer(layer, *args, **kwargs):
+def is_embedding_layer(layer: Layer, *_args, **_kwargs) -> bool:
+    """Checks if layer is an embedding layer."""
     return isinstance(layer, keras.layers.Embedding)
 
 
-def is_batch_normalization_layer(layer, *args, **kwargs):
+def is_batch_normalization_layer(layer: Layer, *_args, **_kwargs) -> bool:
     """Checks if layer is a batchnorm layer."""
     return isinstance(layer, keras.layers.normalization.BatchNormalization)
 
 
-def is_add_layer(layer, *args, **kwargs):
+def is_add_layer(layer: Layer, *_args, **_kwargs) -> bool:
     """Checks if layer is an addition-merge layer."""
     return isinstance(layer, keras.layers.Add)
 
 
-def is_dense_layer(layer, *args, **kwargs):
+def is_dense_layer(layer: Layer, *_args, **_kwargs) -> bool:
     """Checks if layer is a dense layer."""
     return isinstance(layer, keras.layers.core.Dense)
 
 
-def is_convnet_layer(layer):
+def is_convnet_layer(layer: Layer) -> bool:
     """Checks if layer is from a convolutional network."""
     # Inside function to not break import if Keras changes.
     CONVNET_LAYERS = (
@@ -385,7 +385,7 @@ def is_relu_convnet_layer(layer):
     return is_convnet_layer(layer) and only_relu_activation(layer)
 
 
-def is_average_pooling(layer):
+def is_average_pooling(layer: Layer) -> bool:
     """Checks if layer is an average-pooling layer."""
     AVERAGEPOOLING_LAYERS = (
         keras.layers.pooling.AveragePooling1D,
@@ -411,7 +411,7 @@ def is_max_pooling(layer):
     return isinstance(layer, MAXPOOLING_LAYERS)
 
 
-def is_input_layer(layer, ignore_reshape_layers=True):
+def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     """Checks if layer is an input layer."""
     # Triggers if ALL inputs of layer are connected
     # to a Keras input layer object.

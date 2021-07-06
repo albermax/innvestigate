@@ -1,17 +1,13 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 from builtins import zip
+from typing import List, Union
 
-import keras.backend as K
 import numpy as np
+from keras.backend import int_shape
 
-from ... import utils as iutils
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.utils as iutils
+from innvestigate.utils.types import Layer, OptionalList, Tensor
 
 __all__ = [
     "apply",
@@ -19,12 +15,7 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def apply(layer, inputs):
+def apply(layer: Layer, inputs: OptionalList[Tensor]) -> List[Tensor]:
     """
     Apply a layer to input[s].
 
@@ -50,12 +41,18 @@ def apply(layer, inputs):
     return iutils.to_list(ret)
 
 
-def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
+def broadcast_np_tensors_to_keras_tensors(
+    keras_tensors: OptionalList[Tensor],
+    np_tensors: Union[float, np.ndarray, List[np.ndarray]],
+) -> List[np.ndarray]:
     """Broadcasts numpy tensors to the shape of Keras tensors.
 
     :param keras_tensors: The Keras tensors with the target shapes.
+    :type keras_tensors: OptionalList[Tensor]
     :param np_tensors: Numpy tensors that should be broadcasted.
+    :type np_tensors: Union[float, np.ndarray, List[np.ndarray]]
     :return: The broadcasted Numpy tensors.
+    :rtype: List[np.ndarray]
     """
 
     def none_to_one(tmp):
