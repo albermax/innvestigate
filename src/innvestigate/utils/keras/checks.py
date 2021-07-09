@@ -78,41 +78,48 @@ def contains_activation(layer: Layer, activation: str = None) -> bool:
     :rtype: bool
     """
 
-    if activation is not None:
+    if activation is None:
+        return contains_any_activation(layer)
+    else:
+        a = activation.lower()
+
+        # Check for activations in layer
         if hasattr(layer, "activation"):
-            return bool(layer.activation == keras.activations.get(activation))
-        elif (activation == "relu") and isinstance(
-            layer,
-            (
-                keras.layers.ReLU,
-                keras.layers.advanced_activations.ReLU,
-            ),
-        ):
-            return True
-        elif isinstance(
-            layer,
-            (
-                keras.layers.advanced_activations.ELU,
-                keras.layers.advanced_activations.LeakyReLU,
-                keras.layers.advanced_activations.PReLU,
-                keras.layers.advanced_activations.Softmax,
-                keras.layers.advanced_activations.ThresholdedReLU,
-            ),
-        ):
-            raise Exception(f"Cannot detect activation type, expected {activation}.")
-    else:  # just check if layer contains activation
-        if hasattr(layer, "activation") or isinstance(
-            layer,
-            (
-                keras.layers.advanced_activations.ELU,
-                keras.layers.advanced_activations.LeakyReLU,
-                keras.layers.advanced_activations.PReLU,
-                keras.layers.advanced_activations.Softmax,
-                keras.layers.advanced_activations.ThresholdedReLU,
-            ),
-        ):
-            return True
+            return bool(layer.activation == keras.activations.get(a))
+
+        # Check for layers that are activations
+        elif a == "softmax":
+            return isinstance(layer, (keras.layers.Softmax))
+        elif a == "relu":
+            return isinstance(layer, (keras.layers.ReLU))
+        elif a == "elu":
+            return isinstance(layer, (keras.layers.ELU))
+        elif a == "prelu":
+            return isinstance(layer, (keras.layers.PReLU))
+        elif a == "leakyrelu":
+            return isinstance(layer, (keras.layers.LeakyReLU))
+        elif a == "thresholdedrelu":
+            return isinstance(layer, (keras.layers.ThresholdedReLU))
     return False
+
+
+def contains_any_activation(layer: Layer) -> bool:
+    """Check whether layer contains any activation or is activation layer.
+
+    :param layer: Keras layer to check
+    :type layer: Layer
+    :return: True if activation was found.
+    :rtype: bool
+    """
+    activation_layers = (
+        keras.layers.ReLU,
+        keras.layers.ELU,
+        keras.layers.LeakyReLU,
+        keras.layers.PReLU,
+        keras.layers.Softmax,
+        keras.layers.ThresholdedReLU,
+    )
+    return hasattr(layer, "activation") or isinstance(layer, activation_layers)
 
 
 def contains_kernel(layer: Layer) -> bool:
