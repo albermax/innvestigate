@@ -9,20 +9,10 @@ from ..utils.keras import graph as kgraph
 from . import base
 from .relevance_based import relevance_rule as lrp_rules
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 __all__ = [
     "DeepTaylor",
     "BoundedDeepTaylor",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 class DeepTaylor(base.ReverseAnalyzerBase):
@@ -65,7 +55,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
         # ReLU Activation layer
         self._add_conditional_reverse_mapping(
             lambda l: (
-                not kchecks.contains_kernel(l) and kchecks.contains_activation(l)
+                not kchecks.contains_kernel(l) and kchecks.only_relu_activation(l)
             ),
             self._gradient_reverse_mapping,
             name="deep_taylor_relu",

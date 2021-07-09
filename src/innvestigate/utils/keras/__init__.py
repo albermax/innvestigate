@@ -1,17 +1,13 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 from builtins import zip
+from typing import List, Union
 
-import keras.backend as K
 import numpy as np
+from keras.backend import int_shape
 
-from ... import utils as iutils
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.utils as iutils
+from innvestigate.utils.types import Layer, OptionalList, Tensor
 
 __all__ = [
     "apply",
@@ -19,12 +15,7 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def apply(layer, inputs):
+def apply(layer: Layer, inputs: OptionalList[Tensor]) -> List[Tensor]:
     """
     Apply a layer to input[s].
 
@@ -33,16 +24,20 @@ def apply(layer, inputs):
     or many.
 
     :param layer: A Keras layer instance.
+    :type layer: Layer
     :param inputs: A list of input tensors or a single tensor.
+    :type inputs: OptionalList[Tensor]
+    :return: Output from applying the layer to the input.
+    :rtype: List[Tensor]
     """
 
     if isinstance(inputs, list) and len(inputs) > 1:
         try:
             ret = layer(inputs)
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError) as err:
             # layer expects a single tensor.
             if len(inputs) != 1:
-                raise ValueError("Layer expects only a single input!")
+                raise ValueError("Layer expects only a single input!") from err
             ret = layer(inputs[0])
     else:
         ret = layer(inputs[0])
@@ -50,12 +45,18 @@ def apply(layer, inputs):
     return iutils.to_list(ret)
 
 
-def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
+def broadcast_np_tensors_to_keras_tensors(
+    keras_tensors: OptionalList[Tensor],
+    np_tensors: Union[float, np.ndarray, List[np.ndarray]],
+) -> List[np.ndarray]:
     """Broadcasts numpy tensors to the shape of Keras tensors.
 
     :param keras_tensors: The Keras tensors with the target shapes.
+    :type keras_tensors: OptionalList[Tensor]
     :param np_tensors: Numpy tensors that should be broadcasted.
+    :type np_tensors: Union[float, np.ndarray, List[np.ndarray]]
     :return: The broadcasted Numpy tensors.
+    :rtype: List[np.ndarray]
     """
 
     def none_to_one(tmp):
@@ -64,14 +65,10 @@ def broadcast_np_tensors_to_keras_tensors(keras_tensors, np_tensors):
     keras_tensors = iutils.to_list(keras_tensors)
 
     if isinstance(np_tensors, list):
-        ret = [
-            np.broadcast_to(ri, none_to_one(K.int_shape(x)))
+        return [
+            np.broadcast_to(ri, none_to_one(int_shape(x)))
             for x, ri in zip(keras_tensors, np_tensors)
         ]
-    else:
-        ret = [
-            np.broadcast_to(np_tensors, none_to_one(K.int_shape(x)))
-            for x in keras_tensors
-        ]
-
-    return ret
+    return [
+        np.broadcast_to(np_tensors, none_to_one(int_shape(x))) for x in keras_tensors
+    ]

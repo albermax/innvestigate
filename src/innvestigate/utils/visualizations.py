@@ -1,15 +1,9 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 from builtins import range
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 __all__ = [
     "project",
@@ -18,11 +12,6 @@ __all__ = [
     "gamma",
     "clip_quantile",
 ]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 def project(X, output_range=(0, 1), absmax=None, input_is_positive_only=False):

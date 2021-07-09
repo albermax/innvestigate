@@ -1,13 +1,12 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import time
 import warnings
 from builtins import range
 
-import keras.backend as K
 import numpy as np
 import six
+from keras.backend import image_data_format
 from keras.utils import Sequence
 from keras.utils.data_utils import GeneratorEnqueuer, OrderedEnqueuer
 
@@ -17,19 +16,37 @@ import innvestigate.utils
 class Perturbation:
     """Perturbation of pixels based on analysis result.
 
-    :param perturbation_function: Defines the function with which the samples are perturbated. Can be a function or a string that defines a predefined perturbation function.
-    :type perturbation_function: function or callable or str
-    :param num_perturbed_regions: Number of regions to be perturbed.
-    :type num_perturbed_regions: int
-    :param reduce_function: Function to reduce the analysis result to one channel, e.g. mean or max function.
-    :type reduce_function: function or callable
-    :param aggregation_function: Function to aggregate the analysis over subregions.
-    :type aggregation_function: function or callable
-    :param pad_mode: How to pad if the image cannot be subdivided into an integer number of regions. As in numpy.pad.
-    :type pad_mode: str or function or callable
-    :param in_place: If true, the perturbations are performed in place, i.e. the input samples are modified.
-    :type in_place: bool
-    :param value_range: Minimal and maximal value after perturbation as a tuple: (min_val, max_val). The input is clipped to this range
+    :param perturbation_function:
+        Defines the function with which the samples are perturbated.
+        Can be a function or a string that defines a predefined perturbation function.
+    :type perturbation_function:
+        function or callable or str
+    :param num_perturbed_regions:
+        Number of regions to be perturbed.
+    :type num_perturbed_regions:
+        int
+    :param reduce_function:
+        Function to reduce the analysis result to one channel,
+        e.g. mean or max function.
+    :type reduce_function:
+        function or callable
+    :param aggregation_function:
+        Function to aggregate the analysis over subregions.
+    :type aggregation_function:
+        function or callable
+    :param pad_mode:
+        How to pad if the image cannot be subdivided into an integer number of regions.
+        As in numpy.pad.
+    :type pad_mode:
+        str or function or callable
+    :param in_place:
+        If true, the perturbations are performed in place,
+        i.e. the input samples are modified.
+    :type in_place:
+        bool
+    :param value_range:
+        Minimal and maximal value after perturbation as a tuple:
+        (min_val, max_val). The input is clipped to this range
     :type value_range: tuple"""
 
     def __init__(
@@ -45,7 +62,8 @@ class Perturbation:
     ):
         if isinstance(perturbation_function, six.string_types):
             if perturbation_function == "zeros":
-                # This is equivalent to setting the perturbated values to the channel mean if the data are standardized.
+                # This is equivalent to setting the perturbated values
+                # to the channel mean if the data are standardized.
                 self.perturbation_function = np.zeros_like
             elif perturbation_function == "gaussian":
                 # If scale = 1/3, most of the values will be between -1 and 1
@@ -96,7 +114,8 @@ class Perturbation:
 
     def expand_regions_to_pixels(self, regions):
         # Resize to pixels (repeat values).
-        # (n, c, h_aggregated_region, w_aggregated_region) -> (n, c, h_aggregated_region, h_region, w_aggregated_region, w_region)
+        # (n, c, h_aggregated_region, w_aggregated_region) ->
+        # (n, c, h_aggregated_region, h_region, w_aggregated_region, w_region)
         regions_reshaped = np.expand_dims(np.expand_dims(regions, axis=3), axis=5)
         region_pixels = np.repeat(regions_reshaped, self.region_shape[0], axis=3)
         region_pixels = np.repeat(region_pixels, self.region_shape[1], axis=5)
@@ -164,7 +183,8 @@ class Perturbation:
 
     def perturbate_regions(self, x, perturbation_mask_regions):
         # Perturbate every region in tensor.
-        # A single region (at region_x, region_y in sample) should be in mask[sample, channel, region_x, :, region_y, :]
+        # A single region (at region_x, region_y in sample)
+        # should be in mask[sample, channel, region_x, :, region_y, :]
 
         x_perturbated = self.reshape_to_regions(x)
         for sample_idx, channel_idx, region_row, region_col in np.ndindex(
@@ -200,7 +220,7 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
-        if K.image_data_format() == "channels_last":
+        if image_data_format() == "channels_last":
             x = np.moveaxis(x, 3, 1)
             analysis = np.moveaxis(analysis, 3, 1)
         if not self.in_place:
@@ -213,11 +233,12 @@ class Perturbation:
 
         padding = not np.all(np.array(analysis.shape[2:]) % self.region_shape == 0)
         if padding:
-            analysis, pad_shape_before_analysis = self.pad(analysis)
+            analysis, _pad_shape_before_analysis = self.pad(analysis)
             x, pad_shape_before_x = self.pad(x)
         aggregated_regions = self.aggregate_regions(analysis)
 
-        # Compute perturbation mask (mask with ones where the input should be perturbated, zeros otherwise)
+        # Compute perturbation mask
+        # (mask with ones where the input should be perturbated, zeros otherwise)
         ranks = self.compute_region_ordering(aggregated_regions)
         perturbation_mask_regions = self.compute_perturbation_mask(
             ranks, self.num_perturbed_regions
@@ -234,7 +255,7 @@ class Perturbation:
                 pad_shape_before_x[1] : pad_shape_before_x[1] + original_shape[3],
             ]
 
-        if K.image_data_format() == "channels_last":
+        if image_data_format() == "channels_last":
             x_perturbated = np.moveaxis(x_perturbated, 1, 3)
             x = np.moveaxis(x, 1, 3)
             analysis = np.moveaxis(analysis, 1, 3)
@@ -257,7 +278,8 @@ class PerturbationAnalysis:
     :type steps: int
     :param regions_per_step: Number of regions that are perturbed per step.
     :type regions_per_step: float
-    :param recompute_analysis: If true, the analysis is recomputed after each perturbation step.
+    :param recompute_analysis:
+        If true, the analysis is recomputed after each perturbation step.
     :type recompute_analysis: bool
     :param verbose: If true, print some useful information, e.g. timing, progress etc.
     """
@@ -286,17 +308,17 @@ class PerturbationAnalysis:
         if not self.recompute_analysis:
             # Compute the analysis once in the beginning
             analysis = list()
-            x = list()
-            y = list()
-            for xx, yy in self.generator:
-                x.extend(list(xx))
-                y.extend(list(yy))
-                analysis.extend(list(self.analyzer.analyze(xx)))
-            x = np.array(x)
-            y = np.array(y)
+            X = list()
+            Y = list()
+            for XX, YY in self.generator:
+                X.extend(list(XX))
+                Y.extend(list(YY))
+                analysis.extend(list(self.analyzer.analyze(XX)))
+            X = np.array(X)
+            Y = np.array(Y)
             analysis = np.array(analysis)
             self.analysis_generator = innvestigate.utils.BatchSequence(
-                [x, y, analysis], batch_size=256
+                [X, Y, analysis], batch_size=256
             )
         self.verbose = verbose
 
@@ -350,7 +372,8 @@ class PerturbationAnalysis:
 
         The generator should return the same kind of data
         as accepted by `test_on_batch`.
-        For documentation, refer to keras.engine.training.evaluate_generator (https://keras.io/models/model/)
+        For documentation, refer to keras.engine.training.evaluate_generator
+        (https://keras.io/models/model/)
         """
 
         steps_done = 0
@@ -473,10 +496,12 @@ class PerturbationAnalysis:
 
         if self.verbose:
             print(
+                # Use step + 1 instead of self.steps
+                # because the analysis can stop prematurely
                 "Time elapsed for {} steps: {:.3f} seconds.".format(
                     step + 1, time_end - time_start
                 )
-            )  # Use step + 1 instead of self.steps because the analysis can stop prematurely.
+            )
 
         self.perturbation.num_perturbed_regions = 1  # Reset to original value
         assert len(scores) == self.steps + 1

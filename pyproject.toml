@@ -74,6 +74,7 @@ addopts = "-v -m fast --strict-markers --cov"
 # addopts = "-v -m precommit --strict-markers --cov"
 filterwarnings = [
     "ignore::DeprecationWarning:tensorflow",
+    "ignore::DeprecationWarning:tensorboard",
     "ignore::DeprecationWarning:keras",
 ]
 markers = [

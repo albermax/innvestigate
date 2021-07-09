@@ -1,14 +1,13 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
-from builtins import zip
+from typing import List
 
 import keras.backend as K
+import tensorflow as tf
 
-###############################################################################
-###############################################################################
-###############################################################################
+from innvestigate.utils.types import OptionalList, Tensor
 
+# TODO: remove this file -A.
 
 __all__ = [
     "to_floatx",
@@ -20,21 +19,16 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
+def to_floatx(X: Tensor) -> Tensor:
+    """Cast Tensor to default float type."""
+    return K.cast(X, K.floatx())
 
 
-def to_floatx(x):
-    return K.cast(x, K.floatx())
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def gradients(Xs, Ys, known_Ys):
+def gradients(
+    Xs: OptionalList[Tensor],
+    Ys: OptionalList[Tensor],
+    known_Ys: List[Tensor],
+) -> List[Tensor]:
     """Partial derivatives
 
     Computes the partial derivatives between Ys and Xs and
@@ -45,56 +39,17 @@ def gradients(Xs, Ys, known_Ys):
     :param known_Ys: Gradients for Ys.
     :return: Gradients for Xs given known_Ys
     """
-    backend = K.backend()
-    if backend == "theano":
-        # no global import => do not break if module is not present
-        assert len(Ys) == 1
-        import theano.gradient
-
-        known_Ys = {k: v for k, v in zip(Ys, known_Ys)}
-        # todo: check the stop gradient issue here!
-        return theano.gradient.grad(K.sum(Ys[0]), Xs, known_grads=known_Ys)
-    elif backend == "tensorflow":
-        # no global import => do not break if module is not present
-        import tensorflow
-
-        return tensorflow.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
-    else:
-        # todo: add cntk
-        raise NotImplementedError()
+    grads: List[Tensor] = tf.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
+    return grads
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def is_not_finite(x):
+def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
     """Checks if tensor x is finite, if not throws an exception."""
-
-    backend = K.backend()
-    if backend == "theano":
-        # no global import => do not break if module is not present
-        import theano.tensor
-
-        return theano.tensor.or_(theano.tensor.isnan(x), theano.tensor.isinf(x))
-    elif backend == "tensorflow":
-        # no global import => do not break if module is not present
-        import tensorflow
-
-        # x = tensorflow.check_numerics(x, "innvestigate - is_finite check")
-        return tensorflow.logical_not(tensorflow.is_finite(x))
-    else:
-        # todo: add cntk
-        raise NotImplementedError()
+    # x = tensorflow.check_numerics(x, "innvestigate - is_finite check")
+    return tf.logical_not(tf.is_finite(X))
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
+def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> Tensor:
     """Extracts conv2d patches like TF function extract_image_patches.
 
     :param x: Input image.
@@ -104,65 +59,34 @@ def extract_conv2d_patches(x, kernel_shape, strides, rates, padding):
     :param padding: Paddings of the Keras conv2d layer.
     :return: The extracted patches.
     """
+    if K.image_data_format() == "channels_first":
+        X = K.permute_dimensions(X, (0, 2, 3, 1))
+    kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
+    strides = [1, strides[0], strides[1], 1]
+    rates = [1, rates[0], rates[1], 1]
+    ret = tf.extract_image_patches(X, kernel_shape, strides, rates, padding.upper())
 
-    backend = K.backend()
-    if backend == "theano":
-        # todo: add theano function.
-        raise NotImplementedError()
-    elif backend == "tensorflow":
-        # no global import => do not break if module is not present
-        import tensorflow
-
-        if K.image_data_format() == "channels_first":
-            x = K.permute_dimensions(x, (0, 2, 3, 1))
-        kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
-        strides = [1, strides[0], strides[1], 1]
-        rates = [1, rates[0], rates[1], 1]
-        ret = tensorflow.extract_image_patches(
-            x, kernel_shape, strides, rates, padding.upper()
-        )
-
-        if K.image_data_format() == "channels_first":
-            # todo: check if we need to permute again.xs
-            pass
-        return ret
-    else:
-        # todo: add cntk
-        raise NotImplementedError()
+    if K.image_data_format() == "channels_first":
+        # TODO: check if we need to permute again.xs
+        pass
+    return ret
 
 
-###############################################################################
-###############################################################################
-###############################################################################
+def gather(
+    X: Tensor,
+    axis: Tensor,  # Tensor of integer dtype
+    indices: Tensor,  # Tensor of integer dtype
+) -> Tensor:
+    """TensorFlow's gather:
+    Gather slices from `X` axis `axis` according to `indices`.
+    """
+    return tf.gather(X, indices, axis=axis)
 
 
-def gather(x, axis, indices):
-    """Works as TensorFlow's gather."""
-    backend = K.backend()
-    if backend == "theano":
-        # todo: add theano function.
-        raise NotImplementedError()
-    elif backend == "tensorflow":
-        # no global import => do not break if module is not present
-        import tensorflow
-
-        return tensorflow.gather(x, indices, axis=axis)
-    else:
-        # todo: add cntk
-        raise NotImplementedError()
-
-
-def gather_nd(x, indices):
-    """Works as TensorFlow's gather_nd."""
-    backend = K.backend()
-    if backend == "theano":
-        # todo: add theano function.
-        raise NotImplementedError()
-    elif backend == "tensorflow":
-        # no global import => do not break if module is not present
-        import tensorflow
-
-        return tensorflow.gather_nd(x, indices)
-    else:
-        # todo: add cntk
-        raise NotImplementedError()
+def gather_nd(
+    X: Tensor,
+    indices: Tensor,  # Tensor of integer dtype
+) -> Tensor:
+    """TensorFlow's gather_nd:
+    Gather slices from `X` into a Tensor with shape specified by `indices`."""
+    return tf.gather_nd(X, indices)

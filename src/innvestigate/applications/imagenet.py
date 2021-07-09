@@ -4,19 +4,18 @@ Each function returns a pretrained ImageNet model.
 The models are based on keras.applications models and
 contain additionally pretrained patterns.
 
-The returned dictionary contains the following
-keys\: model, in, sm_out, out, image_shape, color_coding,
-preprocess_f, patterns.
+The returned dictionary contains the following keys:
+    model, in, sm_out, out, image_shape, color_coding,
+    preprocess_f, patterns.
 
-Function parameters\:
-
-:param load_weights: Download or access cached weights.
-:param load_patterns: Download or access cached patterns.
+Function parameters:
+    :param load_weights: Download or access cached weights.
+    :param load_patterns: Download or access cached patterns.
 """
-# todo: rename in, sm_out, out to input_tensors, output_tensors,
-# todo: softmax_output_tenors
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+# TODO: rename in, sm_out, out to
+# TODO: input_tensors, output_tensors, softmax_output_tenors
+
+from __future__ import annotations
 
 import warnings
 from builtins import range
@@ -28,16 +27,11 @@ import keras.applications.nasnet
 import keras.applications.resnet50
 import keras.applications.vgg16
 import keras.applications.vgg19
-import keras.backend as K
 import keras.utils.data_utils
 import numpy as np
+from keras import backend
 
 from ..utils.keras import graph as kgraph
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 __all__ = [
     "vgg16",
@@ -54,17 +48,15 @@ __all__ = [
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 PATTERNS = {
     "vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
-        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "url": "https://www.dropbox.com/s/15lip81fzvbgkaa/vgg16_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",  # noqa
         "hash": "8c2abe648e116a93fd5027fab49177b0",
     },
     "vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz": {
-        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",
+        "url": "https://www.dropbox.com/s/nc5empj78rfe9hm/vgg19_pattern_type_relu_tf_dim_ordering_tf_kernels.npz?dl=1",  # noqa
         "hash": "3258b6c64537156afe75ca7b3be44742",
     },
 }
@@ -87,8 +79,6 @@ def _get_patterns_info(netname, pattern_type):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def _prepare_keras_net(
@@ -104,7 +94,7 @@ def _prepare_keras_net(
     net = {}
     net["name"] = netname
     net["image_shape"] = image_shape
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         net["input_shape"] = [None, 3] + image_shape
     else:
         net["input_shape"] = [None] + image_shape + [3]
@@ -152,8 +142,6 @@ def _prepare_keras_net(
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def vgg16(load_weights=False, load_patterns=False):
@@ -183,8 +171,6 @@ def vgg19(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def resnet50(load_weights=False, load_patterns=False):
@@ -201,8 +187,6 @@ def resnet50(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def inception_v3(load_weights=False, load_patterns=False):
@@ -218,8 +202,6 @@ def inception_v3(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def inception_resnet_v2(load_weights=False, load_patterns=False):
@@ -234,8 +216,6 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
     )
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -276,12 +256,10 @@ def densenet201(load_weights=False, load_patterns=False):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 def nasnet_large(load_weights=False, load_patterns=False):
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(
@@ -297,7 +275,7 @@ def nasnet_large(load_weights=False, load_patterns=False):
 
 
 def nasnet_mobile(load_weights=False, load_patterns=False):
-    if K.image_data_format() == "channels_first":
+    if backend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(

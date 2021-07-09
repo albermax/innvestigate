@@ -7,8 +7,8 @@ and http://jmlr.org/papers/v17/15-618.html.
 """
 # TODO: rename in, sm_out, out to input_tensors, output_tensors,
 # TODO: softmax_output_tenors
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+
+from __future__ import annotations
 
 import os
 
@@ -17,14 +17,6 @@ import keras.utils.data_utils
 import numpy as np
 from keras.models import clone_model, load_model
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-# from keras.utils import get_file
-
-
 __all__ = [
     "pretrained_plos_long_relu",
     "pretrained_plos_short_relu",
@@ -32,12 +24,12 @@ __all__ = [
     "pretrained_plos_short_tanh",
 ]
 
+"""
+pre-trained models from
+* https://doi.org/10.1371/journal.pone.0130140
+* http://jmlr.org/papers/v17/15-618.html
+"""
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-# pre-trained models from [https://doi.org/10.1371/journal.pone.0130140 , http://jmlr.org/papers/v17/15-618.html]
 PRETRAINED_MODELS = {
     "pretrained_plos_long_relu": {
         "file": "plos-mnist-rect-long.h5",
@@ -61,7 +53,8 @@ PRETRAINED_MODELS = {
 def _load_pretrained_net(modelname, new_input_shape):
     filename = PRETRAINED_MODELS[modelname]["file"]
     urlname = PRETRAINED_MODELS[modelname]["url"]
-    # model_path = get_file(fname=filename, origin=urlname) #TODO: FIX! corrupts the file?
+    # TODO: FIX! corrupts the file?
+    # model_path = get_file(fname=filename, origin=urlname)
     model_path = os.path.expanduser("~") + "/.keras/models/" + filename
 
     # workaround the more elegant, but dysfunctional solution.
@@ -76,13 +69,14 @@ def _load_pretrained_net(modelname, new_input_shape):
     model.layers[0] = keras.layers.InputLayer(
         input_shape=new_input_shape, name="input_1"
     )
-    for l in model.layers:
-        l.name = "%s_workaround" % l.name
+    for layer in model.layers:
+        layer.name = "%s_workaround" % layer.name
     model = keras.models.Sequential(layers=model.layers)
 
     model_w_sm = clone_model(model)
 
-    # NOTE: perform forward pass to fix a keras 2.2.0 related issue with improper weight initialization
+    # NOTE: perform forward pass to fix a keras 2.2.0 related issue
+    # with improper weight initialization
     # See: https://github.com/albermax/innvestigate/issues/88
     x_dummy = np.zeros(new_input_shape)[None, ...]
     model_w_sm.predict(x_dummy)

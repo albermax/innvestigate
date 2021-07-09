@@ -1,6 +1,7 @@
 # Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
+from abc import ABCMeta, abstractmethod
 from builtins import range
 
 import keras.backend as K
@@ -11,15 +12,11 @@ import keras.utils
 import numpy as np
 import six
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.analyzer.pattern_based
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
 
 __all__ = [
     "get_active_neuron_io",
@@ -33,8 +30,6 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -105,24 +100,23 @@ def get_active_neuron_io(
 
     if len(tmp) == 1:
         return tmp[0]
-    else:
-        raise NotImplementedError("This code seems not to handle several Ys.")
-        # Layer is applied several times in model.
-        # Concatenate the io of the applications.
-        concatenate = keras.layers.Concatenate(axis=0)
 
-        if return_i and return_o:
-            return (concatenate([x[0] for x in tmp]), concatenate([x[1] for x in tmp]))
-        else:
-            return concatenate([x[0] for x in tmp])
+    # TODO: check implementation
+    raise NotImplementedError("This code seems not to handle several Ys.")
+    # # Layer is applied several times in model.
+    # # Concatenate the io of the applications.
+    # concatenate = keras.layers.Concatenate(axis=0)
+
+    # if return_i and return_o:
+    #     return (concatenate([x[0] for x in tmp]), concatenate([x[1] for x in tmp]))
+    # else:
+    #     return concatenate([x[0] for x in tmp])
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
-class BasePattern(object):
+class BasePattern(metaclass=ABCMeta):
     """
     Interface for pattern objects used to compute patterns by the
     PatternComputer class.
@@ -132,7 +126,7 @@ class BasePattern(object):
     """
 
     def __init__(self, model, layer, model_tensors=None, execution_list=None):
-        self.model = model
+        self._model = model
         self.layer = layer
         # All the tensors used by the model.
         # Allows to filter nodes in layers that do not
@@ -165,18 +159,20 @@ class BasePattern(object):
     def has_pattern(self):
         return kchecks.contains_kernel(self.layer)
 
-    def stats_from_batch(self):
+    @abstractmethod
+    def get_stats_from_batch(self):
         """
         Creates statistics while the PatternComputer passes the
         dataset once.
         """
-        raise NotImplementedError()
+        pass
 
+    @abstractmethod
     def compute_pattern(self):
         """
         Computes the pattern after computing the statistics.
         """
-        raise NotImplementedError()
+        pass
 
 
 class DummyPattern(BasePattern):
@@ -264,9 +260,9 @@ class LinearPattern(BasePattern):
         W = kgraph.get_kernel(self.layer)
         W2D = W.reshape((-1, W.shape[-1]))
 
-        mean_x, cnt_x = self.mean_x.get_weights()
-        mean_y, cnt_y = self.mean_y.get_weights()
-        mean_xy, cnt_xy = self.mean_xy.get_weights()
+        mean_x, _cnt_x = self.mean_x.get_weights()
+        mean_y, _cnt_y = self.mean_y.get_weights()
+        mean_xy, _cnt_xy = self.mean_xy.get_weights()
 
         ExEy = mean_x * mean_y
         cov_xy = mean_xy - ExEy
@@ -274,15 +270,16 @@ class LinearPattern(BasePattern):
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
         A = safe_divide(cov_xy, w_cov_xy[None, :])
 
-        # update length
-        if False:
-            norm = np.diag(np.dot(W2D.T, A))
-            A = safe_divide(A, norm)
+        # TODO: check implementation
+        # # update length
+        # if False:
+        #     norm = np.diag(np.dot(W2D.T, A))
+        #     A = safe_divide(A, norm)
 
-        # check pattern
-        if False:
-            tmp = np.diag(np.dot(W2D.T, A))
-            print("pattern_check", W.shape, tmp.min(), tmp.max())
+        # # check pattern
+        # if False:
+        #     tmp = np.diag(np.dot(W2D.T, A))
+        #     print("pattern_check", W.shape, tmp.min(), tmp.max())
 
         return A.reshape(W.shape)
 
@@ -322,8 +319,6 @@ def get_pattern_class(pattern_type):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 class PatternComputer(object):
@@ -344,15 +339,12 @@ class PatternComputer(object):
         self,
         model,
         pattern_type="linear",
-        # todo: this options seems to be buggy,
+        # TODO: this options seems to be buggy,
         # if it sequential tensorflow still pushes all models to gpus
         compute_layers_in_parallel=True,
         gpus=None,
     ):
         self.model = model
-
-        # Break cyclic import.
-        import innvestigate.analyzer.pattern_based
 
         supported_layers = (
             innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET
@@ -402,7 +394,7 @@ class PatternComputer(object):
         # Create pattern instances and collect the dummy outputs.
         self._pattern_instances = {k: [] for k in self.pattern_types}
         computer_outputs = []
-        for layer_id, layer in enumerate(layers):
+        for _layer_id, layer in enumerate(layers):
             # This does not work with containers!
             # They should be replaced by trace_model_execution.
             if kchecks.is_network(layer):
@@ -436,10 +428,6 @@ class PatternComputer(object):
         # Distribute computation on more gpus.
         if self.gpus is not None and self.gpus > 1:
             raise NotImplementedError("Not supported yet.")
-            self._computers = [
-                keras.utils.multi_gpu_model(tmp, gpus=self.gpus)
-                for tmp in self._computers
-            ]
 
     def compute(self, X, batch_size=32, verbose=0):
         """
@@ -470,8 +458,7 @@ class PatternComputer(object):
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
             raise ValueError(
-                "Pattern are computed with "
-                "a closed form solution. "
+                "Pattern are computed with a closed form solution. "
                 "Only need to do one epoch."
             )
         kwargs["epochs"] = 1
