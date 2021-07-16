@@ -114,6 +114,9 @@ class Min(_Reduce):
 
 
 class Max(_Reduce):
+    """Applied to the last layer of a model, this reduces the output
+    to the max neuron activation."""
+
     def _apply_reduce(
         self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:

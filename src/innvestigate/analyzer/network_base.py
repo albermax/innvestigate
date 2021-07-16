@@ -99,8 +99,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         This class adds the code to select a specific output neuron.
         """
         neuron_selection_mode: str
-        model_inputs: OptionalList[Tensor]
-        model_output: OptionalList[Tensor]
+        model_inputs: List[Tensor]
+        model_output: List[Tensor]
         analysis_inputs: List[Tensor]
         stop_analysis_at_tensors: List[Tensor]
 
@@ -144,9 +144,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
         else:
             raise NotImplementedError()
 
-        model = kmodels.Model(
-            inputs=model_inputs + analysis_inputs, outputs=model_output
-        )
+        inputs = model_inputs + analysis_inputs
+        outputs = model_output
+        model = kmodels.Model(inputs=inputs, outputs=outputs)
+
         return model, analysis_inputs, stop_analysis_at_tensors
 
     def create_analyzer_model(self) -> None:
@@ -154,7 +155,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
-        model_inputs = self._model.inputs
+        model_inputs: List[Tensor] = self._model.inputs
         model, analysis_inputs, stop_analysis_at_tensors = self._prepare_model(
             self._model
         )
@@ -189,10 +190,10 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
-        self._analyzer_model = kmodels.Model(
-            inputs=model_inputs + analysis_inputs + constant_inputs,
-            outputs=analysis_outputs + debug_outputs,
-        )
+
+        inputs = model_inputs + analysis_inputs + constant_inputs
+        outputs = analysis_outputs + debug_outputs
+        self._analyzer_model = kmodels.Model(inputs=inputs, outputs=outputs)
 
         self._analyzer_model_done = True
 

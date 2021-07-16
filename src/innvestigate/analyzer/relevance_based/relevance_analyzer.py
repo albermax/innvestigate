@@ -361,15 +361,14 @@ class LRP(ReverseAnalyzerBase):
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
 
-        # Add
+        assert self._bn_layer_fuse_mode in ["one_linear", "two_linear"]
+
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not ichecks.is_convnet_layer(layer),
             "LRP is only tested for convolutional neural networks.",
             check_type="warning",
         )
-
-        assert bn_layer_fuse_mode in ["one_linear", "two_linear"]
 
         # TODO: refactor rule type checking into separate function
         # check if rule was given explicitly.

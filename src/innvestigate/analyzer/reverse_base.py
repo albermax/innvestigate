@@ -195,12 +195,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         # Search for mapping. First consider ones with highest priority,
         # inside priority in order of adding.
-        sorted_keys = sorted(mappings.keys())[::-1]
+        sorted_keys = reversed(sorted(mappings.keys()))
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
                     return mapping["mapping"]
 
+        # Otherwise return None and default reverse mapping will be applied
         return None
 
     def _default_reverse_mapping(
@@ -226,8 +227,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         # Refer to the "Introduction to development notebook".
         return X
 
-    def _postprocess_analysis(self, X: OptionalList[Tensor]) -> OptionalList[Tensor]:
-        return X
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> OptionalList[Tensor]:
+        return Xs
 
     def _reverse_model(
         self,
