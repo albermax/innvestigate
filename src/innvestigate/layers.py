@@ -57,13 +57,13 @@ class OnesLike(klayers.Layer):
 
 class AsFloatX(klayers.Layer):
     def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [kbackend.cast_to_floatx(tmp) for tmp in iutils.to_list(x)]
+        return [ibackend.cast_to_floatx(tmp) for tmp in iutils.to_list(x)]
 
 
 class FiniteCheck(klayers.Layer):
     def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
         return [
-            kbackend.sum(kbackend.cast_to_floatx(kbackend.is_not_finite(tmp)))
+            kbackend.sum(ibackend.cast_to_floatx(kbackend.is_not_finite(tmp)))
             for tmp in iutils.to_list(x)
         ]
 
@@ -222,7 +222,7 @@ class CountNonZero(_Reduce):
         self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:
         return kbackend.sum(
-            kbackend.cast_to_floatx(kbackend.not_equal(x, kbackend.constant(0))),
+            ibackend.cast_to_floatx(kbackend.not_equal(x, kbackend.constant(0))),
             axis=axis,
             keepdims=keepdims,
         )
@@ -281,7 +281,7 @@ class Project(_Map):
     def _apply_map(self, X: Tensor):
         def safe_divide(A: Tensor, B: Tensor) -> Tensor:
             return A / (
-                B + kbackend.cast_to_floatx(kbackend.equal(B, kbackend.constant(0))) * 1
+                B + ibackend.cast_to_floatx(kbackend.equal(B, kbackend.constant(0))) * 1
             )
 
         dims: Tuple[int] = kbackend.int_shape(X)
@@ -370,11 +370,13 @@ class SafeDivide(klayers.Layer):
 
     def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
         a, b = x
-        return a / (
-            b
-            + kbackend.cast_to_floatx(kbackend.equal(b, kbackend.constant(0)))
-            * self._factor
+
+        # replace 0 entries in b with self._factor
+        b_safe = b + self._factor * ibackend.cast_to_floatx(
+            kbackend.equal(b, kbackend.constant(0))
         )
+
+        return a / b_safe
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
         return input_shapes[0]
@@ -524,7 +526,7 @@ class RunningMeans(klayers.Layer):
     def call(self, x: List[Tensor]) -> List[Tensor]:
         def safe_divide(a, b):
             return a / (
-                b + kbackend.cast_to_floatx(kbackend.equal(b, kbackend.constant(0))) * 1
+                b + ibackend.cast_to_floatx(kbackend.equal(b, kbackend.constant(0))) * 1
             )
 
         means, counts = x

@@ -238,8 +238,8 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
             weights = layer.weights
             if not bias and layer.use_bias:
                 weights = weights[:-1]
-            positive_weights = [x * kbackend.cast_to_floatx(x > 0) for x in weights]
-            negative_weights = [x * kbackend.cast_to_floatx(x < 0) for x in weights]
+            positive_weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
+            negative_weights = [x * ibackend.cast_to_floatx(x < 0) for x in weights]
 
         self._layer_wo_act_positive = igraph.copy_layer_wo_activation(
             layer,
@@ -374,8 +374,8 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
             weights = layer.weights
             if not bias and getattr(layer, "use_bias", False):
                 weights = weights[:-1]
-            positive_weights = [x * kbackend.cast_to_floatx(x > 0) for x in weights]
-            negative_weights = [x * kbackend.cast_to_floatx(x < 0) for x in weights]
+            positive_weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
+            negative_weights = [x * ibackend.cast_to_floatx(x < 0) for x in weights]
 
         self._layer_wo_act_positive = igraph.copy_layer_wo_activation(
             layer,
@@ -492,8 +492,8 @@ class BoundedRule(igraph.ReverseMappingBase):
             weights = layer.weights
             if layer.use_bias:
                 weights = weights[:-1]
-            positive_weights = [x * kbackend.cast_to_floatx(x > 0) for x in weights]
-            negative_weights = [x * kbackend.cast_to_floatx(x < 0) for x in weights]
+            positive_weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
+            negative_weights = [x * ibackend.cast_to_floatx(x < 0) for x in weights]
 
         self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, keep_bias=False, name_template="reversed_kernel_%s"
@@ -580,7 +580,7 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
             weights = layer.weights
             if layer.use_bias:
                 weights = weights[:-1]
-            weights = [x * kbackend.cast_to_floatx(x > 0) for x in weights]
+            weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
 
         self._layer_wo_act_b_positive = igraph.copy_layer_wo_activation(
             layer,

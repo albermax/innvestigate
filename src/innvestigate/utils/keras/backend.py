@@ -12,6 +12,7 @@ from innvestigate.utils.types import OptionalList, Tensor
 
 __all__ = [
     "gradients",
+    "cast_to_floatx",
     "is_not_finite",
     "extract_conv2d_patches",
     "gather",
@@ -43,6 +44,9 @@ def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
     # x = tensorflow.check_numerics(x, "innvestigate - is_finite check")
     return tf.logical_not(tf.is_finite(X))
 
+
+def cast_to_floatx(X: Tensor) -> Tensor:
+    return tf.cast(X, dtype=kbackend.floatx())
 
 def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> Tensor:
     """Extracts conv2d patches like TF function extract_image_patches.
