@@ -11,6 +11,7 @@ from innvestigate.utils.types import OptionalList, Tensor
 __all__ = [
     "to_list",
     "unpack_singleton",
+    "apply_mask",
     "BatchSequence",
     "TargetAugmentedSequence",
     "preprocess_images",
@@ -42,6 +43,21 @@ def unpack_singleton(x: OptionalList[T]) -> OptionalList[T]:
     if isinstance(x, list) and len(x) == 1:
         return x[0]
     return x
+
+
+def apply_mask(Xs: List[T], mask: List[bool]) -> List[T]:
+    """Apply mask to list `Xs`, keeping only the elements for which
+    mask is True.
+
+    :param Xs: List to be masked.
+    :type Xs: List[T]
+    :param mask: Mask applied to `Xs`. If True, corresponding entry in `Xs` is kept.
+    :type mask: List[bool]
+    :return: Masked list.
+    :rtype: List[T]
+    """
+    assert len(Xs) == len(mask)
+    return [x for x, keep in zip(Xs, mask) if keep]
 
 
 ###############################################################################
