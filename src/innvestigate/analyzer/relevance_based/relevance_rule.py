@@ -62,7 +62,6 @@ class ZRule(igraph.ReverseMappingBase):
         Rs: List[Tensor],
         _reverse_state,
     ) -> List[Tensor]:
-        grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
@@ -70,9 +69,9 @@ class ZRule(igraph.ReverseMappingBase):
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
 class ZIgnoreBiasRule(ZRule):
@@ -106,7 +105,6 @@ class EpsilonRule(igraph.ReverseMappingBase):
         Rs: List[Tensor],
         _reverse_state: Dict,
     ):
-        grad = ilayers.GradientWRT(len(Xs))
         # The epsilon rule aligns epsilon with the (extended) sign:
         # 0 is considered to be positive
         prepare_div = klayers.Lambda(
@@ -122,9 +120,9 @@ class EpsilonRule(igraph.ReverseMappingBase):
         tmp = [ilayers.Divide()([a, prepare_div(b)]) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
 class EpsilonIgnoreBiasRule(EpsilonRule):
@@ -158,7 +156,6 @@ class WSquareRule(igraph.ReverseMappingBase):
         Rs: List[Tensor],
         _reverse_state: Dict,
     ) -> List[Tensor]:
-        grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
         Ys = ikeras.apply(self._layer_wo_act_b, Xs)
 
@@ -168,8 +165,8 @@ class WSquareRule(igraph.ReverseMappingBase):
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.
-        tmp = iutils.to_list(grad(Xs + Ys + tmp))
-        return tmp
+        grads = ibackend.gradients(Xs, Ys, tmp)
+        return grads
 
 
 class FlatRule(WSquareRule):
@@ -262,7 +259,6 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
         _reverse_state: Dict,
     ):
         # this method is correct, but wasteful
-        grad = ilayers.GradientWRT(len(Xs))
         times_alpha = klayers.Lambda(lambda x: x * self._alpha)
         times_beta = klayers.Lambda(lambda x: x * self._beta)
         keep_positives = klayers.Lambda(
@@ -281,11 +277,11 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
             tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
-            tmp1 = iutils.to_list(grad(X1 + Z1 + tmp))
-            tmp2 = iutils.to_list(grad(X2 + Z2 + tmp))
+            grads1 = ibackend.gradients(X1, Z1, tmp)
+            grads2 = ibackend.gradients(X2, Z2, tmp)
             # Re-weight relevance with the input values.
-            tmp1 = [klayers.Multiply()([a, b]) for a, b in zip(X1, tmp1)]
-            tmp2 = [klayers.Multiply()([a, b]) for a, b in zip(X2, tmp2)]
+            tmp1 = [klayers.Multiply()([a, b]) for a, b in zip(X1, grads1)]
+            tmp2 = [klayers.Multiply()([a, b]) for a, b in zip(X2, grads2)]
             # combine and return
             return [klayers.Add()([a, b]) for a, b in zip(tmp1, tmp2)]
 
@@ -398,7 +394,6 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
         _reverse_state: Dict,
     ):
         # this method is correct, but wasteful
-        grad = ilayers.GradientWRT(len(Xs))
         times_alpha0 = klayers.Lambda(lambda x: x * self._alpha[0])
         # times_alpha1 = klayers.Lambda(lambda x: x * self._alpha[1]) # unused
         times_beta0 = klayers.Lambda(lambda x: x * self._beta[0])
@@ -416,10 +411,9 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
             tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
-            tmp = iutils.to_list(grad(X + Zs + tmp))
+            grads = ibackend.gradients(X, Zs, tmp)
             # Re-weight relevance with the input values.
-            tmp = [klayers.Multiply()([a, b]) for a, b in zip(X, tmp)]
-            return tmp
+            return [klayers.Multiply()([a, b]) for a, b in zip(X, grads)]
 
         # Distinguish postive and negative inputs.
         Xs_pos = ikeras.apply(keep_positives, Xs)
@@ -513,7 +507,6 @@ class BoundedRule(igraph.ReverseMappingBase):
 
     # TODO: clean up this implementation and add more documentation
     def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
-        grad = ilayers.GradientWRT(len(Xs))
         to_low = klayers.Lambda(lambda x: x * 0 + self._low)
         to_high = klayers.Lambda(lambda x: x * 0 + self._high)
 
@@ -531,20 +524,20 @@ class BoundedRule(igraph.ReverseMappingBase):
         # Divide relevances with the value.
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
-        tmp_a = iutils.to_list(grad(Xs + A + tmp))
-        tmp_b = iutils.to_list(grad(low + B + tmp))
-        tmp_c = iutils.to_list(grad(high + C + tmp))
+        grads_a = ibackend.gradients(Xs, A, tmp)
+        grads_b = ibackend.gradients(low, B, tmp)
+        grads_c = ibackend.gradients(high, C, tmp)
 
-        tmp_a = [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp_a)]
-        tmp_b = [klayers.Multiply()([a, b]) for a, b in zip(low, tmp_b)]
-        tmp_c = [klayers.Multiply()([a, b]) for a, b in zip(high, tmp_c)]
+        tmp_a = [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads_a)]
+        tmp_b = [klayers.Multiply()([a, b]) for a, b in zip(low, grads_b)]
+        tmp_c = [klayers.Multiply()([a, b]) for a, b in zip(high, grads_c)]
 
-        tmp = [
+        ret = [
             klayers.Subtract()([a, klayers.Add()([b, c])])
             for a, b, c in zip(tmp_a, tmp_b, tmp_c)
         ]
 
-        return tmp
+        return ret
 
 
 class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
@@ -590,8 +583,6 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
         )
 
     def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
-        grad = ilayers.GradientWRT(len(Xs))
-
         # TODO: assert all inputs are positive, instead of only keeping the positives.
         # keep_positives = klayers.Lambda(
         #     lambda x: x * kbackend.cast(kbackend.greater(x, 0), kbackend.floatx())
@@ -604,6 +595,6 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]

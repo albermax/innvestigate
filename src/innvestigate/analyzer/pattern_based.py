@@ -83,10 +83,6 @@ class PatternNetReverseKernelLayer(igraph.ReverseMappingBase):
         act_Ys = ikeras.apply(self._act_layer, act_Xs)
         pattern_Ys = ikeras.apply(self._pattern_layer, Xs)
 
-        # Layers that apply the backward pass.
-        grad_act = ilayers.GradientWRT(len(act_Xs))
-        grad_pattern = ilayers.GradientWRT(len(Xs))
-
         # First step: propagate through the activation layer.
         # Workaround for linear activations.
         linear_activations = [None, kactivations.get("linear")]
@@ -94,10 +90,10 @@ class PatternNetReverseKernelLayer(igraph.ReverseMappingBase):
             tmp = reversed_Ys
         else:
             # if linear activation this behaves strange
-            tmp = iutils.to_list(grad_act(act_Xs + act_Ys + reversed_Ys))
+            tmp = ibackend.gradients(act_Xs, act_Ys, reversed_Ys)
 
         # Second step: propagate through the pattern layer.
-        return grad_pattern(Xs + pattern_Ys + tmp)
+        return ibackend.gradients(Xs, pattern_Ys, tmp)
 
 
 class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):

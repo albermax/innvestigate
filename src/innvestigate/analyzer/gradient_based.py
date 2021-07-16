@@ -57,9 +57,7 @@ class BaselineGradient(AnalyzerNetworkBase):
         tensors_to_analyze = [
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
-        ret = iutils.to_list(
-            ilayers.Gradient()(tensors_to_analyze + [model.outputs[0]])
-        )
+        ret = iutils.to_list(kbackend.gradients(model.outputs[0], tensors_to_analyze))
 
         if self._postprocess == "abs":
             ret = ilayers.Abs()(ret)
@@ -186,7 +184,7 @@ class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
 
         # Apply gradient of forward pass without relus.
         Ys_wo_relu = ikeras.apply(self._layer_wo_relu, Xs)
-        return ilayers.GradientWRT(len(Xs))(Xs + Ys_wo_relu + reversed_Ys)
+        return ibackend.gradients(Xs, Ys_wo_relu, reversed_Ys)
 
 
 class Deconvnet(ReverseAnalyzerBase):
@@ -226,7 +224,7 @@ def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
     reversed_Ys = ikeras.apply(activation, reversed_Ys)
 
     # Apply gradient of forward pass.
-    return ilayers.GradientWRT(len(Xs))(Xs + Ys + reversed_Ys)
+    return ibackend.gradients(Xs, Ys, reversed_Ys)
 
 
 class GuidedBackprop(ReverseAnalyzerBase):

@@ -137,7 +137,7 @@ class BaselineLRPZ(AnalyzerNetworkBase):
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
         gradients = iutils.to_list(
-            ilayers.Gradient()(tensors_to_analyze + [model.outputs[0]])
+            kbackend.gradients(model.outputs[0], tensors_to_analyze)
         )
         return [
             klayers.Multiply()([i, g]) for i, g in zip(tensors_to_analyze, gradients)
@@ -280,7 +280,6 @@ class AddReverseLayer(igraph.ReverseMappingBase):
         # which corresponds to the "weights" of the layer.
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
-        grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
@@ -288,9 +287,9 @@ class AddReverseLayer(igraph.ReverseMappingBase):
 
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
 class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
@@ -313,7 +312,6 @@ class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
         # which corresponds to the "weights" of the layer.
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
-        grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
@@ -321,9 +319,9 @@ class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
 
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
 class LRP(ReverseAnalyzerBase):

@@ -21,22 +21,12 @@ __all__ = [
 
 
 def gradients(
-    Xs: OptionalList[Tensor],
-    Ys: OptionalList[Tensor],
-    known_Ys: List[Tensor],
+    Xs: OptionalList[Tensor], Ys: OptionalList[Tensor], known_Ys: OptionalList[Tensor]
 ) -> List[Tensor]:
-    """Partial derivatives
-
-    Computes the partial derivatives between Ys and Xs and
-    using the gradients for Ys known_Ys.
-
-    :param Xs: List of input tensors.
-    :param Ys: List of output tensors that depend on Xs.
-    :param known_Ys: Gradients for Ys.
-    :return: Gradients for Xs given known_Ys
-    """
-    grads: List[Tensor] = tf.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
-    return grads
+    grad = tf.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
+    if grad is None:
+        raise TypeError("Gradient computation failed, returned None.")
+    return to_list(grad)
 
 
 def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool

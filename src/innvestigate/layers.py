@@ -17,8 +17,6 @@ __all__ = [
     "OnesLike",
     "AsFloatX",
     "FiniteCheck",
-    "Gradient",
-    "GradientWRT",
     "Min",
     "Max",
     "GreaterThanZero",
@@ -66,87 +64,6 @@ class FiniteCheck(klayers.Layer):
             kbackend.sum(ibackend.cast_to_floatx(kbackend.is_not_finite(tmp)))
             for tmp in iutils.to_list(x)
         ]
-
-
-###############################################################################
-
-
-class Gradient(klayers.Layer):
-    "Returns gradient of sum(output), expects inputs+[output,]."
-
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        inputs, output = x[:-1], x[-1]
-        return kbackend.gradients(kbackend.sum(output), inputs)  # type: ignore
-
-    def compute_output_shape(self, input_shapes: List[ShapeTuple]) -> List[ShapeTuple]:
-        return input_shapes[:-1]
-
-
-class GradientWRT(klayers.Layer):
-    """Returns gradient wrt to another layer and given gradient,
-    expects inputs+[output,]."""
-
-    # TODO: add documentation
-
-    def __init__(
-        self, n_inputs: int, mask: Optional[List[bool]] = None, **kwargs
-    ) -> None:
-        self.n_inputs = n_inputs
-        self.mask = mask
-        super().__init__(**kwargs)
-
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        assert isinstance(x, list)
-        Xs, tmp_Ys = x[: self.n_inputs], x[self.n_inputs :]
-        assert len(tmp_Ys) % 2 == 0
-        len_Ys = len(tmp_Ys) // 2
-        Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
-        ret = iK.gradients(Xs, Ys, known_Ys)
-        if self.mask is not None:
-            ret = [x for c, x in zip(self.mask, ret) if c]
-        self.__workaround__len_ret = len(ret)
-        return ret
-
-    def compute_output_shape(self, input_shapes: List[ShapeTuple]) -> List[ShapeTuple]:
-        if self.mask is None:
-            return input_shapes[: self.n_inputs]
-        else:
-            return [
-                shape
-                for shape, keep in zip(input_shapes[: self.n_inputs], self.mask)
-                if keep
-            ]
-
-    # TODO: remove once keras is fixed.
-    # this is a workaround for cases when
-    # wrapper and skip connections are used together.
-    # bring the fix into keras and remove once
-    # keras is patched.
-    def compute_mask(self, inputs, mask=None):
-        """Computes an output mask tensor.
-
-        # Arguments
-            inputs: Tensor or list of tensors.
-            mask: Tensor or list of tensors.
-
-        # Returns
-            None or a tensor (or list of tensors,
-                one per output tensor of the layer).
-        """
-        if not self.supports_masking:
-            if not isinstance(mask, list) or any(m is not None for m in mask):
-                raise TypeError(
-                    f"Layer {self.name} does not support masking, ",
-                    f"but was passed an input_mask: {str(mask)}",
-                )
-            # masking not explicitly supported: return None as mask
-
-            # this is the workaround for model.run_internal_graph.
-            # it is required that there as many masks as outputs:
-            return [None for _ in range(self.__workaround__len_ret)]
-        # if masking is explicitly supported, by default
-        # carry over the input mask
-        return mask
 
 
 ###############################################################################
