@@ -483,7 +483,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
 
     def meta_mapping(layer: Layer, reverse_state: Dict):
         # get bn params
-        weights = layer.weights[:]  # copy array
+        weights = layer.weights.copy()
         if layer.scale:
             gamma = weights.pop(0)
         else:
@@ -585,6 +585,9 @@ def trace_model_execution(
         # and outbound nodes of the model itself. We copy the model
         # so the passed model should not be affected from the
         # reapplication.
+
+        # For each layer in the model (in forward order),
+        # this list tracks the tensors going in and out of it
         executed_nodes: List[Tuple[Layer, List[Tensor], List[Tensor]]] = []
 
         # Monkeypatch the call function in all the used layer classes.
@@ -655,8 +658,15 @@ def trace_model_execution(
         executed_nodes = new_executed_nodes
     else:
         # Easy and safe way.
-        reverse_executed_nodes: List[Tuple[Layer, List[Tensor], List[Tensor]]] = [
-            (node.outbound_layer, node.input_tensors, node.output_tensors)
+        # For each layer in the model (in reverse order),
+        # this list tracks the tensors going in and out of it
+        reverse_executed_nodes: List[Tuple[Layer, List[Tensor], List[Tensor]]]
+        reverse_executed_nodes = [
+            (
+                node.outbound_layer,
+                iutils.to_list(node.input_tensors),
+                iutils.to_list(node.output_tensors),
+            )
             for depth in sorted(model._nodes_by_depth.keys())
             for node in model._nodes_by_depth[depth]
         ]
@@ -669,10 +679,10 @@ def trace_model_execution(
     # E.g. if a layer was also applied outside of the model. Then its
     # node list contains nodes that do not contribute to the model's output.
     # Those nodes are filtered here.
-    used_as_input = [x for x in outputs]
+    used_as_input = outputs.copy()
     tmp = []
     for l, Xs, Ys in reversed(executed_nodes):
-        if all([y in used_as_input for y in Ys]):
+        if all([Y in used_as_input for Y in Ys]):
             used_as_input += Xs
             tmp.append((l, Xs, Ys))
     executed_nodes = list(reversed(tmp))
@@ -1060,9 +1070,18 @@ def reverse_model(
 
     def add_reversed_tensors(nid, tensors_list, reversed_tensors_list) -> None:
         def add_reversed_tensor(i, X: Tensor, reversed_X: Tensor) -> None:
+            # reversed_X corresponds to the reverse-propagated relevance
+            # or the output (e.g. max neuron activation)
+
             # Do not keep tensors that should stop the mapping.
             if X in stop_mapping_at_tensors:  # type: ignore
                 return
+
+            if reversed_X is None:
+                raise TypeError(
+                    "Propagated relevance `reversed_X` is None, "
+                    "is expected to be Tensor."
+                )
 
             if X not in reversed_tensors:  # no duplicate entries for forward tensors
                 reversed_tensors[X] = {
@@ -1074,6 +1093,10 @@ def reverse_model(
             else:
                 tmp = reversed_tensors[X]  # tmp modifies reversed_tensors!
                 if tmp["tensor"] is not None:
+                    # This condition is met when more than one tensor
+                    # propagates relevance to tensor `X`.
+                    # In this case replace entry for tensor with tensors.
+                    # TODO: generalize to list of tensors
                     if tmp["tensors"] is not None:
                         raise Exception("Wrong order, tensors already aggregated!")
 
@@ -1091,12 +1114,14 @@ def reverse_model(
         tmp = reversed_tensors[tensor]
 
         if tmp["final_tensor"] is None:
-            if tmp["tensor"] is None:
+            if tmp["tensor"] is not None:
+                final_tensor = tmp["tensor"]
+            elif tmp["tensors"] is not None:
                 final_tensor = klayers.Add()(tmp["tensors"])
             else:
-                final_tensor = tmp["tensor"]
+                raise ValueError(f"No reverse tensors in ReverseTensorDict {tmp}.")
 
-            if project_bottleneck_tensors is not False:
+            if project_bottleneck_tensors is True:
                 if tensor in bottleneck_tensors:
                     project = ilayers.Project(project_bottleneck_tensors)
                     final_tensor = project(final_tensor)
@@ -1110,7 +1135,7 @@ def reverse_model(
         return tmp["final_tensor"]
 
     # Reverse the model #######################################################
-    _print("Reverse model: {}".format(model))
+    _print(f"Reverse model: {model}")
 
     # Create a list with nodes in reverse execution order.
     if execution_trace is None:
@@ -1118,12 +1143,11 @@ def reverse_model(
             model, reapply_on_copied_layers=reapply_on_copied_layers
         )
     layers, execution_list, outputs = execution_trace
-    len_execution_list = len(execution_list)
-    num_input_layers = len(
-        [_ for l, _, _ in execution_list if isinstance(l, klayers.InputLayer)]
-    )
-    len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
     reverse_execution_list = reversed(execution_list)
+
+    len_execution_list = len(execution_list)
+    num_input_layers = sum([isinstance(l, klayers.InputLayer) for l in layers])
+    len_execution_list_wo_inputs_layers = len_execution_list - num_input_layers
 
     # Initialize the reverse mapping functions.
     initialized_reverse_mappings: Dict[Layer, Callable]  # TODO: specify Callable
@@ -1202,19 +1226,19 @@ def reverse_model(
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
-            if not all([ys in reversed_tensors for ys in Ys]):
+            if not all([Y in reversed_tensors for Y in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
                 # Potentially this node is also not part of the
                 # reversed tensor set because it depends on a tensor
                 # that is listed in stop_mapping_at_tensors.
                 continue
-            reversed_Ys = [get_reversed_tensor(ys) for ys in Ys]
+            reversed_Ys = [get_reversed_tensor(Y) for Y in Ys]
             local_stop_mapping_at_tensors = [
-                x for x in Xs if x in stop_mapping_at_tensors
+                X for X in Xs if X in stop_mapping_at_tensors
             ]
 
-            _print("  [NID: {}] Reverse layer-node {}".format(nid, layer))
+            _print(f"[NID: {nid}] Reverse layer-node {layer}")
             reverse_mapping = initialized_reverse_mappings[layer]
             reversed_Xs = reverse_mapping(
                 Xs,
