@@ -161,7 +161,7 @@ class WSquareRule(igraph.ReverseMappingBase):
 
         # Compute the sum of the weights.
         ones = ilayers.OnesLike()(Xs)
-        Zs = iutils.to_list(self._layer_wo_act_b(ones))
+        Zs = [self._layer_wo_act_b(X) for X in ones]
         # Weight the incoming relevance.
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Redistribute the relevances along the gradient.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from builtins import range, zip
+from builtins import range
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -166,7 +166,7 @@ class _Map(klayers.Layer):
 
 class Identity(_Map):
     def _apply_map(self, X: Tensor) -> Tensor:
-        return kbackend.identity(X)
+        return tf.identity(X)
 
 
 class Abs(_Map):
@@ -428,6 +428,8 @@ class ExtractConv2DPatches(klayers.Layer):
 
 
 class RunningMeans(klayers.Layer):
+    """Layer used to keep track of a running mean."""
+
     def __init__(self, *args, **kwargs) -> None:
         self.stateful = True
         super().__init__(*args, **kwargs)
@@ -445,9 +447,10 @@ class RunningMeans(klayers.Layer):
 
     def call(self, x: List[Tensor]) -> List[Tensor]:
         def safe_divide(a, b):
-            return a / (
-                b + ibackend.cast_to_floatx(kbackend.equal(b, kbackend.constant(0))) * 1
+            b_safe = b + ibackend.cast_to_floatx(
+                kbackend.equal(b, kbackend.constant(0))
             )
+            return a / b_safe
 
         means, counts = x
 
