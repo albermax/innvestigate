@@ -455,17 +455,28 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 super().__init__(**kwargs)
 
             def build(self, input_shape):
+                def kernel_initializer(shape, dtype=None):
+                    if dtype is not None:
+                        warnings.warn(f"Ignore dtype {dtype} as bias type.")
+                    return self._kernel_to_be
+
                 self.kernel = self.add_weight(
                     name="kernel",
                     shape=kbackend.int_shape(self._kernel_to_be),
-                    initializer=lambda a, b=None: self._kernel_to_be,
+                    initializer=kernel_initializer,
                     trainable=False,
                 )
                 if self.use_bias:
+
+                    def bias_initializer(shape, dtype=None):
+                        if dtype is not None:
+                            warnings.warn(f"Ignore dtype {dtype} as bias type.")
+                        return self._bias_to_be
+
                     self.bias = self.add_weight(
                         name="bias",
                         shape=kbackend.int_shape(self._bias_to_be),
-                        initializer=lambda a, b=None: self._bias_to_be,
+                        initializer=bias_initializer,
                         trainable=False,
                     )
                 super().build(input_shape)
