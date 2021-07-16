@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-import tensorflow.keras.backend as kbackend
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
-import innvestigate.utils.keras as ikeras
 import innvestigate.utils.keras.backend as ibackend
 import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
@@ -16,6 +14,7 @@ from innvestigate.utils.types import (
     Layer,
     Model,
     OptionalList,
+    ReverseTensorDict,
     Tensor,
 )
 
@@ -235,7 +234,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         model: Model,
         stop_analysis_at_tensors: List[Tensor] = None,
         return_all_reversed_tensors=False,
-    ):
+    ) -> Tuple[List[Tensor], Optional[Dict[Tensor, ReverseTensorDict]]]:
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
@@ -263,23 +262,25 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             or self._reverse_check_finite
             or self._reverse_keep_tensors
         )
-        ret = self._reverse_model(
+
+        # if return_all_reversed_tensors is False,
+        # reversed_tensors will be None
+        reversed_input_tensors, reversed_tensors = self._reverse_model(
             model,
             stop_analysis_at_tensors=stop_analysis_at_tensors,
             return_all_reversed_tensors=return_all_reversed_tensors,
         )
+        ret = self._postprocess_analysis(reversed_input_tensors)
 
         if return_all_reversed_tensors:
-            ret = (self._postprocess_analysis(ret[0]), ret[1])
-        else:
-            ret = self._postprocess_analysis(ret)
+            if reversed_tensors is None:
+                raise TypeError("Expected reversed_tensors, got None.")
 
-        if return_all_reversed_tensors:
             debug_tensors: List[Tensor]
             tmp: List[Tensor]
 
             debug_tensors = []
-            values = list(ret[1].items())
+            values = reversed_tensors.values()
             mapping = {i: v["id"] for i, v in enumerate(values)}
             tensors = [v["final_tensor"] for v in values]
             self._reverse_tensors_mapping = mapping
@@ -314,7 +315,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 )
                 debug_tensors += tensors
 
-            ret = (ret[0], debug_tensors)
+            return ret, debug_tensors
         return ret
 
     def _handle_debug_output(self, debug_values):

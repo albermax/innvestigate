@@ -1011,10 +1011,13 @@ def reverse_model(
         Tuple[List[Layer], List[Tuple[Layer, List[Tensor], List[Tensor]]], List[Tensor]]
     ] = None,
     reapply_on_copied_layers: bool = False,
-) -> Union[List[Tensor], Tuple[List[Tensor], Dict[Tensor, ReverseTensorDict]]]:
+) -> Tuple[List[Tensor], Optional[Dict[Tensor, ReverseTensorDict]]]:
     """
     Reverses a Keras model based on the given reverse functions.
-    It returns the reverted tensors for the according model inputs.
+    Returns two values:
+    1. the reverted tensors for the according model inputs.
+    2. If `return_all_reversed_tensors` is true, a dictionary of all reversed tensors,
+        otherwise None.
 
     :param model: A Keras model.
     :param reverse_mappings: Either a callable that matches layers to
@@ -1097,24 +1100,11 @@ def reverse_model(
             if X not in reversed_tensors:  # no duplicate entries for forward tensors
                 reversed_tensors[X] = {
                     "id": (nid, i),
-                    "tensor": reversed_X,
-                    "tensors": None,
+                    "tensors": [reversed_X],
                     "final_tensor": None,
                 }
-            else:
-                tmp = reversed_tensors[X]  # tmp modifies reversed_tensors!
-                if tmp["tensor"] is not None:
-                    # This condition is met when more than one tensor
-                    # propagates relevance to tensor `X`.
-                    # In this case replace entry for tensor with tensors.
-                    # TODO: generalize to list of tensors
-                    if tmp["tensors"] is not None:
-                        raise Exception("Wrong order, tensors already aggregated!")
-
-                    tmp["tensors"] = [tmp["tensor"], reversed_X]
-                    tmp["tensor"] = None
-                else:
-                    raise Exception("Error during reverse tensor aggeregation.")
+            else:  # more than one tensor propagating relevance to X
+                reversed_tensors[X]["tensors"].append(reversed_X)
 
         tmp = zip(tensors_list, reversed_tensors_list)
         for i, (X, reversed_X) in enumerate(tmp):
@@ -1125,12 +1115,10 @@ def reverse_model(
         tmp = reversed_tensors[tensor]
 
         if tmp["final_tensor"] is None:
-            if tmp["tensor"] is not None:
-                final_tensor = tmp["tensor"]
-            elif tmp["tensors"] is not None:
-                final_tensor = klayers.Add()(tmp["tensors"])
+            if len(tmp["tensors"]) == 1:
+                final_tensor = tmp["tensors"][0]
             else:
-                raise ValueError(f"No reverse tensors in ReverseTensorDict {tmp}.")
+                final_tensor = klayers.Add()(tmp["tensors"])
 
             if project_bottleneck_tensors is True:
                 if tensor in bottleneck_tensors:
@@ -1274,4 +1262,4 @@ def reverse_model(
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
     else:
-        return reversed_input_tensors
+        return reversed_input_tensors, None
