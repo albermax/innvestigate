@@ -59,11 +59,12 @@ class AsFloatX(klayers.Layer):
 
 
 class FiniteCheck(klayers.Layer):
-    def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
+    def call(self, Xs: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
         return [
-            kbackend.sum(ibackend.cast_to_floatx(kbackend.is_not_finite(tmp)))
-            for tmp in iutils.to_list(x)
+            kbackend.sum(ibackend.cast_to_floatx(ibackend.is_not_finite(X)))
+            for X in iutils.to_list(Xs)
         ]
+
 
 
 ###############################################################################
