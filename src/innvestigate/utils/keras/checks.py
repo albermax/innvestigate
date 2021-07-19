@@ -3,11 +3,12 @@ e.g. if it is an input or a pooling layer"""
 
 from __future__ import annotations
 
-import tensorflow.keras as keras
+from typing import Set
 import tensorflow.keras.layers as klayers
+import tensorflow.python.keras as keras
 import tensorflow.python.keras.engine.network as knetwork
 
-import innvestigate.utils.keras.graph as igraph
+import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer
 
 __all__ = [
@@ -270,6 +271,16 @@ def is_max_pooling(layer: Layer) -> bool:
     )
     return isinstance(layer, maxpooling_layers)
 
+def get_input_layers(layer: Layer) -> Set[Layer]:
+    """Returns all layers that created this layer's inputs."""
+    ret = set()
+
+    for node_index in range(len(layer._inbound_nodes)):
+        Xs = iutils.to_list(layer.get_input_at(node_index))
+        for X in Xs:
+            ret.add(X._keras_history[0])
+
+    return ret
 
 def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     """Checks if layer is an input layer."""
@@ -278,7 +289,7 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     # Note: In the sequential api the Sequential object
     # adds the Input layer if the user does not.
 
-    layer_inputs = igraph.get_input_layers(layer)
+    layer_inputs = get_input_layers(layer)
     # We ignore certain layers, that do not modify
     # the data content.
     # TODO: update this list!
@@ -291,7 +302,7 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
         tmp = set()
         for layer_input in layer_inputs:
             if ignore_reshape_layers and isinstance(layer_input, ignored_layers):
-                tmp.update(igraph.get_input_layers(layer_input))
+                tmp.update(get_input_layers(layer_input))
             else:
                 tmp.add(layer_input)
         layer_inputs = tmp

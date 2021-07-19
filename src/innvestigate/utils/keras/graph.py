@@ -3,8 +3,8 @@ from __future__ import annotations
 import inspect
 import warnings
 from abc import ABCMeta, abstractmethod
-from builtins import range, zip
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from builtins import zip
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -51,19 +51,6 @@ def get_kernel(layer: Layer) -> Tensor:
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
     return ret[0]
-
-
-def get_input_layers(layer: Layer) -> Set[Layer]:
-    """Returns all layers that created this layer's inputs."""
-    ret = set()
-
-    for node_index in range(len(layer._inbound_nodes)):
-        Xs = iutils.to_list(layer.get_input_at(node_index))
-        for X in Xs:
-            ret.add(X._keras_history[0])
-
-    return ret
-
 
 ###############################################################################
 
