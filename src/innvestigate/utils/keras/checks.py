@@ -4,9 +4,10 @@ e.g. if it is an input or a pooling layer"""
 from __future__ import annotations
 
 from typing import Set
-import tensorflow.keras.layers as klayers
-import tensorflow.python.keras as keras
+
+import tensorflow.keras as keras
 import tensorflow.python.keras.engine.network as knetwork
+import tensorflow.keras.layers as klayers
 
 import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer
@@ -271,6 +272,7 @@ def is_max_pooling(layer: Layer) -> bool:
     )
     return isinstance(layer, maxpooling_layers)
 
+
 def get_input_layers(layer: Layer) -> Set[Layer]:
     """Returns all layers that created this layer's inputs."""
     ret = set()
@@ -281,6 +283,7 @@ def get_input_layers(layer: Layer) -> Set[Layer]:
             ret.add(X._keras_history[0])
 
     return ret
+
 
 def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     """Checks if layer is an input layer."""

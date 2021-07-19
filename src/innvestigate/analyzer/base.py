@@ -231,7 +231,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         :param class_name: The analyzer's class name.
         :param state: The analyzer's state.
         """
-        # TODO: do in a smarter way!
+        # TODO: do in a smarter way without cyclic imports
         cls = getattr(innvestigate.analyzer, class_name)
 
         kwargs = cls._state_to_kwargs(state)

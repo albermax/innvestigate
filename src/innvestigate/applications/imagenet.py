@@ -23,7 +23,7 @@ from builtins import range
 import numpy as np
 import tensorflow.keras.applications as kapplications
 import tensorflow.keras.backend as kbackend
-import tensorflow.python.keras.utils as kutils
+import tensorflow.keras.utils as kutils
 
 import innvestigate.utils.keras.graph as igraph
 

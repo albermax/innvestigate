@@ -281,7 +281,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
             debug_tensors = []
             values = reversed_tensors.values()
-            mapping = {i: v["id"] for i, v in enumerate(values)}
+            mapping = {i: v["nid"] for i, v in enumerate(values)}
             tensors = [v["final_tensor"] for v in values]
             self._reverse_tensors_mapping = mapping
 

@@ -10,13 +10,14 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 import tensorflow.keras.optimizers as koptimizers
-import tensorflow.python.keras.utils as kutils
+import tensorflow.keras.utils as kutils
 
 import innvestigate.analyzer.pattern_based
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.checks as ichecks
 import innvestigate.utils.keras.graph as igraph
+from innvestigate.utils.types import List, Tensor
 
 __all__ = [
     "get_active_neuron_io",
@@ -165,14 +166,12 @@ class BasePattern(metaclass=ABCMeta):
         Creates statistics while the PatternComputer passes the
         dataset once.
         """
-        pass
 
     @abstractmethod
     def compute_pattern(self):
         """
         Computes the pattern after computing the statistics.
         """
-        pass
 
 
 class DummyPattern(BasePattern):

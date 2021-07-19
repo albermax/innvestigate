@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Type
 
-from innvestigate.analyzer.base import AnalyzerBase, NotAnalyzeableModelException
+from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
     BaselineGradient,
@@ -37,22 +37,14 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPZPlus,
     LRPZPlusFast,
 )
-from innvestigate.analyzer.wrapper import (
-    AugmentReduceBase,
-    GaussianSmoother,
-    PathIntegrator,
-    WrapperBase,
-)
+from innvestigate.analyzer.wrapper import AugmentReduceBase  # noqa
+from innvestigate.analyzer.wrapper import GaussianSmoother  # noqa
+from innvestigate.analyzer.wrapper import PathIntegrator  # noqa
+from innvestigate.analyzer.wrapper import WrapperBase  # noqa
 from innvestigate.utils.types import Model
 
-# Disable pyflaks warnings:
-assert NotAnalyzeableModelException
+# Silence flake8
 assert BaselineLRPZ
-assert WrapperBase
-assert AugmentReduceBase
-assert GaussianSmoother
-assert PathIntegrator
-
 
 analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Utility.

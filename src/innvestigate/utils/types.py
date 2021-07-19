@@ -85,10 +85,10 @@ class ReverseTensorDict(TypedDict):
     * `id`:  tuple of the key-layers Node-ID (the Python object ID)
     and its order in the model reversal.
     * `tensors`: correspond to the tensor(s) propagating relevance to the key-layer.
-    * `final_tensor`: sum of all `tensors`. Type-annotated as Optional as it is only computed
-    at the end of the model reversal.
+    * `final_tensor`: sum of all `tensors`. Type-annotated as Optional as it is
+    only computed at the end of the model reversal.
     """
 
-    id: Tuple[int, int]
+    nid: Tuple[int, int]
     tensors: List[Tensor]
     final_tensor: Optional[Tensor]

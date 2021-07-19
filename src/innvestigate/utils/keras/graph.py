@@ -1,3 +1,4 @@
+"""Low-level operations on Keras graph."""
 from __future__ import annotations
 
 import inspect
@@ -51,6 +52,7 @@ def get_kernel(layer: Layer) -> Tensor:
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
     return ret[0]
+
 
 ###############################################################################
 
@@ -442,7 +444,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 super().__init__(**kwargs)
 
             def build(self, input_shape):
-                def kernel_initializer(shape, dtype=None):
+                def kernel_initializer(_shape, dtype=None):
                     if dtype is not None:
                         warnings.warn(f"Ignore dtype {dtype} as bias type.")
                     return self._kernel_to_be
@@ -455,7 +457,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 )
                 if self.use_bias:
 
-                    def bias_initializer(shape, dtype=None):
+                    def bias_initializer(_shape, dtype=None):
                         if dtype is not None:
                             warnings.warn(f"Ignore dtype {dtype} as bias type.")
                         return self._bias_to_be
@@ -1086,7 +1088,7 @@ def reverse_model(
 
             if X not in reversed_tensors:  # no duplicate entries for forward tensors
                 reversed_tensors[X] = {
-                    "id": (nid, i),
+                    "nid": (nid, i),
                     "tensors": [reversed_X],
                     "final_tensor": None,
                 }
@@ -1191,7 +1193,8 @@ def reverse_model(
                 # Nothing meta here
                 reverse_mapping = meta_reverse_mapping
 
-        initialized_reverse_mappings[layer] = reverse_mapping  # type: ignore # TODO: add annotations
+        # TODO: add annotations
+        initialized_reverse_mappings[layer] = reverse_mapping  # type: ignore
 
     if project_bottleneck_tensors:
         bottleneck_tensors.update(

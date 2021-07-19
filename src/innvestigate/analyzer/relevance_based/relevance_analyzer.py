@@ -514,15 +514,10 @@ class LRP(ReverseAnalyzerBase):
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
             return reversed_Ys
-        else:
-            # This branch covers:
-            # MaxPooling
-            # Max
-            # Flatten
-            # Reshape
-            # Concatenate
-            # Cropping
-            return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
+
+        # This branch covers:
+        # MaxPooling, Max, Flatten, Reshape, Concatenate, Cropping
+        return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
     ######################################
     # End of Rule Selection Business. ####

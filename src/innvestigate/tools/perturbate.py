@@ -6,7 +6,7 @@ from builtins import range
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
-import tensorflow.python.keras.utils as kutils
+import tensorflow.keras.utils as kutils
 
 import innvestigate.utils as iutils
 
@@ -333,8 +333,7 @@ class PerturbationAnalysis:
         x_perturbated = self.perturbation.perturbate_on_batch(x, analysis)
         if return_analysis:
             return x_perturbated, analysis
-        else:
-            return x_perturbated
+        return x_perturbated
 
     def evaluate_on_batch(self, x, y, analysis=None, sample_weight=None):
         """

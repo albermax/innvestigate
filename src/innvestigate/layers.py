@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
-import tensorflow.python.keras.utils as kutils
+import tensorflow.keras.utils as kutils
 
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.backend as ibackend
@@ -80,7 +80,7 @@ class _Reduce(klayers.Layer):
     ) -> None:
         self.axis = axis
         self.keepdims = keepdims
-        super(_Reduce, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def call(self, x: OptionalList[Tensor]) -> Tensor:
         return self._apply_reduce(x, axis=self.axis, keepdims=self.keepdims)
@@ -89,8 +89,7 @@ class _Reduce(klayers.Layer):
         if self.axis is None:
             if self.keepdims is False:
                 return (1,)
-            else:
-                return tuple(np.ones_like(input_shape))  # type: ignore
+            return tuple(np.ones_like(input_shape))  # type: ignore
         else:
             axes = np.arange(len(input_shape))
             if self.keepdims is False:
@@ -253,14 +252,12 @@ class Transpose(klayers.Layer):
     def call(self, x: Tensor) -> Tensor:
         if self._axes is None:
             return kbackend.transpose(x)
-        else:
-            return kbackend.permute_dimensions(x, self._axes)
+        return kbackend.permute_dimensions(x, self._axes)
 
     def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
         if self._axes is None:
             return input_shape[::-1]  # invert input shape
-        else:
-            return tuple(np.asarray(input_shape)[list(self._axes)])
+        return tuple(np.asarray(input_shape)[list(self._axes)])
 
 
 class Dot(klayers.Layer):

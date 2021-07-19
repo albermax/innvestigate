@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
@@ -95,7 +94,7 @@ class Gradient(ReverseAnalyzerBase):
     """
 
     def __init__(self, model, postprocess: Optional[str] = None, **kwargs):
-        super(Gradient, self).__init__(model, **kwargs)
+        super().__init__(model, **kwargs)
 
         if postprocess not in [None, "abs", "square"]:
             raise ValueError(

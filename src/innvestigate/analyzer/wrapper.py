@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from builtins import zip
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
