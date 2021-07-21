@@ -42,15 +42,18 @@ class Random(AnalyzerNetworkBase):
 
         super().__init__(model, **kwargs)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=None):
+    def _create_analysis(self, model, stop_analysis_at_tensors=None) -> List[Tensor]:
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
-        noise = ilayers.TestPhaseGaussianNoise(stddev=self._stddev)
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            X for X in iutils.to_list(model.inputs) if X not in stop_analysis_at_tensors
         ]
-        return [noise(x) for x in tensors_to_analyze]
+        tensors_with_noise = [
+            ibackend.add_gaussian_noise(X, stddev=self._stddev)
+            for X in tensors_to_analyze
+        ]
+        return tensors_with_noise
 
     def _get_state(self):
         state = super()._get_state()

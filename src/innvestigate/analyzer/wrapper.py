@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from builtins import zip
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -11,6 +11,7 @@ import tensorflow.keras.models as kmodels
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
+import innvestigate.utils.keras.backend as ibackend
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.utils.types import OptionalList, Tensor
@@ -224,10 +225,13 @@ class GaussianSmoother(AugmentReduceBase):
         super().__init__(subanalyzer, *args, **kwargs)
         self._noise_scale = noise_scale
 
-    def _augment(self, X):
-        tmp = super()._augment(X)
-        noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
-        return [noise(x) for x in tmp]
+    def _augment(self, X: OptionalList[Tensor]) -> List[Tensor]:
+        repeated_Xs = super()._augment(X)
+        noisy_Xs = [
+            ibackend.add_gaussian_noise(X, stddev=self._noise_scale)
+            for X in repeated_Xs
+        ]
+        return noisy_Xs
 
     def _get_state(self):
         state = super()._get_state()

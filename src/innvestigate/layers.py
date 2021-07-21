@@ -35,7 +35,6 @@ __all__ = [
     "Repeat",
     "Reshape",
     "MultiplyWithLinspace",
-    "TestPhaseGaussianNoise",
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
@@ -379,12 +378,6 @@ class MultiplyWithLinspace(klayers.Layer):
             + (max(self._n, input_shapes[self._axis]),)
             + input_shapes[self._axis + 1 :]
         )
-
-
-class TestPhaseGaussianNoise(klayers.GaussianNoise):
-    def call(self, inputs: Tensor) -> Tensor:
-        # Always add Gaussian noise!
-        return super().call(inputs, training=True)
 
 
 class ExtractConv2DPatches(klayers.Layer):

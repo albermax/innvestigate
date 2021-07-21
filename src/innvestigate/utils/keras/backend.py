@@ -1,9 +1,11 @@
+"""Utilities for the Keras backend."""
 from __future__ import annotations
 
 from typing import List
 
 import tensorflow as tf
 import tensorflow.keras.backend as kbackend
+from tensorflow.python.ops import array_ops
 
 from innvestigate.utils import to_list
 from innvestigate.utils.types import OptionalList, Tensor
@@ -14,6 +16,7 @@ __all__ = [
     "gradients",
     "cast_to_floatx",
     "is_not_finite",
+    "add_gaussian_noise",
     "extract_conv2d_patches",
     "gather",
     "gather_nd",
@@ -37,6 +40,13 @@ def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
 
 def cast_to_floatx(X: Tensor) -> Tensor:
     return tf.cast(X, dtype=kbackend.floatx())
+
+
+def add_gaussian_noise(X: Tensor, mean: float = 0.0, stddev: float = 1.0) -> Tensor:
+    """Add Gaussian noise to tensor `X`."""
+    return X + kbackend.random_normal(
+        shape=array_ops.shape(X), mean=mean, stddev=stddev, dtype=X.dtype
+    )
 
 
 def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> Tensor:
