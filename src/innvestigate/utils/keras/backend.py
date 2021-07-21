@@ -16,11 +16,15 @@ __all__ = [
     "gradients",
     "cast_to_floatx",
     "is_not_finite",
+    "safe_divide",
+    "count_non_zero",
     "add_gaussian_noise",
     "extract_conv2d_patches",
     "gather",
     "gather_nd",
 ]
+
+_EPS = kbackend.epsilon()
 
 
 def gradients(
@@ -40,6 +44,18 @@ def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
 
 def cast_to_floatx(X: Tensor) -> Tensor:
     return tf.cast(X, dtype=kbackend.floatx())
+
+
+def safe_divide(A: Tensor, B: Tensor, factor: float = _EPS) -> Tensor:
+    """Divide A by B, replacing all zeroes in B with `factor`."""
+    is_zero = cast_to_floatx(kbackend.equal(B, kbackend.constant(0)))
+    return A / (B + factor * is_zero)
+
+
+def count_non_zero(X: Tensor, axis, keepdims: bool) -> Tensor:
+    "Count non-zero elements in tensor."
+    non_zeros = cast_to_floatx(kbackend.not_equal(X, kbackend.constant(0)))
+    return kbackend.sum(non_zeros, axis=axis, keepdims=keepdims)
 
 
 def add_gaussian_noise(X: Tensor, mean: float = 0.0, stddev: float = 1.0) -> Tensor:

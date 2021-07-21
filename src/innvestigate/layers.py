@@ -139,13 +139,9 @@ class Mean(_Reduce):
 
 class CountNonZero(_Reduce):
     def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
+        self, X: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:
-        return kbackend.sum(
-            ibackend.cast_to_floatx(kbackend.not_equal(x, kbackend.constant(0))),
-            axis=axis,
-            keepdims=keepdims,
-        )
+        return ibackend.count_non_zero(X, axis=axis, keepdims=keepdims)
 
 
 ###############################################################################
@@ -288,15 +284,10 @@ class SafeDivide(klayers.Layer):
             factor = kbackend.epsilon()
         self._factor = factor
 
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
-
-        # replace 0 entries in b with self._factor
-        b_safe = b + self._factor * ibackend.cast_to_floatx(
-            kbackend.equal(b, kbackend.constant(0))
-        )
-
-        return a / b_safe
+    def call(self, inputs: List[Tensor]) -> Tensor:
+        assert len(inputs) == 2
+        a, b = inputs
+        return ibackend.safe_divide(a, b, factor=self._factor)
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
         return input_shapes[0]
