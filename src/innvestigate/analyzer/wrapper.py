@@ -289,17 +289,17 @@ class PathIntegrator(AugmentReduceBase):
     def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
         return self._keras_constant_inputs
 
-    def _compute_difference(self, X: List[Tensor]) -> List[Tensor]:
-        if self._keras_constant_inputs is None:
-            tmp = iutils.keras.broadcast_np_tensors_to_keras_tensors(
-                X, self._reference_inputs
+    def _compute_difference(self, Xs: List[Tensor]) -> List[Tensor]:
+        if len(self._keras_constant_inputs) == 0:
+            inputs = iutils.keras.broadcast_np_tensors_to_keras_tensors(
+                self._reference_inputs, Xs
             )
-            self._keras_set_constant_inputs(tmp)
+            self._keras_set_constant_inputs(inputs)
 
         # Type not Optional anymore as as `_keras_set_constant_inputs` has been called.
         reference_inputs: List[Tensor]
         reference_inputs = self._keras_get_constant_inputs()  # type: ignore
-        return [klayers.Subtract()([x, ri]) for x, ri in zip(X, reference_inputs)]
+        return [klayers.subtract([x, ri]) for x, ri in zip(Xs, reference_inputs)]
 
     def _augment(self, X):
         tmp = super()._augment(X)

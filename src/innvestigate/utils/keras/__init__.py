@@ -46,30 +46,30 @@ def apply(layer: Layer, inputs: OptionalList[Tensor]) -> List[Tensor]:
 
 
 def broadcast_np_tensors_to_keras_tensors(
-    keras_tensors: OptionalList[Tensor],
     np_tensors: Union[float, np.ndarray, List[np.ndarray]],
+    keras_tensors: OptionalList[Tensor],
 ) -> List[np.ndarray]:
     """Broadcasts numpy tensors to the shape of Keras tensors.
 
-    :param keras_tensors: The Keras tensors with the target shapes.
-    :type keras_tensors: OptionalList[Tensor]
     :param np_tensors: Numpy tensors that should be broadcasted.
     :type np_tensors: Union[np.ndarray, List[np.ndarray]]
+    :param keras_tensors: The Keras tensors with the target shapes.
+    :type keras_tensors: OptionalList[Tensor]
     :return: The broadcasted Numpy tensors.
     :rtype: List[np.ndarray]
     """
 
-    def none_to_one(tmp):
-        return [1 if x is None else x for x in tmp]
+    def none_to_one(shape: ShapeTuple):
+        return [1 if dim is None else dim for dim in shape]
 
     keras_tensors = iutils.to_list(keras_tensors)
 
     if isinstance(np_tensors, list):
         return [
-            np.broadcast_to(ri, none_to_one(kbackend.int_shape(x)))
-            for x, ri in zip(keras_tensors, np_tensors)
+            np.broadcast_to(n, none_to_one(kbackend.int_shape(k)))
+            for k, n in zip(keras_tensors, np_tensors)
         ]
     return [
-        np.broadcast_to(np_tensors, none_to_one(kbackend.int_shape(x)))
-        for x in keras_tensors
+        np.broadcast_to(np_tensors, none_to_one(kbackend.int_shape(k)))
+        for k in keras_tensors
     ]
