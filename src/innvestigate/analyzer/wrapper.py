@@ -33,6 +33,9 @@ class WrapperBase(AnalyzerBase):
     """
 
     def __init__(self, subanalyzer: AnalyzerBase, *args, **kwargs):
+        if not isinstance(subanalyzer, AnalyzerNetworkBase):
+            raise NotImplementedError("Keras-based subanalyzer required.")
+
         # To simplify serialization, additionaly passed models are popped
         # and the subanalyzer model is passed to `AnalyzerBase`.
         kwargs.pop("model", None)
@@ -40,6 +43,7 @@ class WrapperBase(AnalyzerBase):
 
         self._subanalyzer_name = subanalyzer.__class__.__name__
         self._subanalyzer = subanalyzer
+        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
