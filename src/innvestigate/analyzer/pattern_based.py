@@ -14,6 +14,7 @@ import innvestigate.utils.keras.checks as ichecks
 import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.base import OneEpochTrainerMixin
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
+from innvestigate.utils.types import Layer
 
 __all__ = [
     "PatternNet",
@@ -149,7 +150,7 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         else:
             kwargs["reverse_project_bottleneck_layers"] = True
 
-    def _get_pattern_for_layer(self, layer, _state):
+    def _get_pattern_for_layer(self, layer: Layer, _state):
         layers = [
             l
             for l in igraph.get_model_layers(self._model)

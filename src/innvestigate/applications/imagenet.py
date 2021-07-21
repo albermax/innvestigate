@@ -77,7 +77,7 @@ def _get_patterns_info(netname, pattern_type):
 
 def _prepare_keras_net(
     netname,
-    clazz,
+    cls,
     image_shape,
     preprocess_f,
     preprocess_mode=None,
@@ -97,7 +97,7 @@ def _prepare_keras_net(
     if load_weights is True:
         weights = "imagenet"
 
-    model = clazz(weights=weights, input_shape=tuple(net["input_shape"][1:]))
+    model = cls(weights=weights, input_shape=tuple(net["input_shape"][1:]))
     net["model"] = model
 
     net["in"] = model.inputs

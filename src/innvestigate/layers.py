@@ -66,7 +66,6 @@ class FiniteCheck(klayers.Layer):
         ]
 
 
-
 ###############################################################################
 
 
@@ -131,6 +130,8 @@ class Sum(_Reduce):
 
 
 class Mean(_Reduce):
+    """Take mean of Tensor along axis."""
+
     def _apply_reduce(
         self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:
@@ -261,8 +262,9 @@ class Transpose(klayers.Layer):
 
 
 class Dot(klayers.Layer):
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
+    def call(self, inputs: List[Tensor]) -> Tensor:
+        assert len(inputs) == 2
+        a, b = inputs
         return kbackend.dot(a, b)
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
@@ -270,8 +272,9 @@ class Dot(klayers.Layer):
 
 
 class Divide(klayers.Layer):
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
+    def call(self, inputs: List[Tensor]) -> Tensor:
+        assert len(inputs) == 2
+        a, b = inputs
         return a / b
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
@@ -304,13 +307,15 @@ class SafeDivide(klayers.Layer):
 
 
 class Repeat(klayers.Layer):
+    """Layer that repeats tensor n-times along axis specified on init."""
+
     def __init__(self, n: int, axis, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._n = n
         self._axis = axis
 
-    def call(self, x: Tensor) -> Tensor:
-        return kbackend.repeat_elements(x, self._n, self._axis)
+    def call(self, X: Tensor) -> Tensor:
+        return kbackend.repeat_elements(X, self._n, self._axis)
 
     def compute_output_shape(
         self, input_shapes: OptionalList[ShapeTuple]
@@ -333,15 +338,20 @@ class Repeat(klayers.Layer):
 
 
 class Reshape(klayers.Layer):
-    def __init__(self, shape: Iterable[int], *args, **kwargs):
+    """Layer that reshapes tensor to the shape specified on init."""
+
+    def __init__(self, shape: ShapeTuple, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
         self._shape = shape
 
-    def call(self, x: Tensor) -> Tensor:
-        return kbackend.reshape(x, self._shape)
+    def call(self, X: Tensor) -> Tensor:
+        return kbackend.reshape(X, self._shape)
 
     def compute_output_shape(self, _input_shapes) -> ShapeTuple:
-        return tuple(x if x >= 0 else None for x in self._shape)
+        return tuple(
+            dim if (dim is not None and dim >= 0) else None for dim in self._shape
+        )
 
 
 class MultiplyWithLinspace(klayers.Layer):

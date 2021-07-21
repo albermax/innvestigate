@@ -12,11 +12,12 @@ import tensorflow.keras.models as kmodels
 import tensorflow.keras.optimizers as koptimizers
 import tensorflow.keras.utils as kutils
 
-import innvestigate.analyzer.pattern_based
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
+import innvestigate.utils.keras.backend as ibackend
 import innvestigate.utils.keras.checks as ichecks
 import innvestigate.utils.keras.graph as igraph
+from innvestigate.analyzer import pattern_based
 from innvestigate.utils.types import List, Tensor
 
 __all__ = [
@@ -345,11 +346,8 @@ class PatternComputer(object):
     ):
         self.model = model
 
-        supported_layers = (
-            innvestigate.analyzer.pattern_based.SUPPORTED_LAYER_PATTERNNET
-        )
         for layer in self.model.layers:
-            if not isinstance(layer, supported_layers):
+            if not isinstance(layer, pattern_based.SUPPORTED_LAYER_PATTERNNET):
                 raise Exception("Model contains not supported layer: %s" % layer)
 
         pattern_types = iutils.to_list(pattern_type)

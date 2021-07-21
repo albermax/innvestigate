@@ -117,6 +117,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reversed_Ys: OptionalList[Tensor],
         reverse_state: Dict,
     ):
+        """Returns masked gradient."""
         mask = [X not in reverse_state["stop_mapping_at_tensors"] for X in Xs]
         grad = ibackend.gradients(Xs, Ys, reversed_Ys)
         return iutils.apply_mask(grad, mask)

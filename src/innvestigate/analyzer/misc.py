@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from typing import List
+
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
+import innvestigate.utils.keras.backend as ibackend
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.utils.types import Tensor
 
 __all__ = ["Random", "Input"]
 
 
 class Input(AnalyzerNetworkBase):
-    """Returns the input.
-
-    Returns the input as analysis.
+    """Returns the input as analysis.
 
     :param model: A Keras model.
     """
@@ -29,9 +31,7 @@ class Input(AnalyzerNetworkBase):
 
 
 class Random(AnalyzerNetworkBase):
-    """Returns noise.
-
-    Returns the Gaussian noise as analysis.
+    """Returns the input with added zero-mean Gaussian noise as analysis.
 
     :param model: A Keras model.
     :param stddev: The standard deviation of the noise.
