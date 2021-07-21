@@ -120,7 +120,7 @@ def _prepare_keras_net(
         except KeyError:
             warnings.warn("There are no patterns for network '%s'." % netname)
         else:
-            patterns_path = kutils.data_utils.get_file(
+            patterns_path = kutils.get_file(
                 pattern_info["file_name"],
                 pattern_info["url"],
                 cache_subdir="innvestigate_patterns",
