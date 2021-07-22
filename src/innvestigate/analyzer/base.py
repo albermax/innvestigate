@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABCMeta, abstractmethod
 from builtins import zip
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -26,8 +27,7 @@ class NotAnalyzeableModelException(Exception):
     """Indicates that the model cannot be analyzed by an analyzer."""
 
 
-
-class AnalyzerBase(object):
+class AnalyzerBase(metaclass=ABCMeta):
     """The basic interface of an iNNvestigate analyzer.
 
     This class defines the basic interface for analyzers:
@@ -154,13 +154,15 @@ class AnalyzerBase(object):
                 RuntimeWarning,
             )
 
-    def analyze(self, X):
+    @abstractmethod
+    def analyze(
+        self, X: OptionalList[np.ndarray], *args: Any, **kwargs: Any
+    ) -> OptionalList[np.ndarray]:
         """
         Analyze the behavior of model on input `X`.
 
         :param X: Input as expected by model.
         """
-        raise NotImplementedError()
 
     def _get_state(self) -> dict:
         state = {
