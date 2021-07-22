@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict, Type
+
 from innvestigate.analyzer.base import AnalyzerBase, NotAnalyzeableModelException
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
@@ -41,6 +43,7 @@ from innvestigate.analyzer.wrapper import (
     PathIntegrator,
     WrapperBase,
 )
+from innvestigate.utils.types import Model
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
@@ -50,7 +53,8 @@ assert AugmentReduceBase
 assert GaussianSmoother
 assert PathIntegrator
 
-analyzers = {
+
+analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Utility.
     "input": Input,
     "random": Random,
@@ -91,7 +95,7 @@ analyzers = {
 }
 
 
-def create_analyzer(name, model, **kwargs):
+def create_analyzer(name: str, model: Model, **kwargs) -> AnalyzerBase:
     """Instantiates the analyzer with the name 'name'
 
     This convenience function takes an analyzer name

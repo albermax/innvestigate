@@ -404,7 +404,7 @@ class Repeat(keras.layers.Layer):
 
 
 class Reshape(keras.layers.Layer):
-    def __init__(self, shape: Tuple[int, ...], *args, **kwargs):
+    def __init__(self, shape: Iterable[int], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._shape = shape
 

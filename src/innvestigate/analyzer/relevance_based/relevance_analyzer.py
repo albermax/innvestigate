@@ -155,8 +155,9 @@ class BaselineLRPZ(AnalyzerNetworkBase):
 
 
 ###############################################################################
+
 # Utility list enabling name mappings via string
-LRP_RULES = {
+LRP_RULES: Dict = {
     "Z": rrule.ZRule,
     "ZIgnoreBias": rrule.ZIgnoreBiasRule,
     "Epsilon": rrule.EpsilonRule,
@@ -180,7 +181,7 @@ class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
         # TODO: implement rule support.
         return
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, _Xs, _Ys, Rs, _reverse_state: Dict):
         # the embedding layer outputs for an (indexed) input a vector.
         # thus, in the relevance backward pass, the embedding layer receives
         # relevances Rs corresponding to those vectors.
@@ -190,13 +191,13 @@ class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
 
         # relevances are given shaped [batch_size, sequence_length, embedding_dims]
         pool_relevance = keras.layers.Lambda(lambda x: keras.backend.sum(x, axis=-1))
-        return [pool_relevance(r) for r in Rs]
+        return [pool_relevance(R) for R in Rs]
 
 
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
     """Special BN handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
+    def __init__(self, layer, _state):
         config = layer.get_config()
 
         self._center = config["center"]
@@ -208,19 +209,20 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         if self._center:
             self._beta = layer.beta
 
-        # TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
-        # super(BatchNormalizationReverseLayer, self).__init__(layer, state)
+        # TODO: implement rule support.
+        #   for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
+        # super().__init__(layer, state)
         # how to do this:
         # super.__init__ calls select_rule and sets a self._rule class
         # check if isinstance(self_rule, EpsiloneRule), then reroute
         # to BatchNormEpsilonRule. Not pretty, but should work.
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, Xs, Ys, Rs, _reverse_state: Dict):
         input_shape = [K.int_shape(x) for x in Xs]
         if len(input_shape) != 1:
             # extend below lambda layers towards multiple parameters.
             raise ValueError(
-                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(
+                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(  # noqa
                     len(Xs)
                 )
             )
@@ -279,13 +281,17 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
         )
 
         # TODO: implement rule support.
-        # super(AddReverseLayer, self).__init__(layer, state)
+        # super().__init__(layer, state)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        # the outputs of the pooling operation at each location is the sum of its inputs.
-        # the forward message must be known in this case, and are the inputs for each pooling thing.
-        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+    def apply(self, Xs, _Ys, Rs, _reverse_state: Dict):
+        # The outputs of the pooling operation at each location
+        # is the sum of its inputs.
+        # The forward message must be known in this case,
+        # and are the inputs for each pooling thing.
+        # The gradient is 1 for each output-to-input connection,
+        # which corresponds to the "weights" of the layer.
+        # It should thus be sufficient to reweight the relevances
+        # and do a gradient_wrt
         grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
@@ -308,14 +314,17 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         )
 
         # TODO: implement rule support.
-        # super(AveragePoolingRerseLayer, self).__init__(layer, state)
+        # super().__init__(layer, state)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        # the outputs of the pooling operation at each location is the sum of its inputs.
-        # the forward message must be known in this case, and are the inputs for each pooling thing.
-        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-
+    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+        # The outputs of the pooling operation at each location
+        # is the sum of its inputs.
+        # The forward message must be known in this case,
+        # and are the inputs for each pooling thing.
+        # The gradient is 1 for each output-to-input connection,
+        # which corresponds to the "weights" of the layer.
+        # It should thus be sufficient to reweight the relevances
+        # and do a gradient_wrt
         grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
@@ -336,10 +345,12 @@ class LRP(ReverseAnalyzerBase):
 
     :param model: A Keras model.
 
-    :param rule: A rule can be a  string or a Rule object, lists thereof or a list of conditions [(Condition, Rule), ... ]
+    :param rule: A rule can be a  string or a Rule object, lists thereof or
+      a list of conditions [(Condition, Rule), ... ]
       gradient.
 
-    :param input_layer_rule: either a Rule object, atuple of (low, high) the min/max pixel values of the inputs
+    :param input_layer_rule: either a Rule object, atuple of (low, high)
+      the min/max pixel values of the inputs
     :param bn_layer_rule: either a Rule object or None.
       None means dedicated BN rule will be applied.
     """
@@ -364,6 +375,7 @@ class LRP(ReverseAnalyzerBase):
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
 
+        # Add
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.is_convnet_layer(layer),
@@ -447,9 +459,9 @@ class LRP(ReverseAnalyzerBase):
         return rule.apply
 
     def _create_analysis(self, *args, **kwargs):
-        ####################################################################
-        ### Functionality responible for backwards rule selection below ####
-        ####################################################################
+        ###################################################################
+        # Functionality responible for backwards rule selection below  ####
+        ###################################################################
 
         # default backward hook
         self._add_conditional_reverse_mapping(
@@ -458,11 +470,12 @@ class LRP(ReverseAnalyzerBase):
             name="lrp_layer_with_kernel_mapping",
         )
 
-        # specialized backward hooks. TODO: add ReverseLayer class handling layers Without kernel: Add and AvgPool
+        # specialized backward hooks.
+        # TODO: add ReverseLayer class handling layers without kernel: Add and AvgPool
         bn_layer_rule = self._bn_layer_rule
 
         if bn_layer_rule is None:
-            # todo(alber): get rid of this option!
+            # TODO (alber): get rid of this option!
             # alternatively a default rule should be applied.
             bn_mapping = BatchNormalizationReverseLayer
         else:
@@ -497,7 +510,13 @@ class LRP(ReverseAnalyzerBase):
         # FINALIZED constructor.
         return super()._create_analysis(*args, **kwargs)
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(
+        self,
+        Xs: OptionalList[Tensor],
+        Ys: OptionalList[Tensor],
+        reversed_Ys: OptionalList[Tensor],
+        reverse_state: Dict,
+    ):
         # default_return_layers = [keras.layers.Activation]# TODO extend
         if (
             len(Xs) == len(Ys)
@@ -518,9 +537,9 @@ class LRP(ReverseAnalyzerBase):
             # Cropping
             return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
-    ########################################
-    ### End of Rule Selection Business. ####
-    ########################################
+    ######################################
+    # End of Rule Selection Business. ####
+    ######################################
 
     def _get_state(self):
         state = super()._get_state()
@@ -531,12 +550,14 @@ class LRP(ReverseAnalyzerBase):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         rule = state.pop("rule")
         input_layer_rule = state.pop("input_layer_rule")
         bn_layer_rule = state.pop("bn_layer_rule")
         bn_layer_fuse_mode = state.pop("bn_layer_fuse_mode")
-        kwargs = super(LRP, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "rule": rule,
@@ -555,8 +576,10 @@ class LRP(ReverseAnalyzerBase):
 
 class _LRPFixedParams(LRP):
     @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPFixedParams, clazz)._state_to_kwargs(state)
+    def _state_to_kwargs(cls, state):
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["rule"]
         del kwargs["bn_layer_rule"]
         return kwargs
@@ -671,12 +694,14 @@ class LRPAlphaBeta(LRP):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         alpha = state.pop("alpha")
         beta = state.pop("beta")
         bias = state.pop("bias")
         state["rule"] = None
-        kwargs = super(LRPAlphaBeta, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["rule"]
         del kwargs["bn_layer_rule"]
         kwargs.update({"alpha": alpha, "beta": beta, "bias": bias})
@@ -685,8 +710,10 @@ class LRPAlphaBeta(LRP):
 
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
     @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPAlphaBetaFixedParams, clazz)._state_to_kwargs(state)
+    def _state_to_kwargs(cls, state):
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["alpha"]
         del kwargs["beta"]
         del kwargs["bias"]

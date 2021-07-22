@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from builtins import zip
+from typing import Any, Dict, List, Optional, Tuple
 
 import keras
 import keras.layers
@@ -24,7 +25,6 @@ __all__ = [
 class NotAnalyzeableModelException(Exception):
     """Indicates that the model cannot be analyzed by an analyzer."""
 
-    pass
 
 
 class AnalyzerBase(object):
@@ -121,7 +121,7 @@ class AnalyzerBase(object):
 
         self._model_check_done = True
 
-    def fit(self, *args, **kwargs):
+    def fit(self, *_args, disable_no_training_warning: bool = False, **_kwargs):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -129,16 +129,16 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
-        disable_no_training_warning = kwargs.pop("disable_no_training_warning", False)
         if not disable_no_training_warning:
-            # issue warning if not training is foreseen,
-            # but is fit is still called.
+            # issue warning if no training is foreseen, but fit() is still called.
             warnings.warn(
                 "This analyzer does not need to be trained." " Still fit() is called.",
                 RuntimeWarning,
             )
 
-    def fit_generator(self, *args, **kwargs):
+    def fit_generator(
+        self, *_args, disable_no_training_warning: bool = False, **_kwargs
+    ):
         """
         Stub that eats arguments. If an analyzer needs training
         include :class:`TrainerMixin`.
@@ -146,10 +146,8 @@ class AnalyzerBase(object):
         :param disable_no_training_warning: Do not warn if this function is
           called despite no training is needed.
         """
-        disable_no_training_warning = kwargs.pop("disable_no_training_warning", False)
         if not disable_no_training_warning:
-            # issue warning if not training is foreseen,
-            # but is fit is still called.
+            # issue warning if no training is foreseen, but fit() is still called.
             warnings.warn(
                 "This analyzer does not need to be trained."
                 " Still fit_generator() is called.",
@@ -164,7 +162,7 @@ class AnalyzerBase(object):
         """
         raise NotImplementedError()
 
-    def _get_state(self):
+    def _get_state(self) -> dict:
         state = {
             "model_json": self._model.to_json(),
             "model_weights": self._model.get_weights(),
@@ -172,7 +170,7 @@ class AnalyzerBase(object):
         }
         return state
 
-    def save(self):
+    def save(self) -> Tuple[str, dict]:
         """
         Save state of analyzer, can be passed to :func:`Analyzer.load`
         to resemble the analyzer.
@@ -183,7 +181,7 @@ class AnalyzerBase(object):
         class_name = self.__class__.__name__
         return class_name, state
 
-    def save_npz(self, fname):
+    def save_npz(self, fname: str) -> None:
         """
         Save state of analyzer, can be passed to :func:`Analyzer.load_npz`
         to resemble the analyzer.
@@ -194,10 +192,12 @@ class AnalyzerBase(object):
         np.savez(fname, **{"class_name": class_name, "state": state})
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state: dict) -> dict:
+        disable_model_checks = state.pop("disable_model_checks")
         model_json = state.pop("model_json")
         model_weights = state.pop("model_weights")
-        disable_model_checks = state.pop("disable_model_checks")
+        # since `super()._state_to_kwargs(state)` should be called last
+        # in every child class, the dict `state` should be empty at this point.
         assert len(state) == 0
 
         model = keras.models.model_from_json(model_json)
@@ -205,7 +205,7 @@ class AnalyzerBase(object):
         return {"model": model, "disable_model_checks": disable_model_checks}
 
     @staticmethod
-    def load(class_name, state):
+    def load(class_name: str, state: Dict[str, Any]) -> AnalyzerBase:
         """
         Resembles an analyzer from the state created by
         :func:`analyzer.save()`.
@@ -213,13 +213,11 @@ class AnalyzerBase(object):
         :param class_name: The analyzer's class name.
         :param state: The analyzer's state.
         """
-        # Todo:do in a smarter way!
-        import innvestigate.analyzer
+        # TODO: do in a smarter way!
+        cls = getattr(innvestigate.analyzer, class_name)
 
-        clazz = getattr(innvestigate.analyzer, class_name)
-
-        kwargs = clazz._state_to_kwargs(state)
-        return clazz(**kwargs)
+        kwargs = cls._state_to_kwargs(state)
+        return cls(**kwargs)  # type: ignore
 
     @staticmethod
     def load_npz(fname):
@@ -229,10 +227,10 @@ class AnalyzerBase(object):
 
         :param fname: The file's name.
         """
-        f = np.load(fname)
+        npz_file = np.load(fname)
 
-        class_name = f["class_name"].item()
-        state = f["state"].item()
+        class_name = npz_file["class_name"].item()
+        state = npz_file["state"].item()
         return AnalyzerBase.load(class_name, state)
 
 
@@ -246,13 +244,15 @@ class TrainerMixin(object):
     to the user.
     """
 
-    # todo: extend with Y
-    def fit(self, X=None, batch_size=32, **kwargs):
+    # TODO: extend with Y
+    def fit(
+        self, X: Optional[np.ndarray] = None, batch_size: int = 32, **kwargs
+    ) -> None:
         """
         Takes the same parameters as Keras's :func:`model.fit` function.
         """
         generator = iutils.BatchSequence(X, batch_size)
-        return self._fit_generator(generator, **kwargs)
+        return self._fit_generator(generator, **kwargs)  # type: ignore
 
     def fit_generator(self, *args, **kwargs):
         """
@@ -263,14 +263,14 @@ class TrainerMixin(object):
 
     def _fit_generator(
         self,
-        generator,
-        steps_per_epoch=None,
-        epochs=1,
-        max_queue_size=10,
-        workers=1,
-        use_multiprocessing=False,
+        generator: iutils.BatchSequence,
+        steps_per_epoch: int = None,
+        epochs: int = 1,
+        max_queue_size: int = 10,
+        workers: int = 1,
+        use_multiprocessing: bool = False,
         verbose=0,
-        disable_no_training_warning=None,
+        disable_no_training_warning: bool = None,
     ):
         raise NotImplementedError()
 
@@ -280,7 +280,7 @@ class OneEpochTrainerMixin(TrainerMixin):
     except that the training is limited to one epoch.
     """
 
-    def fit(self, *args, **kwargs):
+    def fit(self, *args, **kwargs) -> None:
         """
         Same interface as :func:`fit` of :class:`TrainerMixin` except that
         the parameter epoch is fixed to 1.

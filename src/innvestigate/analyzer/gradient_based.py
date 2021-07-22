@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict, Optional
+
 import keras
 import keras.models
 
@@ -69,9 +71,11 @@ class BaselineGradient(AnalyzerNetworkBase):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         postprocess = state.pop("postprocess")
-        kwargs = super(BaselineGradient, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "postprocess": postprocess,
@@ -121,9 +125,11 @@ class Gradient(ReverseAnalyzerBase):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         postprocess = state.pop("postprocess")
-        kwargs = super(Gradient, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "postprocess": postprocess,
@@ -145,7 +151,10 @@ class InputTimesGradient(Gradient):
 
         super(InputTimesGradient, self).__init__(model, **kwargs)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+    def _create_analysis(self, model, stop_analysis_at_tensors=None):
+        if stop_analysis_at_tensors is None:
+            stop_analysis_at_tensors = []
+
         tensors_to_analyze = [
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
@@ -169,7 +178,7 @@ class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
             name_template="reversed_%s",
         )
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state):
+    def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict):
         # Apply relus conditioned on backpropagated values.
         reversed_Ys = kutils.apply(self._activation, reversed_Ys)
 
@@ -209,7 +218,7 @@ class Deconvnet(ReverseAnalyzerBase):
         return super()._create_analysis(*args, **kwargs)
 
 
-def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
+def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
     activation = keras.layers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
     reversed_Ys = kutils.apply(activation, reversed_Ys)

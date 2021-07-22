@@ -133,7 +133,7 @@ class DeepTaylor(ReverseAnalyzerBase):
 
         return super()._create_analysis(*args, **kwargs)
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self, _Xs, _Ys, _reversed_Ys, reverse_state):
         """
         Block all default mappings.
         """

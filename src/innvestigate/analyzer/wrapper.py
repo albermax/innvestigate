@@ -114,14 +114,14 @@ class AugmentReduceBase(WrapperBase):
             raise ValueError(
                 "The input shape for the model needs "
                 "to be fully specified (except the batch axis). "
-                "Model input shape is: %s" % (model.input_shape,)
+                f"Model input shape is: {model.input_shape}"
             )
 
         inputs = model.inputs[: self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input :]
-        # todo: check this, index seems not right.
-        # outputs = model.outputs[:self._subanalyzer._n_data_input]
-        extra_outputs = model.outputs[self._subanalyzer._n_data_input :]
+
+        outputs = model.outputs[: self._subanalyzer._n_data_output]
+        extra_outputs = model.outputs[self._subanalyzer._n_data_output :]
 
         if len(extra_outputs) > 0:
             raise Exception("No extra output is allowed " "with this wrapper.")
@@ -262,27 +262,29 @@ class PathIntegrator(AugmentReduceBase):
         self._reference_inputs = reference_inputs
         self._keras_constant_inputs: Optional[List[Tensor]] = None
 
-    def _keras_set_constant_inputs(self, inputs):
+    def _keras_set_constant_inputs(self, inputs: List[Tensor]) -> None:
         tmp = [kbackend.variable(x) for x in inputs]
         self._keras_constant_inputs = [
-            keras.layers.Input(tensor=x, shape=x.shape[1:]) for x in tmp
+            keras.layers.Input(tensor=X, shape=X.shape[1:]) for X in tmp
         ]
 
-    def _keras_get_constant_inputs(self):
+    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
         return self._keras_constant_inputs
 
-    def _compute_difference(self, X):
+    def _compute_difference(self, X: List[Tensor]) -> List[Tensor]:
         if self._keras_constant_inputs is None:
             tmp = kutils.broadcast_np_tensors_to_keras_tensors(
                 X, self._reference_inputs
             )
             self._keras_set_constant_inputs(tmp)
 
-        reference_inputs = self._keras_get_constant_inputs()
+        # Type not Optional anymore as as `_keras_set_constant_inputs` has been called.
+        reference_inputs: List[Tensor]
+        reference_inputs = self._keras_get_constant_inputs()  # type: ignore
         return [keras.layers.Subtract()([x, ri]) for x, ri in zip(X, reference_inputs)]
 
     def _augment(self, X):
-        tmp = super(PathIntegrator, self)._augment(X)
+        tmp = super()._augment(X)
         tmp = [
             ilayers.Reshape((-1, self._augment_by_n) + kbackend.int_shape(x)[1:])(x)
             for x in tmp

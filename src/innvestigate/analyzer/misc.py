@@ -58,8 +58,10 @@ class Random(AnalyzerNetworkBase):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         stddev = state.pop("stddev")
-        kwargs = super(Random, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update({"stddev": stddev})
         return kwargs

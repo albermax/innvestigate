@@ -79,9 +79,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
         """
         Adds check that prevents models from containing a softmax.
         """
+        contains_softmax: LayerCheck = lambda layer: kchecks.contains_activation(
+            layer, activation="softmax"
+        )
         self._add_model_check(
-            lambda layer: kchecks.contains_activation(layer, activation="softmax"),
-            "This analysis method does not support softmax layers.",
+            check=contains_softmax,
+            message="This analysis method does not support softmax layers.",
             check_type="exception",
         )
 
@@ -105,12 +108,19 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         This class adds the code to select a specific output neuron.
         """
+        neuron_selection_mode: str
+        model_inputs: OptionalList[Tensor]
+        model_output: OptionalList[Tensor]
+        analysis_inputs: List[Tensor]
+        stop_analysis_at_tensors: List[Tensor]
+
         neuron_selection_mode = self._neuron_selection_mode
         model_inputs = model.inputs
-
         model_output = model.outputs
+
         if len(model_output) > 1:
             raise ValueError("Only models with one output tensor are allowed.")
+
         analysis_inputs = []
         stop_analysis_at_tensors = []
 
@@ -119,23 +129,26 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model_output = keras.layers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
-            l = ilayers.Max(name="iNNvestigate_max")
-            model_output = l(model_output)
-            self._special_helper_layers.append(l)
+            inn_max = ilayers.Max(name="iNNvestigate_max")
+            model_output = inn_max(model_output)
+            self._special_helper_layers.append(inn_max)
+
         elif neuron_selection_mode == "index":
-            neuron_indexing = keras.layers.Input(
+            # Creates a placeholder tensor when `dtype` is passed.
+            neuron_indexing: Layer = keras.layers.Input(
                 batch_shape=[None, None],
                 dtype=np.int32,
                 name="iNNvestigate_neuron_indexing",
             )
+            # TODO: what does _keras_history[0] do?
             self._special_helper_layers.append(neuron_indexing._keras_history[0])
             analysis_inputs.append(neuron_indexing)
             # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            l = ilayers.GatherND(name="iNNvestigate_gather_nd")
-            model_output = l(model_output + [neuron_indexing])
-            self._special_helper_layers.append(l)
+            inn_gather = ilayers.GatherND(name="iNNvestigate_gather_nd")
+            model_output = inn_gather(model_output + [neuron_indexing])
+            self._special_helper_layers.append(inn_gather)
         elif neuron_selection_mode == "all":
             pass
         else:
@@ -146,14 +159,15 @@ class AnalyzerNetworkBase(AnalyzerBase):
         )
         return model, analysis_inputs, stop_analysis_at_tensors
 
-    def create_analyzer_model(self):
+    def create_analyzer_model(self) -> None:
         """
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
         model_inputs = self._model.inputs
-        tmp = self._prepare_model(self._model)
-        model, analysis_inputs, stop_analysis_at_tensors = tmp
+        model, analysis_inputs, stop_analysis_at_tensors = self._prepare_model(
+            self._model
+        )
         self._analysis_inputs = analysis_inputs
         self._prepared_model = model
 
@@ -162,18 +176,20 @@ class AnalyzerNetworkBase(AnalyzerBase):
         )
         if isinstance(tmp, tuple):
             if len(tmp) == 3:
-                analysis_outputs, debug_outputs, constant_inputs = tmp
+                analysis_outputs, debug_outputs, constant_inputs = tmp  # type: ignore
             elif len(tmp) == 2:
-                analysis_outputs, debug_outputs = tmp
-                constant_inputs = list()
+                analysis_outputs, debug_outputs = tmp  # type: ignore
+                constant_inputs = []
             elif len(tmp) == 1:
-                analysis_outputs = iutils.to_list(tmp[0])
-                constant_inputs, debug_outputs = list(), list()
+                analysis_outputs = tmp[0]
+                constant_inputs = []
+                debug_outputs = []
             else:
                 raise Exception("Unexpected output from _create_analysis.")
         else:
             analysis_outputs = tmp
-            constant_inputs, debug_outputs = list(), list()
+            constant_inputs = []
+            debug_outputs = []
 
         analysis_outputs = iutils.to_list(analysis_outputs)
         debug_outputs = iutils.to_list(debug_outputs)
@@ -188,7 +204,15 @@ class AnalyzerNetworkBase(AnalyzerBase):
             outputs=analysis_outputs + debug_outputs,
         )
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+        self._analyzer_model_done = True
+
+    def _create_analysis(
+        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+    ) -> Union[
+        Tuple[List[Tensor]],
+        Tuple[List[Tensor], List[Tensor]],
+        Tuple[List[Tensor], List[Tensor], List[Tensor]],
+    ]:
         """
         Interface that needs to be implemented by a derived class.
 
@@ -262,17 +286,19 @@ class AnalyzerNetworkBase(AnalyzerBase):
             ret = ret[0]
         return ret
 
-    def _get_state(self):
-        state = super(AnalyzerNetworkBase, self)._get_state()
+    def _get_state(self) -> Dict[str, Any]:
+        state = super()._get_state()
         state.update({"neuron_selection_mode": self._neuron_selection_mode})
         state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state: Dict[str, Any]) -> Dict[str, Any]:
         neuron_selection_mode = state.pop("neuron_selection_mode")
         allow_lambda_layers = state.pop("allow_lambda_layers")
-        kwargs = super(AnalyzerNetworkBase, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "neuron_selection_mode": neuron_selection_mode,

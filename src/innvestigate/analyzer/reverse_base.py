@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import Callable, Dict, List, Optional, Tuple
+
+import keras
+import keras.layers
+import keras.models
 import numpy as np
 import six
 
@@ -7,6 +12,13 @@ import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.graph as kgraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.utils.types import (
+    CondReverseMapping,
+    Layer,
+    Model,
+    OptionalList,
+    Tensor,
+)
 
 __all__ = ["ReverseAnalyzerBase"]
 
@@ -108,9 +120,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reverse_state: Dict,
     ):
         mask = [x not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
-        return ilayers.GradientWRT(len(Xs), mask=mask)(Xs + Ys + reversed_Ys)
+        masked_grad = ilayers.GradientWRT(len(Xs), mask=mask)
+        return masked_grad(Xs + Ys + reversed_Ys)
 
-    def _reverse_mapping(self, layer):
+    def _reverse_mapping(self, layer: keras.layers.Layer):
         """
         This function should return a reverse mapping for the passed layer.
 
@@ -191,7 +204,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         return None
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(
+        self,
+        Xs: OptionalList[Tensor],
+        Ys: OptionalList[Tensor],
+        reversed_Ys: OptionalList[Tensor],
+        reverse_state: Dict,
+    ):
         """
         Fallback function to map reversed_Ys to reversed_Xs
         (which should contain tensors of the same shape and type).
@@ -203,14 +222,23 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         Map output tensors to new values before passing
         them into the reverted network.
         """
+        # Here: Keep the output signal.
+        # Should be re-implemented by inheritance.
+        # Refer to the "Introduction to development notebook".
         return X
 
-    def _postprocess_analysis(self, X):
+    def _postprocess_analysis(self, X: OptionalList[Tensor]) -> OptionalList[Tensor]:
         return X
 
     def _reverse_model(
-        self, model, stop_analysis_at_tensors=[], return_all_reversed_tensors=False
+        self,
+        model: Model,
+        stop_analysis_at_tensors: List[Tensor] = None,
+        return_all_reversed_tensors=False,
     ):
+        if stop_analysis_at_tensors is None:
+            stop_analysis_at_tensors = []
+
         return kgraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
@@ -223,7 +251,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             return_all_reversed_tensors=return_all_reversed_tensors,
         )
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
+    def _create_analysis(
+        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+    ):
+
+        if stop_analysis_at_tensors is None:
+            stop_analysis_at_tensors = []
+
         return_all_reversed_tensors = (
             self._reverse_check_min_max_values
             or self._reverse_check_finite
@@ -241,9 +275,10 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             ret = self._postprocess_analysis(ret)
 
         if return_all_reversed_tensors:
-            debug_tensors = []
-            self._debug_tensors_indices = {}
+            debug_tensors: List[Tensor]
+            tmp: List[Tensor]
 
+            debug_tensors = []
             values = list(six.itervalues(ret[1]))
             mapping = {i: v["id"] for i, v in enumerate(values)}
             tensors = [v["final_tensor"] for v in values]
@@ -328,26 +363,22 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             self._reversed_tensors = tmp
 
     def _get_state(self):
-        state = super(ReverseAnalyzerBase, self)._get_state()
-        state.update({"reverse_verbose": self._reverse_verbose})
-        state.update({"reverse_clip_values": self._reverse_clip_values})
+        state = super()._get_state()
         state.update(
             {
-                "reverse_project_bottleneck_layers": self._reverse_project_bottleneck_layers
+                "reverse_verbose": self._reverse_verbose,
+                "reverse_clip_values": self._reverse_clip_values,
+                "reverse_project_bottleneck_layers": self._reverse_project_bottleneck_layers,  # noqa
+                "reverse_check_min_max_values": self._reverse_check_min_max_values,
+                "reverse_check_finite": self._reverse_check_finite,
+                "reverse_keep_tensors": self._reverse_keep_tensors,
+                "reverse_reapply_on_copied_layers": self._reverse_reapply_on_copied_layers,  # noqa
             }
-        )
-        state.update(
-            {"reverse_check_min_max_values": self._reverse_check_min_max_values}
-        )
-        state.update({"reverse_check_finite": self._reverse_check_finite})
-        state.update({"reverse_keep_tensors": self._reverse_keep_tensors})
-        state.update(
-            {"reverse_reapply_on_copied_layers": self._reverse_reapply_on_copied_layers}
         )
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state: dict):
         reverse_verbose = state.pop("reverse_verbose")
         reverse_clip_values = state.pop("reverse_clip_values")
         reverse_project_bottleneck_layers = state.pop(
@@ -357,7 +388,9 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reverse_check_finite = state.pop("reverse_check_finite")
         reverse_keep_tensors = state.pop("reverse_keep_tensors")
         reverse_reapply_on_copied_layers = state.pop("reverse_reapply_on_copied_layers")
-        kwargs = super(ReverseAnalyzerBase, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "reverse_verbose": reverse_verbose,

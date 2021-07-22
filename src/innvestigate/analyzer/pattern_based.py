@@ -55,7 +55,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
     where the filter weights are replaced with the patterns.
     """
 
-    def __init__(self, layer, state, pattern):
+    def __init__(self, layer, _state, pattern):
         config = layer.get_config()
 
         # Layer can contain a kernel and an activation.
@@ -83,7 +83,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
             layer, name_template="reversed_pattern_%s", weights=filter_weights
         )
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state):
+    def apply(self, Xs, _Ys, reversed_Ys, _reverse_state: Dict):
         # Reapply the prepared layers.
         act_Xs = kutils.apply(self._filter_layer, Xs)
         act_Ys = kutils.apply(self._act_layer, act_Xs)
@@ -168,8 +168,8 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
 
         return self._patterns[layers.index(layer)]
 
-    def _prepare_pattern(self, layer, state, pattern):
-        """Prepares a pattern before it is set in the back-ward pass."""
+    def _prepare_pattern(self, _layer, _state, pattern):
+        """ ""Prepares a pattern before it is set in the back-ward pass."""
         return pattern
 
     def _create_analysis(self, *args, **kwargs):
@@ -201,13 +201,14 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         disable_no_training_warning=None,
         **kwargs
     ):
+        # TODO: implement epochs
 
         pattern_type = self._pattern_type
         if pattern_type is None:
             pattern_type = "relu"
 
         if isinstance(pattern_type, (list, tuple)):
-            raise ValueError("Only one pattern type allowed. " "Please pass a string.")
+            raise ValueError("Only one pattern type allowed. Please pass a string.")
 
         computer = itools.PatternComputer(
             self._model, pattern_type=pattern_type, **kwargs
@@ -223,15 +224,17 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         )
 
     def _get_state(self):
-        state = super(PatternNet, self)._get_state()
+        state = super()._get_state()
         state.update({"patterns": self._patterns, "pattern_type": self._pattern_type})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         patterns = state.pop("patterns")
         pattern_type = state.pop("pattern_type")
-        kwargs = super(PatternNet, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update({"patterns": patterns, "pattern_type": pattern_type})
         return kwargs
 
