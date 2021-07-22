@@ -827,9 +827,14 @@ class LRPSequentialPresetAFlat(LRPSequentialPresetA):
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPSequentialPresetAFlat, self).__init__(
-            model, *args, input_layer_rule="Flat", **kwargs
-        )
+        # provide functionality for `analyzer.load()` by avoiding multiple kwargs:
+        if "input_layer_rule" in kwargs:
+            if kwargs["input_layer_rule"] != "Flat":
+                raise RuntimeError(
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                )
+            kwargs.pop("input_layer_rule")
+        super().__init__(model, *args, input_layer_rule="Flat", **kwargs)
 
 
 # TODO: allow to pass input layer identification by index or id.
@@ -837,9 +842,14 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPSequentialPresetBFlat, self).__init__(
-            model, *args, input_layer_rule="Flat", **kwargs
-        )
+        # provide functionality for `analyzer.load()` by avoiding multiple kwargs:
+        if "input_layer_rule" in kwargs:
+            if kwargs["input_layer_rule"] != "Flat":
+                raise RuntimeError(
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                )
+            kwargs.pop("input_layer_rule")
+        super().__init__(model, *args, input_layer_rule="Flat", **kwargs)
 
 
 class LRPSequentialPresetBFlatUntilIdx(LRPSequentialPresetBFlat):
