@@ -191,3 +191,19 @@ class BoundedDeepTaylor(DeepTaylor):
         )
 
         return super()._create_analysis(*args, **kwargs)
+
+    def _get_state(self):
+        state = super()._get_state()
+        state.update({"low": self._bounds_low, "high": self._bounds_high})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(cls, state):
+        low = state.pop("low")
+        high = state.pop("high")
+
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
+        kwargs.update({"low": low, "high": high})
+        return kwargs
