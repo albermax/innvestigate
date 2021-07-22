@@ -25,9 +25,6 @@ from innvestigate.utils.keras import graph as kgraph
 from . import utils as rutils
 
 ###############################################################################
-###############################################################################
-###############################################################################
-
 
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions

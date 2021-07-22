@@ -1,9 +1,8 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
-from .base import NotAnalyzeableModelException
-from .deeptaylor import BoundedDeepTaylor, DeepTaylor
-from .gradient_based import (
+from innvestigate.analyzer.base import AnalyzerBase, NotAnalyzeableModelException
+from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
+from innvestigate.analyzer.gradient_based import (
     BaselineGradient,
     Deconvnet,
     Gradient,
@@ -12,9 +11,9 @@ from .gradient_based import (
     IntegratedGradients,
     SmoothGrad,
 )
-from .misc import Input, Random
-from .pattern_based import PatternAttribution, PatternNet
-from .relevance_based.relevance_analyzer import (
+from innvestigate.analyzer.misc import Input, Random
+from innvestigate.analyzer.pattern_based import PatternAttribution, PatternNet
+from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRP,
     LRPZ,
     BaselineLRPZ,
@@ -36,12 +35,12 @@ from .relevance_based.relevance_analyzer import (
     LRPZPlus,
     LRPZPlusFast,
 )
-from .wrapper import AugmentReduceBase, GaussianSmoother, PathIntegrator, WrapperBase
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from innvestigate.analyzer.wrapper import (
+    AugmentReduceBase,
+    GaussianSmoother,
+    PathIntegrator,
+    WrapperBase,
+)
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
@@ -50,12 +49,6 @@ assert WrapperBase
 assert AugmentReduceBase
 assert GaussianSmoother
 assert PathIntegrator
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 analyzers = {
     # Utility.

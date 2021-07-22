@@ -1,20 +1,16 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import keras
 import keras.models
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils import keras as kutils
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
-from . import base, wrapper
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
+import innvestigate.utils.keras as kutils
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
+from innvestigate.analyzer.wrapper import GaussianSmoother, PathIntegrator
 
 __all__ = [
     "BaselineGradient",
@@ -27,12 +23,7 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class BaselineGradient(base.AnalyzerNetworkBase):
+class BaselineGradient(AnalyzerNetworkBase):
     """Gradient analyzer based on build-in gradient.
 
     Returns as analysis the function value with respect to the input.
@@ -86,7 +77,7 @@ class BaselineGradient(base.AnalyzerNetworkBase):
         return kwargs
 
 
-class Gradient(base.ReverseAnalyzerBase):
+class Gradient(ReverseAnalyzerBase):
     """Gradient analyzer.
 
     Returns as analysis the function value with respect to the input.
@@ -138,8 +129,6 @@ class Gradient(base.ReverseAnalyzerBase):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 class InputTimesGradient(Gradient):
@@ -168,8 +157,6 @@ class InputTimesGradient(Gradient):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
@@ -189,7 +176,7 @@ class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
         return ilayers.GradientWRT(len(Xs))(Xs + Ys_wo_relu + reversed_Ys)
 
 
-class Deconvnet(base.ReverseAnalyzerBase):
+class Deconvnet(ReverseAnalyzerBase):
     """Deconvnet analyzer.
 
     Applies the "deconvnet" algorithm to analyze the model.
@@ -228,7 +215,7 @@ def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
     return ilayers.GradientWRT(len(Xs))(Xs + Ys + reversed_Ys)
 
 
-class GuidedBackprop(base.ReverseAnalyzerBase):
+class GuidedBackprop(ReverseAnalyzerBase):
     """Guided backprop analyzer.
 
     Applies the "guided backprop" algorithm to analyze the model.
@@ -259,11 +246,9 @@ class GuidedBackprop(base.ReverseAnalyzerBase):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
-class IntegratedGradients(wrapper.PathIntegrator):
+class IntegratedGradients(PathIntegrator):
     """Integrated gradient analyzer.
 
     Applies the "integrated gradient" algorithm to analyze the model.
@@ -284,11 +269,9 @@ class IntegratedGradients(wrapper.PathIntegrator):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
-class SmoothGrad(wrapper.GaussianSmoother):
+class SmoothGrad(GaussianSmoother):
     """Smooth grad analyzer.
 
     Applies the "smooth grad" algorithm to analyze the model.

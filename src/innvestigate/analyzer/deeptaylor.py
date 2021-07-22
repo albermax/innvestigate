@@ -1,13 +1,14 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
+
+from typing import Any
 
 import keras.layers
 import keras.models
 
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
-from . import base
-from .relevance_based import relevance_rule as lrp_rules
+import innvestigate.analyzer.relevance_based.relevance_rule as lrp_rules
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 
 __all__ = [
     "DeepTaylor",
@@ -15,7 +16,7 @@ __all__ = [
 ]
 
 
-class DeepTaylor(base.ReverseAnalyzerBase):
+class DeepTaylor(ReverseAnalyzerBase):
     """DeepTaylor for ReLU-networks with unbounded input
 
     This class implements the DeepTaylor algorithm for neural networks with

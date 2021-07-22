@@ -1,8 +1,6 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import inspect
 from builtins import zip
+from typing import Dict, List
 
 import keras
 import keras.backend as K
@@ -17,20 +15,15 @@ import keras.layers.pooling
 import keras.models
 import six
 
+import innvestigate.analyzer.relevance_based.relevance_rule as rrule
+import innvestigate.analyzer.relevance_based.utils as rutils
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
 import innvestigate.utils.keras as kutils
-from innvestigate import layers as ilayers
-from innvestigate import utils as iutils
-from innvestigate.utils.keras import checks as kchecks
-from innvestigate.utils.keras import graph as kgraph
-
-from .. import base
-from . import relevance_rule as rrule
-from . import utils as rutils
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 
 __all__ = [
     "BaselineLRPZ",
@@ -58,11 +51,9 @@ __all__ = [
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
-class BaselineLRPZ(base.AnalyzerNetworkBase):
+class BaselineLRPZ(AnalyzerNetworkBase):
     """LRPZ analyzer - for testing purpose only.
 
     Applies the "LRP-Z" algorithm to analyze the model.
@@ -154,9 +145,6 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
-
 # Utility list enabling name mappings via string
 LRP_RULES = {
     "Z": rrule.ZRule,
@@ -331,7 +319,7 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         return [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
 
 
-class LRP(base.ReverseAnalyzerBase):
+class LRP(ReverseAnalyzerBase):
     """
     Base class for LRP-based model analyzers
 

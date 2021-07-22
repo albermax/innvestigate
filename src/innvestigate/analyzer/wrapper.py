@@ -1,21 +1,16 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 from builtins import zip
 
-import keras.backend as K
+import keras.backend as kbackend
 import keras.models
 import numpy as np
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils import keras as kutils
-from . import base
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
+import innvestigate.utils.keras as kutils
+from innvestigate.analyzer.base import AnalyzerBase
+from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 
 __all__ = [
     "WrapperBase",
@@ -25,12 +20,7 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class WrapperBase(base.AnalyzerBase):
+class WrapperBase(AnalyzerBase):
     """Interface for wrappers around analyzers
 
     This class is the basic interface for wrappers around analyzers.
@@ -61,13 +51,11 @@ class WrapperBase(base.AnalyzerBase):
         sa_state = state.pop("subanalyzer_state")
         assert len(state) == 0
 
-        subanalyzer = base.AnalyzerBase.load(sa_class_name, sa_state)
+        subanalyzer = AnalyzerBase.load(sa_class_name, sa_state)
         kwargs = {"subanalyzer": subanalyzer}
         return kwargs
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -91,7 +79,7 @@ class AugmentReduceBase(WrapperBase):
             subanalyzer._neuron_selection_mode = "index"
         super(AugmentReduceBase, self).__init__(subanalyzer, *args, **kwargs)
 
-        if isinstance(self._subanalyzer, base.AnalyzerNetworkBase):
+        if isinstance(self._subanalyzer, AnalyzerNetworkBase):
             # Take the keras analyzer model and
             # add augment and reduce functionality.
             self._keras_based_augment_reduce = True
@@ -169,7 +157,7 @@ class AugmentReduceBase(WrapperBase):
         return [repeat(x) for x in iutils.to_list(X)]
 
     def _reduce(self, X):
-        X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
+        X_shape = [kbackend.int_shape(x) for x in iutils.to_list(X)]
         reshape = [
             ilayers.Reshape((-1, self._augment_by_n) + shape[1:]) for shape in X_shape
         ]
@@ -195,8 +183,6 @@ class AugmentReduceBase(WrapperBase):
         return kwargs
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -234,8 +220,6 @@ class GaussianSmoother(AugmentReduceBase):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 class PathIntegrator(AugmentReduceBase):
@@ -264,7 +248,7 @@ class PathIntegrator(AugmentReduceBase):
         )
 
     def _keras_set_constant_inputs(self, inputs):
-        tmp = [K.variable(x) for x in inputs]
+        tmp = [kbackend.variable(x) for x in inputs]
         self._keras_constant_inputs = [
             keras.layers.Input(tensor=x, shape=x.shape[1:]) for x in tmp
         ]
@@ -285,7 +269,7 @@ class PathIntegrator(AugmentReduceBase):
     def _augment(self, X):
         tmp = super(PathIntegrator, self)._augment(X)
         tmp = [
-            ilayers.Reshape((-1, self._augment_by_n) + K.int_shape(x)[1:])(x)
+            ilayers.Reshape((-1, self._augment_by_n) + kbackend.int_shape(x)[1:])(x)
             for x in tmp
         ]
 
@@ -293,7 +277,7 @@ class PathIntegrator(AugmentReduceBase):
         self._keras_difference = difference
         # Make broadcastable.
         difference = [
-            ilayers.Reshape((-1, 1) + K.int_shape(x)[1:])(x) for x in difference
+            ilayers.Reshape((-1, 1) + kbackend.int_shape(x)[1:])(x) for x in difference
         ]
 
         # Compute path steps.
@@ -304,7 +288,7 @@ class PathIntegrator(AugmentReduceBase):
 
         reference_inputs = self._keras_get_constant_inputs()
         ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs, path_steps)]
-        ret = [ilayers.Reshape((-1,) + K.int_shape(x)[2:])(x) for x in ret]
+        ret = [ilayers.Reshape((-1,) + kbackend.int_shape(x)[2:])(x) for x in ret]
         return ret
 
     def _reduce(self, X):
