@@ -262,12 +262,17 @@ class IntegratedGradients(PathIntegrator):
     """
 
     def __init__(self, model, steps=64, **kwargs):
-        subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode", "postprocess"]
-        for key in kwargs_keys:
-            if key in kwargs:
-                subanalyzer_kwargs[key] = kwargs.pop(key)
-        subanalyzer = Gradient(model, **subanalyzer_kwargs)
+        # If initialized through serialization:
+        if "subanalyzer" in kwargs:
+            subanalyzer = kwargs.pop("subanalyzer")
+        # If initialized normally:
+        else:
+            subanalyzer_kwargs = {}
+            kwargs_keys = ["neuron_selection_mode", "postprocess"]
+            for key in kwargs_keys:
+                if key in kwargs:
+                    subanalyzer_kwargs[key] = kwargs.pop(key)
+            subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
         super().__init__(subanalyzer, steps=steps, **kwargs)
 
@@ -285,11 +290,16 @@ class SmoothGrad(GaussianSmoother):
     """
 
     def __init__(self, model, augment_by_n=64, **kwargs):
-        subanalyzer_kwargs = {}
-        kwargs_keys = ["neuron_selection_mode", "postprocess"]
-        for key in kwargs_keys:
-            if key in kwargs:
-                subanalyzer_kwargs[key] = kwargs.pop(key)
-        subanalyzer = Gradient(model, **subanalyzer_kwargs)
+        # If initialized through serialization:
+        if "subanalyzer" in kwargs:
+            subanalyzer = kwargs.pop("subanalyzer")
+        # If initialized normally:
+        else:
+            subanalyzer_kwargs = {}
+            kwargs_keys = ["neuron_selection_mode", "postprocess"]
+            for key in kwargs_keys:
+                if key in kwargs:
+                    subanalyzer_kwargs[key] = kwargs.pop(key)
+            subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
         super().__init__(subanalyzer, augment_by_n=augment_by_n, **kwargs)
