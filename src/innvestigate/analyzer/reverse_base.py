@@ -60,16 +60,31 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     def __init__(
         self,
-        model,
-        reverse_verbose=False,
-        reverse_clip_values=False,
-        reverse_project_bottleneck_layers=False,
-        reverse_check_min_max_values=False,
-        reverse_check_finite=False,
-        reverse_keep_tensors=False,
-        reverse_reapply_on_copied_layers=False,
+        model: keras.Model,
+        reverse_verbose: bool = False,
+        reverse_clip_values: bool = False,
+        reverse_project_bottleneck_layers: bool = False,
+        reverse_check_min_max_values: bool = False,
+        reverse_check_finite: bool = False,
+        reverse_keep_tensors: bool = False,
+        reverse_reapply_on_copied_layers: bool = False,
         **kwargs
-    ):
+    ) -> None:
+        """
+        From AnalyzerBase super init:
+        * Initializes empty list of _model_checks
+
+        From AnalyzerNetworkBase super init:
+        * set _neuron_selection_mode
+        * add check for lambda layers through 'allow_lambda_layers'
+        * define attributes for '_prepare_model', which is later called
+            through 'create_analyzer_model'
+
+        Here:
+        * define attributes required for calling '_conditional_reverse_mapping'
+        """
+        super().__init__(model, **kwargs)
+
         self._reverse_verbose = reverse_verbose
         self._reverse_clip_values = reverse_clip_values
         self._reverse_project_bottleneck_layers = reverse_project_bottleneck_layers
@@ -77,9 +92,21 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_check_finite = reverse_check_finite
         self._reverse_keep_tensors = reverse_keep_tensors
         self._reverse_reapply_on_copied_layers = reverse_reapply_on_copied_layers
-        super(ReverseAnalyzerBase, self).__init__(model, **kwargs)
+        self._reverse_mapping_applied: bool = False
 
-    def _gradient_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+        # map priorities to lists of conditional reverse mappings
+        self._conditional_reverse_mappings: Dict[int, List[CondReverseMapping]] = {}
+
+        # Maps keys "min", "max", "finite", "keep" to tuples of indices
+        self._debug_tensors_indices: Dict[str, Tuple[int, int]] = {}
+
+    def _gradient_reverse_mapping(
+        self,
+        Xs: OptionalList[Tensor],
+        Ys: OptionalList[Tensor],
+        reversed_Ys: OptionalList[Tensor],
+        reverse_state: Dict,
+    ):
         mask = [x not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
         return ilayers.GradientWRT(len(Xs), mask=mask)(Xs + Ys + reversed_Ys)
 
@@ -107,7 +134,11 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return self._apply_conditional_reverse_mappings(layer)
 
     def _add_conditional_reverse_mapping(
-        self, condition, mapping, priority=-1, name=None
+        self,
+        condition: Callable[[Layer], bool],
+        mapping: Callable,  # TODO: specify type of Callable
+        priority: int = -1,
+        name: Optional[str] = None,
     ):
         """
         This function should return a reverse mapping for the passed layer.
@@ -128,18 +159,22 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
           evaluated.
         :param name: An identifying name.
         """
-        if getattr(self, "_reverse_mapping_applied", False):
+        if self._reverse_mapping_applied is True:
             raise Exception(
                 "Cannot add conditional mapping " "after first application."
             )
 
-        if not hasattr(self, "_conditional_reverse_mappings"):
-            self._conditional_reverse_mappings = {}
-
+        # Add key `priority` to dict _conditional_reverse_mappings
+        # if it doesn't exist yet.
         if priority not in self._conditional_reverse_mappings:
             self._conditional_reverse_mappings[priority] = []
 
-        tmp = {"condition": condition, "mapping": mapping, "name": name}
+        # Add Conditional Reveserse mapping at given priority
+        tmp: CondReverseMapping = {
+            "condition": condition,
+            "mapping": mapping,
+            "name": name,
+        }
         self._conditional_reverse_mappings[priority].append(tmp)
 
     def _apply_conditional_reverse_mappings(self, layer):

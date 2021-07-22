@@ -34,6 +34,7 @@ class BaselineGradient(AnalyzerNetworkBase):
     """
 
     def __init__(self, model, postprocess=None, **kwargs):
+        super().__init__(model, **kwargs)
 
         if postprocess not in [None, "abs", "square"]:
             raise ValueError(
@@ -42,10 +43,12 @@ class BaselineGradient(AnalyzerNetworkBase):
         self._postprocess = postprocess
 
         self._add_model_softmax_check()
+        self._do_model_checks()
 
-        super(BaselineGradient, self).__init__(model, **kwargs)
+    def _create_analysis(self, model, stop_analysis_at_tensors=None):
+        if stop_analysis_at_tensors is None:
+            stop_analysis_at_tensors = []
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         tensors_to_analyze = [
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
@@ -61,7 +64,7 @@ class BaselineGradient(AnalyzerNetworkBase):
         return iutils.to_list(ret)
 
     def _get_state(self):
-        state = super(BaselineGradient, self)._get_state()
+        state = super()._get_state()
         state.update({"postprocess": self._postprocess})
         return state
 
@@ -86,23 +89,24 @@ class Gradient(ReverseAnalyzerBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, postprocess=None, **kwargs):
+    def __init__(self, model, postprocess: Optional[str] = None, **kwargs):
+        super(Gradient, self).__init__(model, **kwargs)
 
         if postprocess not in [None, "abs", "square"]:
             raise ValueError(
-                "Parameter 'postprocess' must be either " "None, 'abs', or 'square'."
+                """Parameter 'postprocess' must be either None, "abs", or "square"."""
             )
         self._postprocess = postprocess
 
+        # Add and run model checks
         self._add_model_softmax_check()
-
-        super(Gradient, self).__init__(model, **kwargs)
+        self._do_model_checks()
 
     def _head_mapping(self, X):
         return ilayers.OnesLike()(X)
 
     def _postprocess_analysis(self, X):
-        ret = super(Gradient, self)._postprocess_analysis(X)
+        ret = super()._postprocess_analysis(X)
 
         if self._postprocess == "abs":
             ret = ilayers.Abs()(ret)
@@ -112,7 +116,7 @@ class Gradient(ReverseAnalyzerBase):
         return iutils.to_list(ret)
 
     def _get_state(self):
-        state = super(Gradient, self)._get_state()
+        state = super()._get_state()
         state.update({"postprocess": self._postprocess})
         return state
 
@@ -139,15 +143,13 @@ class InputTimesGradient(Gradient):
 
     def __init__(self, model, **kwargs):
 
-        self._add_model_softmax_check()
-
         super(InputTimesGradient, self).__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         tensors_to_analyze = [
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
-        gradients = super(InputTimesGradient, self)._create_analysis(
+        gradients = super()._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors
         )
         return [
@@ -185,15 +187,16 @@ class Deconvnet(ReverseAnalyzerBase):
     """
 
     def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
 
+        # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             "Deconvnet is only specified for networks with ReLU activations.",
             check_type="exception",
         )
-
-        super(Deconvnet, self).__init__(model, **kwargs)
+        self._do_model_checks()
 
     def _create_analysis(self, *args, **kwargs):
 
@@ -203,7 +206,7 @@ class Deconvnet(ReverseAnalyzerBase):
             name="deconvnet_reverse_relu_layer",
         )
 
-        return super(Deconvnet, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
 
 
 def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state):
@@ -224,15 +227,16 @@ class GuidedBackprop(ReverseAnalyzerBase):
     """
 
     def __init__(self, model, **kwargs):
+        super().__init__(model, **kwargs)
 
+        # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             "GuidedBackprop is only specified for " "networks with ReLU activations.",
             check_type="exception",
         )
-
-        super(GuidedBackprop, self).__init__(model, **kwargs)
+        self._do_model_checks()
 
     def _create_analysis(self, *args, **kwargs):
 
@@ -242,7 +246,7 @@ class GuidedBackprop(ReverseAnalyzerBase):
             name="guided_backprop_reverse_relu_layer",
         )
 
-        return super(GuidedBackprop, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
 
 
 ###############################################################################
@@ -265,7 +269,7 @@ class IntegratedGradients(PathIntegrator):
                 subanalyzer_kwargs[key] = kwargs.pop(key)
         subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
-        super(IntegratedGradients, self).__init__(subanalyzer, steps=steps, **kwargs)
+        super().__init__(subanalyzer, steps=steps, **kwargs)
 
 
 ###############################################################################
@@ -288,6 +292,4 @@ class SmoothGrad(GaussianSmoother):
                 subanalyzer_kwargs[key] = kwargs.pop(key)
         subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
-        super(SmoothGrad, self).__init__(
-            subanalyzer, augment_by_n=augment_by_n, **kwargs
-        )
+        super().__init__(subanalyzer, augment_by_n=augment_by_n, **kwargs)

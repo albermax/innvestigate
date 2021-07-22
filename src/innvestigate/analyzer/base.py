@@ -8,8 +8,10 @@ import keras.layers
 import keras.models
 import numpy as np
 
+import innvestigate.analyzer
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.graph as kgraph
+from innvestigate.utils.types import LayerCheck, ModelCheckDict, OptionalList
 
 __all__ = [
     "NotAnalyzeableModelException",
@@ -47,42 +49,65 @@ class AnalyzerBase(object):
       :class:`AnalyzerNetworkBase`.
     """
 
-    def __init__(self, model, disable_model_checks=False):
+    def __init__(
+        self,
+        model: keras.Model,
+        disable_model_checks: bool = False,
+        _model_checks: List[ModelCheckDict] = None,
+        _model_check_done: bool = False,
+    ) -> None:
+        """
+        Calling the super init first initializes an empty list of model checks
+        that child classes can append to.
+        """
         self._model = model
         self._disable_model_checks = disable_model_checks
+        self._model_check_done = _model_check_done
 
-        self._do_model_checks()
+        # If no checks have been run, create a new empty list to collect them
+        if _model_checks is None:
+            _model_checks = []
+        self._model_checks: List[ModelCheckDict] = _model_checks
 
-    def _add_model_check(self, check, message, check_type="exception"):
-        if getattr(self, "_model_check_done", False):
+    def _add_model_check(
+        self, check: LayerCheck, message: str, check_type: str = "exception"
+    ) -> None:
+        """Add model check to list of checks `self._model_checks`.
+
+        :param check: Callable that performs a boolean check on a Keras layers.
+        :type check: LayerCheck
+        :param message: Error message if check fails.
+        :type message: str
+        :param check_type: Either "exception" or "warning". Defaults to "exception"
+        :type check_type: str, optional
+        :raises Exception: [description]
+        """
+
+        if self._model_check_done:
             raise Exception(
-                "Cannot add model check anymore." " Check was already performed."
+                "Cannot add model check anymore. Check was already performed."
             )
 
-        if not hasattr(self, "_model_checks"):
-            self._model_checks = []
-
-        check_instance = {
+        check_instance: ModelCheckDict = {
             "check": check,
             "message": message,
-            "type": check_type,
+            "check_type": check_type,
         }
         self._model_checks.append(check_instance)
 
-    def _do_model_checks(self):
-        model_checks = getattr(self, "_model_checks", [])
-
-        if not self._disable_model_checks and len(model_checks) > 0:
-            check = [x["check"] for x in model_checks]
-            types = [x["type"] for x in model_checks]
-            messages = [x["message"] for x in model_checks]
+    def _do_model_checks(self) -> None:
+        if not self._disable_model_checks and len(self._model_checks) > 0:
+            check = [x["check"] for x in self._model_checks]
+            types = [x["check_type"] for x in self._model_checks]
+            messages = [x["message"] for x in self._model_checks]
 
             checked = kgraph.model_contains(self._model, check)
-            tmp = zip(iutils.to_list(checked), messages, types)
+
+            tmp = zip(checked, messages, types)
 
             for checked_layers, message, check_type in tmp:
                 if len(checked_layers) > 0:
-                    tmp_message = "%s\nCheck triggerd by layers: %s" % (
+                    tmp_message = "%s\nCheck triggered by layers: %s" % (
                         message,
                         checked_layers,
                     )
@@ -92,8 +117,7 @@ class AnalyzerBase(object):
                     elif check_type == "warning":
                         # TODO(albermax) only the first warning will be shown
                         warnings.warn(tmp_message)
-                    else:
-                        raise NotImplementedError()
+                    raise NotImplementedError()
 
         self._model_check_done = True
 
@@ -261,14 +285,11 @@ class OneEpochTrainerMixin(TrainerMixin):
         Same interface as :func:`fit` of :class:`TrainerMixin` except that
         the parameter epoch is fixed to 1.
         """
-        return super(OneEpochTrainerMixin, self).fit(*args, epochs=1, **kwargs)
+        return super().fit(*args, epochs=1, **kwargs)
 
-    def fit_generator(self, *args, **kwargs):
+    def fit_generator(self, *args, steps: int = None, **kwargs):
         """
         Same interface as :func:`fit_generator` of :class:`TrainerMixin` except that
         the parameter epoch is fixed to 1.
         """
-        steps = kwargs.pop("steps", None)
-        return super(OneEpochTrainerMixin, self).fit_generator(
-            *args, steps_per_epoch=steps, epochs=1, **kwargs
-        )
+        return super().fit_generator(*args, steps_per_epoch=steps, epochs=1, **kwargs)

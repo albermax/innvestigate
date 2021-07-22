@@ -121,26 +121,26 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
     """
 
     def __init__(self, model, patterns=None, pattern_type=None, **kwargs):
+        super().__init__(model, **kwargs)
 
+        # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
-            (
-                "PatternNet is not well defined for "
-                "networks with non-ReLU activations."
-            ),
+            ("PatternNet is not well defined for networks with non-ReLU activations."),
             check_type="warning",
         )
         self._add_model_check(
             lambda layer: not kchecks.is_convnet_layer(layer),
-            ("PatternNet is only well defined for " "convolutional neural networks."),
+            ("PatternNet is only well defined for convolutional neural networks."),
             check_type="warning",
         )
         self._add_model_check(
             lambda layer: not isinstance(layer, SUPPORTED_LAYER_PATTERNNET),
-            ("PatternNet is only well defined for " "conv2d/max-pooling/dense layers."),
+            ("PatternNet is only well defined for conv2d/max-pooling/dense layers."),
             check_type="exception",
         )
+        self._do_model_checks()
 
         self._patterns = patterns
         if self._patterns is not None:
@@ -153,16 +153,13 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         # Prevent this by projecting the values in bottleneck layers to +-1.
         if not kwargs.get("reverse_project_bottleneck_layers", True):
             warnings.warn(
-                "The standard setting for "
-                "'reverse_project_bottleneck_layers' "
+                "The standard setting for 'reverse_project_bottleneck_layers'"
                 "is overwritten."
             )
         else:
             kwargs["reverse_project_bottleneck_layers"] = True
 
-        super(PatternNet, self).__init__(model, **kwargs)
-
-    def _get_pattern_for_layer(self, layer, state):
+    def _get_pattern_for_layer(self, layer, _state):
         layers = [
             l
             for l in kgraph.get_model_layers(self._model)
@@ -190,7 +187,7 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
             name="patternnet_kernel_layer_mapping",
         )
 
-        return super(PatternNet, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
 
     def _fit_generator(
         self,

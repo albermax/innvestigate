@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import keras
 import keras.backend as K
 import keras.layers
@@ -10,6 +12,7 @@ import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.checks as kchecks
 from innvestigate.analyzer.base import AnalyzerBase
+from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = ["AnalyzerNetworkBase"]
 
@@ -36,33 +39,43 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def __init__(
         self,
-        model,
-        neuron_selection_mode="max_activation",
-        allow_lambda_layers=False,
-        **kwargs
-    ):
+        model: keras.Model,
+        neuron_selection_mode: str = "max_activation",
+        allow_lambda_layers: bool = False,
+        **kwargs,
+    ) -> None:
+        """
+        From AnalyzerBase super init:
+        * Initializes empty list of _model_checks
+
+        Here:
+        * set _neuron_selection_mode
+        * add check for lambda layers through 'allow_lambda_layers'
+        * define attributes for '_prepare_model', which is later called
+            through 'create_analyzer_model'
+        """
+        # Call super init to initialize self._model_checks
+        super().__init__(model, **kwargs)
+
         if neuron_selection_mode not in ["max_activation", "index", "all"]:
-            raise ValueError("neuron_selection parameter is not valid.")
-        self._neuron_selection_mode = neuron_selection_mode
+            raise ValueError("neuron_selection_mode parameter is not valid.")
+        self._neuron_selection_mode: str = neuron_selection_mode
 
-        self._allow_lambda_layers = allow_lambda_layers
-        self._add_model_check(
-            lambda layer: (
-                not self._allow_lambda_layers
-                and isinstance(layer, keras.layers.core.Lambda)
-            ),
-            (
-                "Lamda layers are not allowed. "
-                "To force use set allow_lambda_layers parameter."
-            ),
-            check_type="exception",
-        )
+        # Add model check for lambda layers
+        self._allow_lambda_layers: bool = allow_lambda_layers
+        self._add_lambda_layers_check()
 
-        self._special_helper_layers = []
+        # Attributes of prepared model created by '_prepare_model'
+        self._analyzer_model_done: bool = False
+        self._analyzer_model: Model = None
+        self._special_helper_layers: List[Layer] = []  # added for _reverse_mapping
+        self._analysis_inputs: Optional[List[Tensor]] = None
+        self._n_data_input: int = 0
+        self._n_constant_input: int = 0
+        self._n_data_output: int = 0
+        self._n_debug_output: int = 0
 
-        super(AnalyzerNetworkBase, self).__init__(model, **kwargs)
-
-    def _add_model_softmax_check(self):
+    def _add_model_softmax_check(self) -> None:
         """
         Adds check that prevents models from containing a softmax.
         """
@@ -72,7 +85,21 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-    def _prepare_model(self, model):
+    def _add_lambda_layers_check(self) -> None:
+        check_lambda_layers: LayerCheck = lambda layer: (
+            not self._allow_lambda_layers
+            and isinstance(layer, keras.layers.core.Lambda)
+        )
+        self._add_model_check(
+            check=check_lambda_layers,
+            message=(
+                "Lamda layers are not allowed. "
+                "To force use set 'allow_lambda_layers' parameter."
+            ),
+            check_type="exception",
+        )
+
+    def _prepare_model(self, model: Model) -> Tuple[Model, List[Tensor], List[Tensor]]:
         """
         Prepares the model to analyze before it gets actually analyzed.
 
@@ -194,7 +221,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         :param neuron_selection: If neuron_selection_mode is 'index' this
           should be an integer with the index for the chosen neuron.
         """
-        if not hasattr(self, "_analyzer_model"):
+
+        if self._analyzer_model_done is False:
             self.create_analyzer_model()
 
         X = iutils.to_list(X)

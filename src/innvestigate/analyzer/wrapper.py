@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import warnings
 from builtins import zip
+from typing import List, Optional, Union
 
 import keras.backend as kbackend
 import keras.models
@@ -11,6 +13,7 @@ import innvestigate.utils as iutils
 import innvestigate.utils.keras as kutils
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.utils.types import OptionalList, Tensor
 
 __all__ = [
     "WrapperBase",
@@ -28,11 +31,12 @@ class WrapperBase(AnalyzerBase):
     :param subanalyzer: The analyzer to be wrapped.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
+    def __init__(self, subanalyzer: AnalyzerBase, *args, **kwargs):
+        # To simplify serialization, additionaly passed models are popped
+        # and the subanalyzer model is passed to `AnalyzerBase`.
+        kwargs.pop("model", None)
+        super().__init__(subanalyzer._model, *args, **kwargs)
         self._subanalyzer = subanalyzer
-        model = None
-
-        super(WrapperBase, self).__init__(model, *args, **kwargs)
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
@@ -70,30 +74,39 @@ class AugmentReduceBase(WrapperBase):
     :param augment_by_n: Number of samples to create.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        self._augment_by_n = kwargs.pop("augment_by_n", 2)
-        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
-
-        if self._neuron_selection_mode != "all":
-            # TODO: this is not transparent, find a better way.
-            subanalyzer._neuron_selection_mode = "index"
-        super(AugmentReduceBase, self).__init__(subanalyzer, *args, **kwargs)
-
-        if isinstance(self._subanalyzer, AnalyzerNetworkBase):
-            # Take the keras analyzer model and
-            # add augment and reduce functionality.
-            self._keras_based_augment_reduce = True
-        else:
+    def __init__(
+        self, subanalyzer: AnalyzerNetworkBase, *args, augment_by_n: int = 2, **kwargs
+    ):
+        if not isinstance(subanalyzer, AnalyzerNetworkBase):
             raise NotImplementedError("Keras-based subanalyzer required.")
 
-    def create_analyzer_model(self):
-        if not self._keras_based_augment_reduce:
-            return
+        _subanalyzer_name = subanalyzer.__class__.__name__
+        if subanalyzer._neuron_selection_mode == "max_activation":
+            warnings.warn(
+                f"Subanalyzer {_subanalyzer_name} created through AugmentReduceBase "
+                f"""only supports neuron_selection_mode "all" and "index". """
+                f"""Specified mode "max_activation" has been changed to "all"."""
+            )
+            subanalyzer._neuron_selection_mode = "all"
 
+        if subanalyzer._neuron_selection_mode not in ["all", "index"]:
+            raise NotImplementedError(
+                f"Subanalyzer {_subanalyzer_name} created through AugmentReduceBase "
+                f"""only supports neuron_selection_mode "all" and "index". """
+                f"""got "{subanalyzer._neuron_selection_mode}"."""
+            )
+
+        super().__init__(subanalyzer, *args, **kwargs)
+
+        self._subanalyzer = subanalyzer
+        self._augment_by_n = augment_by_n
+        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+
+    def create_analyzer_model(self):
         self._subanalyzer.create_analyzer_model()
 
         if self._subanalyzer._n_debug_output > 0:
-            raise Exception("No debug output at subanalyzer is supported.")
+            raise NotImplementedError("No debug output at subanalyzer is supported.")
 
         model = self._subanalyzer._analyzer_model
         if None in model.input_shape[1:]:
@@ -124,30 +137,32 @@ class AugmentReduceBase(WrapperBase):
         )
         self._subanalyzer._analyzer_model = new_model
 
-    def analyze(self, X, *args, **kwargs):
-        if self._keras_based_augment_reduce is True:
-            if not hasattr(self._subanalyzer, "_analyzer_model"):
-                self.create_analyzer_model()
+    def analyze(
+        self, X: OptionalList[np.ndarray], *args, **kwargs
+    ) -> OptionalList[np.ndarray]:
+        if not hasattr(self._subanalyzer, "_analyzer_model"):
+            self.create_analyzer_model()
 
-            ns_mode = self._neuron_selection_mode
-            if ns_mode in ["max_activation", "index"]:
-                if ns_mode == "max_activation":
-                    tmp = self._subanalyzer._model.predict(X)
-                    indices = np.argmax(tmp, axis=1)
+        ns_mode = self._neuron_selection_mode
+        # TODO: fix neuron_selection with mode "index"
+        if ns_mode in ["max_activation", "index"]:
+            if ns_mode == "index":
+                # TODO: make neuron_selection arg or kwarg, not both
+                if len(args):
+                    arglist = list(args)
+                    indices = arglist.pop(0)
                 else:
-                    if len(args):
-                        args = list(args)
-                        indices = args.pop(0)
-                    else:
-                        indices = kwargs.pop("neuron_selection")
+                    indices = kwargs.pop("neuron_selection")
+            # TODO: add "max_activation"
+            # elif ns_mode == "max_activation":
+            #     tmp = self._subanalyzer._model.predict(X)
+            #     indices = np.argmax(tmp, axis=1)
 
-                # broadcast to match augmented samples.
-                indices = np.repeat(indices, self._augment_by_n)
+            # broadcast to match augmented samples.
+            indices = np.repeat(indices, self._augment_by_n)
 
-                kwargs["neuron_selection"] = indices
-            return self._subanalyzer.analyze(X, *args, **kwargs)
-        else:
-            raise DeprecationWarning("Not supported anymore.")
+            kwargs["neuron_selection"] = indices
+        return self._subanalyzer.analyze(X, *args, **kwargs)
 
     def _keras_get_constant_inputs(self):
         return list()
@@ -197,17 +212,17 @@ class GaussianSmoother(AugmentReduceBase):
     :param augment_by_n: Number of samples to create.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        self._noise_scale = kwargs.pop("noise_scale", 1)
-        super(GaussianSmoother, self).__init__(subanalyzer, *args, **kwargs)
+    def __init__(self, subanalyzer, *args, noise_scale: float = 1, **kwargs):
+        super().__init__(subanalyzer, *args, **kwargs)
+        self._noise_scale = noise_scale
 
     def _augment(self, X):
-        tmp = super(GaussianSmoother, self)._augment(X)
+        tmp = super()._augment(X)
         noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
         return [noise(x) for x in tmp]
 
     def _get_state(self):
-        state = super(GaussianSmoother, self)._get_state()
+        state = super()._get_state()
         state.update({"noise_scale": self._noise_scale})
         return state
 
@@ -239,13 +254,13 @@ class PathIntegrator(AugmentReduceBase):
     :param reference_inputs: The reference input.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        steps = kwargs.pop("steps", 16)
-        self._reference_inputs = kwargs.pop("reference_inputs", 0)
-        self._keras_constant_inputs = None
-        super(PathIntegrator, self).__init__(
-            subanalyzer, *args, augment_by_n=steps, **kwargs
-        )
+    def __init__(
+        self, subanalyzer, *args, steps: int = 16, reference_inputs=0, **kwargs
+    ):
+        super().__init__(subanalyzer, *args, augment_by_n=steps, **kwargs)
+
+        self._reference_inputs = reference_inputs
+        self._keras_constant_inputs: Optional[List[Tensor]] = None
 
     def _keras_set_constant_inputs(self, inputs):
         tmp = [kbackend.variable(x) for x in inputs]
@@ -292,14 +307,14 @@ class PathIntegrator(AugmentReduceBase):
         return ret
 
     def _reduce(self, X):
-        tmp = super(PathIntegrator, self)._reduce(X)
+        tmp = super()._reduce(X)
         difference = self._keras_difference
         del self._keras_difference
 
         return [keras.layers.Multiply()([x, d]) for x, d in zip(tmp, difference)]
 
     def _get_state(self):
-        state = super(PathIntegrator, self)._get_state()
+        state = super()._get_state()
         state.update({"reference_inputs": self._reference_inputs})
         return state
 
