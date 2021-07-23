@@ -50,7 +50,7 @@ class ReverseState(TypedDict):
     layer: Layer
     model: Model
     nid: int
-    stop_mapping_at_tensors: List[Tensor]
+    stop_mapping_at_ids: List[int]
 
 
 class NodeDict(TypedDict):

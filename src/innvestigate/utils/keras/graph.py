@@ -5,7 +5,7 @@ import inspect
 import warnings
 from abc import ABCMeta, abstractmethod
 from builtins import zip
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Set
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -679,11 +679,11 @@ def trace_model_execution(
     # E.g. if a layer was also applied outside of the model. Then its
     # node list contains nodes that do not contribute to the model's output.
     # Those nodes are filtered here.
-    used_as_input = outputs.copy()
+    used_as_input = [id(out) for out in outputs]
     tmp = []
     for l, Xs, Ys in reversed(executed_nodes):
-        if all([Y in used_as_input for Y in Ys]):
-            used_as_input += Xs
+        if all([id(Y) in used_as_input for Y in Ys]):
+            used_as_input += [id(X) for X in Xs]
             tmp.append((l, Xs, Ys))
     executed_nodes = list(reversed(tmp))
 
@@ -898,26 +898,22 @@ def get_bottleneck_nodes(
     are a bottleneck in the network, i.e., "all information" must pass
     through this node.
     """
-    forward_connections: Dict[Tensor, List[Tensor]]
-    open_connections: Dict[Tensor, bool]
-    ret: List[Tuple[Layer, Tuple[List[Tensor], List[Tensor]]]]
-
-    forward_connections = {}
+    forward_connections: Dict[int, List[Tensor]] = {}
     for l, Xs, Ys in execution_list:
         if isinstance(l, klayers.InputLayer):
             # Special case, do nothing.
             continue
 
-        for x in Xs:
-            if x in forward_connections:
-                forward_connections[x] += Ys
+        for X in Xs:
+            if id(X) in forward_connections:
+                forward_connections[id(X)] += Ys
             else:
-                forward_connections[x] = list(Ys)
+                forward_connections[id(X)] = list(Ys)
 
-    open_connections = {}
+    open_connections: Dict[int, bool] = {}
     for X in inputs:
-        for fw_c in forward_connections[X]:
-            open_connections[fw_c] = True
+        for fw_c in forward_connections[id(X)]:
+            open_connections[id(fw_c)] = True
 
     ret = []
     for l, Xs, Ys in execution_list:
@@ -928,16 +924,16 @@ def get_bottleneck_nodes(
             continue
 
         for Y in Ys:
-            assert Y in open_connections
-            del open_connections[Y]
+            assert id(Y) in open_connections
+            del open_connections[id(Y)]
 
         if len(open_connections) == 0:
             ret.append((l, (Xs, Ys)))
 
         for Y in Ys:
             if Y not in outputs:
-                for fw_c in forward_connections[Y]:
-                    open_connections[fw_c] = True
+                for fwc in forward_connections[id(Y)]:
+                    open_connections[id(fwc)] = True
 
     return ret
 
@@ -955,17 +951,17 @@ def get_bottleneck_tensors(
     nodes: List[Tuple[Layer, Tuple[List[Tensor], List[Tensor]]]]
     nodes = get_bottleneck_nodes(inputs, outputs, execution_list)
 
-    ret = []
+    ret: Dict[int, Tensor] = {}
     for _l, (Xs, Ys) in nodes:
         for tensor_list in (Xs, Ys):
             if len(tensor_list) == 1:
                 tensor = tensor_list[0]
-                if tensor not in ret:
-                    ret.append(tensor)
+                if id(tensor) not in ret:
+                    ret[id(tensor)] = tensor
             else:
                 # TODO(albermax): put warning here?
                 pass
-    return ret
+    return list(ret.values())
 
 
 ###############################################################################
@@ -1039,6 +1035,8 @@ def reverse_model(
     if stop_mapping_at_tensors is None:
         stop_mapping_at_tensors = []
 
+    stop_mapping_at_ids = [id(X) for X in stop_mapping_at_tensors]
+
     if head_mapping is None:
 
         def head_mapping(X):
@@ -1066,10 +1064,10 @@ def reverse_model(
 
     # Initialize structure that keeps track of reversed tensors
     # maps tensor to reverse tensor and additional node information
-    reversed_tensors: Dict[Tensor, ReverseTensorDict]
+    reversed_tensors: Dict[int, ReverseTensorDict]
     reversed_tensors = {}
 
-    bottleneck_tensors = set()
+    bottleneck_tensor_ids: Set[int] = set()
 
     def add_reversed_tensors(nid, tensors_list, reversed_tensors_list) -> None:
         def add_reversed_tensor(i, X: Tensor, reversed_X: Tensor) -> None:
@@ -1077,7 +1075,7 @@ def reverse_model(
             # or the output (e.g. max neuron activation)
 
             # Do not keep tensors that should stop the mapping.
-            if X in stop_mapping_at_tensors:  # type: ignore
+            if id(X) in stop_mapping_at_ids:
                 return
 
             if reversed_X is None:
@@ -1086,14 +1084,16 @@ def reverse_model(
                     "is expected to be Tensor."
                 )
 
-            if X not in reversed_tensors:  # no duplicate entries for forward tensors
-                reversed_tensors[X] = {
+            if (
+                id(X) not in reversed_tensors
+            ):  # no duplicate entries for forward tensors
+                reversed_tensors[id(X)] = {
                     "nid": (nid, i),
                     "tensors": [reversed_X],
                     "final_tensor": None,
                 }
             else:  # more than one tensor propagating relevance to X
-                reversed_tensors[X]["tensors"].append(reversed_X)
+                reversed_tensors[id(X)]["tensors"].append(reversed_X)
 
         tmp = zip(tensors_list, reversed_tensors_list)
         for i, (X, reversed_X) in enumerate(tmp):
@@ -1101,7 +1101,7 @@ def reverse_model(
 
     def get_reversed_tensor(tensor: Tensor) -> Tensor:
         tmp: ReverseTensorDict
-        tmp = reversed_tensors[tensor]
+        tmp = reversed_tensors[id(tensor)]
 
         if tmp["final_tensor"] is None:
             if len(tmp["tensors"]) == 1:
@@ -1110,7 +1110,7 @@ def reverse_model(
                 final_tensor = klayers.Add()(tmp["tensors"])
 
             if project_bottleneck_tensors is True:
-                if tensor in bottleneck_tensors:
+                if id(tensor) in bottleneck_tensor_ids:
                     project = ilayers.Project(project_bottleneck_tensors)
                     final_tensor = project(final_tensor)
 
@@ -1197,9 +1197,10 @@ def reverse_model(
         initialized_reverse_mappings[layer] = reverse_mapping  # type: ignore
 
     if project_bottleneck_tensors:
-        bottleneck_tensors.update(
-            get_bottleneck_tensors(model.inputs, outputs, execution_list)
-        )
+        ids = [
+            id(X) for X in get_bottleneck_tensors(model.inputs, outputs, execution_list)
+        ]
+        bottleneck_tensor_ids.update(ids)
 
     # Initialize the reverse tensor mappings.
     add_reversed_tensors(-1, outputs, [head_mapping(tmp) for tmp in outputs])  # type: ignore
@@ -1215,16 +1216,16 @@ def reverse_model(
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
-            if not all([Y in reversed_tensors for Y in Ys]):
+            if not all([id(Y) in reversed_tensors for Y in Ys]):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
                 # Potentially this node is also not part of the
                 # reversed tensor set because it depends on a tensor
-                # that is listed in stop_mapping_at_tensors.
+                # that is listed in stop_mapping_at_ids.
                 continue
             reversed_Ys = [get_reversed_tensor(Y) for Y in Ys]
-            local_stop_mapping_at_tensors = [
-                X for X in Xs if X in stop_mapping_at_tensors
+            local_stop_mapping_at_ids = [
+                id(X) for X in Xs if id(X) in stop_mapping_at_ids
             ]
 
             _print(f"[NID: {nid}] Reverse layer-node {layer}")
@@ -1237,7 +1238,7 @@ def reverse_model(
                     "nid": nid,
                     "model": model,
                     "layer": layer,
-                    "stop_mapping_at_tensors": local_stop_mapping_at_tensors,
+                    "stop_mapping_at_ids": local_stop_mapping_at_ids,
                 },
             )
             reversed_Xs = iutils.to_list(reversed_Xs)
@@ -1247,7 +1248,7 @@ def reverse_model(
     reversed_input_tensors = [
         get_reversed_tensor(tmp)
         for tmp in model.inputs
-        if tmp not in stop_mapping_at_tensors
+        if id(tmp) not in stop_mapping_at_ids
     ]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
