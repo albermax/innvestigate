@@ -36,6 +36,8 @@ class WrapperBase(AnalyzerBase):
         # and the subanalyzer model is passed to `AnalyzerBase`.
         kwargs.pop("model", None)
         super().__init__(subanalyzer._model, *args, **kwargs)
+
+        self._subanalyzer_name = subanalyzer.__class__.__name__
         self._subanalyzer = subanalyzer
 
     def analyze(self, *args, **kwargs):
@@ -76,32 +78,32 @@ class AugmentReduceBase(WrapperBase):
     """
 
     def __init__(
-        self, subanalyzer: AnalyzerNetworkBase, *args, augment_by_n: int = 2, **kwargs
+        self,
+        subanalyzer: AnalyzerNetworkBase,
+        *args,
+        augment_by_n: int = 2,
+        neuron_selection_mode="max_activation",
+        **kwargs,
     ):
-        if not isinstance(subanalyzer, AnalyzerNetworkBase):
-            raise NotImplementedError("Keras-based subanalyzer required.")
 
-        _subanalyzer_name = subanalyzer.__class__.__name__
-        if subanalyzer._neuron_selection_mode == "max_activation":
-            warnings.warn(
-                f"Subanalyzer {_subanalyzer_name} created through AugmentReduceBase "
-                f"""only supports neuron_selection_mode "all" and "index". """
-                f"""Specified mode "max_activation" has been changed to "all"."""
-            )
-            subanalyzer._neuron_selection_mode = "all"
+        if neuron_selection_mode == "max_activation":
+            # TODO: find a more transparent way.
+            #
+            # Since AugmentReduceBase analyzers augment the input,
+            # it is possible that the neuron w/ max activation changes.
+            # As a workaround, the index of the maximally activated neuron
+            # w.r.t. the "unperturbed" input is computed and used in combination
+            # with neuron_selection_mode = "index" in the subanalyzer.
+            #
+            # NOTE:
+            # The analyzer will still have neuron_selection_mode = "max_activation"!
+            subanalyzer._neuron_selection_mode = "index"
 
-        if subanalyzer._neuron_selection_mode not in ["all", "index"]:
-            raise NotImplementedError(
-                f"Subanalyzer {_subanalyzer_name} created through AugmentReduceBase "
-                f"""only supports neuron_selection_mode "all" and "index". """
-                f"""got "{subanalyzer._neuron_selection_mode}"."""
-            )
+        super().__init__(
+            subanalyzer, *args, neuron_selection_mode=neuron_selection_mode, **kwargs
+        )
 
-        super().__init__(subanalyzer, *args, **kwargs)
-
-        self._subanalyzer = subanalyzer
-        self._augment_by_n = augment_by_n
-        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+        self._augment_by_n: int = augment_by_n  # number of samples to create
 
     def create_analyzer_model(self):
         self._subanalyzer.create_analyzer_model()
@@ -141,28 +143,36 @@ class AugmentReduceBase(WrapperBase):
     def analyze(
         self, X: OptionalList[np.ndarray], *args, **kwargs
     ) -> OptionalList[np.ndarray]:
-        if not hasattr(self._subanalyzer, "_analyzer_model"):
+        if self._subanalyzer._analyzer_model is None:
             self.create_analyzer_model()
 
         ns_mode = self._neuron_selection_mode
-        # TODO: fix neuron_selection with mode "index"
-        if ns_mode in ["max_activation", "index"]:
-            if ns_mode == "index":
-                # TODO: make neuron_selection arg or kwarg, not both
-                if len(args):
-                    arglist = list(args)
-                    indices = arglist.pop(0)
-                else:
-                    indices = kwargs.pop("neuron_selection")
-            # TODO: add "max_activation"
-            # elif ns_mode == "max_activation":
-            #     tmp = self._subanalyzer._model.predict(X)
-            #     indices = np.argmax(tmp, axis=1)
+        if ns_mode == "all":
+            return self._subanalyzer.analyze(X, *args, **kwargs)
 
-            # broadcast to match augmented samples.
-            indices = np.repeat(indices, self._augment_by_n)
+        # As described in the AugmentReduceBase init,
+        # both ns_mode "max_activation" and "index" make use
+        # of a subanalyzer using neuron_selection_mode="index".
+        elif ns_mode == "max_activation":
+            # obtain max neuron activations over batch
+            pred = self._subanalyzer._model.predict(X)
+            indices = np.argmax(pred, axis=1)
+        elif ns_mode == "index":
+            # TODO: make neuron_selection arg or kwarg, not both
+            if len(args):
+                arglist = list(args)
+                indices = arglist.pop(0)
+            else:
+                indices = kwargs.pop("neuron_selection")
 
-            kwargs["neuron_selection"] = indices
+        if not self._subanalyzer._neuron_selection_mode == "index":
+            raise AssertionError(
+                'Subanalyzer neuron_selection_mode has to be "index" '
+                'when using analyzer with neuron_selection_mode != "all".'
+            )
+        # broadcast to match augmented samples.
+        indices = np.repeat(indices, self._augment_by_n)
+        kwargs["neuron_selection"] = indices
         return self._subanalyzer.analyze(X, *args, **kwargs)
 
     def _keras_get_constant_inputs(self):
@@ -242,8 +252,8 @@ class PathIntegrator(AugmentReduceBase):
 
     This analyzer:
     * creates a path from input to reference image.
-    * creates steps number of intermediate inputs and
-      crests an analysis for them.
+    * creates `steps` number of intermediate inputs and
+      creates an analysis for them.
     * sums the analyses and multiplies them with the input-reference_input.
 
     This wrapper is used to implement Integrated Gradients.

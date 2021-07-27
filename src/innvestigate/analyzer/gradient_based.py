@@ -270,20 +270,32 @@ class IntegratedGradients(PathIntegrator):
     :param steps: Number of steps to use average along integration path.
     """
 
-    def __init__(self, model, steps=64, **kwargs):
+    def __init__(
+        self,
+        model,
+        steps=64,
+        neuron_selection_mode="max_activation",
+        postprocess=None,
+        **kwargs
+    ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
             subanalyzer = kwargs.pop("subanalyzer")
         # If initialized normally:
         else:
-            subanalyzer_kwargs = {}
-            kwargs_keys = ["neuron_selection_mode", "postprocess"]
-            for key in kwargs_keys:
-                if key in kwargs:
-                    subanalyzer_kwargs[key] = kwargs.pop(key)
-            subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
-        super().__init__(subanalyzer, steps=steps, **kwargs)
+            subanalyzer = Gradient(
+                model,
+                neuron_selection_mode=neuron_selection_mode,
+                postprocess=postprocess,
+            )
+
+        super().__init__(
+            subanalyzer,
+            steps=steps,
+            neuron_selection_mode=neuron_selection_mode,
+            **kwargs
+        )
 
 
 ###############################################################################
@@ -298,17 +310,29 @@ class SmoothGrad(GaussianSmoother):
     :param augment_by_n: Number of distortions to average for smoothing.
     """
 
-    def __init__(self, model, augment_by_n=64, **kwargs):
+    def __init__(
+        self,
+        model,
+        augment_by_n=64,
+        neuron_selection_mode="max_activation",
+        postprocess=None,
+        **kwargs
+    ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
             subanalyzer = kwargs.pop("subanalyzer")
         # If initialized normally:
         else:
-            subanalyzer_kwargs = {}
-            kwargs_keys = ["neuron_selection_mode", "postprocess"]
-            for key in kwargs_keys:
-                if key in kwargs:
-                    subanalyzer_kwargs[key] = kwargs.pop(key)
-            subanalyzer = Gradient(model, **subanalyzer_kwargs)
 
-        super().__init__(subanalyzer, augment_by_n=augment_by_n, **kwargs)
+            subanalyzer = Gradient(
+                model,
+                neuron_selection_mode=neuron_selection_mode,
+                postprocess=postprocess,
+            )
+
+        super().__init__(
+            subanalyzer,
+            augment_by_n=augment_by_n,
+            neuron_selection_mode=neuron_selection_mode,
+            **kwargs
+        )
