@@ -43,7 +43,6 @@ class WrapperBase(AnalyzerBase):
 
         self._subanalyzer_name = subanalyzer.__class__.__name__
         self._subanalyzer = subanalyzer
-        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
