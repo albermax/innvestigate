@@ -31,35 +31,27 @@ class AnalyzerNetworkBase(AnalyzerBase):
     * allows :func:`_create_analysis` to return tensors
       that are intercept for debugging purposes.
 
-    :param neuron_selection_mode: How to select the neuron to analyze.
-      Possible values are 'max_activation', 'index' for the neuron
-      (expects indices at :func:`analyze` calls), 'all' take all neurons.
     :param allow_lambda_layers: Allow the model to contain lambda layers.
     """
 
     def __init__(
         self,
-        model: keras.Model,
-        neuron_selection_mode: str = "max_activation",
+        model: Model,
         allow_lambda_layers: bool = False,
         **kwargs,
     ) -> None:
         """
         From AnalyzerBase super init:
         * Initializes empty list of _model_checks
+        * set _neuron_selection_mode
 
         Here:
-        * set _neuron_selection_mode
         * add check for lambda layers through 'allow_lambda_layers'
         * define attributes for '_prepare_model', which is later called
             through 'create_analyzer_model'
         """
         # Call super init to initialize self._model_checks
         super().__init__(model, **kwargs)
-
-        if neuron_selection_mode not in ["max_activation", "index", "all"]:
-            raise ValueError("neuron_selection_mode parameter is not valid.")
-        self._neuron_selection_mode: str = neuron_selection_mode
 
         # Add model check for lambda layers
         self._allow_lambda_layers: bool = allow_lambda_layers
@@ -304,21 +296,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def _get_state(self) -> Dict[str, Any]:
         state = super()._get_state()
-        state.update({"neuron_selection_mode": self._neuron_selection_mode})
         state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
     def _state_to_kwargs(cls, state: Dict[str, Any]) -> Dict[str, Any]:
-        neuron_selection_mode = state.pop("neuron_selection_mode")
         allow_lambda_layers = state.pop("allow_lambda_layers")
         # call super after popping class-specific states:
         kwargs = super()._state_to_kwargs(state)
 
-        kwargs.update(
-            {
-                "neuron_selection_mode": neuron_selection_mode,
-                "allow_lambda_layers": allow_lambda_layers,
-            }
-        )
+        kwargs.update({"allow_lambda_layers": allow_lambda_layers})
         return kwargs

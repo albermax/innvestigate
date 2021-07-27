@@ -13,7 +13,7 @@ import numpy as np
 import innvestigate.analyzer
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.graph as kgraph
-from innvestigate.utils.types import LayerCheck, ModelCheckDict, OptionalList
+from innvestigate.utils.types import LayerCheck, Model, ModelCheckDict, OptionalList
 
 __all__ = [
     "NotAnalyzeableModelException",
@@ -44,6 +44,9 @@ class AnalyzerBase(metaclass=ABCMeta):
     :param model: A Keras model.
     :param disable_model_checks: Do not execute model checks that enforce
       compatibility of analyzer and model.
+    :param neuron_selection_mode: How to select the neuron to analyze.
+      Possible values are 'max_activation', 'index' for the neuron
+      (expects indices at :func:`analyze` calls), 'all' take all neurons.
 
     .. note:: To develop a new analyzer derive from
       :class:`AnalyzerNetworkBase`.
@@ -51,20 +54,28 @@ class AnalyzerBase(metaclass=ABCMeta):
 
     def __init__(
         self,
-        model: keras.Model,
+        model: Model,
+        neuron_selection_mode: str = "max_activation",
         disable_model_checks: bool = False,
-        _model_checks: List[ModelCheckDict] = None,
         _model_check_done: bool = False,
+        _model_checks: List[ModelCheckDict] = None,
     ) -> None:
-        """
-        Calling the super init first initializes an empty list of model checks
-        that child classes can append to.
-        """
+
         self._model = model
         self._disable_model_checks = disable_model_checks
         self._model_check_done = _model_check_done
 
-        # If no checks have been run, create a new empty list to collect them
+        # There are three possible neuron selection modes
+        # that return an explanation w.r.t.:
+        # * "max_activation": maximum activated neuron
+        # * "index": neuron at index given on call to `analyze`
+        # * "all": all output neurons
+        if neuron_selection_mode not in ["max_activation", "index", "all"]:
+            raise ValueError("neuron_selection_mode parameter is not valid.")
+        self._neuron_selection_mode: str = neuron_selection_mode
+
+        # If no model checks are given, initialize an empty list of checks
+        # that child analyzers can append to.
         if _model_checks is None:
             _model_checks = []
         self._model_checks: List[ModelCheckDict] = _model_checks
@@ -169,6 +180,7 @@ class AnalyzerBase(metaclass=ABCMeta):
             "model_json": self._model.to_json(),
             "model_weights": self._model.get_weights(),
             "disable_model_checks": self._disable_model_checks,
+            "neuron_selection_mode": self._neuron_selection_mode,
         }
         return state
 
@@ -198,13 +210,19 @@ class AnalyzerBase(metaclass=ABCMeta):
         disable_model_checks = state.pop("disable_model_checks")
         model_json = state.pop("model_json")
         model_weights = state.pop("model_weights")
+        neuron_selection_mode = state.pop("neuron_selection_mode")
+
         # since `super()._state_to_kwargs(state)` should be called last
         # in every child class, the dict `state` should be empty at this point.
         assert len(state) == 0
 
         model = keras.models.model_from_json(model_json)
         model.set_weights(model_weights)
-        return {"model": model, "disable_model_checks": disable_model_checks}
+        return {
+            "model": model,
+            "disable_model_checks": disable_model_checks,
+            "neuron_selection_mode": neuron_selection_mode,
+        }
 
     @staticmethod
     def load(class_name: str, state: Dict[str, Any]) -> AnalyzerBase:
