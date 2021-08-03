@@ -29,7 +29,6 @@ from innvestigate.utils.types import (
 __all__ = [
     "get_kernel",
     "get_layer_inbound_count",
-    "get_layer_outbound_count",
     "get_layer_neuronwise_io",
     "copy_layer_wo_activation",
     "copy_layer",
@@ -756,8 +755,11 @@ def get_model_execution_trace(
     nid_to_nodes: Dict[Layer, Tuple[Optional[int], Layer, List[Tensor], List[Tensor]]]
     model_execution_trace: List[NodeDict]
 
+    # TODO: fix invariance of type hints
     Xs_nids: List[Optional[int]]
     Ys_nids: List[Union[List[int], List[None]]]
+    # Xs_layers = List[Layer]
+    # Ys_layers = List[List[Layer]]
 
     nid_to_nodes = {t[0]: t for t in id_execution_trace}
 

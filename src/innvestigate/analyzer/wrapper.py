@@ -1,21 +1,19 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
+import warnings
 from builtins import zip
+from typing import List, Optional, Union
 
-import keras.backend as K
+import keras.backend as kbackend
 import keras.models
 import numpy as np
 
-from .. import layers as ilayers
-from .. import utils as iutils
-from ..utils import keras as kutils
-from . import base
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
+import innvestigate.utils.keras as kutils
+from innvestigate.analyzer.base import AnalyzerBase
+from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.utils.types import OptionalList, Tensor
 
 __all__ = [
     "WrapperBase",
@@ -25,12 +23,7 @@ __all__ = [
 ]
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class WrapperBase(base.AnalyzerBase):
+class WrapperBase(AnalyzerBase):
     """Interface for wrappers around analyzers
 
     This class is the basic interface for wrappers around analyzers.
@@ -38,36 +31,38 @@ class WrapperBase(base.AnalyzerBase):
     :param subanalyzer: The analyzer to be wrapped.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        self._subanalyzer = subanalyzer
-        model = None
+    def __init__(self, subanalyzer: AnalyzerBase, *args, **kwargs):
+        # To simplify serialization, additionaly passed models are popped
+        # and the subanalyzer model is passed to `AnalyzerBase`.
+        kwargs.pop("model", None)
+        super().__init__(subanalyzer._model, *args, **kwargs)
 
-        super(WrapperBase, self).__init__(model, *args, **kwargs)
+        self._subanalyzer_name = subanalyzer.__class__.__name__
+        self._subanalyzer = subanalyzer
 
     def analyze(self, *args, **kwargs):
         return self._subanalyzer.analyze(*args, **kwargs)
 
-    def _get_state(self):
+    def _get_state(self) -> dict:
         sa_class_name, sa_state = self._subanalyzer.save()
 
-        state = {}
+        state = super()._get_state()
         state.update({"subanalyzer_class_name": sa_class_name})
         state.update({"subanalyzer_state": sa_state})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state: dict):
         sa_class_name = state.pop("subanalyzer_class_name")
         sa_state = state.pop("subanalyzer_state")
-        assert len(state) == 0
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
 
-        subanalyzer = base.AnalyzerBase.load(sa_class_name, sa_state)
-        kwargs = {"subanalyzer": subanalyzer}
+        subanalyzer = AnalyzerBase.load(sa_class_name, sa_state)
+        kwargs.update({"subanalyzer": subanalyzer})
         return kwargs
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -82,44 +77,53 @@ class AugmentReduceBase(WrapperBase):
     :param augment_by_n: Number of samples to create.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        self._augment_by_n = kwargs.pop("augment_by_n", 2)
-        self._neuron_selection_mode = subanalyzer._neuron_selection_mode
+    def __init__(
+        self,
+        subanalyzer: AnalyzerNetworkBase,
+        *args,
+        augment_by_n: int = 2,
+        neuron_selection_mode="max_activation",
+        **kwargs,
+    ):
 
-        if self._neuron_selection_mode != "all":
-            # TODO: this is not transparent, find a better way.
+        if neuron_selection_mode == "max_activation":
+            # TODO: find a more transparent way.
+            #
+            # Since AugmentReduceBase analyzers augment the input,
+            # it is possible that the neuron w/ max activation changes.
+            # As a workaround, the index of the maximally activated neuron
+            # w.r.t. the "unperturbed" input is computed and used in combination
+            # with neuron_selection_mode = "index" in the subanalyzer.
+            #
+            # NOTE:
+            # The analyzer will still have neuron_selection_mode = "max_activation"!
             subanalyzer._neuron_selection_mode = "index"
-        super(AugmentReduceBase, self).__init__(subanalyzer, *args, **kwargs)
 
-        if isinstance(self._subanalyzer, base.AnalyzerNetworkBase):
-            # Take the keras analyzer model and
-            # add augment and reduce functionality.
-            self._keras_based_augment_reduce = True
-        else:
-            raise NotImplementedError("Keras-based subanalyzer required.")
+        super().__init__(
+            subanalyzer, *args, neuron_selection_mode=neuron_selection_mode, **kwargs
+        )
+
+        self._augment_by_n: int = augment_by_n  # number of samples to create
 
     def create_analyzer_model(self):
-        if not self._keras_based_augment_reduce:
-            return
-
         self._subanalyzer.create_analyzer_model()
 
         if self._subanalyzer._n_debug_output > 0:
-            raise Exception("No debug output at subanalyzer is supported.")
+            raise NotImplementedError("No debug output at subanalyzer is supported.")
 
         model = self._subanalyzer._analyzer_model
         if None in model.input_shape[1:]:
             raise ValueError(
                 "The input shape for the model needs "
                 "to be fully specified (except the batch axis). "
-                "Model input shape is: %s" % (model.input_shape,)
+                f"Model input shape is: {model.input_shape}"
             )
 
         inputs = model.inputs[: self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input :]
-        # todo: check this, index seems not right.
-        # outputs = model.outputs[:self._subanalyzer._n_data_input]
-        extra_outputs = model.outputs[self._subanalyzer._n_data_input :]
+
+        outputs = model.outputs[: self._subanalyzer._n_data_output]
+        extra_outputs = model.outputs[self._subanalyzer._n_data_output :]
 
         if len(extra_outputs) > 0:
             raise Exception("No extra output is allowed " "with this wrapper.")
@@ -136,30 +140,40 @@ class AugmentReduceBase(WrapperBase):
         )
         self._subanalyzer._analyzer_model = new_model
 
-    def analyze(self, X, *args, **kwargs):
-        if self._keras_based_augment_reduce is True:
-            if not hasattr(self._subanalyzer, "_analyzer_model"):
-                self.create_analyzer_model()
+    def analyze(
+        self, X: OptionalList[np.ndarray], *args, **kwargs
+    ) -> OptionalList[np.ndarray]:
+        if self._subanalyzer._analyzer_model is None:
+            self.create_analyzer_model()
 
-            ns_mode = self._neuron_selection_mode
-            if ns_mode in ["max_activation", "index"]:
-                if ns_mode == "max_activation":
-                    tmp = self._subanalyzer._model.predict(X)
-                    indices = np.argmax(tmp, axis=1)
-                else:
-                    if len(args):
-                        args = list(args)
-                        indices = args.pop(0)
-                    else:
-                        indices = kwargs.pop("neuron_selection")
-
-                # broadcast to match augmented samples.
-                indices = np.repeat(indices, self._augment_by_n)
-
-                kwargs["neuron_selection"] = indices
+        ns_mode = self._neuron_selection_mode
+        if ns_mode == "all":
             return self._subanalyzer.analyze(X, *args, **kwargs)
-        else:
-            raise DeprecationWarning("Not supported anymore.")
+
+        # As described in the AugmentReduceBase init,
+        # both ns_mode "max_activation" and "index" make use
+        # of a subanalyzer using neuron_selection_mode="index".
+        elif ns_mode == "max_activation":
+            # obtain max neuron activations over batch
+            pred = self._subanalyzer._model.predict(X)
+            indices = np.argmax(pred, axis=1)
+        elif ns_mode == "index":
+            # TODO: make neuron_selection arg or kwarg, not both
+            if len(args):
+                arglist = list(args)
+                indices = arglist.pop(0)
+            else:
+                indices = kwargs.pop("neuron_selection")
+
+        if not self._subanalyzer._neuron_selection_mode == "index":
+            raise AssertionError(
+                'Subanalyzer neuron_selection_mode has to be "index" '
+                'when using analyzer with neuron_selection_mode != "all".'
+            )
+        # broadcast to match augmented samples.
+        indices = np.repeat(indices, self._augment_by_n)
+        kwargs["neuron_selection"] = indices
+        return self._subanalyzer.analyze(X, *args, **kwargs)
 
     def _keras_get_constant_inputs(self):
         return list()
@@ -169,7 +183,7 @@ class AugmentReduceBase(WrapperBase):
         return [repeat(x) for x in iutils.to_list(X)]
 
     def _reduce(self, X):
-        X_shape = [K.int_shape(x) for x in iutils.to_list(X)]
+        X_shape = [kbackend.int_shape(x) for x in iutils.to_list(X)]
         reshape = [
             ilayers.Reshape((-1, self._augment_by_n) + shape[1:]) for shape in X_shape
         ]
@@ -178,25 +192,20 @@ class AugmentReduceBase(WrapperBase):
         return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
 
     def _get_state(self):
-        if self._neuron_selection_mode != "all":
-            # TODO: this is not transparent, find a better way.
-            # revert the tempering in __init__
-            tmp = self._neuron_selection_mode
-            self._subanalyzer._neuron_selection_mode = tmp
-        state = super(AugmentReduceBase, self)._get_state()
+        state = super()._get_state()
         state.update({"augment_by_n": self._augment_by_n})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         augment_by_n = state.pop("augment_by_n")
-        kwargs = super(AugmentReduceBase, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update({"augment_by_n": augment_by_n})
         return kwargs
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -211,30 +220,30 @@ class GaussianSmoother(AugmentReduceBase):
     :param augment_by_n: Number of samples to create.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        self._noise_scale = kwargs.pop("noise_scale", 1)
-        super(GaussianSmoother, self).__init__(subanalyzer, *args, **kwargs)
+    def __init__(self, subanalyzer, *args, noise_scale: float = 1, **kwargs):
+        super().__init__(subanalyzer, *args, **kwargs)
+        self._noise_scale = noise_scale
 
     def _augment(self, X):
-        tmp = super(GaussianSmoother, self)._augment(X)
+        tmp = super()._augment(X)
         noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
         return [noise(x) for x in tmp]
 
     def _get_state(self):
-        state = super(GaussianSmoother, self)._get_state()
+        state = super()._get_state()
         state.update({"noise_scale": self._noise_scale})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         noise_scale = state.pop("noise_scale")
-        kwargs = super(GaussianSmoother, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update({"noise_scale": noise_scale})
         return kwargs
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -243,8 +252,8 @@ class PathIntegrator(AugmentReduceBase):
 
     This analyzer:
     * creates a path from input to reference image.
-    * creates steps number of intermediate inputs and
-      crests an analysis for them.
+    * creates `steps` number of intermediate inputs and
+      creates an analysis for them.
     * sums the analyses and multiplies them with the input-reference_input.
 
     This wrapper is used to implement Integrated Gradients.
@@ -255,37 +264,39 @@ class PathIntegrator(AugmentReduceBase):
     :param reference_inputs: The reference input.
     """
 
-    def __init__(self, subanalyzer, *args, **kwargs):
-        steps = kwargs.pop("steps", 16)
-        self._reference_inputs = kwargs.pop("reference_inputs", 0)
-        self._keras_constant_inputs = None
-        super(PathIntegrator, self).__init__(
-            subanalyzer, *args, augment_by_n=steps, **kwargs
-        )
+    def __init__(
+        self, subanalyzer, *args, steps: int = 16, reference_inputs=0, **kwargs
+    ):
+        super().__init__(subanalyzer, *args, augment_by_n=steps, **kwargs)
 
-    def _keras_set_constant_inputs(self, inputs):
-        tmp = [K.variable(x) for x in inputs]
+        self._reference_inputs = reference_inputs
+        self._keras_constant_inputs: Optional[List[Tensor]] = None
+
+    def _keras_set_constant_inputs(self, inputs: List[Tensor]) -> None:
+        tmp = [kbackend.variable(x) for x in inputs]
         self._keras_constant_inputs = [
-            keras.layers.Input(tensor=x, shape=x.shape[1:]) for x in tmp
+            keras.layers.Input(tensor=X, shape=X.shape[1:]) for X in tmp
         ]
 
-    def _keras_get_constant_inputs(self):
+    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
         return self._keras_constant_inputs
 
-    def _compute_difference(self, X):
+    def _compute_difference(self, X: List[Tensor]) -> List[Tensor]:
         if self._keras_constant_inputs is None:
             tmp = kutils.broadcast_np_tensors_to_keras_tensors(
                 X, self._reference_inputs
             )
             self._keras_set_constant_inputs(tmp)
 
-        reference_inputs = self._keras_get_constant_inputs()
+        # Type not Optional anymore as as `_keras_set_constant_inputs` has been called.
+        reference_inputs: List[Tensor]
+        reference_inputs = self._keras_get_constant_inputs()  # type: ignore
         return [keras.layers.Subtract()([x, ri]) for x, ri in zip(X, reference_inputs)]
 
     def _augment(self, X):
-        tmp = super(PathIntegrator, self)._augment(X)
+        tmp = super()._augment(X)
         tmp = [
-            ilayers.Reshape((-1, self._augment_by_n) + K.int_shape(x)[1:])(x)
+            ilayers.Reshape((-1, self._augment_by_n) + kbackend.int_shape(x)[1:])(x)
             for x in tmp
         ]
 
@@ -293,7 +304,7 @@ class PathIntegrator(AugmentReduceBase):
         self._keras_difference = difference
         # Make broadcastable.
         difference = [
-            ilayers.Reshape((-1, 1) + K.int_shape(x)[1:])(x) for x in difference
+            ilayers.Reshape((-1, 1) + kbackend.int_shape(x)[1:])(x) for x in difference
         ]
 
         # Compute path steps.
@@ -304,27 +315,30 @@ class PathIntegrator(AugmentReduceBase):
 
         reference_inputs = self._keras_get_constant_inputs()
         ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs, path_steps)]
-        ret = [ilayers.Reshape((-1,) + K.int_shape(x)[2:])(x) for x in ret]
+        ret = [ilayers.Reshape((-1,) + kbackend.int_shape(x)[2:])(x) for x in ret]
         return ret
 
     def _reduce(self, X):
-        tmp = super(PathIntegrator, self)._reduce(X)
+        tmp = super()._reduce(X)
         difference = self._keras_difference
         del self._keras_difference
 
         return [keras.layers.Multiply()([x, d]) for x, d in zip(tmp, difference)]
 
     def _get_state(self):
-        state = super(PathIntegrator, self)._get_state()
+        state = super()._get_state()
         state.update({"reference_inputs": self._reference_inputs})
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         reference_inputs = state.pop("reference_inputs")
-        kwargs = super(PathIntegrator, clazz)._state_to_kwargs(state)
-        kwargs.update({"reference_inputs": reference_inputs})
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         # We use steps instead.
-        kwargs.update({"steps": kwargs["augment_by_n"]})
+        kwargs.update(
+            {"reference_inputs": reference_inputs, "steps": kwargs["augment_by_n"]}
+        )
         del kwargs["augment_by_n"]
         return kwargs

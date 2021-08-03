@@ -1,9 +1,10 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
-from .base import NotAnalyzeableModelException
-from .deeptaylor import BoundedDeepTaylor, DeepTaylor
-from .gradient_based import (
+from typing import Dict, Type
+
+from innvestigate.analyzer.base import AnalyzerBase, NotAnalyzeableModelException
+from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
+from innvestigate.analyzer.gradient_based import (
     BaselineGradient,
     Deconvnet,
     Gradient,
@@ -12,9 +13,9 @@ from .gradient_based import (
     IntegratedGradients,
     SmoothGrad,
 )
-from .misc import Input, Random
-from .pattern_based import PatternAttribution, PatternNet
-from .relevance_based.relevance_analyzer import (
+from innvestigate.analyzer.misc import Input, Random
+from innvestigate.analyzer.pattern_based import PatternAttribution, PatternNet
+from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRP,
     LRPZ,
     BaselineLRPZ,
@@ -36,12 +37,13 @@ from .relevance_based.relevance_analyzer import (
     LRPZPlus,
     LRPZPlusFast,
 )
-from .wrapper import AugmentReduceBase, GaussianSmoother, PathIntegrator, WrapperBase
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from innvestigate.analyzer.wrapper import (
+    AugmentReduceBase,
+    GaussianSmoother,
+    PathIntegrator,
+    WrapperBase,
+)
+from innvestigate.utils.types import Model
 
 # Disable pyflaks warnings:
 assert NotAnalyzeableModelException
@@ -52,12 +54,7 @@ assert GaussianSmoother
 assert PathIntegrator
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-analyzers = {
+analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Utility.
     "input": Input,
     "random": Random,
@@ -98,7 +95,7 @@ analyzers = {
 }
 
 
-def create_analyzer(name, model, **kwargs):
+def create_analyzer(name: str, model: Model, **kwargs) -> AnalyzerBase:
     """Instantiates the analyzer with the name 'name'
 
     This convenience function takes an analyzer name

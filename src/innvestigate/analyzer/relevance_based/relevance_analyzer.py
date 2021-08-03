@@ -1,8 +1,8 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import inspect
 from builtins import zip
+from typing import Dict, List
 
 import keras
 import keras.backend as K
@@ -17,20 +17,16 @@ import keras.layers.pooling
 import keras.models
 import six
 
+import innvestigate.analyzer.relevance_based.relevance_rule as rrule
+import innvestigate.analyzer.relevance_based.utils as rutils
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
 import innvestigate.utils.keras as kutils
-from innvestigate import layers as ilayers
-from innvestigate import utils as iutils
-from innvestigate.utils.keras import checks as kchecks
-from innvestigate.utils.keras import graph as kgraph
-
-from .. import base
-from . import relevance_rule as rrule
-from . import utils as rutils
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.analyzer.network_base import AnalyzerNetworkBase
+from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
+from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = [
     "BaselineLRPZ",
@@ -58,11 +54,59 @@ __all__ = [
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
+BASELINE_LRPZ_LAYERS = (
+    keras.engine.topology.InputLayer,
+    keras.layers.convolutional.Conv1D,
+    keras.layers.convolutional.Conv2D,
+    keras.layers.convolutional.Conv2DTranspose,
+    keras.layers.convolutional.Conv3D,
+    keras.layers.convolutional.Conv3DTranspose,
+    keras.layers.convolutional.Cropping1D,
+    keras.layers.convolutional.Cropping2D,
+    keras.layers.convolutional.Cropping3D,
+    keras.layers.convolutional.SeparableConv1D,
+    keras.layers.convolutional.SeparableConv2D,
+    keras.layers.convolutional.UpSampling1D,
+    keras.layers.convolutional.UpSampling2D,
+    keras.layers.convolutional.UpSampling3D,
+    keras.layers.convolutional.ZeroPadding1D,
+    keras.layers.convolutional.ZeroPadding2D,
+    keras.layers.convolutional.ZeroPadding3D,
+    keras.layers.core.Activation,
+    keras.layers.core.ActivityRegularization,
+    keras.layers.core.Dense,
+    keras.layers.core.Dropout,
+    keras.layers.core.Flatten,
+    keras.layers.core.Lambda,
+    keras.layers.core.Masking,
+    keras.layers.core.Permute,
+    keras.layers.core.RepeatVector,
+    keras.layers.core.Reshape,
+    keras.layers.core.SpatialDropout1D,
+    keras.layers.core.SpatialDropout2D,
+    keras.layers.core.SpatialDropout3D,
+    keras.layers.local.LocallyConnected1D,
+    keras.layers.local.LocallyConnected2D,
+    keras.layers.Add,
+    keras.layers.Concatenate,
+    keras.layers.Dot,
+    keras.layers.Maximum,
+    keras.layers.Minimum,
+    keras.layers.Subtract,
+    keras.layers.noise.AlphaDropout,
+    keras.layers.noise.GaussianDropout,
+    keras.layers.noise.GaussianNoise,
+    keras.layers.normalization.BatchNormalization,
+    keras.layers.pooling.GlobalMaxPooling1D,
+    keras.layers.pooling.GlobalMaxPooling2D,
+    keras.layers.pooling.GlobalMaxPooling3D,
+    keras.layers.pooling.MaxPooling1D,
+    keras.layers.pooling.MaxPooling2D,
+    keras.layers.pooling.MaxPooling3D,
+)
 
 
-class BaselineLRPZ(base.AnalyzerNetworkBase):
+class BaselineLRPZ(AnalyzerNetworkBase):
     """LRPZ analyzer - for testing purpose only.
 
     Applies the "LRP-Z" algorithm to analyze the model.
@@ -73,59 +117,12 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model: Model, **kwargs):
         # Inside function to not break import if Keras changes.
-        BASELINELRPZ_LAYERS = (
-            keras.engine.topology.InputLayer,
-            keras.layers.convolutional.Conv1D,
-            keras.layers.convolutional.Conv2D,
-            keras.layers.convolutional.Conv2DTranspose,
-            keras.layers.convolutional.Conv3D,
-            keras.layers.convolutional.Conv3DTranspose,
-            keras.layers.convolutional.Cropping1D,
-            keras.layers.convolutional.Cropping2D,
-            keras.layers.convolutional.Cropping3D,
-            keras.layers.convolutional.SeparableConv1D,
-            keras.layers.convolutional.SeparableConv2D,
-            keras.layers.convolutional.UpSampling1D,
-            keras.layers.convolutional.UpSampling2D,
-            keras.layers.convolutional.UpSampling3D,
-            keras.layers.convolutional.ZeroPadding1D,
-            keras.layers.convolutional.ZeroPadding2D,
-            keras.layers.convolutional.ZeroPadding3D,
-            keras.layers.core.Activation,
-            keras.layers.core.ActivityRegularization,
-            keras.layers.core.Dense,
-            keras.layers.core.Dropout,
-            keras.layers.core.Flatten,
-            keras.layers.core.Lambda,
-            keras.layers.core.Masking,
-            keras.layers.core.Permute,
-            keras.layers.core.RepeatVector,
-            keras.layers.core.Reshape,
-            keras.layers.core.SpatialDropout1D,
-            keras.layers.core.SpatialDropout2D,
-            keras.layers.core.SpatialDropout3D,
-            keras.layers.local.LocallyConnected1D,
-            keras.layers.local.LocallyConnected2D,
-            keras.layers.Add,
-            keras.layers.Concatenate,
-            keras.layers.Dot,
-            keras.layers.Maximum,
-            keras.layers.Minimum,
-            keras.layers.Subtract,
-            keras.layers.noise.AlphaDropout,
-            keras.layers.noise.GaussianDropout,
-            keras.layers.noise.GaussianNoise,
-            keras.layers.normalization.BatchNormalization,
-            keras.layers.pooling.GlobalMaxPooling1D,
-            keras.layers.pooling.GlobalMaxPooling2D,
-            keras.layers.pooling.GlobalMaxPooling3D,
-            keras.layers.pooling.MaxPooling1D,
-            keras.layers.pooling.MaxPooling2D,
-            keras.layers.pooling.MaxPooling3D,
-        )
 
+        super().__init__(model, **kwargs)
+
+        # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
@@ -133,14 +130,18 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
             check_type="exception",
         )
         self._add_model_check(
-            lambda layer: not isinstance(layer, BASELINELRPZ_LAYERS),
+            lambda layer: not isinstance(layer, BASELINE_LRPZ_LAYERS),
             "BaselineLRPZ only works with a predefined set of layers.",
             check_type="exception",
         )
+        self._do_model_checks()
 
-        super(BaselineLRPZ, self).__init__(model, **kwargs)
+    def _create_analysis(
+        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+    ):
+        if stop_analysis_at_tensors is None:
+            stop_analysis_at_tensors = []
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=[]):
         tensors_to_analyze = [
             x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
         ]
@@ -154,11 +155,9 @@ class BaselineLRPZ(base.AnalyzerNetworkBase):
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 # Utility list enabling name mappings via string
-LRP_RULES = {
+LRP_RULES: Dict = {
     "Z": rrule.ZRule,
     "ZIgnoreBias": rrule.ZIgnoreBiasRule,
     "Epsilon": rrule.EpsilonRule,
@@ -182,7 +181,7 @@ class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
         # TODO: implement rule support.
         return
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, _Xs, _Ys, Rs, _reverse_state: Dict):
         # the embedding layer outputs for an (indexed) input a vector.
         # thus, in the relevance backward pass, the embedding layer receives
         # relevances Rs corresponding to those vectors.
@@ -192,13 +191,13 @@ class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
 
         # relevances are given shaped [batch_size, sequence_length, embedding_dims]
         pool_relevance = keras.layers.Lambda(lambda x: keras.backend.sum(x, axis=-1))
-        return [pool_relevance(r) for r in Rs]
+        return [pool_relevance(R) for R in Rs]
 
 
 class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
     """Special BN handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
+    def __init__(self, layer, _state):
         config = layer.get_config()
 
         self._center = config["center"]
@@ -210,19 +209,20 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         if self._center:
             self._beta = layer.beta
 
-        # TODO: implement rule support. for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
-        # super(BatchNormalizationReverseLayer, self).__init__(layer, state)
+        # TODO: implement rule support.
+        #   for BatchNormalization -> [BNEpsilon, BNAlphaBeta, BNIgnore]
+        # super().__init__(layer, state)
         # how to do this:
         # super.__init__ calls select_rule and sets a self._rule class
         # check if isinstance(self_rule, EpsiloneRule), then reroute
         # to BatchNormEpsilonRule. Not pretty, but should work.
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, Xs, Ys, Rs, _reverse_state: Dict):
         input_shape = [K.int_shape(x) for x in Xs]
         if len(input_shape) != 1:
             # extend below lambda layers towards multiple parameters.
             raise ValueError(
-                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(
+                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(  # noqa
                     len(Xs)
                 )
             )
@@ -281,13 +281,17 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
         )
 
         # TODO: implement rule support.
-        # super(AddReverseLayer, self).__init__(layer, state)
+        # super().__init__(layer, state)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        # the outputs of the pooling operation at each location is the sum of its inputs.
-        # the forward message must be known in this case, and are the inputs for each pooling thing.
-        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
+    def apply(self, Xs, _Ys, Rs, _reverse_state: Dict):
+        # The outputs of the pooling operation at each location
+        # is the sum of its inputs.
+        # The forward message must be known in this case,
+        # and are the inputs for each pooling thing.
+        # The gradient is 1 for each output-to-input connection,
+        # which corresponds to the "weights" of the layer.
+        # It should thus be sufficient to reweight the relevances
+        # and do a gradient_wrt
         grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
@@ -310,14 +314,17 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         )
 
         # TODO: implement rule support.
-        # super(AveragePoolingRerseLayer, self).__init__(layer, state)
+        # super().__init__(layer, state)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
-        # the outputs of the pooling operation at each location is the sum of its inputs.
-        # the forward message must be known in this case, and are the inputs for each pooling thing.
-        # the gradient is 1 for each output-to-input connection, which corresponds to the "weights"
-        # of the layer. It should thus be sufficient to reweight the relevances and and do a gradient_wrt
-
+    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+        # The outputs of the pooling operation at each location
+        # is the sum of its inputs.
+        # The forward message must be known in this case,
+        # and are the inputs for each pooling thing.
+        # The gradient is 1 for each output-to-input connection,
+        # which corresponds to the "weights" of the layer.
+        # It should thus be sufficient to reweight the relevances
+        # and do a gradient_wrt
         grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
         Zs = kutils.apply(self._layer_wo_act, Xs)
@@ -331,31 +338,44 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         return [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
 
 
-class LRP(base.ReverseAnalyzerBase):
+class LRP(ReverseAnalyzerBase):
     """
     Base class for LRP-based model analyzers
 
 
     :param model: A Keras model.
 
-    :param rule: A rule can be a  string or a Rule object, lists thereof or a list of conditions [(Condition, Rule), ... ]
+    :param rule: A rule can be a  string or a Rule object, lists thereof or
+      a list of conditions [(Condition, Rule), ... ]
       gradient.
 
-    :param input_layer_rule: either a Rule object, atuple of (low, high) the min/max pixel values of the inputs
+    :param input_layer_rule: either a Rule object, atuple of (low, high)
+      the min/max pixel values of the inputs
     :param bn_layer_rule: either a Rule object or None.
       None means dedicated BN rule will be applied.
     """
 
-    def __init__(self, model, *args, **kwargs):
-        rule = kwargs.pop("rule", None)
-        input_layer_rule = kwargs.pop("input_layer_rule", None)
-        until_layer_idx = kwargs.pop("until_layer_idx", None)
-        until_layer_rule = kwargs.pop("until_layer_rule", None)
+    def __init__(
+        self,
+        model,
+        *args,
+        rule=None,
+        input_layer_rule=None,
+        until_layer_idx=None,
+        until_layer_rule=None,
+        bn_layer_rule=None,
+        bn_layer_fuse_mode: str = "one_linear",
+        **kwargs,
+    ):
+        super().__init__(model, *args, **kwargs)
 
-        bn_layer_rule = kwargs.pop("bn_layer_rule", None)
-        bn_layer_fuse_mode = kwargs.pop("bn_layer_fuse_mode", "one_linear")
-        assert bn_layer_fuse_mode in ["one_linear", "two_linear"]
+        self._input_layer_rule = input_layer_rule
+        self._until_layer_rule = until_layer_rule
+        self._until_layer_idx = until_layer_idx
+        self._bn_layer_rule = bn_layer_rule
+        self._bn_layer_fuse_mode = bn_layer_fuse_mode
 
+        # Add
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.is_convnet_layer(layer),
@@ -363,29 +383,26 @@ class LRP(base.ReverseAnalyzerBase):
             check_type="warning",
         )
 
+        assert bn_layer_fuse_mode in ["one_linear", "two_linear"]
+
+        # TODO: refactor rule type checking into separate function
         # check if rule was given explicitly.
-        # rule can be a string, a list (of strings) or a list of conditions [(Condition, Rule), ... ] for each layer.
+        # rule can be a string, a list (of strings) or
+        # a list of conditions [(Condition, Rule), ... ] for each layer.
         if rule is None:
             raise ValueError("Need LRP rule(s).")
 
         if isinstance(rule, list):
-            # copy refrences
             self._rule = list(rule)
         else:
             self._rule = rule
-        self._input_layer_rule = input_layer_rule
-        self._until_layer_rule = until_layer_rule
-        self._until_layer_idx = until_layer_idx
 
-        self._bn_layer_rule = bn_layer_rule
-        self._bn_layer_fuse_mode = bn_layer_fuse_mode
-
-        if isinstance(rule, six.string_types) or (
+        if isinstance(rule, str) or (
             inspect.isclass(rule) and issubclass(rule, kgraph.ReverseMappingBase)
         ):  # NOTE: All LRP rules inherit from kgraph.ReverseMappingBase
             # the given rule is a single string or single rule implementing cla ss
             use_conditions = True
-            rules = [(lambda a, b: True, rule)]
+            rules = [(lambda _: True, rule)]
 
         elif not isinstance(rule[0], tuple):
             # rule list of rule strings or classes
@@ -399,15 +416,8 @@ class LRP(base.ReverseAnalyzerBase):
         # apply rule to first self._until_layer_idx layers
         if self._until_layer_rule is not None and self._until_layer_idx is not None:
             for i in range(self._until_layer_idx + 1):
-                rules.insert(
-                    0,
-                    (
-                        lambda layer, foo, bound_i=i: kchecks.is_layer_at_idx(
-                            layer, bound_i
-                        ),
-                        self._until_layer_rule,
-                    ),
-                )
+                is_at_idx: LayerCheck = lambda layer: kchecks.is_layer_at_idx(layer, i)
+                rules.insert(0, (is_at_idx, self._until_layer_rule))
 
         # create a BoundedRule for input layer handling from given tuple
         if self._input_layer_rule is not None:
@@ -417,53 +427,41 @@ class LRP(base.ReverseAnalyzerBase):
 
                 class BoundedProxyRule(rrule.BoundedRule):
                     def __init__(self, *args, **kwargs):
-                        super(BoundedProxyRule, self).__init__(
-                            *args, low=low, high=high, **kwargs
-                        )
+                        super().__init__(*args, low=low, high=high, **kwargs)
 
                 input_layer_rule = BoundedProxyRule
 
             if use_conditions is True:
-                rules.insert(
-                    0,
-                    (
-                        lambda layer, foo: kchecks.is_input_layer(layer),
-                        input_layer_rule,
-                    ),
-                )
-
+                is_input: LayerCheck = lambda layer: kchecks.is_input_layer(layer)
+                rules.insert(0, (is_input, input_layer_rule))
             else:
                 rules.insert(0, input_layer_rule)
 
         self._rules_use_conditions = use_conditions
         self._rules = rules
 
-        # FINALIZED constructor.
-        super(LRP, self).__init__(model, *args, **kwargs)
-
-    def create_rule_mapping(self, layer, reverse_state):
-        rule_class = None
+    def create_rule_mapping(self, layer: Layer, reverse_state: Dict):
         if self._rules_use_conditions is True:
             for condition, rule in self._rules:
-                if condition(layer, reverse_state):
+                if condition(layer):
                     rule_class = rule
                     break
         else:
             rule_class = self._rules.pop()
 
         if rule_class is None:
-            raise Exception("No rule applies to layer: %s" % layer)
+            raise Exception(f"No rule applies to layer {layer}")
 
-        if isinstance(rule_class, six.string_types):
+        if isinstance(rule_class, str):
             rule_class = LRP_RULES[rule_class]
         rule = rule_class(layer, reverse_state)
 
         return rule.apply
 
     def _create_analysis(self, *args, **kwargs):
-        ####################################################################
-        ### Functionality responible for backwards rule selection below ####
-        ####################################################################
+        ###################################################################
+        # Functionality responible for backwards rule selection below  ####
+        ###################################################################
 
         # default backward hook
         self._add_conditional_reverse_mapping(
@@ -472,11 +470,12 @@ class LRP(base.ReverseAnalyzerBase):
             name="lrp_layer_with_kernel_mapping",
         )
 
-        # specialized backward hooks. TODO: add ReverseLayer class handling layers Without kernel: Add and AvgPool
+        # specialized backward hooks.
+        # TODO: add ReverseLayer class handling layers without kernel: Add and AvgPool
         bn_layer_rule = self._bn_layer_rule
 
         if bn_layer_rule is None:
-            # todo(alber): get rid of this option!
+            # TODO (alber): get rid of this option!
             # alternatively a default rule should be applied.
             bn_mapping = BatchNormalizationReverseLayer
         else:
@@ -509,9 +508,15 @@ class LRP(base.ReverseAnalyzerBase):
         )
 
         # FINALIZED constructor.
-        return super(LRP, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(
+        self,
+        Xs: OptionalList[Tensor],
+        Ys: OptionalList[Tensor],
+        reversed_Ys: OptionalList[Tensor],
+        reverse_state: Dict,
+    ):
         # default_return_layers = [keras.layers.Activation]# TODO extend
         if (
             len(Xs) == len(Ys)
@@ -532,12 +537,12 @@ class LRP(base.ReverseAnalyzerBase):
             # Cropping
             return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
-    ########################################
-    ### End of Rule Selection Business. ####
-    ########################################
+    ######################################
+    # End of Rule Selection Business. ####
+    ######################################
 
     def _get_state(self):
-        state = super(LRP, self)._get_state()
+        state = super()._get_state()
         state.update({"rule": self._rule})
         state.update({"input_layer_rule": self._input_layer_rule})
         state.update({"bn_layer_rule": self._bn_layer_rule})
@@ -545,12 +550,14 @@ class LRP(base.ReverseAnalyzerBase):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         rule = state.pop("rule")
         input_layer_rule = state.pop("input_layer_rule")
         bn_layer_rule = state.pop("bn_layer_rule")
         bn_layer_fuse_mode = state.pop("bn_layer_fuse_mode")
-        kwargs = super(LRP, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         kwargs.update(
             {
                 "rule": rule,
@@ -569,8 +576,10 @@ class LRP(base.ReverseAnalyzerBase):
 
 class _LRPFixedParams(LRP):
     @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPFixedParams, clazz)._state_to_kwargs(state)
+    def _state_to_kwargs(cls, state):
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["rule"]
         del kwargs["bn_layer_rule"]
         return kwargs
@@ -580,16 +589,18 @@ class LRPZ(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Z rule"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPZ, self).__init__(model, *args, rule="Z", bn_layer_rule="Z", **kwargs)
+        super().__init__(model, *args, rule="Z", bn_layer_rule="Z", **kwargs)
+        self._do_model_checks()
 
 
 class LRPZIgnoreBias(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Z-ignore-bias rule"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPZIgnoreBias, self).__init__(
+        super().__init__(
             model, *args, rule="ZIgnoreBias", bn_layer_rule="ZIgnoreBias", **kwargs
         )
+        self._do_model_checks()
 
 
 class LRPEpsilon(_LRPFixedParams):
@@ -607,44 +618,43 @@ class LRPEpsilon(_LRPFixedParams):
             """
 
             def __init__(self, *args, **kwargs):
-                super(EpsilonProxyRule, self).__init__(
-                    *args, epsilon=epsilon, bias=bias, **kwargs
-                )
+                super().__init__(*args, epsilon=epsilon, bias=bias, **kwargs)
 
-        super(LRPEpsilon, self).__init__(
+        super().__init__(
             model,
             *args,
             rule=EpsilonProxyRule,
             bn_layer_rule=EpsilonProxyRule,
-            **kwargs
+            **kwargs,
         )
+
+        self._do_model_checks()
 
 
 class LRPEpsilonIgnoreBias(LRPEpsilon):
     """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
 
     def __init__(self, model, epsilon=1e-7, *args, **kwargs):
-        super(LRPEpsilonIgnoreBias, self).__init__(
-            model, *args, epsilon=epsilon, bias=False, **kwargs
-        )
+        super().__init__(model, *args, epsilon=epsilon, bias=False, **kwargs)
+        self._do_model_checks()
 
 
 class LRPWSquare(_LRPFixedParams):
     """LRP-analyzer that uses the DeepTaylor W**2 rule"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPWSquare, self).__init__(
+        super().__init__(
             model, *args, rule="WSquare", bn_layer_rule="WSquare", **kwargs
         )
+        self._do_model_checks()
 
 
 class LRPFlat(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Flat rule"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPFlat, self).__init__(
-            model, *args, rule="Flat", bn_layer_rule="Flat", **kwargs
-        )
+        super().__init__(model, *args, rule="Flat", bn_layer_rule="Flat", **kwargs)
+        self._do_model_checks()
 
 
 class LRPAlphaBeta(LRP):
@@ -664,20 +674,19 @@ class LRPAlphaBeta(LRP):
             """
 
             def __init__(self, *args, **kwargs):
-                super(AlphaBetaProxyRule, self).__init__(
-                    *args, alpha=alpha, beta=beta, bias=bias, **kwargs
-                )
+                super().__init__(*args, alpha=alpha, beta=beta, bias=bias, **kwargs)
 
-        super(LRPAlphaBeta, self).__init__(
+        super().__init__(
             model,
             *args,
             rule=AlphaBetaProxyRule,
             bn_layer_rule=AlphaBetaProxyRule,
-            **kwargs
+            **kwargs,
         )
+        self._do_model_checks()
 
     def _get_state(self):
-        state = super(LRPAlphaBeta, self)._get_state()
+        state = super()._get_state()
         del state["rule"]
         state.update({"alpha": self._alpha})
         state.update({"beta": self._beta})
@@ -685,12 +694,14 @@ class LRPAlphaBeta(LRP):
         return state
 
     @classmethod
-    def _state_to_kwargs(clazz, state):
+    def _state_to_kwargs(cls, state):
         alpha = state.pop("alpha")
         beta = state.pop("beta")
         bias = state.pop("bias")
         state["rule"] = None
-        kwargs = super(LRPAlphaBeta, clazz)._state_to_kwargs(state)
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["rule"]
         del kwargs["bn_layer_rule"]
         kwargs.update({"alpha": alpha, "beta": beta, "bias": bias})
@@ -699,8 +710,10 @@ class LRPAlphaBeta(LRP):
 
 class _LRPAlphaBetaFixedParams(LRPAlphaBeta):
     @classmethod
-    def _state_to_kwargs(clazz, state):
-        kwargs = super(_LRPAlphaBetaFixedParams, clazz)._state_to_kwargs(state)
+    def _state_to_kwargs(cls, state):
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
         del kwargs["alpha"]
         del kwargs["beta"]
         del kwargs["bias"]
@@ -711,36 +724,32 @@ class LRPAlpha2Beta1(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta rule with a=2,b=1"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPAlpha2Beta1, self).__init__(
-            model, *args, alpha=2, beta=1, bias=True, **kwargs
-        )
+        super().__init__(model, *args, alpha=2, beta=1, bias=True, **kwargs)
+        self._do_model_checks()
 
 
 class LRPAlpha2Beta1IgnoreBias(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=2,b=1"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPAlpha2Beta1IgnoreBias, self).__init__(
-            model, *args, alpha=2, beta=1, bias=False, **kwargs
-        )
+        super().__init__(model, *args, alpha=2, beta=1, bias=False, **kwargs)
+        self._do_model_checks()
 
 
 class LRPAlpha1Beta0(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta rule with a=1,b=0"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPAlpha1Beta0, self).__init__(
-            model, *args, alpha=1, beta=0, bias=True, **kwargs
-        )
+        super().__init__(model, *args, alpha=1, beta=0, bias=True, **kwargs)
+        self._do_model_checks()
 
 
 class LRPAlpha1Beta0IgnoreBias(_LRPAlphaBetaFixedParams):
     """LRP-analyzer that uses the LRP-alpha-beta-ignbias rule with a=1,b=0"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPAlpha1Beta0IgnoreBias, self).__init__(
-            model, *args, alpha=1, beta=0, bias=False, **kwargs
-        )
+        super().__init__(model, *args, alpha=1, beta=0, bias=False, **kwargs)
+        self._do_model_checks()
 
 
 class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
@@ -748,7 +757,8 @@ class LRPZPlus(LRPAlpha1Beta0IgnoreBias):
 
     # TODO: assert that layer inputs are always >= 0
     def __init__(self, model, *args, **kwargs):
-        super(LRPZPlus, self).__init__(model, *args, **kwargs)
+        super().__init__(model, *args, **kwargs)
+        self._do_model_checks()
 
 
 class LRPZPlusFast(_LRPFixedParams):
@@ -759,15 +769,35 @@ class LRPZPlusFast(_LRPFixedParams):
 
     # TODO: assert that layer inputs are always >= 0
     def __init__(self, model, *args, **kwargs):
-        super(LRPZPlusFast, self).__init__(
+        super().__init__(
             model, *args, rule="ZPlusFast", bn_layer_rule="ZPlusFast", **kwargs
         )
+        self._do_model_checks()
 
 
 class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
     """Special LRP-configuration for ConvNets"""
 
-    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
+    def __init__(
+        self,
+        model,
+        epsilon=1e-1,
+        *args,
+        bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+        **kwargs,
+    ):
+        class EpsilonProxyRule(rrule.EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, epsilon=epsilon, bias=True, **kwargs)
+
+        conditional_rules = [
+            (kchecks.is_dense_layer, EpsilonProxyRule),
+            (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule),
+        ]
+
+        super().__init__(
+            model, *args, rule=conditional_rules, bn_layer_rule=bn_layer_rule, **kwargs
+        )
 
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
@@ -779,27 +809,34 @@ class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
             check_type="warning",
         )
 
-        class EpsilonProxyRule(rrule.EpsilonRule):
-            def __init__(self, *args, **kwargs):
-                super(EpsilonProxyRule, self).__init__(
-                    *args, epsilon=epsilon, bias=True, **kwargs
-                )
-
-        conditional_rules = [
-            (kchecks.is_dense_layer, EpsilonProxyRule),
-            (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule),
-        ]
-        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
-
-        super(LRPSequentialPresetA, self).__init__(
-            model, *args, rule=conditional_rules, bn_layer_rule=bn_layer_rule, **kwargs
-        )
+        self._do_model_checks()
 
 
 class LRPSequentialPresetB(_LRPFixedParams):
     """Special LRP-configuration for ConvNets"""
 
-    def __init__(self, model, epsilon=1e-1, *args, **kwargs):
+    def __init__(
+        self,
+        model: Model,
+        epsilon: float = 1e-1,
+        *args,
+        bn_layer_rule=rrule.AlphaBetaX2m100Rule,
+        **kwargs,
+    ):
+        class EpsilonProxyRule(rrule.EpsilonRule):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, epsilon=epsilon, bias=True, **kwargs)
+
+        conditional_rules = [
+            (kchecks.is_dense_layer, EpsilonProxyRule),
+            (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule),
+        ]
+
+        super().__init__(
+            model, *args, rule=conditional_rules, bn_layer_rule=bn_layer_rule, **kwargs
+        )
+
+        # Add and run model checks
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             # TODO: fix. specify. extend.
@@ -809,22 +846,7 @@ class LRPSequentialPresetB(_LRPFixedParams):
             ),
             check_type="warning",
         )
-
-        class EpsilonProxyRule(rrule.EpsilonRule):
-            def __init__(self, *args, **kwargs):
-                super(EpsilonProxyRule, self).__init__(
-                    *args, epsilon=epsilon, bias=True, **kwargs
-                )
-
-        conditional_rules = [
-            (kchecks.is_dense_layer, EpsilonProxyRule),
-            (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule),
-        ]
-        bn_layer_rule = kwargs.pop("bn_layer_rule", rrule.AlphaBetaX2m100Rule)
-
-        super(LRPSequentialPresetB, self).__init__(
-            model, *args, rule=conditional_rules, bn_layer_rule=bn_layer_rule, **kwargs
-        )
+        self._do_model_checks()
 
 
 # TODO: allow to pass input layer identification by index or id.
@@ -832,9 +854,14 @@ class LRPSequentialPresetAFlat(LRPSequentialPresetA):
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPSequentialPresetAFlat, self).__init__(
-            model, *args, input_layer_rule="Flat", **kwargs
-        )
+        # provide functionality for `analyzer.load()` by avoiding multiple kwargs:
+        if "input_layer_rule" in kwargs:
+            if kwargs["input_layer_rule"] != "Flat":
+                raise RuntimeError(
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                )
+            kwargs.pop("input_layer_rule")
+        super().__init__(model, *args, input_layer_rule="Flat", **kwargs)
 
 
 # TODO: allow to pass input layer identification by index or id.
@@ -842,23 +869,28 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
     """Special LRP-configuration for ConvNets"""
 
     def __init__(self, model, *args, **kwargs):
-        super(LRPSequentialPresetBFlat, self).__init__(
-            model, *args, input_layer_rule="Flat", **kwargs
-        )
+        # provide functionality for `analyzer.load()` by avoiding multiple kwargs:
+        if "input_layer_rule" in kwargs:
+            if kwargs["input_layer_rule"] != "Flat":
+                raise RuntimeError(
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                )
+            kwargs.pop("input_layer_rule")
+        super().__init__(model, *args, input_layer_rule="Flat", **kwargs)
 
 
 class LRPSequentialPresetBFlatUntilIdx(LRPSequentialPresetBFlat):
     """
-    Special LRP-configuration for ConvNets. Allows to perform LRP_flat from (including) layer until_layer_idx down until
+    Special LRP-configuration for ConvNets.
+    Allows to perform LRP_flat from (including) layer until_layer_idx down until
     the input layer. Weightless layers are ignored when counting the index for now.
     """
 
-    def __init__(self, model, *args, **kwargs):
-        layer_flat_idx = kwargs.pop("until_layer_idx", None)
-        super(LRPSequentialPresetBFlatUntilIdx, self).__init__(
+    def __init__(self, model, *args, until_layer_idx=None, **kwargs):
+        super().__init__(
             model,
             *args,
-            until_layer_idx=layer_flat_idx,
+            until_layer_idx=until_layer_idx,
             until_layer_rule=rrule.FlatRule,
-            **kwargs
+            **kwargs,
         )

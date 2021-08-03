@@ -1,7 +1,7 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 from builtins import zip
+from typing import Dict, List, Tuple
 
 import keras
 import keras.backend as K
@@ -15,19 +15,15 @@ import keras.layers.normalization
 import keras.layers.pooling
 import keras.models
 import numpy as np
+from keras.layers import Layer
+from tensorflow import Tensor
 
+import innvestigate.analyzer.relevance_based.utils as rutils
+import innvestigate.layers as ilayers
+import innvestigate.utils as iutils
 import innvestigate.utils.keras as kutils
-from innvestigate import layers as ilayers
-from innvestigate import utils as iutils
-from innvestigate.utils.keras import backend as iK
-from innvestigate.utils.keras import graph as kgraph
-
-from . import utils as rutils
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import innvestigate.utils.keras.backend as iK
+import innvestigate.utils.keras.graph as kgraph
 
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions
@@ -63,12 +59,19 @@ class ZRule(kgraph.ReverseMappingBase):
     which considers the bias a constant input neuron.
     """
 
-    def __init__(self, layer, state, bias=True):
+    def __init__(self, layer: Layer, state, bias: bool = True) -> None:
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s"
         )
+        super().__init__(layer, state)
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(
+        self,
+        Xs: List[Tensor],
+        _Ys: List[Tensor],
+        Rs: List[Tensor],
+        _reverse_state,
+    ) -> List[Tensor]:
         grad = ilayers.GradientWRT(len(Xs))
 
         # Get activations.
@@ -88,7 +91,7 @@ class ZIgnoreBiasRule(ZRule):
     """
 
     def __init__(self, *args, **kwargs):
-        super(ZIgnoreBiasRule, self).__init__(*args, bias=False, **kwargs)
+        super().__init__(*args, bias=False, **kwargs)
 
 
 class EpsilonRule(kgraph.ReverseMappingBase):
@@ -100,15 +103,22 @@ class EpsilonRule(kgraph.ReverseMappingBase):
     0 is considered to be positive, ie sign(0) = 1
     """
 
-    def __init__(self, layer, state, epsilon=1e-7, bias=True):
+    def __init__(self, layer: Layer, state, epsilon=1e-7, bias: bool = True):
         self._epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
         self._layer_wo_act = kgraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s"
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(
+        self,
+        Xs: List[Tensor],
+        _Ys: List[Tensor],
+        Rs: List[Tensor],
+        _reverse_state: Dict,
+    ):
         grad = ilayers.GradientWRT(len(Xs))
-        # The epsilon rule aligns epsilon with the (extended) sign: 0 is considered to be positive
+        # The epsilon rule aligns epsilon with the (extended) sign:
+        # 0 is considered to be positive
         prepare_div = keras.layers.Lambda(
             lambda x: x
             + (K.cast(K.greater_equal(x, 0), K.floatx()) * 2 - 1) * self._epsilon
@@ -130,13 +140,13 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
     """Same as EpsilonRule but ignores the bias."""
 
     def __init__(self, *args, **kwargs):
-        super(EpsilonIgnoreBiasRule, self).__init__(*args, bias=False, **kwargs)
+        super().__init__(*args, bias=False, **kwargs)
 
 
 class WSquareRule(kgraph.ReverseMappingBase):
     """W**2 rule from Deep Taylor Decomposition"""
 
-    def __init__(self, layer, state, copy_weights=False):
+    def __init__(self, layer: Layer, state, copy_weights=False) -> None:
         # W-square rule works with squared weights and no biases.
         if copy_weights:
             weights = layer.get_weights()
@@ -150,7 +160,13 @@ class WSquareRule(kgraph.ReverseMappingBase):
             layer, keep_bias=False, weights=weights, name_template="reversed_kernel_%s"
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(
+        self,
+        Xs: List[Tensor],
+        Ys: List[Tensor],
+        Rs: List[Tensor],
+        _reverse_state: Dict,
+    ) -> List[Tensor]:
         grad = ilayers.GradientWRT(len(Xs))
         # Create dummy forward path to take the derivative below.
         Ys = kutils.apply(self._layer_wo_act_b, Xs)
@@ -168,7 +184,7 @@ class WSquareRule(kgraph.ReverseMappingBase):
 class FlatRule(WSquareRule):
     """Same as W**2 rule but sets all weights to ones."""
 
-    def __init__(self, layer, state, copy_weights=False):
+    def __init__(self, layer: Layer, state, copy_weights: bool = False) -> None:
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
@@ -207,8 +223,14 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
     """
 
     def __init__(
-        self, layer, state, alpha=None, beta=None, bias=True, copy_weights=False
-    ):
+        self,
+        layer: Layer,
+        _state,
+        alpha=None,
+        beta=None,
+        bias: bool = True,
+        copy_weights=False,
+    ) -> None:
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
@@ -241,7 +263,13 @@ class AlphaBetaRule(kgraph.ReverseMappingBase):
             name_template="reversed_kernel_negative_%s",
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(
+        self,
+        Xs: List[Tensor],
+        _Ys: List[Tensor],
+        Rs: List[Tensor],
+        _reverse_state: Dict,
+    ):
         # this method is correct, but wasteful
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha = keras.layers.Lambda(lambda x: x * self._alpha)
@@ -295,43 +323,35 @@ class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
     """Same as AlphaBetaRule but ignores biases."""
 
     def __init__(self, *args, **kwargs):
-        super(AlphaBetaIgnoreBiasRule, self).__init__(*args, bias=False, **kwargs)
+        super().__init__(*args, bias=False, **kwargs)
 
 
 class Alpha2Beta1Rule(AlphaBetaRule):
     """AlphaBetaRule with alpha=2, beta=1"""
 
     def __init__(self, *args, **kwargs):
-        super(Alpha2Beta1Rule, self).__init__(
-            *args, alpha=2, beta=1, bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=2, beta=1, bias=True, **kwargs)
 
 
 class Alpha2Beta1IgnoreBiasRule(AlphaBetaRule):
     """AlphaBetaRule with alpha=2, beta=1 and ignores biases"""
 
     def __init__(self, *args, **kwargs):
-        super(Alpha2Beta1IgnoreBiasRule, self).__init__(
-            *args, alpha=2, beta=1, bias=False, **kwargs
-        )
+        super().__init__(*args, alpha=2, beta=1, bias=False, **kwargs)
 
 
 class Alpha1Beta0Rule(AlphaBetaRule):
     """AlphaBetaRule with alpha=1, beta=0"""
 
     def __init__(self, *args, **kwargs):
-        super(Alpha1Beta0Rule, self).__init__(
-            *args, alpha=1, beta=0, bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=1, beta=0, bias=True, **kwargs)
 
 
 class Alpha1Beta0IgnoreBiasRule(AlphaBetaRule):
     """AlphaBetaRule with alpha=1, beta=0 and ignores biases"""
 
     def __init__(self, *args, **kwargs):
-        super(Alpha1Beta0IgnoreBiasRule, self).__init__(
-            *args, alpha=1, beta=0, bias=False, **kwargs
-        )
+        super().__init__(*args, alpha=1, beta=0, bias=False, **kwargs)
 
 
 class AlphaBetaXRule(kgraph.ReverseMappingBase):
@@ -341,13 +361,13 @@ class AlphaBetaXRule(kgraph.ReverseMappingBase):
 
     def __init__(
         self,
-        layer,
-        state,
-        alpha=(0.5, 0.5),
-        beta=(0.5, 0.5),
-        bias=True,
-        copy_weights=False,
-    ):
+        layer: Layer,
+        _state,
+        alpha: Tuple[float, float] = (0.5, 0.5),
+        beta: Tuple[float, float] = (0.5, 0.5),
+        bias: bool = True,
+        copy_weights: bool = False,
+    ) -> None:
         self._alpha = alpha
         self._beta = beta
 
@@ -379,11 +399,17 @@ class AlphaBetaXRule(kgraph.ReverseMappingBase):
             name_template="reversed_kernel_negative_%s",
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(
+        self,
+        Xs: List[Tensor],
+        _Ys: List[Tensor],
+        Rs: List[Tensor],
+        _reverse_state: Dict,
+    ):
         # this method is correct, but wasteful
         grad = ilayers.GradientWRT(len(Xs))
         times_alpha0 = keras.layers.Lambda(lambda x: x * self._alpha[0])
-        times_alpha1 = keras.layers.Lambda(lambda x: x * self._alpha[1])
+        # times_alpha1 = keras.layers.Lambda(lambda x: x * self._alpha[1]) # unused
         times_beta0 = keras.layers.Lambda(lambda x: x * self._beta[0])
         times_beta1 = keras.layers.Lambda(lambda x: x * self._beta[1])
         keep_positives = keras.layers.Lambda(
@@ -393,7 +419,7 @@ class AlphaBetaXRule(kgraph.ReverseMappingBase):
             lambda x: x * K.cast(K.less(x, 0), K.floatx())
         )
 
-        def f(layer, X):
+        def f(layer: Layer, X):
             Zs = kutils.apply(layer, X)
             # Divide incoming relevance by the activations.
             tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
@@ -433,30 +459,22 @@ class AlphaBetaXRule(kgraph.ReverseMappingBase):
 
 class AlphaBetaX1000Rule(AlphaBetaXRule):
     def __init__(self, *args, **kwargs):
-        super(AlphaBetaX1000Rule, self).__init__(
-            *args, alpha=(1, 0), beta=(0, 0), bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=(1, 0), beta=(0, 0), bias=True, **kwargs)
 
 
 class AlphaBetaX1010Rule(AlphaBetaXRule):
     def __init__(self, *args, **kwargs):
-        super(AlphaBetaX1010Rule, self).__init__(
-            *args, alpha=(1, 0), beta=(0, -1), bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=(1, 0), beta=(0, -1), bias=True, **kwargs)
 
 
 class AlphaBetaX1001Rule(AlphaBetaXRule):
     def __init__(self, *args, **kwargs):
-        super(AlphaBetaX1001Rule, self).__init__(
-            *args, alpha=(1, 1), beta=(0, 0), bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=(1, 1), beta=(0, 0), bias=True, **kwargs)
 
 
 class AlphaBetaX2m100Rule(AlphaBetaXRule):
     def __init__(self, *args, **kwargs):
-        super(AlphaBetaX2m100Rule, self).__init__(
-            *args, alpha=(2, 0), beta=(1, 0), bias=True, **kwargs
-        )
+        super().__init__(*args, alpha=(2, 0), beta=(1, 0), bias=True, **kwargs)
 
 
 class BoundedRule(kgraph.ReverseMappingBase):
@@ -464,7 +482,9 @@ class BoundedRule(kgraph.ReverseMappingBase):
 
     # TODO: this only works for relu networks, needs to be extended.
     # TODO: check
-    def __init__(self, layer, state, low=-1, high=1, copy_weights=False):
+    def __init__(
+        self, layer: Layer, _state, low=-1, high=1, copy_weights: bool = False
+    ) -> None:
         self._low = low
         self._high = high
 
@@ -501,7 +521,7 @@ class BoundedRule(kgraph.ReverseMappingBase):
         )
 
     # TODO: clean up this implementation and add more documentation
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
         grad = ilayers.GradientWRT(len(Xs))
         to_low = keras.layers.Lambda(lambda x: x * 0 + self._low)
         to_high = keras.layers.Lambda(lambda x: x * 0 + self._high)
@@ -521,17 +541,17 @@ class BoundedRule(kgraph.ReverseMappingBase):
         # Divide relevances with the value.
         tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
-        tmpA = iutils.to_list(grad(Xs + A + tmp))
-        tmpB = iutils.to_list(grad(low + B + tmp))
-        tmpC = iutils.to_list(grad(high + C + tmp))
+        tmp_a = iutils.to_list(grad(Xs + A + tmp))
+        tmp_b = iutils.to_list(grad(low + B + tmp))
+        tmp_c = iutils.to_list(grad(high + C + tmp))
 
-        tmpA = [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmpA)]
-        tmpB = [keras.layers.Multiply()([a, b]) for a, b in zip(low, tmpB)]
-        tmpC = [keras.layers.Multiply()([a, b]) for a, b in zip(high, tmpC)]
+        tmp_a = [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmp_a)]
+        tmp_b = [keras.layers.Multiply()([a, b]) for a, b in zip(low, tmp_b)]
+        tmp_c = [keras.layers.Multiply()([a, b]) for a, b in zip(high, tmp_c)]
 
         tmp = [
             keras.layers.Subtract()([a, keras.layers.Add()([b, c])])
-            for a, b, c in zip(tmpA, tmpB, tmpC)
+            for a, b, c in zip(tmp_a, tmp_b, tmp_c)
         ]
 
         return tmp
@@ -548,7 +568,7 @@ class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
 
     # TODO: assert that layer inputs are always >= 0
     def __init__(self, *args, **kwargs):
-        super(ZPlusRule, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class ZPlusFastRule(kgraph.ReverseMappingBase):
@@ -557,7 +577,7 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
     for alpha=1, beta=0 and assumes inputs x >= 0.
     """
 
-    def __init__(self, layer, state, copy_weights=False):
+    def __init__(self, layer: Layer, state, copy_weights=False):
         # The z-plus rule only works with positive weights and
         # no biases.
         # TODO: assert that layer inputs are always >= 0
@@ -579,11 +599,13 @@ class ZPlusFastRule(kgraph.ReverseMappingBase):
             name_template="reversed_kernel_positive_%s",
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state):
+    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
         grad = ilayers.GradientWRT(len(Xs))
 
         # TODO: assert all inputs are positive, instead of only keeping the positives.
-        # keep_positives = keras.layers.Lambda(lambda x: x * K.cast(K.greater(x,0), K.floatx()))
+        # keep_positives = keras.layers.Lambda(
+        #     lambda x: x * K.cast(K.greater(x, 0), K.floatx())
+        # )
         # Xs = kutils.apply(keep_positives, Xs)
 
         # Get activations.

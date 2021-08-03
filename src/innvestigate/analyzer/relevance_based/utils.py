@@ -1,17 +1,6 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from __future__ import annotations
 
 __all__ = ["assert_lrp_epsilon_param", "assert_infer_lrp_alpha_beta_param"]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 def assert_lrp_epsilon_param(epsilon, caller):
@@ -55,6 +44,8 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
     :param caller: the class instance calling this assertion function
     """
 
+    # TODO: Rework error messages
+
     err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
     if alpha is None and beta is None:
         err_msg = err_head + "Neither alpha or beta were given"
@@ -85,7 +76,7 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
         if alpha < 1:
             err_msg = (
                 err_head
-                + "Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(
+                + "Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(  # noqa
                     beta
                 )
             )
@@ -96,7 +87,7 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
         if beta < 0:
             err_msg = (
                 err_head
-                + "Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(
+                + "Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(  # noqa
                     alpha
                 )
             )
@@ -107,7 +98,7 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
     if amb != 1:
         err_msg = (
             err_head
-            + "Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(
+            + "Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(  # noqa
                 alpha, beta, amb
             )
         )
@@ -115,8 +106,3 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
 
     # return benign values for alpha and beta
     return alpha, beta
-
-
-###############################################################################
-###############################################################################
-###############################################################################

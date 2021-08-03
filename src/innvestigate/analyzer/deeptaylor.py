@@ -1,13 +1,15 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
+
+from typing import Any
 
 import keras.layers
 import keras.models
 
-from ..utils.keras import checks as kchecks
-from ..utils.keras import graph as kgraph
-from . import base
-from .relevance_based import relevance_rule as lrp_rules
+import innvestigate.analyzer.relevance_based.relevance_rule as lrp_rules
+import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.graph as kgraph
+from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
+from innvestigate.utils.types import Model
 
 __all__ = [
     "DeepTaylor",
@@ -15,7 +17,7 @@ __all__ = [
 ]
 
 
-class DeepTaylor(base.ReverseAnalyzerBase):
+class DeepTaylor(ReverseAnalyzerBase):
     """DeepTaylor for ReLU-networks with unbounded input
 
     This class implements the DeepTaylor algorithm for neural networks with
@@ -24,19 +26,19 @@ class DeepTaylor(base.ReverseAnalyzerBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, model: Model, *args, **kwargs) -> None:
+        super().__init__(model, *args, **kwargs)
 
+        # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not kchecks.only_relu_activation(layer),
             "This DeepTaylor implementation only supports ReLU activations.",
             check_type="exception",
         )
-        super(DeepTaylor, self).__init__(model, *args, **kwargs)
+        self._do_model_checks()
 
-    def _create_analysis(self, *args, **kwargs):
-        def do_nothing(Xs, Ys, As, reverse_state):
-            return As
+    def _create_analysis(self, *args: Any, **kwargs: Any):
 
         # Kernel layers.
         self._add_conditional_reverse_mapping(
@@ -129,9 +131,9 @@ class DeepTaylor(base.ReverseAnalyzerBase):
             name="deep_taylor_no_transform",
         )
 
-        return super(DeepTaylor, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
 
-    def _default_reverse_mapping(self, Xs, Ys, reversed_Ys, reverse_state):
+    def _default_reverse_mapping(self, _Xs, _Ys, _reversed_Ys, reverse_state):
         """
         Block all default mappings.
         """
@@ -147,7 +149,7 @@ class DeepTaylor(base.ReverseAnalyzerBase):
             inputs=model.inputs, outputs=positive_outputs
         )
 
-        return super(DeepTaylor, self)._prepare_model(model_with_positive_output)
+        return super()._prepare_model(model_with_positive_output)
 
 
 class BoundedDeepTaylor(DeepTaylor):
@@ -162,17 +164,16 @@ class BoundedDeepTaylor(DeepTaylor):
     """
 
     def __init__(self, model, low=None, high=None, **kwargs):
+        super().__init__(model, **kwargs)
 
         if low is None or high is None:
             raise ValueError(
-                "The low or high parameter is missing."
-                " Z-B (bounded rule) require both values."
+                "The low or high parameter is missing. "
+                "Z-B (bounded rule) require both values."
             )
 
         self._bounds_low = low
         self._bounds_high = high
-
-        super(BoundedDeepTaylor, self).__init__(model, **kwargs)
 
     def _create_analysis(self, *args, **kwargs):
 
@@ -180,9 +181,7 @@ class BoundedDeepTaylor(DeepTaylor):
 
         class BoundedProxyRule(lrp_rules.BoundedRule):
             def __init__(self, *args, **kwargs):
-                super(BoundedProxyRule, self).__init__(
-                    *args, low=low, high=high, **kwargs
-                )
+                super().__init__(*args, low=low, high=high, **kwargs)
 
         self._add_conditional_reverse_mapping(
             lambda l: kchecks.is_input_layer(l) and kchecks.contains_kernel(l),
@@ -191,4 +190,20 @@ class BoundedDeepTaylor(DeepTaylor):
             priority=10,  # do first
         )
 
-        return super(BoundedDeepTaylor, self)._create_analysis(*args, **kwargs)
+        return super()._create_analysis(*args, **kwargs)
+
+    def _get_state(self):
+        state = super()._get_state()
+        state.update({"low": self._bounds_low, "high": self._bounds_high})
+        return state
+
+    @classmethod
+    def _state_to_kwargs(cls, state):
+        low = state.pop("low")
+        high = state.pop("high")
+
+        # call super after popping class-specific states:
+        kwargs = super()._state_to_kwargs(state)
+
+        kwargs.update({"low": low, "high": high})
+        return kwargs
