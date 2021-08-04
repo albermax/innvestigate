@@ -217,7 +217,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         """
         return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
-    def _head_mapping(self, X):
+    def _head_mapping(self, X: Tensor) -> Tensor:
         """
         Map output tensors to new values before passing
         them into the reverted network.

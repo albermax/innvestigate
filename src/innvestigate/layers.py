@@ -38,7 +38,7 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
-    "GatherND",
+    "NeuronSelection",
 ]
 
 
@@ -381,7 +381,7 @@ class ExtractConv2DPatches(klayers.Layer):
         self._padding = padding
 
     def call(self, x):
-        return kbackend.extract_conv2d_patches(
+        return ibackend.extract_conv2d_patches(
             x, self._kernel_shape, self._strides, self._rates, self._padding
         )
 
@@ -471,18 +471,19 @@ class RunningMeans(klayers.Layer):
 
 
 class Broadcast(klayers.Layer):
-    def call(self, x: List[Tensor]) -> Tensor:
-        target_shapped, x = x
+    def call(self, inputs: List[Tensor]) -> Tensor:
+        target_shapped, x = inputs
         return target_shapped * 0 + x
 
     def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
         return input_shapes[0]
 
 
-class GatherND(klayers.Layer):
+class NeuronSelection(klayers.Layer):
+    """Keras layer wrapping `tf.gather` to select
+    output neurons at given indices.
+    """
+
     def call(self, inputs):
         x, indices = inputs
-        return tf.gather_nd(x, indices)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[1][:2] + input_shapes[0][2:]
+        return tf.gather(x, indices, axis=1)

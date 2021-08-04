@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow.keras.backend as kbackend
 
 import innvestigate.utils as iutils
-from innvestigate.utils.types import Layer, OptionalList, Tensor
+from innvestigate.utils.types import Layer, OptionalList, ShapeTuple, Tensor
 
 __all__ = [
     "apply",

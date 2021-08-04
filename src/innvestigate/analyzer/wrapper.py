@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import warnings
 from builtins import zip
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -130,18 +129,17 @@ class AugmentReduceBase(WrapperBase):
         extra_outputs = model.outputs[self._subanalyzer._n_data_output :]
 
         if len(extra_outputs) > 0:
-            raise Exception("No extra output is allowed " "with this wrapper.")
+            raise Exception("No extra output is allowed with this wrapper.")
 
-        new_inputs = iutils.to_list(self._augment(inputs))
-        # print(type(new_inputs), type(extra_inputs))
-        tmp = iutils.to_list(model(new_inputs + extra_inputs))
-        new_outputs = iutils.to_list(self._reduce(tmp))
+        new_inputs = self._augment(iutils.to_list(inputs))
+
+        augmented_outputs = iutils.to_list(model(new_inputs + extra_inputs))
+        new_outputs = self._reduce(augmented_outputs)
         new_constant_inputs = self._keras_get_constant_inputs()
 
-        new_model = keras.models.Model(
-            inputs=inputs + extra_inputs + new_constant_inputs,
-            outputs=new_outputs + extra_outputs,
-        )
+        inputs = inputs + extra_inputs + new_constant_inputs
+        outputs = new_outputs + extra_outputs
+        new_model = kmodels.Model(inputs=inputs, outputs=outputs)
         self._subanalyzer._analyzer_model = new_model
 
     def analyze(
@@ -179,21 +177,42 @@ class AugmentReduceBase(WrapperBase):
         kwargs["neuron_selection"] = indices
         return self._subanalyzer.analyze(X, *args, **kwargs)
 
-    def _keras_get_constant_inputs(self):
-        return list()
+    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
+        return []
 
-    def _augment(self, X):
-        repeat = ilayers.Repeat(self._augment_by_n, axis=0)
-        return [repeat(x) for x in iutils.to_list(X)]
-
-    def _reduce(self, X):
-        X_shape = [kbackend.int_shape(x) for x in iutils.to_list(X)]
-        reshape = [
-            ilayers.Reshape((-1, self._augment_by_n) + shape[1:]) for shape in X_shape
+    def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        """Augments inputs `Xs` by repeating them `self._augment_by_n`-times
+        along the batch-axis `axis=0`.
+        Typically overridden by inherited analyzers.
+        """
+        return [
+            kbackend.repeat_elements(X, self._augment_by_n, axis=0)
+            for X in iutils.to_list(Xs)
         ]
-        mean = ilayers.Mean(axis=1)
 
-        return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
+    def _reshape(self, X: Tensor) -> Tensor:
+        """Moves the axis of augmentations from the batch-axis `axis=0`
+        to a new axis `axis=1`.
+
+        :param X: Augmented tensor
+        :type X: Tensor
+        :return: Reshaped augmented tensor
+        :rtype: Tensor
+        """
+        in_shape = kbackend.int_shape(X)
+        out_shape = (
+            -1,
+            self._augment_by_n,
+        ) + in_shape[1:]
+        return kbackend.reshape(X, out_shape)
+
+    def _reduce(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        """Reduce input Xs by reshaping and taking the mean along
+        the axis of augmentation."""
+
+        reshaped = [self._reshape(X) for X in iutils.to_list(Xs)]
+        means = [kbackend.mean(X, axis=1) for X in reshaped]
+        return means
 
     def _get_state(self):
         state = super()._get_state()
@@ -289,7 +308,7 @@ class PathIntegrator(AugmentReduceBase):
         return self._keras_constant_inputs
 
     def _compute_difference(self, Xs: List[Tensor]) -> List[Tensor]:
-        if len(self._keras_constant_inputs) == 0:
+        if self._keras_constant_inputs is None:
             inputs = iutils.keras.broadcast_np_tensors_to_keras_tensors(
                 self._reference_inputs, Xs
             )
@@ -301,12 +320,6 @@ class PathIntegrator(AugmentReduceBase):
         return [klayers.subtract([x, ri]) for x, ri in zip(Xs, reference_inputs)]
 
     def _augment(self, X):
-        tmp = super()._augment(X)
-        tmp = [
-            ilayers.Reshape((-1, self._augment_by_n) + kbackend.int_shape(x)[1:])(x)
-            for x in tmp
-        ]
-
         difference = self._compute_difference(X)
         self._keras_difference = difference
         # Make broadcastable.

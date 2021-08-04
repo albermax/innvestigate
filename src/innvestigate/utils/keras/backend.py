@@ -20,8 +20,6 @@ __all__ = [
     "count_non_zero",
     "add_gaussian_noise",
     "extract_conv2d_patches",
-    "gather",
-    "gather_nd",
 ]
 
 _EPS = kbackend.epsilon()
@@ -86,23 +84,3 @@ def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> 
         # TODO: check if we need to permute again.xs
         pass
     return ret
-
-
-def gather(
-    X: Tensor,
-    axis: Tensor,  # Tensor of integer dtype
-    indices: Tensor,  # Tensor of integer dtype
-) -> Tensor:
-    """TensorFlow's gather:
-    Gather slices from `X` axis `axis` according to `indices`.
-    """
-    return tf.gather(X, indices, axis=axis)
-
-
-def gather_nd(
-    X: Tensor,
-    indices: Tensor,  # Tensor of integer dtype
-) -> Tensor:
-    """TensorFlow's gather_nd:
-    Gather slices from `X` into a Tensor with shape specified by `indices`."""
-    return tf.gather_nd(X, indices)

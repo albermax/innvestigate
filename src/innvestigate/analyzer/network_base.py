@@ -126,19 +126,18 @@ class AnalyzerNetworkBase(AnalyzerBase):
         elif neuron_selection_mode == "index":
             # Creates a placeholder tensor when `dtype` is passed.
             neuron_indexing: Layer = klayers.Input(
-                batch_shape=[None, None],
+                shape=(None,),  # unknown amount of output neurons
                 dtype=np.int32,
                 name="iNNvestigate_neuron_indexing",
             )
             # TODO: what does _keras_history[0] do?
             self._special_helper_layers.append(neuron_indexing._keras_history[0])
             analysis_inputs.append(neuron_indexing)
-            # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            inn_gather = ilayers.GatherND(name="iNNvestigate_gather_nd")
-            model_output = inn_gather(model_output + [neuron_indexing])
-            self._special_helper_layers.append(inn_gather)
+            select = ilayers.NeuronSelection(name="iNNvestigate_neuron_selection")
+            model_output = select(model_output + [neuron_indexing])
+            self._special_helper_layers.append(select)
         elif neuron_selection_mode == "all":
             pass
         else:
@@ -231,14 +230,15 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def analyze(
         self,
-        X: OptionalList[np.ndarray],
-        neuron_selection: Optional[int] = None,
+        X: Tensor,
+        neuron_selection: Optional[OptionalList[int]] = None,
     ) -> OptionalList[np.ndarray]:
         """
         Same interface as :class:`Analyzer` besides
 
         :param neuron_selection: If neuron_selection_mode is 'index' this
         should be an integer with the index for the chosen neuron.
+        When analyzing batches, this should be a List of integer indices.
         """
         # TODO: what does should mean in docstring?
 
@@ -256,14 +256,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 "neuron_selection_mode 'index' expects 'neuron_selection' parameter."
             )
 
-        X = iutils.to_list(X)
-
         ret: OptionalList[np.ndarray]
         if self._neuron_selection_mode == "index":
             if neuron_selection is not None:
                 # TODO: document how this works
-                selection = self._get_neuron_selection_array(X, neuron_selection)
-                ret = self._analyzer_model.predict_on_batch(X + [selection])
+                indices = self._get_neuron_selection_array(X, neuron_selection)
+                ret = self._analyzer_model.predict_on_batch([X, indices])
             else:
                 raise RuntimeError(
                     'neuron_selection_mode "index" requires neuron_selection.'
@@ -278,7 +276,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         return iutils.unpack_singleton(ret)
 
     def _get_neuron_selection_array(
-        self, X: List[np.ndarray], neuron_selection: int
+        self, X: Tensor, neuron_selection: OptionalList[int]
     ) -> np.ndarray:
         """Get neuron selection array for neuron_selection_mode "index"."""
         # TODO: detailed documentation on how this selects neurons
@@ -287,10 +285,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         # is 'nsa' is singleton, repeat it so that it matches number of rows of X
         if nsa.size == 1:
-            nsa = np.repeat(nsa, len(X[0]))
+            nsa = np.repeat(nsa, batch_size)
 
-        # Add first axis indices for gather_nd
-        nsa = np.hstack((np.arange(len(nsa)).reshape((-1, 1)), nsa.reshape((-1, 1))))
         return nsa
 
     def _get_state(self) -> Dict[str, Any]:

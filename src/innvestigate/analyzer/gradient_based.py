@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
+import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
@@ -106,8 +107,8 @@ class Gradient(ReverseAnalyzerBase):
         self._add_model_softmax_check()
         self._do_model_checks()
 
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
+    def _head_mapping(self, X: Tensor) -> Tensor:
+        return tf.ones_like(X)
 
     def _postprocess_analysis(self, X):
         ret = super()._postprocess_analysis(X)
