@@ -56,7 +56,8 @@ def apply_mask(Xs: List[T], mask: List[bool]) -> List[T]:
     :return: Masked list.
     :rtype: List[T]
     """
-    assert len(Xs) == len(mask)
+    if len(Xs) != len(mask):
+        raise ValueError("mask not of same length as list that is to be masked.")
     return [x for x, keep in zip(Xs, mask) if keep]
 
 

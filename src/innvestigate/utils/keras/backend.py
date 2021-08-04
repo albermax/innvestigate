@@ -28,6 +28,11 @@ _EPS = kbackend.epsilon()
 def gradients(
     Xs: OptionalList[Tensor], Ys: OptionalList[Tensor], known_Ys: OptionalList[Tensor]
 ) -> List[Tensor]:
+    if len(Ys) != len(known_Ys):
+        raise ValueError(
+            "Gradient computation failesd, Ys and known_Ys not of same length"
+        )
+
     grad = tf.gradients(Ys, Xs, grad_ys=known_Ys, stop_gradients=Xs)
     if grad is None:
         raise TypeError("Gradient computation failed, returned None.")

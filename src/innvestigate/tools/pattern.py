@@ -70,8 +70,9 @@ def get_active_neuron_io(
                 if layer is node[0]:
                     layer_i = i
                     break
+            if layer_i is None:
+                raise RuntimeError("Current node not found.")
 
-            assert layer_i is not None
             assert len(ret) == 1
             input_to_next_layer = ret[0]
 

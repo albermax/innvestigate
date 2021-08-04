@@ -258,7 +258,8 @@ class Transpose(klayers.Layer):
 
 class Dot(klayers.Layer):
     def call(self, inputs: List[Tensor]) -> Tensor:
-        assert len(inputs) == 2
+        if len(inputs) != 2:
+            raise ValueError("A `Dot` layer should be called on exactly 2 inputs")
         a, b = inputs
         return kbackend.dot(a, b)
 
@@ -268,7 +269,8 @@ class Dot(klayers.Layer):
 
 class Divide(klayers.Layer):
     def call(self, inputs: List[Tensor]) -> Tensor:
-        assert len(inputs) == 2
+        if len(inputs) != 2:
+            raise ValueError("A `Divide` layer should be called on exactly 2 inputs")
         a, b = inputs
         return a / b
 
@@ -285,7 +287,10 @@ class SafeDivide(klayers.Layer):
         self._factor = factor
 
     def call(self, inputs: List[Tensor]) -> Tensor:
-        assert len(inputs) == 2
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `SafeDivide` layer should be called on exactly 2 inputs"
+            )
         a, b = inputs
         return ibackend.safe_divide(a, b, factor=self._factor)
 
@@ -472,6 +477,8 @@ class RunningMeans(klayers.Layer):
 
 class Broadcast(klayers.Layer):
     def call(self, inputs: List[Tensor]) -> Tensor:
+        if len(inputs) != 2:
+            raise ValueError("A `Broadcast` layer should be called on exactly 2 inputs")
         target_shapped, x = inputs
         return target_shapped * 0 + x
 
@@ -485,5 +492,9 @@ class NeuronSelection(klayers.Layer):
     """
 
     def call(self, inputs):
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `NeuronSelection` layer should be called on exactly 2 inputs"
+            )
         x, indices = inputs
         return tf.gather(x, indices, axis=1)

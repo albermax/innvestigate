@@ -212,7 +212,8 @@ class AnalyzerBase(metaclass=ABCMeta):
 
         # since `super()._state_to_kwargs(state)` should be called last
         # in every child class, the dict `state` should be empty at this point.
-        assert len(state) == 0
+        if len(state) != 0:
+            raise RuntimeError(f"Serialization failed. Got state {state}.")
 
         model = kmodels.model_from_json(model_json)
         model.set_weights(model_weights)

@@ -361,7 +361,8 @@ class LRP(ReverseAnalyzerBase):
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
 
-        assert self._bn_layer_fuse_mode in ["one_linear", "two_linear"]
+        if self._bn_layer_fuse_mode not in ["one_linear", "two_linear"]:
+            raise ValueError(f"Unknown _bn_layer_fuse_mode {self._bn_layer_fuse_mode}")
 
         self._add_model_softmax_check()
         self._add_model_check(

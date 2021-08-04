@@ -379,7 +379,8 @@ def get_model_layers(model: Model) -> List[Layer]:
 
     def collect_layers(container: Model) -> None:
         for layer in container.layers:
-            assert layer not in layers
+            if layer in layers:
+                raise ValueError(f"Collected layer {layer} twice.")
             layers.append(layer)
             if ichecks.is_network(layer):
                 collect_layers(layer)
