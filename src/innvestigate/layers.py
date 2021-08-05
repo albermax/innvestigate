@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import sys
 from builtins import range
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -38,6 +39,7 @@ __all__ = [
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
+    "MaxNeuronSelection",
     "NeuronSelection",
 ]
 
@@ -195,11 +197,6 @@ class Project(_Map):
         super().__init__()
 
     def _apply_map(self, X: Tensor):
-        def safe_divide(A: Tensor, B: Tensor) -> Tensor:
-            return A / (
-                B + ibackend.cast_to_floatx(kbackend.equal(B, kbackend.constant(0))) * 1
-            )
-
         dims: Tuple[int] = kbackend.int_shape(X)
         n_dim: int = len(dims)
         axes = tuple(range(1, n_dim))
@@ -211,7 +208,7 @@ class Project(_Map):
             return X
 
         absmax = kbackend.max(kbackend.abs(X), axis=axes, keepdims=True)
-        X = safe_divide(X, absmax)
+        X = ibackend.safe_divide(X, absmax, factor=1)
 
         if self._output_range not in (False, True):  # True = (-1, +1)
             output_range = self._output_range
@@ -428,8 +425,8 @@ class RunningMeans(klayers.Layer):
     """Layer used to keep track of a running mean."""
 
     def __init__(self, *args, **kwargs) -> None:
-        self.stateful = True
         super().__init__(*args, **kwargs)
+        self.stateful = True
 
     def build(self, input_shapes: Sequence[ShapeTuple]) -> None:
         means_shape, counts_shape = input_shapes
@@ -442,22 +439,19 @@ class RunningMeans(klayers.Layer):
         )
         self.built = True
 
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        def safe_divide(a, b):
-            b_safe = b + ibackend.cast_to_floatx(
-                kbackend.equal(b, kbackend.constant(0))
+    def call(self, inputs: List[Tensor]) -> List[Tensor]:
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `RunningMeans` layer should be called on exactly 2 inputs"
             )
-            return a / b_safe
-
-        means, counts = x
-
+        means, counts = inputs
         new_counts = counts + self.counts
 
         # If new_means are not used for the model output,
         # the following part of the code will be executed after
         # self.counts is updated, therefore we cannot use it
         # hereafter.
-        factor_new = safe_divide(counts, new_counts)
+        factor_new = ibackend.safe_divide(counts, new_counts, factor=1)
         factor_old = kbackend.ones_like(factor_new) - factor_new
         new_means = self.means * factor_old + means * factor_new
 
@@ -486,10 +480,17 @@ class Broadcast(klayers.Layer):
         return input_shapes[0]
 
 
+class MaxNeuronSelection(klayers.Layer):
+    """Applied to the last layer of a model, this reduces the output
+    to the max neuron activation."""
+
+    def call(self, x: Tensor) -> Tensor:
+        return kbackend.max(x)
+
+
 class NeuronSelection(klayers.Layer):
-    """Keras layer wrapping `tf.gather` to select
-    output neurons at given indices.
-    """
+    """Applied to the last layer of a model, this selects output neurons at given indices
+    by wrapping `tf.gather`."""
 
     def call(self, inputs):
         if len(inputs) != 2:
