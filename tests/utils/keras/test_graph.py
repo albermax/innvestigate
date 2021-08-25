@@ -22,6 +22,7 @@ def test_fast__get_model_execution_graph():
         igraph.print_model_execution_graph(graph)
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
 def test_commit__get_model_execution_graph():
 
@@ -35,6 +36,7 @@ def test_commit__get_model_execution_graph():
         igraph.print_model_execution_graph(graph)
 
 
+@pytest.mark.resnet50
 @pytest.mark.precommit
 def test_precommit__get_model_execution_graph_resnet50():
 

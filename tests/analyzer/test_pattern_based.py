@@ -7,6 +7,7 @@ from tests import dryrun
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternNet():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -18,7 +19,9 @@ def test_fast__PatternNet():
     dryrun.test_analyzer(method, "mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_precommit__PatternNet():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -33,6 +36,7 @@ def test_precommit__PatternNet():
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
+@pytest.mark.pattern_based
 def test_imagenet__PatternNet():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -46,6 +50,7 @@ def test_imagenet__PatternNet():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternAttribution():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -57,7 +62,9 @@ def test_fast__PatternAttribution():
     dryrun.test_analyzer(method, "mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_precommit__PatternAttribution():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -72,6 +79,7 @@ def test_precommit__PatternAttribution():
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
+@pytest.mark.pattern_based
 def test_imagenet__PatternAttribution():
     def method(model):
         # enough for test purposes, only pattern application is tested here
@@ -88,6 +96,7 @@ def test_imagenet__PatternAttribution():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__SerializePatternNet():
     def method(model):
         # enough for test purposes, only pattern application is tested here

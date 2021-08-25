@@ -82,7 +82,10 @@ markers = [
     "slow",
     "fast",
     "application",
+    "mnist",
     "imagenet",
+    "resnet50",
+    "pattern_based",
 ]
 
 [tool.coverage.paths]

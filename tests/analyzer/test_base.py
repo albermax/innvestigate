@@ -108,6 +108,7 @@ def test_fast__BasicGraphReversal():
     dryrun.test_equal_analyzer(method1, method2, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
 def test_precommit__BasicGraphReversal():
     def method1(model):

@@ -19,6 +19,7 @@ from tests.networks import base
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternComputer_dummy_parallel():
     def method(model):
         return PatternComputer(
@@ -31,6 +32,7 @@ def test_fast__PatternComputer_dummy_parallel():
 @pytest.mark.skip("Feature not supported.")
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternComputer_dummy_sequential():
     def method(model):
         return PatternComputer(
@@ -45,6 +47,7 @@ def test_fast__PatternComputer_dummy_sequential():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternComputer_linear():
     def method(model):
         return PatternComputer(model, pattern_type="linear")
@@ -52,7 +55,9 @@ def test_fast__PatternComputer_linear():
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_precommit__PatternComputer_linear():
     def method(model):
         return PatternComputer(model, pattern_type="linear")
@@ -62,6 +67,7 @@ def test_precommit__PatternComputer_linear():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternComputer_relupositive():
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
@@ -69,7 +75,9 @@ def test_fast__PatternComputer_relupositive():
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_precommit__PatternComputer_relupositive():
     def method(model):
         return PatternComputer(model, pattern_type="relu.positive")
@@ -79,6 +87,7 @@ def test_precommit__PatternComputer_relupositive():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_fast__PatternComputer_relunegative():
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
@@ -86,7 +95,9 @@ def test_fast__PatternComputer_relunegative():
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
 
+@pytest.mark.mnist
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 def test_precommit__PatternComputer_relunegative():
     def method(model):
         return PatternComputer(model, pattern_type="relu.negative")
@@ -99,6 +110,7 @@ def test_precommit__PatternComputer_relunegative():
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 class HaufePatternExample(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
@@ -182,6 +194,7 @@ def train_model(model, data, epochs=20):
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 class MnistPatternExample_dense_linear(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
@@ -223,6 +236,7 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
 
 @pytest.mark.fast
 @pytest.mark.precommit
+@pytest.mark.pattern_based
 class MnistPatternExample_dense_relu(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
