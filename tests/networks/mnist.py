@@ -12,11 +12,7 @@ from tests.networks import base
 __all__ = [
     "log_reg",
     "mlp_2dense",
-    "mlp_3dense",
-    "cnn_1convb_2dense",
-    "cnn_2convb_2dense",
-    "cnn_2convb_3dense",
-    "cnn_3convb_3dense",
+    "cnn_2conv_2dense",
 ]
 
 # Create dummy input data
@@ -43,48 +39,8 @@ def mlp_2dense(activation: str = None) -> Model:
     )
 
 
-def mlp_3dense(activation: str = None) -> Model:
-    return base.mlp_3dense(
-        INPUT_SHAPE,
-        N_OUTPUTS,
-        activation=activation,
-        dense_units=DENSE_UNITS,
-        dropout_rate=DROPOUT,
-    )
-
-
-def cnn_1convb_2dense(activation: str = None) -> Model:
-    return base.cnn_1convb_2dense(
-        INPUT_SHAPE,
-        N_OUTPUTS,
-        activation=activation,
-        dense_units=DENSE_UNITS,
-        dropout_rate=DROPOUT,
-    )
-
-
-def cnn_2convb_2dense(activation: str = None) -> Model:
-    return base.cnn_2convb_2dense(
-        INPUT_SHAPE,
-        N_OUTPUTS,
-        activation=activation,
-        dense_units=DENSE_UNITS,
-        dropout_rate=DROPOUT,
-    )
-
-
-def cnn_2convb_3dense(activation: str = None) -> Model:
-    return base.cnn_2convb_3dense(
-        INPUT_SHAPE,
-        N_OUTPUTS,
-        activation=activation,
-        dense_units=DENSE_UNITS,
-        dropout_rate=DROPOUT,
-    )
-
-
-def cnn_3convb_3dense(activation: str = None) -> Model:
-    return base.cnn_3convb_3dense(
+def cnn_2conv_2dense(activation: str = None) -> Model:
+    return base.cnn_2conv_2dense(
         INPUT_SHAPE,
         N_OUTPUTS,
         activation=activation,

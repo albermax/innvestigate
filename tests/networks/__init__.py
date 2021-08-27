@@ -9,7 +9,7 @@ import tensorflow.keras.backend as kbackend
 
 from innvestigate.utils.types import Model
 
-from tests.networks import cifar10, imagenet, mnist, trivia
+from tests.networks import imagenet, mnist, trivia
 
 
 def iterator(
@@ -28,7 +28,6 @@ def iterator(
     networks = (
         _fetch_networks("trivia", trivia, network_filter)
         + _fetch_networks("mnist", mnist, network_filter)
-        + _fetch_networks("cifar10", cifar10, network_filter)
         + _fetch_networks("imagenet", imagenet, network_filter)
     )
 
