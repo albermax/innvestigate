@@ -122,7 +122,7 @@ def get_layer_neuronwise_io(
             if kbackend.image_data_format() == "channels_first":
                 # Ys shape is [samples, channels, out_row, out_col]
                 def _reshape(x):
-                    x = ilayers.Transpose((0, 2, 3, 1))(x)
+                    x = kbackend.permute_dimensions(x, (0, 2, 3, 1))
                     x = ilayers.Reshape((-1, n_channels))(x)
                     return x
 

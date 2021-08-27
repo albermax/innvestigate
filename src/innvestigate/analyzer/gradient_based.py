@@ -59,11 +59,11 @@ class BaselineGradient(AnalyzerNetworkBase):
         ret = iutils.to_list(kbackend.gradients(model.outputs[0], tensors_to_analyze))
 
         if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
+            ret = [kbackend.abs(r) for r in ret]
         elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+            ret = [kbackend.square(r) for r in ret]
 
-        return iutils.to_list(ret)
+        return ret
 
     def _get_state(self):
         state = super()._get_state()
@@ -109,15 +109,15 @@ class Gradient(ReverseAnalyzerBase):
     def _head_mapping(self, X: Tensor) -> Tensor:
         return tf.ones_like(X)
 
-    def _postprocess_analysis(self, X):
-        ret = super()._postprocess_analysis(X)
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        ret = super()._postprocess_analysis(Xs)
 
         if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
+            ret = [kbackend.abs(r) for r in ret]
         elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+            ret = [kbackend.square(r) for r in ret]
 
-        return iutils.to_list(ret)
+        return ret
 
     def _get_state(self):
         state = super()._get_state()

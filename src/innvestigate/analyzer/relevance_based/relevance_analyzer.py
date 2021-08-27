@@ -254,7 +254,7 @@ class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
         denominator = [klayers.Multiply()([xmm, y]) for xmm, y in zip(x_minus_mu, Ys)]
 
         return [
-            ilayers.SafeDivide()([n, prepare_div(d)])
+            ibackend.safe_divide(n, prepare_div(d))
             for n, d in zip(numerator, denominator)
         ]
 
@@ -282,7 +282,7 @@ class AddReverseLayer(igraph.ReverseMappingBase):
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 
         # Propagate the relevance to input neurons
         # using the gradient.
@@ -314,7 +314,7 @@ class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 
         # Propagate the relevance to input neurons
         # using the gradient.

@@ -229,10 +229,10 @@ class LinearPattern(BasePattern):
         self.mean_xy = ilayers.RunningMeans()
 
         # Compute mask and active neuron counts.
-        mask = ilayers.AsFloatX()(self._get_neuron_mask())
+        mask = ibackend.cast_to_floatx(self._get_neuron_mask())
         Y_masked = klayers.multiply([Y, mask])
-        count = ilayers.CountNonZero(axis=0)(mask)
-        count_all = ilayers.Sum(axis=0)(ilayers.OnesLike()(mask))
+        count = ibackend.count_non_zero(mask, axis=0)
+        count_all = ibackend.count_non_zero(ilayers.OnesLike()(mask), axis=0)
 
         # Get means ...
         def norm(x, count):
@@ -257,9 +257,6 @@ class LinearPattern(BasePattern):
     def compute_pattern(self):
         """Computes the patterns according to the formula in the paper."""
 
-        def safe_divide(a, b):
-            return a / (b + (b == 0))
-
         W = igraph.get_kernel(self.layer)
         W2D = W.reshape((-1, W.shape[-1]))
 
@@ -271,7 +268,7 @@ class LinearPattern(BasePattern):
         cov_xy = mean_xy - ExEy
 
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = safe_divide(cov_xy, w_cov_xy[None, :])
+        A = ibackend.safe_divide(cov_xy, w_cov_xy[None, :], factor=1)
 
         # TODO: check implementation
         # # update length

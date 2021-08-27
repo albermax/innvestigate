@@ -217,16 +217,13 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
         X = data[0].reshape((data[0].shape[0], -1))
         Y = np.dot(X, W2D)
 
-        def safe_divide(a, b):
-            return a / (b + (b == 0))
-
         mean_x = X.mean(axis=0)
         mean_y = Y.mean(axis=0)
         mean_xy = np.dot(X.T, Y) / Y.shape[0]
         ExEy = mean_x[:, None] * mean_y[None, :]
         cov_xy = mean_xy - ExEy
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = safe_divide(cov_xy, w_cov_xy[None, :])
+        A = ibackend.safe_divide(cov_xy, w_cov_xy[None, :], factor=1)
 
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)
@@ -261,18 +258,15 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
         mask = np.dot(X, W2D) + b > 0
         count = mask.sum(axis=0)
 
-        def safe_divide(a, b):
-            return a / (b + (b == 0))
-
-        mean_x = safe_divide(np.dot(X.T, mask), count)
+        mean_x = ibackend.safe_divide(np.dot(X.T, mask), count, factor=1)
         mean_y = Y.mean(axis=0)
-        mean_xy = safe_divide(np.dot(X.T, Y * mask), count)
+        mean_xy = ibackend.safe_divide(np.dot(X.T, Y * mask), count, factor=1)
 
         ExEy = mean_x * mean_y
 
         cov_xy = mean_xy - ExEy
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = safe_divide(cov_xy, w_cov_xy[None, :])
+        A = ibackend.safe_divide(cov_xy, w_cov_xy[None, :], factor=1)
 
         def allclose(a, b):
             return np.allclose(a, b, rtol=0.05, atol=0.05)

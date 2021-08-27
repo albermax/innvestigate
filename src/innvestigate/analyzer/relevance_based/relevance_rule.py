@@ -65,7 +65,7 @@ class ZRule(igraph.ReverseMappingBase):
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
         grads = ibackend.gradients(Xs, Zs, tmp)
@@ -116,7 +116,7 @@ class EpsilonRule(igraph.ReverseMappingBase):
         Zs = ikeras.apply(self._layer_wo_act, Xs)
 
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.Divide()([a, prepare_div(b)]) for a, b in zip(Rs, Zs)]
+        tmp = [a / prepare_div(b) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
         grads = ibackend.gradients(Xs, Zs, tmp)
@@ -273,7 +273,7 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
             Z2 = ikeras.apply(layer2, X2)
             Zs = [klayers.Add()([a, b]) for a, b in zip(Z1, Z2)]
             # Divide incoming relevance by the activations.
-            tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+            tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
             grads1 = ibackend.gradients(X1, Z1, tmp)
@@ -407,7 +407,7 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
         def f(layer: Layer, X):
             Zs = ikeras.apply(layer, X)
             # Divide incoming relevance by the activations.
-            tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+            tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
             grads = ibackend.gradients(X, Zs, tmp)
@@ -521,7 +521,7 @@ class BoundedRule(igraph.ReverseMappingBase):
         ]
 
         # Divide relevances with the value.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
         # Distribute along the gradient.
         grads_a = ibackend.gradients(Xs, A, tmp)
         grads_b = ibackend.gradients(low, B, tmp)
@@ -591,7 +591,7 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
         # Get activations.
         Zs = ikeras.apply(self._layer_wo_act_b_positive, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
         # using the gradient.
         grads = ibackend.gradients(Xs, Zs, tmp)

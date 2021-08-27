@@ -288,14 +288,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             self._reverse_tensors_mapping = mapping
 
             if self._reverse_check_min_max_values:
-                tmp = [ilayers.Min(None)(x) for x in tensors]
+                tmp = [kbackend.min(x) for x in tensors]
                 self._debug_tensors_indices["min"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),
                 )
                 debug_tensors += tmp
 
-                tmp = [ilayers.Max(None)(x) for x in tensors]
+                tmp = [kbackend.min(x) for x in tensors]
                 self._debug_tensors_indices["max"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),
