@@ -6,8 +6,8 @@ from __future__ import annotations
 from typing import Set
 
 import tensorflow.keras as keras
-import tensorflow.python.keras.engine.network as knetwork
 import tensorflow.keras.layers as klayers
+import tensorflow.python.keras.engine.network as knetwork
 
 import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer

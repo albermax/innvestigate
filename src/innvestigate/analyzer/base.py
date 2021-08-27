@@ -213,7 +213,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         # since `super()._state_to_kwargs(state)` should be called last
         # in every child class, the dict `state` should be empty at this point.
         if len(state) != 0:
-            raise RuntimeError(f"Serialization failed. Got state {state}.")
+            raise RuntimeError(f"Serialization failed. Got left-over state {state}.")
 
         model = kmodels.model_from_json(model_json)
         model.set_weights(model_weights)
@@ -280,17 +280,7 @@ class TrainerMixin(object):
         """
         return self._fit_generator(*args, **kwargs)
 
-    def _fit_generator(
-        self,
-        generator: iutils.BatchSequence,
-        steps_per_epoch: int = None,
-        epochs: int = 1,
-        max_queue_size: int = 10,
-        workers: int = 1,
-        use_multiprocessing: bool = False,
-        verbose=0,
-        disable_no_training_warning: bool = None,
-    ):
+    def _fit_generator(self, *_args, **_kwargs):
         raise NotImplementedError()
 
 

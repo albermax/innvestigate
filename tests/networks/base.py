@@ -66,6 +66,7 @@ def mlp_2dense(
     )
     return model
 
+
 def cnn_2conv_2dense(
     input_shape: ShapeTuple,
     output_n: int,

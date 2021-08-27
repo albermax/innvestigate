@@ -11,6 +11,7 @@ import tensorflow.keras.utils as kutils
 from tensorflow.keras.datasets import mnist
 
 import innvestigate
+import innvestigate.utils.keras.backend as ibackend
 from innvestigate.tools import PatternComputer
 
 from tests import dryrun

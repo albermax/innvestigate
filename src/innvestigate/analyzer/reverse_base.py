@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+import tensorflow.keras.backend as kbackend
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
@@ -227,8 +228,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         # Refer to the "Introduction to development notebook".
         return X
 
-    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> OptionalList[Tensor]:
-        return Xs
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        return iutils.to_list(Xs)
 
     def _reverse_model(
         self,

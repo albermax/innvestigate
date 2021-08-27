@@ -9,7 +9,6 @@ import tensorflow.keras.layers as klayers
 
 import innvestigate.analyzer.relevance_based.relevance_rule as rrule
 import innvestigate.analyzer.relevance_based.utils as rutils
-import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras as ikeras
 import innvestigate.utils.keras.backend as ibackend

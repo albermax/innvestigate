@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import fnmatch
 import types
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Iterator, List, Tuple
 
 import tensorflow.keras.backend as kbackend
 

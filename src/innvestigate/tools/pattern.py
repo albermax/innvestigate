@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from builtins import range
+from typing import Dict
 
 import numpy as np
 import six
@@ -18,7 +19,7 @@ import innvestigate.utils.keras.backend as ibackend
 import innvestigate.utils.keras.checks as ichecks
 import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer import pattern_based
-from innvestigate.utils.types import List, Tensor
+from innvestigate.utils.types import List, Model, Tensor
 
 __all__ = [
     "get_active_neuron_io",
@@ -217,11 +218,12 @@ class LinearPattern(BasePattern):
         for i in range(igraph.get_layer_inbound_count(self.layer)):
             layer(self.layer.get_input_at(i))
         Xs, Ys = get_active_neuron_io(layer, self._active_node_indices)
-        if len(Ys) != 1:
-            raise ValueError("Assume that kernel layer have only one output.")
+        if len(Ys) != 1 or len(Xs) != 1:
+            raise ValueError("Assume that kernel layer have only one input and output.")
         X, Y = Xs[0], Ys[0]
 
         # Create layers that keep a running mean for the desired stats.
+        # These are class attributes to be able to query them in `compute_pattern`.
         self.mean_x = ilayers.RunningMeans()
         self.mean_y = ilayers.RunningMeans()
         self.mean_xy = ilayers.RunningMeans()
@@ -322,7 +324,7 @@ def get_pattern_class(pattern_type):
 ###############################################################################
 
 
-class PatternComputer(object):
+class PatternComputer:
     """Pattern computer.
 
     Computes a pattern for each layer with a kernel of a given model.
@@ -503,5 +505,4 @@ class PatternComputer(object):
 
         if len(self.pattern_types) == 1:
             return patterns[list(self.pattern_types.keys())[0]]
-        else:
-            return patterns
+        return patterns

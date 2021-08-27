@@ -10,6 +10,7 @@ import tensorflow.keras.models as kmodels
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.checks as ichecks
+import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
@@ -135,7 +136,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             analysis_inputs.append(neuron_indexing)
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            select = ilayers.NeuronSelection(name="iNNvestigate_neuron_selection")
+            select = ilayers.NeuronSelection(name="NeuronSelection")
             model_output = select(model_output + [neuron_indexing])
             self._special_helper_layers.append(select)
         elif neuron_selection_mode == "all":

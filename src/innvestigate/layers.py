@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from builtins import range
 from typing import List, Optional, Sequence, Tuple, Union
 

@@ -5,7 +5,7 @@ import inspect
 import warnings
 from abc import ABCMeta, abstractmethod
 from builtins import zip
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import tensorflow.keras.backend as kbackend

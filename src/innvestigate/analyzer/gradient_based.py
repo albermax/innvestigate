@@ -6,7 +6,6 @@ import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
-import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
 import innvestigate.utils.keras as ikeras
 import innvestigate.utils.keras.backend as ibackend
@@ -15,7 +14,7 @@ import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 from innvestigate.analyzer.wrapper import GaussianSmoother, PathIntegrator
-from innvestigate.utils.types import List, Tensor
+from innvestigate.utils.types import List, OptionalList, Tensor
 
 __all__ = [
     "BaselineGradient",

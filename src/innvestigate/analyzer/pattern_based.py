@@ -156,6 +156,8 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
             for l in igraph.get_model_layers(self._model)
             if ichecks.contains_kernel(l)
         ]
+        print(f"layer: {layer}")
+        print(f"layers: {layers}")
 
         return self._patterns[layers.index(layer)]
 
@@ -189,8 +191,7 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         workers=1,
         use_multiprocessing=False,
         verbose=0,
-        disable_no_training_warning=None,
-        **kwargs
+        **kwargs,
     ):
         # TODO: implement epochs
 

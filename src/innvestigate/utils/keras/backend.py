@@ -55,7 +55,7 @@ def safe_divide(A: Tensor, B: Tensor, factor: float = _EPS) -> Tensor:
     return A / (B + factor * is_zero)
 
 
-def count_non_zero(X: Tensor, axis, keepdims: bool) -> Tensor:
+def count_non_zero(X: Tensor, axis, keepdims: bool = False) -> Tensor:
     "Count non-zero elements in tensor."
     non_zeros = cast_to_floatx(kbackend.not_equal(X, kbackend.constant(0)))
     return kbackend.sum(non_zeros, axis=axis, keepdims=keepdims)

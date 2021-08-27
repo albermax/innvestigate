@@ -1,14 +1,14 @@
 """Dryrun analyzers to catch crashes."""
 from __future__ import annotations
 
-from typing import Callable, Dict
+from typing import Callable
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
 
 from innvestigate.analyzer import Random
 from innvestigate.analyzer.base import AnalyzerBase
-from innvestigate.utils.types import Layer, Model, ShapeTuple
+from innvestigate.utils.types import Model
 
 from tests import networks
 
