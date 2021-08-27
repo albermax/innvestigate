@@ -18,22 +18,15 @@ __all__ = [
     "OnesLike",
     "AsFloatX",
     "FiniteCheck",
-    "Min",
-    "Max",
     "GreaterThanZero",
     "LessEqualThanZero",
     "Sum",
-    "Mean",
-    "CountNonZero",
     "Identity",
     "Abs",
     "Square",
     "Clip",
     "Project",
-    "Transpose",
-    "Dot",
     "SafeDivide",
-    "Repeat",
     "Reshape",
     "MultiplyWithLinspace",
     "ExtractConv2DPatches",
@@ -106,44 +99,11 @@ class _Reduce(klayers.Layer):
         raise NotImplementedError()
 
 
-class Min(_Reduce):
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return kbackend.min(x, axis=axis, keepdims=keepdims)
-
-
-class Max(_Reduce):
-    """Applied to the last layer of a model, this reduces the output
-    to the max neuron activation."""
-
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return kbackend.max(x, axis=axis, keepdims=keepdims)
-
-
 class Sum(_Reduce):
     def _apply_reduce(
         self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:
         return kbackend.sum(x, axis=axis, keepdims=keepdims)
-
-
-class Mean(_Reduce):
-    """Take mean of Tensor along axis."""
-
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return kbackend.mean(x, axis=axis, keepdims=keepdims)
-
-
-class CountNonZero(_Reduce):
-    def _apply_reduce(
-        self, X: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return ibackend.count_non_zero(X, axis=axis, keepdims=keepdims)
 
 
 ###############################################################################
@@ -237,33 +197,6 @@ class LessEqualThanZero(klayers.Layer):
         return kbackend.less_equal(x, kbackend.constant(0))
 
 
-class Transpose(klayers.Layer):
-    def __init__(self, axes=None, **kwargs) -> None:
-        self._axes = axes
-        super().__init__(**kwargs)
-
-    def call(self, x: Tensor) -> Tensor:
-        if self._axes is None:
-            return kbackend.transpose(x)
-        return kbackend.permute_dimensions(x, self._axes)
-
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        if self._axes is None:
-            return input_shape[::-1]  # invert input shape
-        return tuple(np.asarray(input_shape)[list(self._axes)])
-
-
-class Dot(klayers.Layer):
-    def call(self, inputs: List[Tensor]) -> Tensor:
-        if len(inputs) != 2:
-            raise ValueError("A `Dot` layer should be called on exactly 2 inputs")
-        a, b = inputs
-        return kbackend.dot(a, b)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return (input_shapes[0][0], input_shapes[1][1])
-
-
 class Divide(klayers.Layer):
     def call(self, inputs: List[Tensor]) -> Tensor:
         if len(inputs) != 2:
@@ -296,37 +229,6 @@ class SafeDivide(klayers.Layer):
 
 
 ###############################################################################
-
-
-class Repeat(klayers.Layer):
-    """Layer that repeats tensor n-times along axis specified on init."""
-
-    def __init__(self, n: int, axis, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._n = n
-        self._axis = axis
-
-    def call(self, X: Tensor) -> Tensor:
-        return kbackend.repeat_elements(X, self._n, self._axis)
-
-    def compute_output_shape(
-        self, input_shapes: OptionalList[ShapeTuple]
-    ) -> ShapeTuple:
-        input_shape: ShapeTuple
-
-        if isinstance(input_shapes, list):
-            input_shape = input_shapes[0]
-        elif isinstance(input_shapes, tuple):
-            input_shape = input_shapes
-        else:
-            raise TypeError(
-                "Expected shape tuple (tuple of integers) or list of shape tuples."
-            )
-
-        if input_shape[0] is None:
-            return input_shape
-        else:
-            return (input_shape[0] * self._n,) + input_shape[1:]
 
 
 class Reshape(klayers.Layer):
