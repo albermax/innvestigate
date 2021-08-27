@@ -1,6 +1,11 @@
+"""Apply network architectures defined in base.py using MNIST input shape,
+512 units per dense layer and a dropout rate of 0.25.
+"""
 from __future__ import annotations
 
 import tensorflow.keras.backend as kbackend
+
+from innvestigate.utils.types import Model
 
 from tests.networks import base
 
@@ -14,85 +19,75 @@ __all__ = [
     "cnn_3convb_3dense",
 ]
 
-
-###############################################################################
-
-
-if kbackend.image_data_format() == "channels_first":
-    __input_shape__ = [None, 1, 28, 28]
+# Create dummy input data
+if kbackend.image_data_format == "channels_first":
+    INPUT_SHAPE = (1, 28, 28)
 else:
-    __input_shape__ = [None, 28, 28, 1]
-__output_n__ = 10
+    INPUT_SHAPE = (28, 28, 1)
+N_OUTPUTS = 10
+DENSE_UNITS = 512
+DROPOUT = 0.25
 
 
-###############################################################################
+def log_reg(activation: str = None) -> Model:
+    return base.log_reg(INPUT_SHAPE, N_OUTPUTS, activation=activation)
 
 
-def log_reg(activation=None):
-    return base.log_reg(__input_shape__, __output_n__, activation=activation)
-
-
-###############################################################################
-
-
-def mlp_2dense(activation=None):
+def mlp_2dense(activation: str = None) -> Model:
     return base.mlp_2dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )
 
 
-def mlp_3dense(activation=None):
+def mlp_3dense(activation: str = None) -> Model:
     return base.mlp_3dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )
 
 
-###############################################################################
-
-
-def cnn_1convb_2dense(activation=None):
+def cnn_1convb_2dense(activation: str = None) -> Model:
     return base.cnn_1convb_2dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )
 
 
-def cnn_2convb_2dense(activation=None):
+def cnn_2convb_2dense(activation: str = None) -> Model:
     return base.cnn_2convb_2dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )
 
 
-def cnn_2convb_3dense(activation=None):
+def cnn_2convb_3dense(activation: str = None) -> Model:
     return base.cnn_2convb_3dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )
 
 
-def cnn_3convb_3dense(activation=None):
+def cnn_3convb_3dense(activation: str = None) -> Model:
     return base.cnn_3convb_3dense(
-        __input_shape__,
-        __output_n__,
+        INPUT_SHAPE,
+        N_OUTPUTS,
         activation=activation,
-        dense_units=512,
-        dropout_rate=0.25,
+        dense_units=DENSE_UNITS,
+        dropout_rate=DROPOUT,
     )

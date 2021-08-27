@@ -1,6 +1,10 @@
+"""Predefined network architectures for testing."""
 from __future__ import annotations
 
 import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
+
+from innvestigate.utils.types import Layer, Model, ShapeTuple
 
 __all__ = [
     "log_reg",
@@ -12,288 +16,191 @@ __all__ = [
     "cnn_3convb_3dense",
 ]
 
-# TODO: more consistent nameing
 
-
-def input_layer(shape, *args, **kwargs):
-    return klayers.Input(shape=shape[1:], *args, **kwargs)
-
-
-def dense_layer(layer_in, *args, **kwargs):
-    return klayers.Dense(*args, **kwargs)(layer_in)
-
-
-def conv_layer(layer_in, *args, **kwargs):
-    return klayers.Conv2D(*args, **kwargs)(layer_in)
-
-
-def conv_pool(layer_in, n_conv, prefix, n_filter, **kwargs):
-    conv_prefix = "%s_%%i" % prefix
-
-    ret = {}
-    current_layer = layer_in
-    for i in range(n_conv):
-        conv = conv_layer(
-            current_layer,
-            filters=n_filter,
-            kernel_size=(3, 3),
-            strides=(1, 1),
-            padding="same",
-            kernel_initializer="glorot_uniform",
-            **kwargs
-        )
-        current_layer = conv
-        ret[conv_prefix % i] = conv
-
-        ret["%s_pool" % prefix] = klayers.MaxPooling2D(
-            pool_size=(2, 2),
-            strides=(2, 2),
-        )(current_layer)
-    return ret
-
-
-def dropout_layer(layer_in, *args, **kwargs):
-    return klayers.Dropout(*args, **kwargs)(layer_in)
-
-
-def softmax(layer_in):
-    return klayers.Activation("softmax")(layer_in)
-
-
-###############################################################################
-
-
-def log_reg(input_shape, output_n, activation=None):
-    if activation is None:
-        activation = "relu"
-
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = klayers.Flatten()(net["in"])
-    net["out"] = dense_layer(
-        net["in_flat"], units=output_n, kernel_initializer="glorot_uniform"
+def _conv_layer() -> Layer:
+    return klayers.Conv2D(
+        filters=128,
+        kernel_size=(3, 3),
+        strides=(1, 1),
+        padding="same",
+        kernel_initializer="glorot_uniform",
     )
-    net["sm_out"] = softmax(net["out"])
 
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
+
+def _pooling_layer() -> Layer:
+    return klayers.MaxPooling2D(
+        pool_size=(2, 2),
+        strides=(2, 2),
     )
-    return net
 
 
-###############################################################################
+def log_reg(input_shape: ShapeTuple, output_n: int, activation=None) -> Model:
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            klayers.Flatten(),
+            klayers.Dense(output_n),
+        ],
+        name="log_reg",
+    )
+    return model
 
 
 def mlp_2dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = klayers.Flatten()(net["in"])
-    net["dense_1"] = dense_layer(
-        net["in_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="mlp_2dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_1_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
+    return model
 
 
 def mlp_3dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net["in_flat"] = klayers.Flatten()(net["in"])
-    net["dense_1"] = dense_layer(
-        net["in_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="mlp_3dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["dense_2"] = dense_layer(
-        net["dense_1_dropout"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
-    )
-    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_2_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
-
-
-###############################################################################
+    return model
 
 
 def cnn_1convb_2dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 128, activation=activation))
-    net["conv_flat"] = klayers.Flatten()(net["conv_1_pool"])
-    net["dense_1"] = dense_layer(
-        net["conv_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            _conv_layer(),
+            _pooling_layer(),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="cnn_1convb_2dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_1_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
+    return model
 
 
 def cnn_2convb_2dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 128, activation=activation))
-    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128, activation=activation))
-    net["conv_flat"] = klayers.Flatten()(net["conv_2_pool"])
-    net["dense_1"] = dense_layer(
-        net["conv_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            _conv_layer(),
+            _pooling_layer(),
+            _conv_layer(),
+            _pooling_layer(),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="cnn_2convb_2dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_1_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
+    return model
 
 
 def cnn_2convb_3dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 128, activation=activation))
-    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128, activation=activation))
-    net["conv_flat"] = klayers.Flatten()(net["conv_2_pool"])
-    net["dense_1"] = dense_layer(
-        net["conv_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            _conv_layer(),
+            _pooling_layer(),
+            _conv_layer(),
+            _pooling_layer(),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="cnn_2convb_3dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["dense_2"] = dense_layer(
-        net["dense_1_dropout"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
-    )
-    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_2_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
+    return model
 
 
 def cnn_3convb_3dense(
-    input_shape, output_n, activation=None, dense_units=512, dropout_rate=0.25
-):
+    input_shape: ShapeTuple,
+    output_n: int,
+    activation=None,
+    dense_units: int = 512,
+    dropout_rate=0.25,
+) -> Model:
     if activation is None:
         activation = "relu"
 
-    net = {}
-    net["in"] = input_layer(shape=input_shape)
-    net.update(conv_pool(net["in"], 2, "conv_1", 128, activation=activation))
-    net.update(conv_pool(net["conv_1_pool"], 2, "conv_2", 128, activation=activation))
-    net.update(conv_pool(net["conv_2_pool"], 2, "conv_3", 128, activation=activation))
-    net["conv_flat"] = klayers.Flatten()(net["conv_3_pool"])
-    net["dense_1"] = dense_layer(
-        net["conv_flat"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
+    model = kmodels.Sequential(
+        [
+            klayers.Input(shape=input_shape),
+            _conv_layer(),
+            _pooling_layer(),
+            _conv_layer(),
+            _pooling_layer(),
+            _conv_layer(),
+            _pooling_layer(),
+            klayers.Flatten(),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(dense_units, activation=activation),
+            klayers.Dropout(dropout_rate),
+            klayers.Dense(output_n),
+        ],
+        name="cnn_3convb_3dense",
     )
-    net["dense_1_dropout"] = dropout_layer(net["dense_1"], dropout_rate)
-    net["dense_2"] = dense_layer(
-        net["dense_1_dropout"],
-        units=dense_units,
-        activation=activation,
-        kernel_initializer="glorot_uniform",
-    )
-    net["dense_2_dropout"] = dropout_layer(net["dense_2"], dropout_rate)
-    net["out"] = dense_layer(
-        net["dense_2_dropout"], units=output_n, kernel_initializer="glorot_uniform"
-    )
-    net["sm_out"] = softmax(net["out"])
-
-    net.update(
-        {
-            "input_shape": input_shape,
-            "output_n": output_n,
-        }
-    )
-    return net
+    return model
