@@ -15,7 +15,7 @@ import innvestigate.utils.keras.backend as ibackend
 from innvestigate.tools import PatternComputer
 
 from tests import dryrun
-from tests.networks import base
+from tests.networks.base import mlp_2dense
 
 
 @pytest.mark.fast
@@ -165,15 +165,6 @@ def fetch_data():
     return x_train[:100], y_train[:100], x_test[:10], y_test[:10]
 
 
-def create_model(clazz):
-    num_classes = 10
-
-    network = clazz((None, 1, 28, 28), num_classes, dense_units=1024, dropout_rate=0.25)
-    model_wo_sm = kmodels.Model(inputs=network["in"], outputs=network["out"])
-    model_w_sm = kmodels.Model(inputs=network["in"], outputs=network["sm_out"])
-    return model_wo_sm, model_w_sm
-
-
 def train_model(model, data, epochs=20):
     batch_size = 128
     num_classes = 10
@@ -199,12 +190,17 @@ def train_model(model, data, epochs=20):
 class MnistPatternExample_dense_linear(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
-        model_class = base.mlp_2dense
+
+        model = mlp_2dense(
+            (1, 28, 28),
+            10,
+            dense_units=1024,
+            dropout_rate=0.25,
+        )
 
         data = fetch_data()
-        model, modelp = create_model(model_class)
-        train_model(modelp, data, epochs=10)
-        model.set_weights(modelp.get_weights())
+        train_model(model, data, epochs=10)
+        model.set_weights(model.get_weights())
 
         analyzer = innvestigate.create_analyzer(
             "pattern.net", model, pattern_type="linear"
@@ -238,12 +234,17 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
 class MnistPatternExample_dense_relu(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
-        model_class = base.mlp_2dense
+
+        model = mlp_2dense(
+            (1, 28, 28),
+            10,
+            dense_units=1024,
+            dropout_rate=0.25,
+        )
 
         data = fetch_data()
-        model, modelp = create_model(model_class)
-        train_model(modelp, data, epochs=10)
-        model.set_weights(modelp.get_weights())
+        train_model(model, data, epochs=10)
+        model.set_weights(model.get_weights())
 
         analyzer = innvestigate.create_analyzer(
             "pattern.net", model, pattern_type="relu"
