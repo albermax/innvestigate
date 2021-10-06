@@ -120,7 +120,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             model_output = klayers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
-            inn_max = ilayers.Max(name="iNNvestigate_max")
+            inn_max = ilayers.MaxNeuronSelection(name="MaxNeuronSelection")
             model_output = inn_max(model_output)
             self._special_helper_layers.append(inn_max)
 
