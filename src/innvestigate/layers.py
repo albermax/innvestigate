@@ -388,6 +388,9 @@ class MaxNeuronSelection(klayers.Layer):
     def call(self, x: Tensor) -> Tensor:
         return kbackend.max(x)
 
+    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
+        return (None, 1)
+
 
 class NeuronSelection(klayers.Layer):
     """Applied to the last layer of a model, this selects output neurons at given indices
@@ -400,3 +403,6 @@ class NeuronSelection(klayers.Layer):
             )
         x, indices = inputs
         return tf.gather(x, indices, axis=1)
+
+    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
+        return (None, 1)
