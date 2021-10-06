@@ -33,15 +33,10 @@ def _pooling_layer() -> Layer:
 
 
 def log_reg(input_shape: ShapeTuple, output_n: int, activation=None) -> Model:
-    model = kmodels.Sequential(
-        [
-            klayers.Input(shape=input_shape),
-            klayers.Flatten(),
-            klayers.Dense(output_n),
-        ],
-        name="log_reg",
-    )
-    return model
+    inputs = klayers.Input(shape=input_shape)
+    x = klayers.Flatten()(inputs)
+    outputs = klayers.Dropout(0.25)(x, training=False)
+    return kmodels.Model(inputs=inputs, outputs=outputs, name="log_reg")
 
 
 def mlp_2dense(
@@ -54,17 +49,12 @@ def mlp_2dense(
     if activation is None:
         activation = "relu"
 
-    model = kmodels.Sequential(
-        [
-            klayers.Input(shape=input_shape),
-            klayers.Flatten(),
-            klayers.Dense(dense_units, activation=activation),
-            klayers.Dropout(dropout_rate),
-            klayers.Dense(output_n),
-        ],
-        name="mlp_2dense",
-    )
-    return model
+    inputs = klayers.Input(shape=input_shape)
+    x = klayers.Flatten()(inputs)
+    x = klayers.Dense(dense_units, activation=activation)(x)
+    x = klayers.Dropout(dropout_rate)(x, training=False)
+    outputs = klayers.Dense(output_n)(x)
+    return kmodels.Model(inputs=inputs, outputs=outputs, name="mlp_2dense")
 
 
 def cnn_2conv_2dense(
@@ -77,18 +67,13 @@ def cnn_2conv_2dense(
     if activation is None:
         activation = "relu"
 
-    model = kmodels.Sequential(
-        [
-            klayers.Input(shape=input_shape),
-            _conv_layer(),
-            _pooling_layer(),
-            _conv_layer(),
-            _pooling_layer(),
-            klayers.Flatten(),
-            klayers.Dense(dense_units, activation=activation),
-            klayers.Dropout(dropout_rate),
-            klayers.Dense(output_n),
-        ],
-        name="cnn_2conv_2dense",
-    )
-    return model
+    inputs = klayers.Input(shape=input_shape)
+    x = _conv_layer()(inputs)
+    x = _pooling_layer()(x)
+    x = _conv_layer()(x)
+    x = _pooling_layer()(x)
+    x = klayers.Flatten()(inputs)
+    x = klayers.Dense(dense_units, activation=activation)(x)
+    x = klayers.Dropout(dropout_rate)(x, training=False)
+    outputs = klayers.Dense(output_n)(x)
+    return kmodels.Model(inputs=inputs, outputs=outputs, name="cnn_2conv_2dense")

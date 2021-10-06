@@ -33,8 +33,6 @@ class BaseLayerTestCase:
         kbackend.clear_session()
 
         for model in networks.iterator(self._network_filter, clear_sessions=True):
-            print(f"Running test on network {model.name}")
-            model.summary()
             self._apply_test(model)
 
 
@@ -59,7 +57,7 @@ class AnalyzerTestCase(BaseLayerTestCase):
         input_shape = model.input_shape[1:]
         x = np.random.rand(1, *input_shape).astype(np.float32)
         # Call model with test input
-        model(x)
+        model.predict(x)
         # Call analyzer
         analyzer = self._method(model)
         analysis = analyzer.analyze(x)
@@ -98,7 +96,7 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
         x = np.random.rand(1, *input_shape).astype(np.float32)
         x_fit = np.random.rand(16, *input_shape).astype(np.float32)
         # Call model with test input
-        model(x)
+        model.predict(x)
         # Get analyzer.
         analyzer = self._method(model)
         analyzer.fit(x_fit)
@@ -145,7 +143,7 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
         input_shape = model.input_shape[1:]
         x = np.random.rand(1, *input_shape).astype(np.float32)
         # Call model with test input
-        model(x)
+        model.predict(x)
         # Get analyzer.
         analyzer1 = self._method1(model)
         analyzer2 = self._method2(model)
@@ -153,7 +151,6 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
         analysis1 = analyzer1.analyze(x)
         analysis2 = analyzer2.analyze(x)
 
-        print((1,) + input_shape)
         assert tuple(analysis1.shape) == (1,) + input_shape
         assert not np.any(np.isinf(analysis1.ravel()))
         assert not np.any(np.isnan(analysis1.ravel()))
