@@ -189,7 +189,7 @@ class DummyPattern(BasePattern):
         count = ilayers.CountNonZero(axis=0)(Ys[0])
         sum_x = ilayers.Dot()([ilayers.Transpose()(Xs[0]), Ys[0]])
 
-        mean_x, count_x = self.mean_x([sum_x, count])
+        _mean_x, count_x = self.mean_x([sum_x, count])
 
         # Return dummy output to have connected graph!
         return ilayers.Sum(axis=None)(count_x)
@@ -370,8 +370,7 @@ class PatternComputer:
         via dummy outputs to a model's output and then iterate over the
         dataset to compute statistics.
         """
-        # Create a broadcasting function that is used to connect
-        # the dummy outputs.
+        # Create a broadcasting function that is used to connect the dummy outputs.
         # Broadcaster has shape (mini_batch_size, 1)
         reduce_axes = list(range(len(kbackend.int_shape(self.model.inputs[0]))))[1:]
         dummy_broadcaster = ilayers.Sum(axis=reduce_axes, keepdims=True)(
@@ -448,7 +447,7 @@ class PatternComputer:
 
         # We don't do gradient updates.
         class NoOptimizer(koptimizers.Optimizer):
-            def get_updates(self, *args, **kwargs):
+            def get_updates(self, *_args, **_kwargs):
                 return []
 
         optimizer = NoOptimizer()

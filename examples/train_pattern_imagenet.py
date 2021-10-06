@@ -15,8 +15,6 @@ import innvestigate.tools
 import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
 
-import tests.networks.imagenet
-
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 

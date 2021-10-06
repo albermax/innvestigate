@@ -87,7 +87,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._add_model_check(
             check=check_lambda_layers,
             message=(
-                "Lamda layers are not allowed. "
+                "Lambda layers are not allowed. "
                 "To force use set 'allow_lambda_layers' parameter."
             ),
             check_type="exception",
@@ -193,8 +193,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         inputs = model_inputs + analysis_inputs + constant_inputs
         outputs = analysis_outputs + debug_outputs
-        self._analyzer_model = kmodels.Model(inputs=inputs, outputs=outputs)
 
+        self._analyzer_model = kmodels.Model(
+            inputs=inputs,
+            outputs=outputs,
+            name=f"{self.__class__.__name__}_analyzer_model",
+        )
         self._analyzer_model_done = True
 
     def _create_analysis(

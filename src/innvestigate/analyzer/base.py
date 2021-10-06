@@ -58,7 +58,6 @@ class AnalyzerBase(metaclass=ABCMeta):
         _model_check_done: bool = False,
         _model_checks: List[ModelCheckDict] = None,
     ) -> None:
-
         self._model = model
         self._disable_model_checks = disable_model_checks
         self._model_check_done = _model_check_done

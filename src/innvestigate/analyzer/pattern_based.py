@@ -156,9 +156,6 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
             for l in igraph.get_model_layers(self._model)
             if ichecks.contains_kernel(l)
         ]
-        print(f"layer: {layer}")
-        print(f"layers: {layers}")
-
         return self._patterns[layers.index(layer)]
 
     def _prepare_pattern(self, _layer, _state, pattern):
