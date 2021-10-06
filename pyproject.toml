@@ -33,9 +33,8 @@ keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
 python = "~3.7"
-Keras = "~2.3"
 tensorflow = "~1.15"
-Pillow = "^8.1.1"
+future = "^0.18.2"
 numpy = "^1.18.5"
 matplotlib = "^3.4.0"
 typing-extensions = "^3.7.4"
@@ -50,6 +49,7 @@ flake8-builtins = "^1.5.3"
 flake8-docstrings = "^1.5.0"
 flake8-isort = "^4.0.0"
 pep8-naming = "^0.11.1"
+Pillow = "^8.3.1"
 pytest = "^6.2.2"
 pytest-cov = "^2.11.1"
 coverage = {extras = ["toml"], version = "^5.5"}
@@ -70,8 +70,8 @@ known_first_party = "innvestigate"
 known_local_folder = "tests"
 
 [tool.pytest.ini_options]
-addopts = "-v -m fast --strict-markers --cov"
-# addopts = "-v -m precommit --strict-markers --cov"
+# addopts = "-v -m fast --strict-markers --cov"
+addopts = "-v -m precommit --strict-markers --cov"
 filterwarnings = [
     "ignore::DeprecationWarning:tensorflow",
     "ignore::DeprecationWarning:tensorboard",
