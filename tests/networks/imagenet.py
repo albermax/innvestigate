@@ -41,10 +41,10 @@ def vgg19() -> Model:
 
 
 def resnet50() -> Model:
-    return kapps.ResNet50(
+    model = kapps.ResNet50(
         weights=WEIGHTS,
-        classifier_activation=ACTIVATION,
     )
+    return model_wo_softmax(model)
 
 
 ###############################################################################
