@@ -477,9 +477,6 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                     ret += self.bias
                 return ret
 
-            def compute_output_shape(self, input_shape):
-                return input_shape
-
         return ScaleLayer()
 
     def meta_mapping(layer: Layer, reverse_state: Dict):

@@ -77,21 +77,6 @@ class _Reduce(klayers.Layer):
     def call(self, x: OptionalList[Tensor]) -> Tensor:
         return self._apply_reduce(x, axis=self.axis, keepdims=self.keepdims)
 
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        if self.axis is None:
-            if self.keepdims is False:
-                return (1,)
-            return tuple(np.ones_like(input_shape))  # type: ignore
-        else:
-            axes = np.arange(len(input_shape))
-            if self.keepdims is False:
-                for i in iutils.to_list(self.axis):
-                    axes = np.delete(axes, i, 0)
-            else:
-                for i in iutils.to_list(self.axis):
-                    axes[i] = 1
-            return tuple([idx for i, idx in enumerate(input_shape) if i in axes])
-
     def _apply_reduce(
         self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
     ) -> Tensor:
@@ -113,9 +98,6 @@ class _Map(klayers.Layer):
         if isinstance(X, list) and len(X) == 1:
             X = X[0]
         return self._apply_map(X)
-
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        return input_shape
 
     def _apply_map(self, X: Tensor):
         raise NotImplementedError()
@@ -203,9 +185,6 @@ class Divide(klayers.Layer):
         a, b = inputs
         return a / b
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
-
 
 class SafeDivide(klayers.Layer):
     def __init__(self, *args, factor: float = None, **kwargs) -> None:
@@ -223,9 +202,6 @@ class SafeDivide(klayers.Layer):
         a, b = inputs
         return ibackend.safe_divide(a, b, factor=self._factor)
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
-
 
 ###############################################################################
 
@@ -240,11 +216,6 @@ class Reshape(klayers.Layer):
 
     def call(self, X: Tensor) -> Tensor:
         return kbackend.reshape(X, self._shape)
-
-    def compute_output_shape(self, _input_shapes) -> ShapeTuple:
-        return tuple(
-            dim if (dim is not None and dim >= 0) else None for dim in self._shape
-        )
 
 
 class MultiplyWithLinspace(klayers.Layer):
@@ -266,13 +237,6 @@ class MultiplyWithLinspace(klayers.Layer):
         linspace = kbackend.reshape(linspace, shape)
         return x * linspace
 
-    def compute_output_shape(self, input_shapes: ShapeTuple) -> ShapeTuple:
-        return (
-            input_shapes[: self._axis]
-            + (max(self._n, input_shapes[self._axis]),)
-            + input_shapes[self._axis + 1 :]
-        )
-
 
 class ExtractConv2DPatches(klayers.Layer):
     def __init__(self, kernel_shape, depth, strides, rates, padding, *args, **kwargs):
@@ -286,39 +250,6 @@ class ExtractConv2DPatches(klayers.Layer):
     def call(self, x):
         return ibackend.extract_conv2d_patches(
             x, self._kernel_shape, self._strides, self._rates, self._padding
-        )
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        if kbackend.image_data_format() == "channels_first":
-            space = input_shapes[2:]
-            new_space = []
-            for i in range(len(space)):
-                new_dim = kutils.conv_utils.conv_output_length(
-                    space[i],
-                    self._kernel_shape[i],
-                    padding=self._padding,
-                    stride=self._strides[i],
-                    dilation=self._rates[i],
-                )
-                new_space.append(new_dim)
-
-        if kbackend.image_data_format() == "channels_last":
-            space = input_shapes[1:-1]
-            new_space = []
-            for i in range(len(space)):
-                new_dim = kutils.conv_utils.conv_output_length(
-                    space[i],
-                    self._kernel_shape[i],
-                    padding=self._padding,
-                    stride=self._strides[i],
-                    dilation=self._rates[i],
-                )
-                new_space.append(new_dim)
-
-        return (
-            (input_shapes[0],)
-            + tuple(new_space)
-            + (np.product(self._kernel_shape) * self._depth,)
         )
 
 
@@ -366,9 +297,6 @@ class RunningMeans(klayers.Layer):
 
         return [new_means, new_counts]
 
-    def compute_output_shape(self, input_shapes: ShapeTuple) -> ShapeTuple:
-        return input_shapes
-
 
 class Broadcast(klayers.Layer):
     def call(self, inputs: List[Tensor]) -> Tensor:
@@ -377,9 +305,6 @@ class Broadcast(klayers.Layer):
         target_shapped, x = inputs
         return target_shapped * 0 + x
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
-
 
 class MaxNeuronSelection(klayers.Layer):
     """Applied to the last layer of a model, this reduces the output
@@ -387,9 +312,6 @@ class MaxNeuronSelection(klayers.Layer):
 
     def call(self, x: Tensor) -> Tensor:
         return kbackend.max(x)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return (None, 1)
 
 
 class NeuronSelection(klayers.Layer):
@@ -403,6 +325,3 @@ class NeuronSelection(klayers.Layer):
             )
         x, indices = inputs
         return tf.gather(x, indices, axis=1)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return (None, 1)
