@@ -14,14 +14,9 @@ __all__ = [
 
 
 def dot() -> Model:
-    model = kmodels.Sequential(
-        [
-            klayers.Input(shape=(2,)),
-            klayers.Dense(1, activation="linear"),
-        ],
-        name="dot",
-    )
-    return model
+    inputs = klayers.Input(shape=(2,))
+    outputs = klayers.Dense(1, activation="linear")(inputs)
+    return kmodels.Model(inputs=inputs, outputs=outputs, name="dot")
 
 
 def skip_connection() -> Model:

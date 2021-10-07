@@ -9,7 +9,6 @@ from innvestigate.utils.keras.graph import model_wo_softmax
 from innvestigate.utils.types import Model
 
 __all__ = [
-    "vgg16_custom",
     "vgg16",
     "vgg19",
     "resnet50",
@@ -29,20 +28,21 @@ ACTIVATION = None  # leave as None to return the logits of the output layer
 def vgg16() -> Model:
     return kapps.VGG16(
         weights=WEIGHTS,
-        classifier_activation=ACTIVATION,
+        # classifier_activation=ACTIVATION,
     )
 
 
 def vgg19() -> Model:
     return kapps.VGG19(
         weights=WEIGHTS,
-        classifier_activation=ACTIVATION,
+        # classifier_activation=ACTIVATION,
     )
 
 
 def resnet50() -> Model:
     model = kapps.ResNet50(
         weights=WEIGHTS,
+        # classifier_activation=ACTIVATION,
     )
     return model_wo_softmax(model)
 
@@ -53,14 +53,14 @@ def resnet50() -> Model:
 def inception_v3() -> Model:
     return kapps.InceptionV3(
         weights=WEIGHTS,
-        classifier_activation=ACTIVATION,
+        # classifier_activation=ACTIVATION,
     )
 
 
 def inception_resnet_v2() -> Model:
     return kapps.InceptionResNetV2(
         weights=WEIGHTS,
-        classifier_activation=ACTIVATION,
+        # classifier_activation=ACTIVATION,
     )
 
 

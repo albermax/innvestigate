@@ -125,11 +125,7 @@ class HaufePatternExample(unittest.TestCase):
 
         X = y * a_s + eps * a_d
 
-        model = kmodels.Sequential(
-            [
-                klayers.Dense(1, input_shape=(2,), use_bias=True),
-            ]
-        )
+        model = kmodels.Sequential([klayers.Dense(1, input_shape=(2,), use_bias=True)])
         model.compile(optimizer=koptimizers.Adam(lr=1), loss="mse")
         model.fit(X, y, epochs=20, verbose=0).history
         self.assertTrue(model.evaluate(X, y, verbose=0) < 0.05)
