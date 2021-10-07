@@ -17,6 +17,7 @@ __all__ = [
     "cast_to_floatx",
     "is_not_finite",
     "safe_divide",
+    "np_safe_divide",
     "count_non_zero",
     "add_gaussian_noise",
     "extract_conv2d_patches",
@@ -53,6 +54,11 @@ def safe_divide(A: Tensor, B: Tensor, factor: float = _EPS) -> Tensor:
     """Divide A by B, replacing all zeroes in B with `factor`."""
     is_zero = cast_to_floatx(kbackend.equal(B, kbackend.constant(0)))
     return A / (B + factor * is_zero)
+
+
+def np_safe_divide(a: np.ndarray, b: np.ndarray, factor: float = _EPS) -> np.ndarray:
+    """Divide A by B, replacing all zeroes in B with `factor`."""
+    return a / (b + factor * (b == 0))
 
 
 def count_non_zero(X: Tensor, axis, keepdims: bool = False) -> Tensor:

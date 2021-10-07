@@ -268,7 +268,7 @@ class LinearPattern(BasePattern):
         cov_xy = mean_xy - ExEy
 
         w_cov_xy = np.diag(np.dot(W2D.T, cov_xy))
-        A = ibackend.safe_divide(cov_xy, w_cov_xy[None, :], factor=1)
+        A = ibackend.np_safe_divide(cov_xy, w_cov_xy[None, :], factor=1)
 
         # TODO: check implementation
         # # update length

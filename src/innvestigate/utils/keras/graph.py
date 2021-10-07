@@ -47,7 +47,7 @@ __all__ = [
 ]
 
 
-def get_kernel(layer: Layer) -> Tensor:
+def get_kernel(layer: Layer) -> np.ndarray:
     """Returns the kernel weights of a layer, i.e, w/o biases."""
     ret = [x for x in layer.get_weights() if len(x.shape) > 1]
     assert len(ret) == 1
