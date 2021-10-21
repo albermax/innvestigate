@@ -1104,8 +1104,12 @@ def reverse_model(
         if tmp["final_tensor"] is None:
             if len(tmp["tensors"]) == 1:
                 final_tensor = tmp["tensors"][0]
-            else:
+            elif len(tmp["tensors"]) > 1:
                 final_tensor = klayers.Add()(tmp["tensors"])
+            else:
+                raise RuntimeError(
+                    f"Error during graph reversal: no tensors connected to {tensor}."
+                )
 
             if project_bottleneck_tensors is True:
                 if id(tensor) in bottleneck_tensor_ids:
