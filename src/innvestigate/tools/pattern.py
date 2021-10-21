@@ -182,12 +182,17 @@ class DummyPattern(BasePattern):
     Computes a dummy pattern for test purposes.
     """
 
+    def __init__(self, model, layer, model_tensors=None, execution_list=None):
+        super().__init__(
+            model, layer, model_tensors=model_tensors, execution_list=execution_list
+        )
+
     def get_stats_from_batch(self):
         Xs, Ys = get_active_neuron_io(self.layer, self._active_node_indices)
         self.mean_x = ilayers.RunningMeans()
 
-        count = ilayers.CountNonZero(axis=0)(Ys[0])
-        sum_x = ilayers.Dot()([ilayers.Transpose()(Xs[0]), Ys[0]])
+        count = ibackend.count_non_zero(Ys[0], axis=0)
+        sum_x = kbackend.dot(kbackend.transpose(Xs[0]), Ys[0])
 
         _mean_x, count_x = self.mean_x([sum_x, count])
 
@@ -199,15 +204,21 @@ class DummyPattern(BasePattern):
 
 
 class LinearPattern(BasePattern):
-    def _get_neuron_mask(self):
+    def __init__(self, model, layer, model_tensors=None, execution_list=None):
+        super().__init__(
+            model, layer, model_tensors=model_tensors, execution_list=execution_list
+        )
+
+    def _get_neuron_mask(self) -> Tensor:
         """
         Select which neurons are considered for the pattern computation.
+        TODO: What happens here?
         """
         Ys = get_active_neuron_io(
             self.layer, self._active_node_indices, return_i=False, return_o=True
         )
-
-        return ilayers.OnesLike()(Ys[0])
+        mask = kbackend.ones_like(Ys[0])
+        return mask
 
     def get_stats_from_batch(self):
         # Get the neuron-wise I/O for this layer.
@@ -231,22 +242,24 @@ class LinearPattern(BasePattern):
         # Compute mask and active neuron counts.
         mask = ibackend.cast_to_floatx(self._get_neuron_mask())
         Y_masked = klayers.multiply([Y, mask])
+
+        # TODO: really use axis=0, the batch dim?
         count = ibackend.count_non_zero(mask, axis=0)
-        count_all = ibackend.count_non_zero(ilayers.OnesLike()(mask), axis=0)
+        count_all = kbackend.sum(kbackend.ones_like(mask), axis=0)
 
-        # Get means ...
-        def norm(x, count):
-            return ilayers.SafeDivide(factor=1)([x, count])
+        # Get means along active neurons.
+        tmp_x = kbackend.dot(kbackend.transpose(X), mask)
+        tmp_xy = kbackend.dot(kbackend.transpose(X), Y_masked)
 
-        # ... along active neurons.
-        mean_x = norm(ilayers.Dot()([ilayers.Transpose()(X), mask]), count)
-        mean_xy = norm(ilayers.Dot()([ilayers.Transpose()(X), Y_masked]), count)
+        mean_x = ibackend.safe_divide(tmp_x, count, factor=1)
+        mean_xy = ibackend.safe_divide(tmp_xy, count, factor=1)
 
         _, a = self.mean_x([mean_x, count])
         _, b = self.mean_xy([mean_xy, count])
 
         # ... along all neurons.
-        mean_y = norm(ilayers.Sum(axis=0)(Y), count_all)
+        mean_y = ibackend.safe_divide(kbackend.sum(Y, axis=0), count_all, factor=1)
+        tmp = self.mean_y([mean_y, count_all])
         _, c = self.mean_y([mean_y, count_all])
 
         # Create a dummy output to have a connected graph.
@@ -337,26 +350,30 @@ class PatternComputer:
 
     def __init__(
         self,
-        model,
+        model: Model,
         pattern_type="linear",
         # TODO: this options seems to be buggy,
         # if it sequential tensorflow still pushes all models to gpus
         compute_layers_in_parallel=True,
         gpus=None,
     ):
-        self.model = model
 
-        for layer in self.model.layers:
+        for layer in model.layers:
             if not isinstance(layer, pattern_based.SUPPORTED_LAYER_PATTERNNET):
                 raise Exception("Model contains not supported layer: %s" % layer)
 
-        pattern_types = iutils.to_list(pattern_type)
-        self.pattern_types = {k: get_pattern_class(k) for k in pattern_types}
+        if compute_layers_in_parallel is False:
+            raise NotImplementedError("Not supported.")
+
+        self.model: Model = model
+        self.pattern_types = {
+            k: get_pattern_class(k) for k in iutils.to_list(pattern_type)
+        }
         self.compute_layers_in_parallel = compute_layers_in_parallel
         self.gpus = gpus
-
-        if self.compute_layers_in_parallel is False:
-            raise NotImplementedError("Not supported.")
+        self._computers: List[Model] = []
+        self._n_computer_outputs = None
+        self._pattern_instances: Dict = {}
 
     def _create_computers(self):
         """
@@ -447,10 +464,13 @@ class PatternComputer:
 
         # We don't do gradient updates.
         class NoOptimizer(koptimizers.Optimizer):
-            def get_updates(self, *_args, **_kwargs):
+            def get_updates(self, *args, **kwargs):
                 return []
 
-        optimizer = NoOptimizer()
+            def get_config(self, *args, **kwargs):
+                return {}
+
+        optimizer = NoOptimizer(name="NoOptimizer")
         # We only pass the training data once.
         if "epochs" in kwargs and kwargs["epochs"] != 1:
             raise ValueError(
@@ -486,7 +506,7 @@ class PatternComputer:
 
         # Compute pattern statistics.
         for computer in self._computers:
-            computer.fit_generator(generator, **kwargs)
+            computer.predict_generator(generator)
 
         # Compute and retrieve the actual patterns.
         pis = self._pattern_instances
