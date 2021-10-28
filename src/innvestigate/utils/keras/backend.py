@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import List
 
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 from tensorflow.python.ops import array_ops
@@ -26,6 +27,10 @@ __all__ = [
 _EPS = kbackend.epsilon()
 
 
+def disable_eager_execution() -> None:
+    tf.compat.v1.disable_eager_execution()
+
+
 def gradients(
     Xs: OptionalList[Tensor], Ys: OptionalList[Tensor], known_Ys: OptionalList[Tensor]
 ) -> List[Tensor]:
@@ -43,7 +48,7 @@ def gradients(
 def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
     """Checks if tensor x is finite, if not throws an exception."""
     # x = tensorflow.check_numerics(x, "innvestigate - is_finite check")
-    return tf.logical_not(tf.is_finite(X))
+    return tf.logical_not(tf.math.is_finite(X))
 
 
 def cast_to_floatx(X: Tensor) -> Tensor:

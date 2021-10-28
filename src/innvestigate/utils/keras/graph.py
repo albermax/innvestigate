@@ -1205,7 +1205,7 @@ def reverse_model(
         bottleneck_tensor_ids.update(ids)
 
     # Initialize the reverse tensor mappings.
-    add_reversed_tensors(-1, outputs, [head_mapping(tmp) for tmp in outputs])  # type: ignore
+    add_reversed_tensors(-1, outputs, [head_mapping(tmp) for tmp in outputs])  # type: ignore # noqa
 
     # Follow the list and revert the graph.
     for _nid, (layer, Xs, Ys) in enumerate(reverse_execution_list):

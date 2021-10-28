@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
+import innvestigate.utils.keras.backend as ibackend
 import innvestigate.utils.keras.checks as ichecks
-import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
 

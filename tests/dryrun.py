@@ -4,7 +4,10 @@ from __future__ import annotations
 from typing import Callable
 
 import numpy as np
+import tensorflow
 import tensorflow.keras.backend as kbackend
+
+tensorflow.compat.v1.disable_eager_execution()
 
 from innvestigate.analyzer import Random
 from innvestigate.analyzer.base import AnalyzerBase

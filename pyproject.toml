@@ -33,7 +33,7 @@ keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
 python = "~3.7"
-tensorflow = "~1.15"
+tensorflow = "~2.2"
 future = "^0.18.2"
 numpy = "^1.18.5"
 matplotlib = "^3.4.0"
