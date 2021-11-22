@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "innvestigate"
-version = "1.1.0"
+version = "2.0.0"
 description = "A toolbox to innvestigate neural networks' predictions."
 classifiers = [
     "License :: OSI Approved :: BSD License",
@@ -32,8 +32,8 @@ documentation = "https://innvestigate.readthedocs.io/en/latest/"
 keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
-python = "~3.7"
-tensorflow = "~2.2"
+python = "^3.7"
+tensorflow = "~2.6"
 future = "^0.18.2"
 numpy = "^1.18.5"
 matplotlib = "^3.4.0"
@@ -61,7 +61,7 @@ isort = "^5.8.0"
 mypy = "^0.812"
 MonkeyType = "^20.5.0"
 vulture = "^2.3"
-Sphinx = "^4.0.0"
+Sphinx = "^4.3.0"
 
 [tool.isort]
 profile = "black"
