@@ -1,7 +1,6 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
-import keras.backend as K
+from keras.backend import image_data_format
 
 from tests.networks import base
 
@@ -16,7 +15,10 @@ __all__ = [
 ]
 
 
-if K.image_data_format() == "channels_first":
+###############################################################################
+
+
+if image_data_format() == "channels_first":
     __input_shape__ = [None, 3, 32, 32]
 else:
     __input_shape__ = [None, 32, 32, 3]

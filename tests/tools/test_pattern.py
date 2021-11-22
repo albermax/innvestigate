@@ -1,5 +1,4 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import unittest
 
@@ -15,7 +14,7 @@ import innvestigate
 from innvestigate.tools import PatternComputer
 
 from tests import dryrun
-from tests.networks.base import cnn_2convb_2dense, mlp_2dense
+from tests.networks import base
 
 
 @pytest.mark.fast
@@ -41,8 +40,6 @@ def test_fast__PatternComputer_dummy_sequential():
     dryrun.test_pattern_computer(method, "mnist.log_reg")
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -98,8 +95,6 @@ def test_precommit__PatternComputer_relunegative():
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
 
 
 @pytest.mark.fast
@@ -142,8 +137,6 @@ class HaufePatternExample(unittest.TestCase):
         self.assertTrue(allclose(a_s.ravel(), A.ravel()))
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -192,7 +185,7 @@ def train_model(model, data, epochs=20):
 class MnistPatternExample_dense_linear(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
-        model_class = mlp_2dense
+        model_class = base.mlp_2dense
 
         data = fetch_data()
         model, modelp = create_model(model_class)
@@ -233,7 +226,7 @@ class MnistPatternExample_dense_linear(unittest.TestCase):
 class MnistPatternExample_dense_relu(unittest.TestCase):
     def test(self):
         np.random.seed(234354346)
-        model_class = mlp_2dense
+        model_class = base.mlp_2dense
 
         data = fetch_data()
         model, modelp = create_model(model_class)
@@ -329,7 +322,7 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
 #     def test(self):
 #         np.random.seed(234354346)
 #         K.set_image_data_format("channels_first")
-#         model_class = cnn_2convb_2dense
+#         model_class = base.cnn_2convb_2dense
 #         data = fetch_data()
 #         model, modelp = create_model(model_class)
 #         train_model(modelp, data, epochs=1)

@@ -1,6 +1,3 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
 
 from innvestigate.analyzer import (
@@ -13,121 +10,39 @@ from innvestigate.analyzer import (
 
 from tests import dryrun
 
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__WrapperBase():
-    def method(model):
-        return WrapperBase(Gradient(model))
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__WrapperBase():
-    def method(model):
-        return WrapperBase(Gradient(model))
-
-    dryrun.test_analyzer(method, "mnist.*")
+# Dict that maps test name to tuple of method and kwargs
+methods = {
+    "WrapperBase": (WrapperBase, {}),
+    "GaussianSmoother": (GaussianSmoother, {}),
+    "PathIntegrator": (PathIntegrator, {}),
+    "AugmentReduceBase": (AugmentReduceBase, {}),
+}
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__SerializeWrapperBase():
-    def method(model):
-        return WrapperBase(Gradient(model))
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast(method, kwargs):
+    def analyzer(model):
+        return method(Gradient(model), **kwargs)
 
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
+    dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__AugmentReduceBase():
-    def method(model):
-        return AugmentReduceBase(Gradient(model))
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast_serialize(method, kwargs):
+    def analyzer(model):
+        return method(Gradient(model), **kwargs)
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__AugmentReduceBase():
-    def method(model):
-        return AugmentReduceBase(Gradient(model))
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeAugmentReduceBase():
-    def method(model):
-        return AugmentReduceBase(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__GaussianSmoother():
-    def method(model):
-        return GaussianSmoother(Gradient(model))
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
 @pytest.mark.precommit
-def test_precommit__GaussianSmoother():
-    def method(model):
-        return GaussianSmoother(Gradient(model))
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit(method, kwargs):
+    def analyzer(model):
+        return method(Gradient(model), **kwargs)
 
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeGaussianSmoother():
-    def method(model):
-        return GaussianSmoother(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__PathIntegrator():
-    def method(model):
-        return PathIntegrator(Gradient(model))
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__PathIntegrator():
-    def method(model):
-        return PathIntegrator(Gradient(model))
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializePathIntegrator():
-    def method(model):
-        return PathIntegrator(Gradient(model))
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
+    dryrun.test_analyzer(analyzer, "mnist.*")

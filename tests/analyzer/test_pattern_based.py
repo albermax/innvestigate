@@ -1,13 +1,8 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
 
 from innvestigate.analyzer import PatternAttribution, PatternNet
 
 from tests import dryrun
-
-# todo: add again a traint/test case for mnist
 
 
 @pytest.mark.fast
@@ -88,8 +83,6 @@ def test_imagenet__PatternAttribution():
     dryrun.test_analyzer(method, "imagenet.vgg16:imagenet.vgg19")
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 

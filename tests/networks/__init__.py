@@ -1,28 +1,18 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import fnmatch
 
-import keras.backend as K
+from keras.backend import clear_session
 
 from tests.networks import cifar10, imagenet, mnist, trivia
 
-###############################################################################
-###############################################################################
-###############################################################################
 
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def iterator(network_filter="*", clear_sessions=False):
+def iterator(network_filter: str = "*", clear_sessions: bool = False):
     """
     Iterator over various networks.
     """
 
-    def fetch_networks(module_name, module):
+    def fetch_networks(module_name: str, module):
         ret = [
             ("%s.%s" % (module_name, name), (module, name))
             for name in module.__all__
@@ -46,7 +36,7 @@ def iterator(network_filter="*", clear_sessions=False):
 
     for module_name, (module, name) in networks:
         if clear_sessions:
-            K.clear_session()
+            clear_session()
 
         network = getattr(module, name)()
         network["name"] = module_name

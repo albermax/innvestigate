@@ -1,14 +1,11 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import keras.models
 import pytest
 
-from innvestigate.utils.keras import graph as kgraph
+import innvestigate.utils.keras.graph as kgraph
 
 from tests import networks
-
-#############################################################################
 
 
 @pytest.mark.fast

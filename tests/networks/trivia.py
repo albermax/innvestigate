@@ -1,5 +1,4 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import keras.layers
 
@@ -7,7 +6,7 @@ from tests.networks import base
 
 __all__ = [
     "dot",
-    # todo: check why this makes problems to wrapper implementation.
+    # TODO: check why this makes problems to wrapper implementation.
     "skip_connection",
 ]
 
