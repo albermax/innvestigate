@@ -214,36 +214,3 @@ def test_serialize_analyzer(method, network_filter) -> None:
     """Workaround for move from unit-tests to pytest."""
     test_case = SerializeAnalyzerTestCase(method=method, network_filter=network_filter)
     test_case.run_test()
-
-
-###############################################################################
-
-
-class PatternComputerTestCase(BaseLayerTestCase):
-    """TestCase pattern computation
-
-    :param method: A function that returns an PatternComputer class.
-    """
-
-    def __init__(self, *args, method=None, **kwargs) -> None:
-        if method is not None:
-            self._method = method
-        super().__init__(*args, **kwargs)
-
-    def _method(self, model):
-        raise NotImplementedError("Set in subclass.")
-
-    def _apply_test(self, model: Model) -> None:
-        # Get computer
-        computer = self._method(model)
-        # Dryrun
-        batch_size = 10
-        input_shape = model.input_shape[1:]
-        x = np.random.rand(batch_size, *input_shape)
-        computer.compute(x)
-
-
-def test_pattern_computer(method, network_filter) -> None:
-    """Workaround for move from unit-tests to pytest."""
-    test_case = PatternComputerTestCase(method=method, network_filter=network_filter)
-    test_case.run_test()

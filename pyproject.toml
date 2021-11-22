@@ -85,7 +85,7 @@ markers = [
     "mnist",
     "imagenet",
     "resnet50",
-    "pattern_based",
+    "_based",
 ]
 
 [tool.coverage.paths]

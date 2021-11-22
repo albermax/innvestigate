@@ -14,7 +14,6 @@ from innvestigate.analyzer.gradient_based import (
     SmoothGrad,
 )
 from innvestigate.analyzer.misc import Input, Random
-from innvestigate.analyzer.pattern_based import PatternAttribution, PatternNet
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRP,
     LRPZ,
@@ -81,9 +80,6 @@ analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Deep Taylor
     "deep_taylor": DeepTaylor,
     "deep_taylor.bounded": BoundedDeepTaylor,
-    # Pattern based
-    "pattern.net": PatternNet,
-    "pattern.attribution": PatternAttribution,
 }
 
 
