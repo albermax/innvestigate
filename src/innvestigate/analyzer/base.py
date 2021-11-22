@@ -110,7 +110,7 @@ class AnalyzerBase(metaclass=ABCMeta):
             types = [x["check_type"] for x in self._model_checks]
             messages = [x["message"] for x in self._model_checks]
 
-            checked = kgraph.model_contains(self._model, check)
+            checked = igraph.model_contains(self._model, check)
 
             tmp = zip(checked, messages, types)
 
@@ -214,7 +214,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         # in every child class, the dict `state` should be empty at this point.
         assert len(state) == 0
 
-        model = keras.models.model_from_json(model_json)
+        model = kmodels.model_from_json(model_json)
         model.set_weights(model_weights)
         return {
             "model": model,
