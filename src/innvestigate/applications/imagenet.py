@@ -20,18 +20,12 @@ from __future__ import annotations
 import warnings
 from builtins import range
 
-import keras.applications.densenet
-import keras.applications.inception_resnet_v2
-import keras.applications.inception_v3
-import keras.applications.nasnet
-import keras.applications.resnet50
-import keras.applications.vgg16
-import keras.applications.vgg19
-import keras.utils.data_utils
 import numpy as np
-from keras import backend
+import tensorflow.keras.applications as kapplications
+import tensorflow.keras.backend as kbackend
+import tensorflow.python.keras.utils as kutils
 
-from ..utils.keras import graph as kgraph
+import innvestigate.utils.keras.graph as igraph
 
 __all__ = [
     "vgg16",
@@ -94,7 +88,7 @@ def _prepare_keras_net(
     net = {}
     net["name"] = netname
     net["image_shape"] = image_shape
-    if backend.image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         net["input_shape"] = [None, 3] + image_shape
     else:
         net["input_shape"] = [None] + image_shape + [3]
@@ -108,7 +102,7 @@ def _prepare_keras_net(
 
     net["in"] = model.inputs
     net["sm_out"] = model.outputs
-    net["out"] = kgraph.pre_softmax_tensors(model.outputs)
+    net["out"] = igraph.pre_softmax_tensors(model.outputs)
 
     net["color_coding"] = color_coding
     net["preprocess_f"] = preprocess_f
@@ -126,7 +120,7 @@ def _prepare_keras_net(
         except KeyError:
             warnings.warn("There are no patterns for network '%s'." % netname)
         else:
-            patterns_path = keras.utils.data_utils.get_file(
+            patterns_path = kutils.data_utils.get_file(
                 pattern_info["file_name"],
                 pattern_info["url"],
                 cache_subdir="innvestigate_patterns",
@@ -147,9 +141,9 @@ def _prepare_keras_net(
 def vgg16(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "vgg16",
-        keras.applications.vgg16.VGG16,
+        kapplications.vgg16.VGG16,
         [224, 224],
-        preprocess_f=keras.applications.vgg16.preprocess_input,
+        preprocess_f=kapplications.vgg16.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -160,9 +154,9 @@ def vgg16(load_weights=False, load_patterns=False):
 def vgg19(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "vgg19",
-        keras.applications.vgg19.VGG19,
+        kapplications.vgg19.VGG19,
         [224, 224],
-        preprocess_f=keras.applications.vgg19.preprocess_input,
+        preprocess_f=kapplications.vgg19.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -176,9 +170,9 @@ def vgg19(load_weights=False, load_patterns=False):
 def resnet50(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "resnet50",
-        keras.applications.resnet50.ResNet50,
+        kapplications.resnet50.ResNet50,
         [224, 224],
-        preprocess_f=keras.applications.resnet50.preprocess_input,
+        preprocess_f=kapplications.resnet50.preprocess_input,
         preprocess_mode="caffe",
         color_coding="BGR",
         load_weights=load_weights,
@@ -192,9 +186,9 @@ def resnet50(load_weights=False, load_patterns=False):
 def inception_v3(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "inception_v3",
-        keras.applications.inception_v3.InceptionV3,
+        kapplications.inception_v3.InceptionV3,
         [299, 299],
-        preprocess_f=keras.applications.inception_v3.preprocess_input,
+        preprocess_f=kapplications.inception_v3.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -207,9 +201,9 @@ def inception_v3(load_weights=False, load_patterns=False):
 def inception_resnet_v2(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "inception_resnet_v2",
-        keras.applications.inception_resnet_v2.InceptionResNetV2,
+        kapplications.inception_resnet_v2.InceptionResNetV2,
         [299, 299],
-        preprocess_f=keras.applications.inception_resnet_v2.preprocess_input,
+        preprocess_f=kapplications.inception_resnet_v2.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -222,9 +216,9 @@ def inception_resnet_v2(load_weights=False, load_patterns=False):
 def densenet121(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "densenet121",
-        keras.applications.densenet.DenseNet121,
+        kapplications.densenet.DenseNet121,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=kapplications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -234,9 +228,9 @@ def densenet121(load_weights=False, load_patterns=False):
 def densenet169(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "densenet169",
-        keras.applications.densenet.DenseNet169,
+        kapplications.densenet.DenseNet169,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=kapplications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -246,9 +240,9 @@ def densenet169(load_weights=False, load_patterns=False):
 def densenet201(load_weights=False, load_patterns=False):
     return _prepare_keras_net(
         "densenet201",
-        keras.applications.densenet.DenseNet201,
+        kapplications.densenet.DenseNet201,
         [224, 224],
-        preprocess_f=keras.applications.densenet.preprocess_input,
+        preprocess_f=kapplications.densenet.preprocess_input,
         preprocess_mode="torch",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -259,15 +253,15 @@ def densenet201(load_weights=False, load_patterns=False):
 
 
 def nasnet_large(load_weights=False, load_patterns=False):
-    if backend.image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(
         "nasnet_large",
-        keras.applications.nasnet.NASNetLarge,
+        kapplications.nasnet.NASNetLarge,
         [331, 331],
         color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_f=kapplications.nasnet.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns,
@@ -275,15 +269,15 @@ def nasnet_large(load_weights=False, load_patterns=False):
 
 
 def nasnet_mobile(load_weights=False, load_patterns=False):
-    if backend.image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         raise Exception("NASNet is not available for channels first.")
 
     return _prepare_keras_net(
         "nasnet_mobile",
-        keras.applications.nasnet.NASNetMobile,
+        kapplications.nasnet.NASNetMobile,
         [224, 224],
         color_coding="BGR",
-        preprocess_f=keras.applications.nasnet.preprocess_input,
+        preprocess_f=kapplications.nasnet.preprocess_input,
         preprocess_mode="tf",
         load_weights=load_weights,
         load_patterns=load_patterns,

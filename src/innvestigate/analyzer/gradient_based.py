@@ -2,17 +2,20 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-import keras
-import keras.models
+import tensorflow as tf
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
-import innvestigate.utils.keras as kutils
-import innvestigate.utils.keras.checks as kchecks
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.utils.keras as ikeras
+import innvestigate.utils.keras.backend as ibackend
+import innvestigate.utils.keras.checks as ichecks
+import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 from innvestigate.analyzer.wrapper import GaussianSmoother, PathIntegrator
+from innvestigate.utils.types import List, Tensor
 
 __all__ = [
     "BaselineGradient",
@@ -162,28 +165,27 @@ class InputTimesGradient(Gradient):
             model, stop_analysis_at_tensors=stop_analysis_at_tensors
         )
         return [
-            keras.layers.Multiply()([i, g])
-            for i, g in zip(tensors_to_analyze, gradients)
+            klayers.Multiply()([i, g]) for i, g in zip(tensors_to_analyze, gradients)
         ]
 
 
 ###############################################################################
 
 
-class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
+class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
     def __init__(self, layer, state):
-        self._activation = keras.layers.Activation("relu")
-        self._layer_wo_relu = kgraph.copy_layer_wo_activation(
+        self._activation = klayers.Activation("relu")
+        self._layer_wo_relu = igraph.copy_layer_wo_activation(
             layer,
             name_template="reversed_%s",
         )
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict):
+    def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict) -> List[Tensor]:
         # Apply relus conditioned on backpropagated values.
-        reversed_Ys = kutils.apply(self._activation, reversed_Ys)
+        reversed_Ys = ikeras.apply(self._activation, reversed_Ys)
 
         # Apply gradient of forward pass without relus.
-        Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
+        Ys_wo_relu = ikeras.apply(self._layer_wo_relu, Xs)
         return ilayers.GradientWRT(len(Xs))(Xs + Ys_wo_relu + reversed_Ys)
 
 
@@ -201,7 +203,7 @@ class Deconvnet(ReverseAnalyzerBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             "Deconvnet is only specified for networks with ReLU activations.",
             check_type="exception",
         )
@@ -210,7 +212,7 @@ class Deconvnet(ReverseAnalyzerBase):
     def _create_analysis(self, *args, **kwargs):
 
         self._add_conditional_reverse_mapping(
-            lambda layer: kchecks.contains_activation(layer, "relu"),
+            lambda layer: ichecks.contains_activation(layer, "relu"),
             DeconvnetReverseReLULayer,
             name="deconvnet_reverse_relu_layer",
         )
@@ -219,9 +221,9 @@ class Deconvnet(ReverseAnalyzerBase):
 
 
 def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
-    activation = keras.layers.Activation("relu")
+    activation = klayers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
-    reversed_Ys = kutils.apply(activation, reversed_Ys)
+    reversed_Ys = ikeras.apply(activation, reversed_Ys)
 
     # Apply gradient of forward pass.
     return ilayers.GradientWRT(len(Xs))(Xs + Ys + reversed_Ys)
@@ -241,7 +243,7 @@ class GuidedBackprop(ReverseAnalyzerBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             "GuidedBackprop is only specified for " "networks with ReLU activations.",
             check_type="exception",
         )
@@ -250,7 +252,7 @@ class GuidedBackprop(ReverseAnalyzerBase):
     def _create_analysis(self, *args, **kwargs):
 
         self._add_conditional_reverse_mapping(
-            lambda layer: kchecks.contains_activation(layer, "relu"),
+            lambda layer: ichecks.contains_activation(layer, "relu"),
             GuidedBackpropReverseReLULayer,
             name="guided_backprop_reverse_relu_layer",
         )

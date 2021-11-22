@@ -3,14 +3,12 @@ from __future__ import annotations
 import math
 from typing import Callable, List, Tuple, TypeVar, Union
 
-import keras.utils as kutils
-from keras import backend
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.utils as kutils
 
-from innvestigate.utils.keras.graph import model_wo_softmax
 from innvestigate.utils.types import OptionalList, Tensor
 
 __all__ = [
-    "model_wo_softmax",
     "to_list",
     "unpack_singleton",
     "BatchSequence",
@@ -131,8 +129,8 @@ def preprocess_images(images: Tensor, color_coding: str = None) -> Tensor:
     :return: The preprocessed batch.
     """
 
-    ret = images
-    image_data_format: str = backend.image_data_format()
+    ret: Tensor = images
+    image_data_format: str = kbackend.image_data_format()
 
     # TODO: not very general:
     channels_first: bool = images.shape[1] in [1, 3]
@@ -165,8 +163,8 @@ def postprocess_images(
     :return: The postprocessed images.
     """
 
-    ret = images
-    image_data_format: str = backend.image_data_format()
+    ret: Tensor = images
+    image_data_format: str = kbackend.image_data_format()
 
     assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
     if color_coding in ["RGBtoBGR", "BGRtoRGB"]:

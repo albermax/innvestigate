@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import keras.models
 import pytest
+import tensorflow.keras.models as kmodels
 
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.utils.keras.graph as igraph
 
 from tests import networks
 
@@ -16,10 +16,10 @@ def test_fast__get_model_execution_graph():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
 
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
+        graph = igraph.get_model_execution_graph(model)
+        igraph.print_model_execution_graph(graph)
 
 
 @pytest.mark.precommit
@@ -29,10 +29,10 @@ def test_commit__get_model_execution_graph():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
 
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
+        graph = igraph.get_model_execution_graph(model)
+        igraph.print_model_execution_graph(graph)
 
 
 @pytest.mark.precommit
@@ -42,10 +42,10 @@ def test_precommit__get_model_execution_graph_resnet50():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
 
-        graph = kgraph.get_model_execution_graph(model)
-        kgraph.print_model_execution_graph(graph)
+        graph = igraph.get_model_execution_graph(model)
+        igraph.print_model_execution_graph(graph)
 
 
 @pytest.mark.fast
@@ -56,7 +56,7 @@ def test_fast__get_model_execution_graph_with_inputs():
 
     for network in networks.iterator(network_filter):
 
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
 
-        graph = kgraph.get_model_execution_graph(model, keep_input_layers=True)
-        kgraph.print_model_execution_graph(graph)
+        graph = igraph.get_model_execution_graph(model, keep_input_layers=True)
+        igraph.print_model_execution_graph(graph)

@@ -3,21 +3,15 @@ from __future__ import annotations
 import warnings
 from typing import Dict
 
-import keras
-import keras.activations
-import keras.engine.topology
-import keras.layers
-import keras.layers.core
-import keras.layers.pooling
-import keras.models
 import numpy as np
+import tensorflow.keras.activations as kactivations
+import tensorflow.keras.layers as klayers
 
-import innvestigate.layers as ilayers
 import innvestigate.tools as itools
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as kutils
-import innvestigate.utils.keras.checks as kchecks
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.utils.keras as ikeras
+import innvestigate.utils.keras.backend as ibackend
+import innvestigate.utils.keras.checks as ichecks
+import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.base import OneEpochTrainerMixin
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 
@@ -28,25 +22,25 @@ __all__ = [
 
 
 SUPPORTED_LAYER_PATTERNNET = (
-    keras.engine.topology.InputLayer,
-    keras.layers.convolutional.Conv2D,
-    keras.layers.core.Dense,
-    keras.layers.core.Dropout,
-    keras.layers.core.Flatten,
-    keras.layers.core.Masking,
-    keras.layers.core.Permute,
-    keras.layers.core.Reshape,
-    keras.layers.Concatenate,
-    keras.layers.pooling.GlobalMaxPooling1D,
-    keras.layers.pooling.GlobalMaxPooling2D,
-    keras.layers.pooling.GlobalMaxPooling3D,
-    keras.layers.pooling.MaxPooling1D,
-    keras.layers.pooling.MaxPooling2D,
-    keras.layers.pooling.MaxPooling3D,
+    klayers.InputLayer,
+    klayers.Conv2D,
+    klayers.Dense,
+    klayers.Dropout,
+    klayers.Flatten,
+    klayers.Masking,
+    klayers.Permute,
+    klayers.Reshape,
+    klayers.Concatenate,
+    klayers.GlobalMaxPooling1D,
+    klayers.GlobalMaxPooling2D,
+    klayers.GlobalMaxPooling3D,
+    klayers.MaxPooling1D,
+    klayers.MaxPooling2D,
+    klayers.MaxPooling3D,
 )
 
 
-class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
+class PatternNetReverseKernelLayer(igraph.ReverseMappingBase):
     """
     PatternNet backward mapping for layers with kernels.
 
@@ -64,10 +58,10 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
         if "activation" in config:
             activation = config["activation"]
             config["activation"] = None
-        self._act_layer = keras.layers.Activation(
+        self._act_layer = klayers.Activation(
             activation, name="reversed_act_%s" % config["name"]
         )
-        self._filter_layer = kgraph.copy_layer_wo_activation(
+        self._filter_layer = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_filter_%s"
         )
 
@@ -79,15 +73,15 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
         if np.sum(tmp) != 1:
             raise Exception("Cannot match pattern to filter.")
         filter_weights[np.argmax(tmp)] = pattern
-        self._pattern_layer = kgraph.copy_layer_wo_activation(
+        self._pattern_layer = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_pattern_%s", weights=filter_weights
         )
 
     def apply(self, Xs, _Ys, reversed_Ys, _reverse_state: Dict):
         # Reapply the prepared layers.
-        act_Xs = kutils.apply(self._filter_layer, Xs)
-        act_Ys = kutils.apply(self._act_layer, act_Xs)
-        pattern_Ys = kutils.apply(self._pattern_layer, Xs)
+        act_Xs = ikeras.apply(self._filter_layer, Xs)
+        act_Ys = ikeras.apply(self._act_layer, act_Xs)
+        pattern_Ys = ikeras.apply(self._pattern_layer, Xs)
 
         # Layers that apply the backward pass.
         grad_act = ilayers.GradientWRT(len(act_Xs))
@@ -95,7 +89,7 @@ class PatternNetReverseKernelLayer(kgraph.ReverseMappingBase):
 
         # First step: propagate through the activation layer.
         # Workaround for linear activations.
-        linear_activations = [None, keras.activations.get("linear")]
+        linear_activations = [None, kactivations.get("linear")]
         if self._act_layer.activation in linear_activations:
             tmp = reversed_Ys
         else:
@@ -126,12 +120,12 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             ("PatternNet is not well defined for networks with non-ReLU activations."),
             check_type="warning",
         )
         self._add_model_check(
-            lambda layer: not kchecks.is_convnet_layer(layer),
+            lambda layer: not ichecks.is_convnet_layer(layer),
             ("PatternNet is only well defined for convolutional neural networks."),
             check_type="warning",
         )
@@ -162,8 +156,8 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
     def _get_pattern_for_layer(self, layer, _state):
         layers = [
             l
-            for l in kgraph.get_model_layers(self._model)
-            if kchecks.contains_kernel(l)
+            for l in igraph.get_model_layers(self._model)
+            if ichecks.contains_kernel(l)
         ]
 
         return self._patterns[layers.index(layer)]
@@ -182,7 +176,7 @@ class PatternNet(OneEpochTrainerMixin, ReverseAnalyzerBase):
             return mapping_obj.apply
 
         self._add_conditional_reverse_mapping(
-            kchecks.contains_kernel,
+            ichecks.contains_kernel,
             create_kernel_layer_mapping,
             name="patternnet_kernel_layer_mapping",
         )

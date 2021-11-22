@@ -5,14 +5,12 @@ from abc import ABCMeta, abstractmethod
 from builtins import zip
 from typing import Any, Dict, List, Optional, Tuple
 
-import keras
-import keras.layers
-import keras.models
 import numpy as np
+import tensorflow.keras.models as kmodels
 
 import innvestigate.analyzer
 import innvestigate.utils as iutils
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.utils.keras.graph as igraph
 from innvestigate.utils.types import LayerCheck, Model, ModelCheckDict, OptionalList
 
 __all__ = [

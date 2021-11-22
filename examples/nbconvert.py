@@ -1,33 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import argparse
 import os
 import subprocess
 import sys
-
-# catch exception with: except Exception as e
-from builtins import filter, map, range, zip
 from io import open
 
-import six
-from future.utils import raise_from, raise_with_traceback
-
-# End: Python 2/3 compatability header small
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
 if __name__ == "__main__":
+    # TODO: reduce complexity
 
     def is_executable(filepath):
         # determine whether the target file exists and is executable

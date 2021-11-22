@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import keras.layers
+import tensorflow.keras.layers as klayers
 
 from tests.networks import base
 
@@ -35,8 +35,8 @@ def skip_connection():
 
     net = {}
     net["in"] = base.input_layer(shape=input_shape)
-    dense = keras.layers.Dense(units=output_n, activation="linear", use_bias=False)
-    net["out"] = keras.layers.Add()([net["in"], dense(net["in"])])
+    dense = klayers.Dense(units=output_n, activation="linear", use_bias=False)
+    net["out"] = klayers.Add()([net["in"], dense(net["in"])])
 
     net.update(
         {

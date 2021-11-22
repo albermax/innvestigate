@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import os
 
-import keras.models
-import keras.utils.data_utils
 import numpy as np
-from keras.models import clone_model, load_model
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
 __all__ = [
     "pretrained_plos_long_relu",
@@ -64,16 +63,14 @@ def _load_pretrained_net(modelname, new_input_shape):
             os.makedirs(model_dir)
         os.system("wget {} &&  mv -v {} {}".format(urlname, filename, model_path))
 
-    model = load_model(model_path)
+    model = kmodels.load_model(model_path)
     # create replacement input layer with new shape.
-    model.layers[0] = keras.layers.InputLayer(
-        input_shape=new_input_shape, name="input_1"
-    )
+    model.layers[0] = klayers.InputLayer(input_shape=new_input_shape, name="input_1")
     for layer in model.layers:
         layer.name = "%s_workaround" % layer.name
-    model = keras.models.Sequential(layers=model.layers)
+    model = kmodels.Sequential(layers=model.layers)
 
-    model_w_sm = clone_model(model)
+    model_w_sm = kmodels.clone_model(model)
 
     # NOTE: perform forward pass to fix a keras 2.2.0 related issue
     # with improper weight initialization
@@ -82,7 +79,7 @@ def _load_pretrained_net(modelname, new_input_shape):
     model_w_sm.predict(x_dummy)
 
     model_w_sm.set_weights(model.get_weights())
-    model_w_sm.add(keras.layers.Activation("softmax"))
+    model_w_sm.add(klayers.Activation("softmax"))
     return model, model_w_sm
 
 

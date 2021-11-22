@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import keras.models
 import numpy as np
-from keras.backend import clear_session
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.models as kmodels
 
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.utils.types import Model
@@ -36,7 +36,7 @@ class BaseLayerTestCase:
 
     def run_test(self):
         np.random.seed(2349784365)
-        clear_session()
+        kbackend.clear_session()
 
         for network in networks.iterator(self._network_filter, clear_sessions=True):
             self._apply_test(network)
@@ -60,7 +60,7 @@ class AnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network: Model):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -98,7 +98,7 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -145,7 +145,7 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer1 = self._method1(model)
@@ -202,7 +202,7 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get analyzer.
         analyzer = self._method(model)
@@ -243,7 +243,7 @@ class PatternComputerTestCase(BaseLayerTestCase):
 
     def _apply_test(self, network):
         # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
+        model = kmodels.Model(inputs=network["in"], outputs=network["out"])
         model.set_weights(_set_zero_weights_to_random(model.get_weights()))
         # Get computer.
         computer = self._method(model)

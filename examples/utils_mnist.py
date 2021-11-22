@@ -1,18 +1,9 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# catch exception with: except Exception as e
-from builtins import filter, map, range, zip
-from io import open
+from __future__ import annotations
 
 import keras
 import numpy as np
-import six
-from future.utils import raise_from, raise_with_traceback
-from keras import backend as K
+from keras.backend import image_data_format
 from keras.datasets import mnist
-from keras.layers import Activation, Dense, Dropout, Input
 from keras.models import Model
 from keras.optimizers import Adam
 
@@ -20,17 +11,9 @@ import innvestigate
 import innvestigate.applications.mnist
 import innvestigate.utils
 import innvestigate.utils as iutils
-import innvestigate.utils.tests
-import innvestigate.utils.tests.networks
 import innvestigate.utils.visualizations as ivis
 
-# End: Python 2/3 compatability header small
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+from tests.networks import base
 
 ###############################################################################
 # Data Preprocessing Utility
@@ -38,7 +21,7 @@ import innvestigate.utils.visualizations as ivis
 
 
 def fetch_data():
-    channels_first = K.image_data_format() == "channels_first"
+    channels_first = image_data_format() == "channels_first"
     # the data, shuffled and split between train and test sets
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -55,11 +38,13 @@ def fetch_data():
     return x_train, y_train, x_test, y_test
 
 
-def create_preprocessing_f(X, input_range=[0, 1]):
+def create_preprocessing_f(X, input_range=None):
     """
     Generically shifts data from interval [a, b] to interval [c, d].
     Assumes that theoretical min and max values are populated.
     """
+    if input_range is None:
+        input_range = [0, 1]
 
     if len(input_range) != 2:
         raise ValueError(
@@ -99,7 +84,7 @@ def create_preprocessing_f(X, input_range=[0, 1]):
 
 
 def create_model(modelname, **kwargs):
-    channels_first = K.image_data_format() == "channels_first"
+    channels_first = image_data_format() == "channels_first"
     num_classes = 10
 
     if channels_first:
@@ -112,10 +97,9 @@ def create_model(modelname, **kwargs):
         model_init_fxn = getattr(innvestigate.applications.mnist, modelname)
         model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
 
-    elif modelname in innvestigate.utils.tests.networks.base.__all__:
-        network_init_fxn = getattr(innvestigate.utils.tests.networks.base, modelname)
+    elif modelname in base.__all__:
+        network_init_fxn = getattr(base, modelname)
         network = network_init_fxn(input_shape, num_classes, **kwargs)
-        model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
         model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
     else:
         raise ValueError("Invalid model name {}".format(modelname))
@@ -135,9 +119,6 @@ def train_model(model, data, batch_size=128, epochs=20):
         loss="categorical_crossentropy", optimizer=Adam(), metrics=["accuracy"]
     )
 
-    history = model.fit(
-        x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1
-    )
     score = model.evaluate(x_test, y_test, verbose=0)
     return score
 

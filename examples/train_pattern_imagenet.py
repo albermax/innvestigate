@@ -1,62 +1,37 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import imp
 import os
 import sys
 
-# catch exception with: except Exception as e
-from builtins import filter, map, range, zip
-from io import open
-
-import keras.backend
 import keras.models
 import keras.preprocessing.image
 import keras.utils
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-import six
-from future.utils import raise_from, raise_with_traceback
+from keras.backend import image_data_format
 
 import innvestigate
 import innvestigate.tools
 import innvestigate.utils as iutils
-import innvestigate.utils.tests.networks.imagenet
 import innvestigate.utils.visualizations as ivis
 
-# End: Python 2/3 compatability header small
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
+import tests.networks.imagenet
 
 base_dir = os.path.dirname(__file__)
 eutils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
 
 
 # Path to train and validation images of Imagenet.
-# Each directory should contain one directory for each class which contains
-# the according images,
-# see https://keras.io/preprocessing/image/#imagedatagenerator-class
+# Each directory should contain one directory for each class
+# which contains the according images, see
+# https://keras.io/preprocessing/image/#imagedatagenerator-class
 # function flow_from_directory().
 imagenet_train_dir = "/temp/datasets/imagenet/2012/train_set_small"
 imagenet_val_dir = "/temp/datasets/imagenet/2012/train_set_small"
 
 
-###############################################################################
-###############################################################################
-###############################################################################
-
 if __name__ == "__main__":
+    # TODO: reduce complexity
 
     netname = sys.argv[1] if len(sys.argv) > 1 else "vgg16"
     pattern_type = "relu"
@@ -89,7 +64,7 @@ if __name__ == "__main__":
     # Create data loaders.
     ###########################################################################
 
-    if keras.backend.image_data_format() == "channels_first":
+    if image_data_format() == "channels_first":
         target_size = net["input_shape"][2:4]
     else:
         target_size = net["input_shape"][1:3]
@@ -159,7 +134,7 @@ if __name__ == "__main__":
     # Utility functions.
     ###########################################################################
     color_conversion = "BGRtoRGB" if net["color_coding"] == "BGR" else None
-    channels_first = keras.backend.image_data_format == "channels_first"
+    channels_first = image_data_format == "channels_first"
 
     def preprocess(X):
         X = X.copy()
@@ -194,7 +169,7 @@ if __name__ == "__main__":
 
     # Methods we use and some properties.
     methods = [
-        # NAME             POSTPROCESSING     TITLE
+        # Tuple format: NAME, POSTPROCESSING, TITLE
         # Show input.
         ("input", {}, image, "Input"),
         # Function

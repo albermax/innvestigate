@@ -5,12 +5,10 @@ import warnings
 from builtins import range
 
 import numpy as np
-import six
-from keras.backend import image_data_format
-from keras.utils import Sequence
-from keras.utils.data_utils import GeneratorEnqueuer, OrderedEnqueuer
+import tensorflow.keras.backend as kbackend
+import tensorflow.python.keras.utils as kutils
 
-import innvestigate.utils
+import innvestigate.utils as iutils
 
 
 class Perturbation:
@@ -60,7 +58,7 @@ class Perturbation:
         in_place=False,
         value_range=None,
     ):
-        if isinstance(perturbation_function, six.string_types):
+        if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values
                 # to the channel mean if the data are standardized.
@@ -220,7 +218,7 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
-        if image_data_format() == "channels_last":
+        if kbackend.image_data_format() == "channels_last":
             x = np.moveaxis(x, 3, 1)
             analysis = np.moveaxis(analysis, 3, 1)
         if not self.in_place:
@@ -255,7 +253,7 @@ class Perturbation:
                 pad_shape_before_x[1] : pad_shape_before_x[1] + original_shape[3],
             ]
 
-        if image_data_format() == "channels_last":
+        if kbackend.image_data_format() == "channels_last":
             x_perturbated = np.moveaxis(x_perturbated, 1, 3)
             x = np.moveaxis(x, 1, 3)
             analysis = np.moveaxis(analysis, 1, 3)
@@ -269,7 +267,6 @@ class PerturbationAnalysis:
     :param analyzer: Analyzer.
     :type analyzer: innvestigate.analyzer.base.AnalyzerBase
     :param model: Trained Keras model.
-    :type model: keras.engine.training.Model
     :param generator: Data generator.
     :type generator: innvestigate.utils.BatchSequence
     :param perturbation: Instance of Perturbation class that performs the perturbation.
@@ -317,7 +314,7 @@ class PerturbationAnalysis:
             X = np.array(X)
             Y = np.array(Y)
             analysis = np.array(analysis)
-            self.analysis_generator = innvestigate.utils.BatchSequence(
+            self.analysis_generator = iutils.BatchSequence(
                 [X, Y, analysis], batch_size=256
             )
         self.verbose = verbose
@@ -380,7 +377,7 @@ class PerturbationAnalysis:
         wait_time = 0.01
         all_outs = []
         batch_sizes = []
-        is_sequence = isinstance(generator, Sequence)
+        is_sequence = isinstance(generator, kutils.Sequence)
         if not is_sequence and use_multiprocessing and workers > 1:
             warnings.warn(
                 UserWarning(
@@ -405,11 +402,11 @@ class PerturbationAnalysis:
         try:
             if workers > 0:
                 if is_sequence:
-                    enqueuer = OrderedEnqueuer(
+                    enqueuer = kutils.OrderedEnqueuer(
                         generator, use_multiprocessing=use_multiprocessing
                     )
                 else:
-                    enqueuer = GeneratorEnqueuer(
+                    enqueuer = kutils.GeneratorEnqueuer(
                         generator,
                         use_multiprocessing=use_multiprocessing,
                         wait_time=wait_time,

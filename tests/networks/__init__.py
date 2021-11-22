@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 
-from keras.backend import clear_session
+import tensorflow.keras.backend as kbackend
 
 from tests.networks import cifar10, imagenet, mnist, trivia
 
@@ -36,7 +36,7 @@ def iterator(network_filter: str = "*", clear_sessions: bool = False):
 
     for module_name, (module, name) in networks:
         if clear_sessions:
-            clear_session()
+            kbackend.clear_session()
 
         network = getattr(module, name)()
         network["name"] = module_name

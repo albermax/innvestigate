@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import keras
-import keras.backend as K
-import keras.layers
-import keras.models
 import numpy as np
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
-import innvestigate.utils.keras.checks as kchecks
+import innvestigate.utils.keras.checks as ichecks
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
@@ -71,7 +70,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         """
         Adds check that prevents models from containing a softmax.
         """
-        contains_softmax: LayerCheck = lambda layer: kchecks.contains_activation(
+        contains_softmax: LayerCheck = lambda layer: ichecks.contains_activation(
             layer, activation="softmax"
         )
         self._add_model_check(
@@ -82,8 +81,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def _add_lambda_layers_check(self) -> None:
         check_lambda_layers: LayerCheck = lambda layer: (
-            not self._allow_lambda_layers
-            and isinstance(layer, keras.layers.core.Lambda)
+            not self._allow_lambda_layers and isinstance(layer, klayers.Lambda)
         )
         self._add_model_check(
             check=check_lambda_layers,
@@ -117,8 +115,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         stop_analysis_at_tensors = []
 
         # Flatten to form (batch_size, other_dimensions):
-        if K.ndim(model_output[0]) > 2:
-            model_output = keras.layers.Flatten()(model_output)
+        if kbackend.ndim(model_output[0]) > 2:
+            model_output = klayers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
             inn_max = ilayers.Max(name="iNNvestigate_max")
@@ -127,7 +125,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         elif neuron_selection_mode == "index":
             # Creates a placeholder tensor when `dtype` is passed.
-            neuron_indexing: Layer = keras.layers.Input(
+            neuron_indexing: Layer = klayers.Input(
                 batch_shape=[None, None],
                 dtype=np.int32,
                 name="iNNvestigate_neuron_indexing",
@@ -146,7 +144,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         else:
             raise NotImplementedError()
 
-        model = keras.models.Model(
+        model = kmodels.Model(
             inputs=model_inputs + analysis_inputs, outputs=model_output
         )
         return model, analysis_inputs, stop_analysis_at_tensors
@@ -191,7 +189,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
-        self._analyzer_model = keras.models.Model(
+        self._analyzer_model = kmodels.Model(
             inputs=model_inputs + analysis_inputs + constant_inputs,
             outputs=analysis_outputs + debug_outputs,
         )

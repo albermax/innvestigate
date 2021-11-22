@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import keras.engine.topology
-import keras.models
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
 import innvestigate.utils as iutils
 
@@ -25,13 +25,13 @@ class TestAnalysisHelper(object):
         :param weights: After creating the model set the given weights.
         """
 
-        if isinstance(model, keras.engine.topology.Layer):
+        if isinstance(model, klayers.Layer):
             model = [model]
 
         if isinstance(model, list):
-            self._model = keras.models.Sequential(model)
+            self._model = kmodels.Sequential(model)
         else:
-            self._model = keras.models.Model(*model)
+            self._model = kmodels.Model(*model)
 
         self._input_shapes = iutils.to_list(self._model.input_shape)
 

@@ -1,22 +1,14 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import os
 import shutil
-
-# catch exception with: except Exception as e
-from builtins import filter, map, range, zip
+from builtins import range
 from io import open
 
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
 import six
-from future.utils import raise_from, raise_with_traceback
-
-# End: Python 2/3 compatability header small
-
 
 ###############################################################################
 # Download utilities
@@ -39,7 +31,7 @@ def download(url, filename):
 def load_image(path, size):
     ret = PIL.Image.open(path)
     ret = ret.resize((size, size))
-    ret = np.asarray(ret, dtype=np.uint8).astype(np.float32)
+    ret = np.asarray(ret).astype(np.float32)
     if ret.ndim == 2:
         # Convert gray scale image to color channels.
         ret.resize((size, size, 1))
@@ -95,6 +87,8 @@ def plot_image_grid(
     figsize=None,
     dpi=224,
 ):
+    # TODO: reduce complexity
+
     n_rows = len(grid)
     n_cols = len(grid[0])
     if figsize is None:
@@ -133,7 +127,7 @@ def plot_image_grid(
             # row labels
             if not c:
                 if row_labels_left != []:
-                    txt_left = [l + "\n" for l in row_labels_left[r]]
+                    txt_left = [label + "\n" for label in row_labels_left[r]]
                     ax.set_ylabel(
                         "".join(txt_left),
                         rotation=0,
@@ -143,7 +137,7 @@ def plot_image_grid(
 
             if c == n_cols - 1:
                 if row_labels_right != []:
-                    txt_right = [l + "\n" for l in row_labels_right[r]]
+                    txt_right = [label + "\n" for label in row_labels_right[r]]
                     ax2 = ax.twinx()
                     # No border around subplots
                     for spine in ax2.spines.values():

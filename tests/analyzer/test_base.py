@@ -128,7 +128,7 @@ def test_precommit__BasicGraphReversal():
 
 #     def method2(model):
 #         Create container execution
-#         model = keras.models.Model(inputs=model.inputs,
+#         model = kmodels.Model(inputs=model.inputs,
 #                                    outputs=model(model.inputs))
 #         return Gradient(model)
 
@@ -145,7 +145,7 @@ def test_precommit__BasicGraphReversal():
 
 #     def method2(model):
 #         Create container execution
-#         model = keras.models.Model(inputs=model.inputs,
+#         model = kmodels.Model(inputs=model.inputs,
 #                                    outputs=model(model.inputs))
 #         return Gradient(model)
 

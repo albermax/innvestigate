@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-import keras.layers
-import keras.models
-import keras.optimizers
 import numpy as np
 import pytest
-from keras.datasets import mnist
-from keras.models import Model
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
+import tensorflow.keras.optimizers as koptimizers
+import tensorflow.keras.utils as kutils
+from tensorflow.keras.datasets import mnist
 
 import innvestigate
 from innvestigate.tools import PatternComputer
@@ -112,12 +112,12 @@ class HaufePatternExample(unittest.TestCase):
 
         X = y * a_s + eps * a_d
 
-        model = keras.models.Sequential(
+        model = kmodels.Sequential(
             [
-                keras.layers.Dense(1, input_shape=(2,), use_bias=True),
+                klayers.Dense(1, input_shape=(2,), use_bias=True),
             ]
         )
-        model.compile(optimizer=keras.optimizers.Adam(lr=1), loss="mse")
+        model.compile(optimizer=koptimizers.Adam(lr=1), loss="mse")
         model.fit(X, y, epochs=20, verbose=0).history
         self.assertTrue(model.evaluate(X, y, verbose=0) < 0.05)
 
@@ -156,8 +156,8 @@ def create_model(clazz):
     num_classes = 10
 
     network = clazz((None, 1, 28, 28), num_classes, dense_units=1024, dropout_rate=0.25)
-    model_wo_sm = Model(inputs=network["in"], outputs=network["out"])
-    model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
+    model_wo_sm = kmodels.Model(inputs=network["in"], outputs=network["out"])
+    model_w_sm = kmodels.Model(inputs=network["in"], outputs=network["sm_out"])
     return model_wo_sm, model_w_sm
 
 
@@ -167,12 +167,12 @@ def train_model(model, data, epochs=20):
 
     x_train, y_train, x_test, y_test = data
     # convert class vectors to binary class matrices
-    y_train = keras.utils.to_categorical(y_train, num_classes)
-    y_test = keras.utils.to_categorical(y_test, num_classes)
+    y_train = kutils.to_categorical(y_train, num_classes)
+    y_test = kutils.to_categorical(y_test, num_classes)
 
     model.compile(
         loss="categorical_crossentropy",
-        optimizer=keras.optimizers.RMSprop(),
+        optimizer=koptimizers.RMSprop(),
         metrics=["accuracy"],
     )
 
@@ -321,7 +321,7 @@ class MnistPatternExample_dense_relu(unittest.TestCase):
 
 #     def test(self):
 #         np.random.seed(234354346)
-#         K.set_image_data_format("channels_first")
+#         backend.set_image_data_format("channels_first")
 #         model_class = base.cnn_2convb_2dense
 #         data = fetch_data()
 #         model, modelp = create_model(model_class)

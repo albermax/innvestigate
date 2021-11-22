@@ -1,5 +1,5 @@
-import keras
 import pytest
+import tensorflow.keras.layers as klayers
 
 import innvestigate.utils.keras.checks as ichecks
 
@@ -9,13 +9,13 @@ import innvestigate.utils.keras.checks as ichecks
 @pytest.mark.parametrize(
     "activation,layer,expected",
     [
-        ("relu", keras.layers.Dense(5, activation="relu"), True),
-        ("linear", keras.layers.Dense(5, activation="linear"), True),
-        ("none", keras.layers.Dense(5, activation=None), True),  # defaults to linear
-        ("selu", keras.layers.Dense(5, activation="selu"), False),
-        ("softmax", keras.layers.Dense(5, activation="softmax"), False),
-        ("relu", keras.layers.ReLU(), True),
-        ("elu", keras.layers.ELU(), False),
+        ("relu", klayers.Dense(5, activation="relu"), True),
+        ("linear", klayers.Dense(5, activation="linear"), True),
+        ("none", klayers.Dense(5, activation=None), True),  # defaults to linear
+        ("selu", klayers.Dense(5, activation="selu"), False),
+        ("softmax", klayers.Dense(5, activation="softmax"), False),
+        ("relu", klayers.ReLU(), True),
+        ("elu", klayers.ELU(), False),
     ],
 )
 def test_only_relu_activation(activation, layer, expected):
@@ -27,13 +27,13 @@ def test_only_relu_activation(activation, layer, expected):
 @pytest.mark.parametrize(
     "activation,layer,expected",
     [
-        ("selu", keras.layers.Dense(5, activation="selu"), False),
-        ("relu", keras.layers.Dense(5, activation="relu"), True),
-        ("softmax", keras.layers.Dense(5, activation="softmax"), False),
-        ("linear", keras.layers.Dense(5, activation="linear"), False),
-        ("relu", keras.layers.ReLU(), True),
-        ("elu", keras.layers.ELU(), False),
-        ("none", keras.layers.Dense(5, activation=None), False),  # defaults to linear
+        ("selu", klayers.Dense(5, activation="selu"), False),
+        ("relu", klayers.Dense(5, activation="relu"), True),
+        ("softmax", klayers.Dense(5, activation="softmax"), False),
+        ("linear", klayers.Dense(5, activation="linear"), False),
+        ("relu", klayers.ReLU(), True),
+        ("elu", klayers.ELU(), False),
+        ("none", klayers.Dense(5, activation=None), False),  # defaults to linear
     ],
 )
 def test_contains_activation_relu(activation, layer, expected):
@@ -45,13 +45,13 @@ def test_contains_activation_relu(activation, layer, expected):
 @pytest.mark.parametrize(
     "activation,layer,expected",
     [
-        ("elu", keras.layers.Dense(5, activation="elu"), True),
-        ("relu", keras.layers.Dense(5, activation="relu"), False),
-        ("softmax", keras.layers.Dense(5, activation="softmax"), False),
-        ("linear", keras.layers.Dense(5, activation="linear"), False),
-        ("relu", keras.layers.ReLU(), False),
-        ("elu", keras.layers.ELU(), True),
-        ("none", keras.layers.Dense(5, activation=None), False),  # defaults to linear
+        ("elu", klayers.Dense(5, activation="elu"), True),
+        ("relu", klayers.Dense(5, activation="relu"), False),
+        ("softmax", klayers.Dense(5, activation="softmax"), False),
+        ("linear", klayers.Dense(5, activation="linear"), False),
+        ("relu", klayers.ReLU(), False),
+        ("elu", klayers.ELU(), True),
+        ("none", klayers.Dense(5, activation=None), False),  # defaults to linear
     ],
 )
 def test_contains_activation_elu(activation, layer, expected):
@@ -71,7 +71,7 @@ def test_contains_activation_elu(activation, layer, expected):
     ],
 )
 def test_contains_activation_softmax(activation, expected):
-    layer = keras.layers.Dense(5, activation=activation)
+    layer = klayers.Dense(5, activation=activation)
     assert ichecks.contains_activation(layer, "softmax") == expected
 
 
@@ -88,5 +88,5 @@ def test_contains_activation_softmax(activation, expected):
     ],
 )
 def test_contains_activation_general(activation, expected):
-    layer = keras.layers.Dense(5, activation=activation)
+    layer = klayers.Dense(5, activation=activation)
     assert ichecks.contains_activation(layer) == expected

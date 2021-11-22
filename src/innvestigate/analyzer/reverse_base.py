@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional, Tuple
 
-import keras
-import keras.layers
-import keras.models
 import numpy as np
-import six
+import tensorflow.keras.backend as kbackend
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.utils.keras as ikeras
+import innvestigate.utils.keras.backend as ibackend
+import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.utils.types import (
     CondReverseMapping,
@@ -72,7 +71,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
     def __init__(
         self,
-        model: keras.Model,
+        model: Model,
         reverse_verbose: bool = False,
         reverse_clip_values: bool = False,
         reverse_project_bottleneck_layers: bool = False,
@@ -123,7 +122,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         masked_grad = ilayers.GradientWRT(len(Xs), mask=mask)
         return masked_grad(Xs + Ys + reversed_Ys)
 
-    def _reverse_mapping(self, layer: keras.layers.Layer):
+    def _reverse_mapping(self, layer: Layer):
         """
         This function should return a reverse mapping for the passed layer.
 
@@ -239,7 +238,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
-        return kgraph.reverse_model(
+        return igraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
@@ -279,7 +278,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             tmp: List[Tensor]
 
             debug_tensors = []
-            values = list(six.itervalues(ret[1]))
+            values = list(ret[1].items())
             mapping = {i: v["id"] for i, v in enumerate(values)}
             tensors = [v["final_tensor"] for v in values]
             self._reverse_tensors_mapping = mapping

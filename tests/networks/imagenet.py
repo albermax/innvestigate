@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import warnings
 
-import keras.layers
 import numpy as np
-from keras.backend import image_data_format
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
 
 from innvestigate.applications import imagenet
 
@@ -48,7 +48,7 @@ def vgg16_custom(activation=None):
     if activation is None:
         activation = "relu"
 
-    if image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         input_shape = [None, 3, 224, 224]
     else:
         input_shape = [None, 224, 224, 3]
@@ -103,7 +103,7 @@ def vgg16_custom(activation=None):
         )
     )
 
-    net["conv_flat"] = keras.layers.Flatten()(net["conv_5_pool"])
+    net["conv_flat"] = klayers.Flatten()(net["conv_5_pool"])
     net["dense_1"] = base.dense_layer(
         net["conv_flat"],
         units=4096,
@@ -200,7 +200,7 @@ def densenet201():
 
 
 def nasnet_large():
-    if image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         warnings.warn(
             "NASNet is not available for channels first. " "Return dummy net."
         )
@@ -212,7 +212,7 @@ def nasnet_large():
 
 
 def nasnet_mobile():
-    if image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         warnings.warn(
             "NASNet is not available for channels first. " "Return dummy net."
         )

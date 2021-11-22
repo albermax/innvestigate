@@ -4,7 +4,7 @@ from builtins import zip
 from typing import List, Union
 
 import numpy as np
-from keras.backend import int_shape
+import tensorflow.keras.backend as kbackend
 
 import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer, OptionalList, Tensor
@@ -54,7 +54,7 @@ def broadcast_np_tensors_to_keras_tensors(
     :param keras_tensors: The Keras tensors with the target shapes.
     :type keras_tensors: OptionalList[Tensor]
     :param np_tensors: Numpy tensors that should be broadcasted.
-    :type np_tensors: Union[float, np.ndarray, List[np.ndarray]]
+    :type np_tensors: Union[np.ndarray, List[np.ndarray]]
     :return: The broadcasted Numpy tensors.
     :rtype: List[np.ndarray]
     """
@@ -66,9 +66,10 @@ def broadcast_np_tensors_to_keras_tensors(
 
     if isinstance(np_tensors, list):
         return [
-            np.broadcast_to(ri, none_to_one(int_shape(x)))
+            np.broadcast_to(ri, none_to_one(kbackend.int_shape(x)))
             for x, ri in zip(keras_tensors, np_tensors)
         ]
     return [
-        np.broadcast_to(np_tensors, none_to_one(int_shape(x))) for x in keras_tensors
+        np.broadcast_to(np_tensors, none_to_one(kbackend.int_shape(x)))
+        for x in keras_tensors
     ]

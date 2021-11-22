@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import logging
 
-import keras.layers
-import keras.models
 import pytest
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
 from innvestigate import create_analyzer
 from innvestigate.analyzer import analyzers
@@ -19,7 +19,7 @@ def test_fast__create_analyzers():
     Instantiate analyzers by name using a placeholder Keras model.
     """
 
-    fake_model = keras.models.Sequential([keras.layers.Dense(10, input_shape=(10,))])
+    fake_model = kmodels.Sequential([klayers.Dense(10, input_shape=(10,))])
     for name in analyzers:
         try:
             create_analyzer(name, fake_model)
@@ -36,6 +36,6 @@ def test_fast__create_analyzers_wrong_name():
     Test 'innvestigate.create_analyzer':
     'KeyError' should be thrown when passing wrong keys.
     """
-    fake_model = keras.models.Sequential([keras.layers.Dense(10, input_shape=(10,))])
+    fake_model = kmodels.Sequential([klayers.Dense(10, input_shape=(10,))])
     with pytest.raises(KeyError):
         create_analyzer("wrong name", fake_model)

@@ -2,26 +2,21 @@ from __future__ import annotations
 
 from typing import List
 
-import keras.backend as K
 import tensorflow as tf
+import tensorflow.keras.backend as kbackend
 
+from innvestigate.utils import to_list
 from innvestigate.utils.types import OptionalList, Tensor
 
 # TODO: remove this file -A.
 
 __all__ = [
-    "to_floatx",
     "gradients",
     "is_not_finite",
     "extract_conv2d_patches",
     "gather",
     "gather_nd",
 ]
-
-
-def to_floatx(X: Tensor) -> Tensor:
-    """Cast Tensor to default float type."""
-    return K.cast(X, K.floatx())
 
 
 def gradients(
@@ -59,14 +54,14 @@ def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> 
     :param padding: Paddings of the Keras conv2d layer.
     :return: The extracted patches.
     """
-    if K.image_data_format() == "channels_first":
-        X = K.permute_dimensions(X, (0, 2, 3, 1))
+    if kbackend.image_data_format() == "channels_first":
+        X = kbackend.permute_dimensions(X, (0, 2, 3, 1))
     kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
     strides = [1, strides[0], strides[1], 1]
     rates = [1, rates[0], rates[1], 1]
     ret = tf.extract_image_patches(X, kernel_shape, strides, rates, padding.upper())
 
-    if K.image_data_format() == "channels_first":
+    if kbackend.image_data_format() == "channels_first":
         # TODO: check if we need to permute again.xs
         pass
     return ret

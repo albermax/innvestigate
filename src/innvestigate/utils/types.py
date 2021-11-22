@@ -2,9 +2,9 @@
 
 from typing import Any, Callable, List, Optional, Sequence, Tuple, TypeVar, Union
 
-from keras import Model
-from keras.layers import Layer
 from tensorflow import Tensor
+from tensorflow.keras.layers import Layer
+from tensorflow.keras.models import Model
 
 # from tensorflow.python.types import Tensor
 from typing_extensions import TypedDict
