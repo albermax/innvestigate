@@ -93,18 +93,14 @@ pool_size = (2, 2)
 LAYERS_2D = {
     "Dense": keras.layers.Dense(5, input_shape=input_shape),
     "Dense_relu": keras.layers.Dense(5, activation="relu", input_shape=input_shape),
-    "Conv2D": keras.layers.Conv2D(
-        5, kernel_size, input_shape=input_shape
-    ),
+    "Conv2D": keras.layers.Conv2D(5, kernel_size, input_shape=input_shape),
     "Conv2D_relu": keras.layers.Conv2D(
         5, kernel_size, activation="relu", input_shape=input_shape
     ),
     "AveragePooling2D": keras.layers.AveragePooling2D(
         pool_size, input_shape=input_shape
     ),
-    "MaxPooling2D": keras.layers.MaxPooling2D(
-        pool_size, input_shape=input_shape
-    ),
+    "MaxPooling2D": keras.layers.MaxPooling2D(pool_size, input_shape=input_shape),
 }
 
 
@@ -114,8 +110,13 @@ LAYERS_2D = {
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_reference_layer(method, kwargs):
     analyzer_name = method.__name__
-    data_path = os.path.join(os.path.abspath(os.curdir), "tests", "references", "layer", analyzer_name + ".hdf5")
-
+    data_path = os.path.join(
+        os.path.abspath(os.curdir),
+        "tests",
+        "references",
+        "layer",
+        analyzer_name + ".hdf5",
+    )
 
     with h5py.File(data_path, "r") as f:
         assert f.attrs["analyzer_name"] == analyzer_name  # sanity check: correct file
@@ -124,8 +125,8 @@ def test_reference_layer(method, kwargs):
         for layer_name, layer in LAYERS_2D.items():
             f_layer = f[layer_name]
             assert f_layer.attrs["layer_name"] == layer_name
-            weights = [w[:] for w  in f_layer["weights"].values()]
-            
+            weights = [w[:] for w in f_layer["weights"].values()]
+
             # Get model
             inputs = keras.layers.Input(shape=input_shape)
             activations = layer(inputs)
@@ -133,17 +134,36 @@ def test_reference_layer(method, kwargs):
             model = keras.Model(inputs=inputs, outputs=outputs, name=layer_name)
 
             model.set_weights(weights)
-            
+
             # Model output should match
             y = model.predict(x)
             y_ref = f_layer["output"][:]
             assert np.allclose(y, y_ref)
-            
+
             # Analyze model
             analyzer = method(model, **kwargs)
             a = analyzer.analyze(x)
 
             # Test attribution
             a_ref = f_layer["attribution"][:]
-            assert np.allclose(a, a_ref, rtol=rtol, atol=atol)
-            
+            attributions_match = np.allclose(a, a_ref, rtol=rtol, atol=atol)
+            if not attributions_match:
+                diff = np.absolute(a - a_ref)
+                # Function evaluated by np.allclose, see "Notes":
+                # https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
+                tol = atol + rtol * np.absolute(a_ref)
+                idx = np.argwhere(diff > tol)
+
+                print(
+                    f"{len(idx)}/{np.prod(a.shape)} "
+                    f"failed using {analyzer_name} on layer {layer_name} "
+                    f"using atol={atol}, rtol={rtol}"
+                )
+                for i in idx:
+                    ti = tuple(i)
+                    print(
+                        f"{ti}: diff {diff[ti]} > tol {tol[ti]}"
+                        f"\tfor values a={a[ti]}, a_ref={a_ref[ti]}"
+                    )
+
+            assert attributions_match
