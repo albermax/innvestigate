@@ -7,7 +7,7 @@ from typing import Set
 
 import tensorflow.keras as keras
 import tensorflow.keras.layers as klayers
-import tensorflow.python.keras.engine.network as knetwork
+from tensorflow import Module
 
 import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer
@@ -17,7 +17,7 @@ __all__ = [
     "contains_activation",
     "contains_kernel",
     "only_relu_activation",
-    "is_network",
+    "is_module",
     "is_convnet_layer",
     "is_average_pooling",
     "is_max_pooling",
@@ -135,11 +135,13 @@ def only_relu_activation(layer: Layer) -> bool:
     )
 
 
-def is_network(layer: Layer) -> bool:
+def is_module(layer) -> bool:
     """
-    Is network in network?
+    Is there a tf.Module in the network?
     """
-    return isinstance(layer, knetwork.Network)
+    if isinstance(layer, klayers.Layer):
+        return False
+    return isinstance(layer, Module)
 
 
 def is_conv_layer(layer: Layer, *_args, **_kwargs) -> bool:

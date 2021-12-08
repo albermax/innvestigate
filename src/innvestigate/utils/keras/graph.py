@@ -382,7 +382,7 @@ def get_model_layers(model: Model) -> List[Layer]:
             if layer in layers:
                 raise ValueError(f"Collected layer {layer} twice.")
             layers.append(layer)
-            if ichecks.is_network(layer):
+            if ichecks.is_module(layer):
                 collect_layers(layer)
 
     collect_layers(model)
@@ -561,7 +561,7 @@ def trace_model_execution(
     # Check if some layers are containers.
     # Ignoring the outermost container, i.e. the passed model.
     contains_container: bool = any(
-        [((l is not model) and ichecks.is_network(l)) for l in layers]
+        [((l is not model) and ichecks.is_module(l)) for l in layers]
     )
 
     outputs: List[Tensor]
@@ -1214,7 +1214,7 @@ def reverse_model(
         if isinstance(layer, klayers.InputLayer):
             # Special case. Do nothing.
             pass
-        elif ichecks.is_network(layer):
+        elif ichecks.is_module(layer):
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
