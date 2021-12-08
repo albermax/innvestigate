@@ -104,6 +104,26 @@ LAYERS_2D = {
 }
 
 
+def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
+    diff = np.absolute(val - ref)
+    # Function evaluated by np.allclose, see "Notes":
+    # https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
+    tol = atol + rtol * np.absolute(ref)
+    idx = np.argwhere(diff > tol)
+
+    print(
+        f"{len(idx)}/{np.prod(val.shape)} "
+        f"failed on referece \"{val_name}\" using layer {layer_name} with {analyzer_name}"
+        f"(atol={atol}, rtol={rtol})"
+    )
+    for i in idx:
+        ti = tuple(i)
+        print(
+            f"{ti}: diff {diff[ti]} > tol {tol[ti]}"
+            f"\tfor values {val_name}={val[ti]}, {val_name}_ref={ref[ti]}"
+        )
+
+
 @pytest.mark.reference
 @pytest.mark.layer
 @pytest.mark.precommit
@@ -138,7 +158,10 @@ def test_reference_layer(method, kwargs):
             # Model output should match
             y = model.predict(x)
             y_ref = f_layer["output"][:]
-            assert np.allclose(y, y_ref)
+            outputs_match = np.allclose(y, y_ref, rtol=rtol, atol=atol)
+            if not outputs_match:
+                debug_failed_all_close(y, y_ref, "y", layer_name, analyzer_name)
+            assert outputs_match
 
             # Analyze model
             analyzer = method(model, **kwargs)
@@ -148,22 +171,5 @@ def test_reference_layer(method, kwargs):
             a_ref = f_layer["attribution"][:]
             attributions_match = np.allclose(a, a_ref, rtol=rtol, atol=atol)
             if not attributions_match:
-                diff = np.absolute(a - a_ref)
-                # Function evaluated by np.allclose, see "Notes":
-                # https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
-                tol = atol + rtol * np.absolute(a_ref)
-                idx = np.argwhere(diff > tol)
-
-                print(
-                    f"{len(idx)}/{np.prod(a.shape)} "
-                    f"failed using {analyzer_name} on layer {layer_name} "
-                    f"using atol={atol}, rtol={rtol}"
-                )
-                for i in idx:
-                    ti = tuple(i)
-                    print(
-                        f"{ti}: diff {diff[ti]} > tol {tol[ti]}"
-                        f"\tfor values a={a[ti]}, a_ref={a_ref[ti]}"
-                    )
-
+                debug_failed_all_close(a, a_ref, "a", layer_name, analyzer_name)
             assert attributions_match

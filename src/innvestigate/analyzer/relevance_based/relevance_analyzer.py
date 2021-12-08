@@ -855,7 +855,7 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
         if "input_layer_rule" in kwargs:
             if kwargs["input_layer_rule"] != "Flat":
                 raise RuntimeError(
-                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetBFlat."
                 )
             kwargs.pop("input_layer_rule")
         super().__init__(model, *args, input_layer_rule="Flat", **kwargs)
