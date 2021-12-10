@@ -5,9 +5,8 @@ from __future__ import annotations
 
 from typing import Set
 
-import tensorflow.keras as keras
 import tensorflow.keras.layers as klayers
-from tensorflow import Module
+from tensorflow import Module, keras
 
 import innvestigate.utils as iutils
 from innvestigate.utils.types import Layer
@@ -70,26 +69,25 @@ def contains_activation(layer: Layer, activation: str = None) -> bool:
 
     if activation is None:
         return contains_any_activation(layer)
-    else:
-        a = activation.lower()
+    a = activation.lower()
 
-        # Check for activations in layer
-        if hasattr(layer, "activation"):
-            return bool(layer.activation == keras.activations.get(a))
+    # Check for activations in layer
+    if hasattr(layer, "activation"):
+        return bool(layer.activation == keras.activations.get(a))
 
-        # Check for layers that are activations
-        elif a == "softmax":
-            return isinstance(layer, (klayers.Softmax))
-        elif a == "relu":
-            return isinstance(layer, (klayers.ReLU))
-        elif a == "elu":
-            return isinstance(layer, (klayers.ELU))
-        elif a == "prelu":
-            return isinstance(layer, (klayers.PReLU))
-        elif a == "leakyrelu":
-            return isinstance(layer, (klayers.LeakyReLU))
-        elif a == "thresholdedrelu":
-            return isinstance(layer, (klayers.ThresholdedReLU))
+    # Check for layers that are activations
+    if a == "softmax":
+        return isinstance(layer, (klayers.Softmax))
+    if a == "relu":
+        return isinstance(layer, (klayers.ReLU))
+    if a == "elu":
+        return isinstance(layer, (klayers.ELU))
+    if a == "prelu":
+        return isinstance(layer, (klayers.PReLU))
+    if a == "leakyrelu":
+        return isinstance(layer, (klayers.LeakyReLU))
+    if a == "thresholdedrelu":
+        return isinstance(layer, (klayers.ThresholdedReLU))
     return False
 
 

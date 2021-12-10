@@ -155,7 +155,7 @@ class AugmentReduceBase(WrapperBase):
         # As described in the AugmentReduceBase init,
         # both ns_mode "max_activation" and "index" make use
         # of a subanalyzer using neuron_selection_mode="index".
-        elif ns_mode == "max_activation":
+        if ns_mode == "max_activation":
             # obtain max neuron activations over batch
             pred = self._subanalyzer._model.predict(X)
             indices = np.argmax(pred, axis=1)

@@ -115,9 +115,8 @@ class AnalyzerBase(metaclass=ABCMeta):
 
             for checked_layers, message, check_type in tmp:
                 if len(checked_layers) > 0:
-                    tmp_message = "%s\nCheck triggered by layers: %s" % (
-                        message,
-                        checked_layers,
+                    tmp_message = (
+                        message + f"\nCheck triggered by layers: {checked_layers}"
                     )
 
                     if check_type == "exception":
@@ -255,7 +254,7 @@ class AnalyzerBase(metaclass=ABCMeta):
 ###############################################################################
 
 
-class TrainerMixin(object):
+class TrainerMixin:
     """Mixin for analyzer that adapt to data.
 
     This convenience interface exposes a Keras like training routing

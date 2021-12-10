@@ -211,9 +211,8 @@ class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
         if len(input_shape) != 1:
             # extend below lambda layers towards multiple parameters.
             raise ValueError(
-                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(  # noqa
-                    len(Xs)
-                )
+                "BatchNormalizationReverseLayer expects Xs with length 1, "
+                f"but was len(Xs)={len(Xs)}"
             )
         input_shape = input_shape[0]
 
@@ -616,7 +615,7 @@ class LRPEpsilon(_LRPFixedParams):
 class LRPEpsilonIgnoreBias(LRPEpsilon):
     """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
 
-    def __init__(self, model, epsilon=1e-7, *args, **kwargs):
+    def __init__(self, model, *args, epsilon=1e-7, **kwargs):
         super().__init__(model, *args, epsilon=epsilon, bias=False, **kwargs)
         self._do_model_checks()
 
@@ -642,7 +641,7 @@ class LRPFlat(_LRPFixedParams):
 class LRPAlphaBeta(LRP):
     """Base class for LRP AlphaBeta"""
 
-    def __init__(self, model, alpha=None, beta=None, bias=True, *args, **kwargs):
+    def __init__(self, model, *args, alpha=None, beta=None, bias=True, **kwargs):
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
@@ -763,8 +762,8 @@ class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
     def __init__(
         self,
         model,
-        epsilon=1e-1,
         *args,
+        epsilon=1e-1,
         bn_layer_rule=rrule.AlphaBetaX2m100Rule,
         **kwargs,
     ):
@@ -800,8 +799,8 @@ class LRPSequentialPresetB(_LRPFixedParams):
     def __init__(
         self,
         model: Model,
-        epsilon: float = 1e-1,
         *args,
+        epsilon: float = 1e-1,
         bn_layer_rule=rrule.AlphaBetaX2m100Rule,
         **kwargs,
     ):

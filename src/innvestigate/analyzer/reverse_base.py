@@ -79,7 +79,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reverse_check_finite: bool = False,
         reverse_keep_tensors: bool = False,
         reverse_reapply_on_copied_layers: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         From AnalyzerBase super init:
@@ -328,20 +328,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             tmp = sorted(
                 [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
             )
-            print(
-                "Minimum values in tensors: "
-                "((NodeID, TensorID), Value) - {}".format(tmp)
-            )
+            print(f"Minimum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
             indices = self._debug_tensors_indices["max"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
                 [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
             )
-            print(
-                "Maximum values in tensors: "
-                "((NodeID, TensorID), Value) - {}".format(tmp)
-            )
+            print(f"Maximum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
         if self._reverse_check_finite:
             indices = self._debug_tensors_indices["finite"]
@@ -354,7 +348,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 )
                 print(
                     "Not finite values found in following nodes: "
-                    "(NodeID, TensorID) - {}".format(nfinite_tensors)
+                    f"(NodeID, TensorID) - {nfinite_tensors}"
                 )
 
         if self._reverse_keep_tensors:

@@ -137,7 +137,7 @@ class DeepTaylor(ReverseAnalyzerBase):
         """
         Block all default mappings.
         """
-        raise NotImplementedError("Layer %s not supported." % reverse_state["layer"])
+        raise NotImplementedError(f"""Layer {reverse_state["layer"]} not supported.""")
 
     def _prepare_model(self, model):
         """

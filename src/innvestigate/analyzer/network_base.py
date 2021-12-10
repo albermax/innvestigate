@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -11,7 +10,6 @@ import tensorflow.keras.models as kmodels
 
 import innvestigate.layers as ilayers
 import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as ibackend
 import innvestigate.utils.keras.checks as ichecks
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
@@ -292,6 +290,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         # is 'nsa' is singleton, repeat it so that it matches number of rows of X
         if nsa.size == 1:
+            batch_size = tf.shape(X)[0]
             nsa = np.repeat(nsa, batch_size)
 
         return nsa

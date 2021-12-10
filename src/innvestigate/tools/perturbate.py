@@ -74,17 +74,13 @@ class Perturbation:
                 self.perturbation_function = lambda x: -x
             else:
                 raise ValueError(
-                    "Perturbation function type '{}' not known.".format(
-                        perturbation_function
-                    )
+                    f"Perturbation function type '{perturbation_function}' not known."
                 )
         elif callable(perturbation_function):
             self.perturbation_function = perturbation_function
         else:
             raise TypeError(
-                "Cannot handle perturbation function of type {}.".format(
-                    type(perturbation_function)
-                )
+                f"Cannot handle perturbation function of type {perturbation_function}."
             )
 
         self.num_perturbed_regions = num_perturbed_regions
@@ -304,9 +300,9 @@ class PerturbationAnalysis:
 
         if not self.recompute_analysis:
             # Compute the analysis once in the beginning
-            analysis = list()
-            X = list()
-            Y = list()
+            analysis = []
+            X = []
+            Y = []
             for XX, YY in self.generator:
                 X.extend(list(XX))
                 Y.extend(list(YY))
@@ -373,7 +369,6 @@ class PerturbationAnalysis:
         """
 
         steps_done = 0
-        wait_time = 0.01
         all_outs = []
         batch_sizes = []
         is_sequence = isinstance(generator, kutils.Sequence)
@@ -408,7 +403,6 @@ class PerturbationAnalysis:
                     enqueuer = kutils.GeneratorEnqueuer(
                         generator,
                         use_multiprocessing=use_multiprocessing,
-                        wait_time=wait_time,
                     )
                 enqueuer.start(workers=workers, max_queue_size=max_queue_size)
                 output_generator = enqueuer.get()
@@ -460,16 +454,15 @@ class PerturbationAnalysis:
 
         if not isinstance(outs, list):
             return np.average(np.asarray(all_outs), weights=batch_sizes)
-        else:
-            averages = []
-            for i in range(len(outs)):
-                averages.append(
-                    np.average([out[i] for out in all_outs], weights=batch_sizes)
-                )
-            return averages
+        averages = []
+        for i in range(len(outs)):
+            averages.append(
+                np.average([out[i] for out in all_outs], weights=batch_sizes)
+            )
+        return averages
 
     def compute_perturbation_analysis(self):
-        scores = list()
+        scores = []
         # Evaluate first on original data
         scores.append(self.model.evaluate_generator(self.generator))
         self.perturbation.num_perturbed_regions = 1
@@ -478,25 +471,23 @@ class PerturbationAnalysis:
             tic = time.time()
             if self.verbose:
                 print(
-                    "Step {} of {}: {} regions perturbed.".format(
-                        step + 1, self.steps, self.perturbation.num_perturbed_regions
-                    ),
+                    f"Step {step + 1} of {self.steps}: "
+                    f"{self.perturbation.num_perturbed_regions} regions perturbed.",
                     end=" ",
                 )
             scores.append(self.evaluate_generator(self.analysis_generator))
             self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
             if self.verbose:
-                print("Time elapsed: {:.3f} seconds.".format(toc - tic))
+                print(f"Time elapsed: {toc - tic:.3f} seconds.")
         time_end = time.time()
 
         if self.verbose:
             print(
                 # Use step + 1 instead of self.steps
                 # because the analysis can stop prematurely
-                "Time elapsed for {} steps: {:.3f} seconds.".format(
-                    step + 1, time_end - time_start
-                )
+                f"Time elapsed for {step + 1} steps: "
+                f"{time_end - time_start:.3f} seconds."
             )
 
         self.perturbation.num_perturbed_regions = 1  # Reset to original value

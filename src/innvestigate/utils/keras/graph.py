@@ -140,12 +140,11 @@ def get_layer_neuronwise_io(
     # Xs is (n, d) and Ys is (d, channels)
     if return_i and return_o:
         return ret_Xs, ret_Ys
-    elif return_i:
+    if return_i:
         return ret_Xs
-    elif return_o:
+    if return_o:
         return ret_Ys
-    else:
-        raise Exception()
+    raise Exception()
 
 
 def get_symbolic_weight_names(layer: Layer, weights: List[Tensor] = None) -> List[str]:
@@ -807,7 +806,7 @@ def get_model_execution_trace(
 
     if not keep_input_layers:
         model_execution_trace = [
-            tmp for tmp in model_execution_trace if tmp["nid"] is not None
+            t for t in model_execution_trace if t["nid"] is not None
         ]
 
     return model_execution_trace
@@ -861,17 +860,14 @@ def print_model_execution_graph(
     # TODO: check types
 
     def nids_as_str(nids: List[Optional[int]]) -> str:  # type: ignore
-        return ", ".join(["%s" % nid for nid in nids])  # type: ignore
+        return ", ".join([str(nid) for nid in nids])  # type: ignore
 
     def print_node(node) -> None:  # node of type NodeDict?
         print(
-            "  [NID: %4s] [Layer: %20s] [Inputs from: %20s] [Outputs to: %20s]"
-            % (
-                node["nid"],
-                node["layer"].name,
-                nids_as_str(node["Xs_nids"]),
-                nids_as_str(node["Ys_nids"]),
-            )
+            f"""[NID: {node["nid"]:4s}] """
+            f"""[Layer: {node["layer"].name:20s}] """
+            f"""[Inputs from: {nids_as_str(node["Xs_nids"]):20s}] """
+            f"""[Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
         )
 
     if None in graph:  # Input layers in graph have Node-ID `None`
@@ -1218,7 +1214,7 @@ def reverse_model(
             raise Exception("This is not supposed to happen!")
         else:
             Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
-            if not all([id(Y) in reversed_tensors for Y in Ys]):
+            if not all(id(Y) in reversed_tensors for Y in Ys):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
                 # Potentially this node is also not part of the
@@ -1254,5 +1250,4 @@ def reverse_model(
     ]
     if return_all_reversed_tensors is True:
         return reversed_input_tensors, reversed_tensors
-    else:
-        return reversed_input_tensors, None
+    return reversed_input_tensors, None

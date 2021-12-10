@@ -13,6 +13,7 @@ classifiers = [
 ]
 authors = [
     "Maxmilian Alber <workDoTalberDoTmaximilian@gmail.com>",
+    "Adrian Hill <hill@campus.tu-berlin.de>",
     "Sebastian Lapuschkin",
     "Miriam Haegele",
     "Kristof Schuett",
@@ -20,7 +21,6 @@ authors = [
     "Pieter-Jan Kindermans",
     "Henry Webel",
     "Leander Weber",
-    "Adrian Hill <hill@campus.tu-berlin.de>",
     "and others",
 ]
 maintainers = ["Adrian Hill <hill@campus.tu-berlin.de>"]
@@ -40,7 +40,7 @@ matplotlib = "^3.4.0"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"
-black  = { version = "*", allow-prereleases = true }
+black  = {extras = ["jupyter"], version = "*", allow-prereleases = true }
 flake8 = "^3.8.4"
 flake8-black = "^0.2.1"
 flake8-bugbear = "^21.3.1"

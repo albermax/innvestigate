@@ -11,7 +11,6 @@ import tensorflow.keras as keras
 
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
-    BaselineGradient,
     Deconvnet,
     Gradient,
     GuidedBackprop,
@@ -20,14 +19,11 @@ from innvestigate.analyzer.gradient_based import (
     SmoothGrad,
 )
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
-    LRP,
     LRPZ,
-    BaselineLRPZ,
     LRPAlpha1Beta0,
     LRPAlpha1Beta0IgnoreBias,
     LRPAlpha2Beta1,
     LRPAlpha2Beta1IgnoreBias,
-    LRPAlphaBeta,
     LRPEpsilon,
     LRPEpsilonIgnoreBias,
     LRPFlat,
@@ -35,16 +31,10 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPSequentialPresetAFlat,
     LRPSequentialPresetB,
     LRPSequentialPresetBFlat,
-    LRPSequentialPresetBFlatUntilIdx,
     LRPWSquare,
     LRPZIgnoreBias,
     LRPZPlus,
     LRPZPlusFast,
-)
-from innvestigate.analyzer.wrapper import (
-    AugmentReduceBase,
-    GaussianSmoother,
-    PathIntegrator,
 )
 
 tf.compat.v1.disable_eager_execution()
@@ -113,7 +103,7 @@ def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
 
     print(
         f"{len(idx)}/{np.prod(val.shape)} "
-        f"failed on referece \"{val_name}\" using layer {layer_name} with {analyzer_name}"
+        f'failed on referece "{val_name}" using layer {layer_name} with {analyzer_name}'
         f"(atol={atol}, rtol={rtol})"
     )
     for i in idx:

@@ -301,8 +301,7 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
                 klayers.Subtract()([times_alpha(a), times_beta(b)])
                 for a, b in zip(activator_relevances, inhibitor_relevances)
             ]
-        else:
-            return activator_relevances
+        return activator_relevances
 
 
 class AlphaBetaIgnoreBiasRule(AlphaBetaRule):
@@ -549,8 +548,6 @@ class ZPlusRule(Alpha1Beta0IgnoreBiasRule):
     """
 
     # TODO: assert that layer inputs are always >= 0
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
 
 class ZPlusFastRule(igraph.ReverseMappingBase):

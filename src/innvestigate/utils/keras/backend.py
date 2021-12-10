@@ -52,7 +52,7 @@ def is_not_finite(X: Tensor) -> Tensor:  # returns Tensor of dtype bool
 
 
 def cast_to_floatx(X: Tensor) -> Tensor:
-    return tf.cast(X, dtype=kbackend.floatx())
+    return tf.cast(X, kbackend.floatx())
 
 
 def safe_divide(A: Tensor, B: Tensor, factor: float = _EPS) -> Tensor:
@@ -94,7 +94,9 @@ def extract_conv2d_patches(X: Tensor, kernel_shape, strides, rates, padding) -> 
     kernel_shape = [1, kernel_shape[0], kernel_shape[1], 1]
     strides = [1, strides[0], strides[1], 1]
     rates = [1, rates[0], rates[1], 1]
-    ret = tf.extract_image_patches(X, kernel_shape, strides, rates, padding.upper())
+    ret = tf.compat.v1.extract_image_patches(
+        X, kernel_shape, strides, rates, padding.upper()
+    )
 
     if kbackend.image_data_format() == "channels_first":
         # TODO: check if we need to permute again.xs

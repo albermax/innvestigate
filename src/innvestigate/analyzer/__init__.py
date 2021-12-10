@@ -102,7 +102,7 @@ def create_analyzer(name: str, model: Model, **kwargs) -> AnalyzerBase:
         analyzer_class = analyzers[name]
     except KeyError:
         raise KeyError(
-            "No analyzer with the name '%s' could be found."
-            " All possible names are: %s" % (name, list(analyzers.keys()))
+            f"No analyzer with the name '{name}' could be found."
+            f" All possible names are: {list(analyzers.keys())}"
         )
     return analyzer_class(model, **kwargs)

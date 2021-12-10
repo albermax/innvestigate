@@ -7,7 +7,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
-import tensorflow.keras.utils as kutils
 
 import innvestigate.utils as iutils
 import innvestigate.utils.keras.backend as ibackend
@@ -65,9 +64,9 @@ class FiniteCheck(klayers.Layer):
 class _Reduce(klayers.Layer):
     def __init__(
         self,
+        *args,
         axis: Optional[OptionalList[int]] = -1,
         keepdims: bool = False,
-        *args,
         **kwargs,
     ) -> None:
         self.axis = axis
@@ -219,7 +218,7 @@ class Reshape(klayers.Layer):
 
 
 class MultiplyWithLinspace(klayers.Layer):
-    def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
+    def __init__(self, start, end, *args, n=1, axis=-1, **kwargs):
         super().__init__(*args, **kwargs)
         self._start = start
         self._end = end
