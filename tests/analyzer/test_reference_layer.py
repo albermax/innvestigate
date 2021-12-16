@@ -80,19 +80,6 @@ batch_size = 1
 kernel_size = (3, 3)
 pool_size = (2, 2)
 
-LAYERS_2D = {
-    "Dense": keras.layers.Dense(5, input_shape=input_shape),
-    "Dense_relu": keras.layers.Dense(5, activation="relu", input_shape=input_shape),
-    "Conv2D": keras.layers.Conv2D(5, kernel_size, input_shape=input_shape),
-    "Conv2D_relu": keras.layers.Conv2D(
-        5, kernel_size, activation="relu", input_shape=input_shape
-    ),
-    "AveragePooling2D": keras.layers.AveragePooling2D(
-        pool_size, input_shape=input_shape
-    ),
-    "MaxPooling2D": keras.layers.MaxPooling2D(pool_size, input_shape=input_shape),
-}
-
 
 def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
     diff = np.absolute(val - ref)
@@ -132,7 +119,27 @@ def test_reference_layer(method, kwargs):
         assert f.attrs["analyzer_name"] == analyzer_name  # sanity check: correct file
         x = f["input"][:]
 
-        for layer_name, layer in LAYERS_2D.items():
+        tf.keras.backend.clear_session()
+
+        layers_2d = {
+            "Dense": keras.layers.Dense(5, input_shape=input_shape),
+            "Dense_relu": keras.layers.Dense(
+                5, activation="relu", input_shape=input_shape
+            ),
+            "Conv2D": keras.layers.Conv2D(5, kernel_size, input_shape=input_shape),
+            "Conv2D_relu": keras.layers.Conv2D(
+                5, kernel_size, activation="relu", input_shape=input_shape
+            ),
+            "AveragePooling2D": keras.layers.AveragePooling2D(
+                pool_size, input_shape=input_shape
+            ),
+            "MaxPooling2D": keras.layers.MaxPooling2D(
+                pool_size, input_shape=input_shape
+            ),
+        }
+
+        for layer_name, layer in layers_2d.items():
+
             f_layer = f[layer_name]
             assert f_layer.attrs["layer_name"] == layer_name
             weights = [w[:] for w in f_layer["weights"].values()]

@@ -1,4 +1,5 @@
 import pytest
+import tensorflow as tf
 
 from innvestigate.analyzer import BoundedDeepTaylor, DeepTaylor
 
@@ -15,6 +16,8 @@ methods = {
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_fast(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -25,6 +28,8 @@ def test_fast(method, kwargs):
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_fast_serialize(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -35,6 +40,8 @@ def test_fast_serialize(method, kwargs):
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_precommit(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -46,6 +53,8 @@ def test_precommit(method, kwargs):
 @pytest.mark.imagenet
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_imagenet(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 

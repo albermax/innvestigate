@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import tensorflow as tf
 
 import innvestigate.utils.keras.graph as igraph
 
@@ -10,6 +11,7 @@ from tests import networks
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__get_model_execution_graph():
+    tf.keras.backend.clear_session()
 
     network_filter = "trivia.*:mnist.log_reg"
 
@@ -21,6 +23,7 @@ def test_fast__get_model_execution_graph():
 @pytest.mark.mnist
 @pytest.mark.precommit
 def test_commit__get_model_execution_graph():
+    tf.keras.backend.clear_session()
 
     network_filter = "mnist.*"
 
@@ -32,6 +35,7 @@ def test_commit__get_model_execution_graph():
 @pytest.mark.resnet50
 @pytest.mark.precommit
 def test_precommit__get_model_execution_graph_resnet50():
+    tf.keras.backend.clear_session()
 
     network_filter = "imagenet.resnet50"
 
@@ -43,6 +47,7 @@ def test_precommit__get_model_execution_graph_resnet50():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__get_model_execution_graph_with_inputs():
+    tf.keras.backend.clear_session()
 
     network_filter = "trivia.*:mnist.log_reg"
 

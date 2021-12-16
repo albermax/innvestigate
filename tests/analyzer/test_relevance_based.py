@@ -1,4 +1,5 @@
 import pytest
+import tensorflow as tf
 
 from innvestigate.analyzer import (
     LRPZ,
@@ -49,6 +50,8 @@ methods = {
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_fast(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -59,6 +62,8 @@ def test_fast(method, kwargs):
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_fast_serialize(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -69,6 +74,8 @@ def test_fast_serialize(method, kwargs):
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_precommit(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -79,6 +86,8 @@ def test_precommit(method, kwargs):
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_precommit_resnet50(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -90,6 +99,8 @@ def test_precommit_resnet50(method, kwargs):
 @pytest.mark.imagenet
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
 def test_imagenet(method, kwargs):
+    tf.keras.backend.clear_session()
+
     def analyzer(model):
         return method(model, **kwargs)
 
@@ -102,6 +113,8 @@ def test_imagenet(method, kwargs):
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_LRPZ_equal_BaselineLRPZ():
+    tf.keras.backend.clear_session()
+
     def method1(model):
         return BaselineLRPZ(model)
 
