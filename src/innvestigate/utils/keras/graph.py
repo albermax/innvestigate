@@ -862,18 +862,24 @@ def print_model_execution_graph(
     def nids_as_str(nids: List[Optional[int]]) -> str:  # type: ignore
         return ", ".join([str(nid) for nid in nids])  # type: ignore
 
-    def print_node(node) -> None:  # node of type NodeDict?
+    def print_node(node) -> None:
         print(
-            f"""[NID: {node["nid"]:4s}] """
+            f"""[NID: {node["nid"]:d}] """
             f"""[Layer: {node["layer"].name:20s}] """
             f"""[Inputs from: {nids_as_str(node["Xs_nids"]):20s}] """
+            f"""[Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
+        )
+
+    def print_input_node(node) -> None:  # node of type NodeDict?
+        print(
+            f"""[Layer: {node["layer"].name:20s}] """
             f"""[Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
         )
 
     if None in graph:  # Input layers in graph have Node-ID `None`
         print("Graph input layers:")
         for input_node in graph[None]:
-            print_node(input_node)
+            print_input_node(input_node)
 
     print("Graph nodes:")
     for nid in sorted([key for key in graph if key is not None]):

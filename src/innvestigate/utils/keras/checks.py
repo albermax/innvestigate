@@ -303,11 +303,11 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     )
     while any(isinstance(x, ignored_layers) for x in layer_inputs):
         tmp = set()
-        for layer_input in layer_inputs:
-            if ignore_reshape_layers and isinstance(layer_input, ignored_layers):
-                tmp.update(get_input_layers(layer_input))
+        for l in layer_inputs:
+            if ignore_reshape_layers and isinstance(l, ignored_layers):
+                tmp.update(get_input_layers(l))
             else:
-                tmp.add(layer_input)
+                tmp.add(l)
         layer_inputs = tmp
 
     return all(isinstance(x, klayers.InputLayer) for x in layer_inputs)
