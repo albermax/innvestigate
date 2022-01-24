@@ -16,7 +16,6 @@ from innvestigate.analyzer.gradient_based import (
     GuidedBackprop,
     InputTimesGradient,
     IntegratedGradients,
-    SmoothGrad,
 )
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPZ,
@@ -46,7 +45,6 @@ methods = {
     "Deconvnet": (Deconvnet, {}),
     "GuidedBackprop": (GuidedBackprop, {}),
     "IntegratedGradients": (IntegratedGradients, {}),
-    "SmoothGrad": (SmoothGrad, {}),
     # Relevance based
     "LRPZ": (LRPZ, {}),
     "LRPZ_Flat_input_layer_rule": (LRPZ, {"input_layer_rule": "Flat"}),
@@ -71,14 +69,13 @@ methods = {
     "BoundedDeepTaylor": (BoundedDeepTaylor, {"low": -128, "high": 128}),
 }
 
-rtol = 1e-3
-atol = 1e-5
+rtol = 1e-2
+atol = 1e-8
 
 # Sizes used for data generation
-input_shape = (10, 10, 3)
-batch_size = 1
-kernel_size = (3, 3)
-pool_size = (2, 2)
+INPUT_SHAPE = (10, 10, 3)
+KERNEL_SIZE = (3, 3)
+POOL_SIZE = (2, 2)
 
 
 def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
@@ -104,9 +101,11 @@ def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
 @pytest.mark.reference
 @pytest.mark.layer
 @pytest.mark.precommit
-@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
-def test_reference_layer(method, kwargs):
-    analyzer_name = method.__name__
+@pytest.mark.parametrize(
+    "analyzer_name, val", methods.items(), ids=list(methods.keys())
+)
+def test_reference_layer(val, analyzer_name):
+    method, kwargs = val
     data_path = os.path.join(
         os.path.abspath(os.curdir),
         "tests",
@@ -119,33 +118,32 @@ def test_reference_layer(method, kwargs):
         assert f.attrs["analyzer_name"] == analyzer_name  # sanity check: correct file
         x = f["input"][:]
 
-        tf.keras.backend.clear_session()
-
         layers_2d = {
-            "Dense": keras.layers.Dense(5, input_shape=input_shape),
+            "Dense": keras.layers.Dense(5, input_shape=INPUT_SHAPE),
             "Dense_relu": keras.layers.Dense(
-                5, activation="relu", input_shape=input_shape
+                5, activation="relu", input_shape=INPUT_SHAPE
             ),
-            "Conv2D": keras.layers.Conv2D(5, kernel_size, input_shape=input_shape),
+            "Conv2D": keras.layers.Conv2D(5, KERNEL_SIZE, input_shape=INPUT_SHAPE),
             "Conv2D_relu": keras.layers.Conv2D(
-                5, kernel_size, activation="relu", input_shape=input_shape
+                5, KERNEL_SIZE, activation="relu", input_shape=INPUT_SHAPE
             ),
             "AveragePooling2D": keras.layers.AveragePooling2D(
-                pool_size, input_shape=input_shape
+                POOL_SIZE, input_shape=INPUT_SHAPE
             ),
             "MaxPooling2D": keras.layers.MaxPooling2D(
-                pool_size, input_shape=input_shape
+                POOL_SIZE, input_shape=INPUT_SHAPE
             ),
         }
 
         for layer_name, layer in layers_2d.items():
+            tf.keras.backend.clear_session()
 
             f_layer = f[layer_name]
             assert f_layer.attrs["layer_name"] == layer_name
             weights = [w[:] for w in f_layer["weights"].values()]
 
             # Get model
-            inputs = keras.layers.Input(shape=input_shape)
+            inputs = keras.layers.Input(shape=INPUT_SHAPE)
             activations = layer(inputs)
             outputs = keras.layers.Flatten()(activations)
             model = keras.Model(inputs=inputs, outputs=outputs, name=layer_name)
