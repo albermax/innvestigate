@@ -310,7 +310,7 @@ class MaxNeuronSelection(klayers.Layer):
     to the max neuron activation."""
 
     def call(self, x: Tensor) -> Tensor:
-        return kbackend.max(x)
+        return kbackend.max(x, axis=-1)
 
 
 class NeuronSelection(klayers.Layer):
