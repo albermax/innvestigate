@@ -93,6 +93,7 @@ markers = [
     "init",
     "lrp",
     "wrapper",
+    "perturbate",
 ]
 
 [tool.coverage.paths]

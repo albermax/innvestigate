@@ -10,6 +10,7 @@ import innvestigate.tools.perturbate
 import innvestigate.backend.sequence as isequence
 
 
+@pytest.mark.perturbate
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__PerturbationAnalysis():
@@ -61,6 +62,7 @@ def test_fast__PerturbationAnalysis():
     assert np.all(np.isclose(scores, expected_scores))
 
 
+@pytest.mark.perturbate
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__Perturbation():
