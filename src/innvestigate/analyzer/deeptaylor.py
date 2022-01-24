@@ -6,10 +6,10 @@ import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
 import innvestigate.analyzer.relevance_based.relevance_rule as lrp_rules
-import innvestigate.utils.keras.checks as ichecks
-import innvestigate.utils.keras.graph as igraph
+import innvestigate.backend.checks as ichecks
+import innvestigate.backend.graph as igraph
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 __all__ = [
     "DeepTaylor",

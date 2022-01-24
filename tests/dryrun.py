@@ -11,7 +11,7 @@ tensorflow.compat.v1.disable_eager_execution()
 
 from innvestigate.analyzer import Random
 from innvestigate.analyzer.base import AnalyzerBase
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 from tests import networks
 

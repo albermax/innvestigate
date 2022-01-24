@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import tensorflow.keras.backend as kbackend
 
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 from tests.networks import base
 

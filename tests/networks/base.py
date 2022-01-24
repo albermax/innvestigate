@@ -4,7 +4,7 @@ from __future__ import annotations
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
-from innvestigate.utils.types import Layer, Model, ShapeTuple
+from innvestigate.backend.types import Layer, Model, ShapeTuple
 
 __all__ = [
     "log_reg",

@@ -8,12 +8,11 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
+import innvestigate.backend as ibackend
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as ibackend
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
-from innvestigate.utils.types import OptionalList, Tensor
+from innvestigate.backend.types import OptionalList, Tensor
 
 __all__ = [
     "WrapperBase",
@@ -131,9 +130,9 @@ class AugmentReduceBase(WrapperBase):
         if len(extra_outputs) > 0:
             raise Exception("No extra output is allowed with this wrapper.")
 
-        new_inputs = self._augment(iutils.to_list(inputs))
+        new_inputs = self._augment(ibackend.to_list(inputs))
 
-        augmented_outputs = iutils.to_list(model(new_inputs + extra_inputs))
+        augmented_outputs = ibackend.to_list(model(new_inputs + extra_inputs))
         new_outputs = self._reduce(augmented_outputs)
         new_constant_inputs = self._keras_get_constant_inputs()
 
@@ -187,7 +186,7 @@ class AugmentReduceBase(WrapperBase):
         """
         return [
             kbackend.repeat_elements(X, self._augment_by_n, axis=0)
-            for X in iutils.to_list(Xs)
+            for X in ibackend.to_list(Xs)
         ]
 
     def _reshape(self, X: Tensor) -> Tensor:
@@ -210,7 +209,7 @@ class AugmentReduceBase(WrapperBase):
         """Reduce input Xs by reshaping and taking the mean along
         the axis of augmentation."""
 
-        reshaped = [self._reshape(X) for X in iutils.to_list(Xs)]
+        reshaped = [self._reshape(X) for X in ibackend.to_list(Xs)]
         means = [kbackend.mean(X, axis=1) for X in reshaped]
         return means
 
@@ -309,7 +308,7 @@ class PathIntegrator(AugmentReduceBase):
 
     def _compute_difference(self, Xs: List[Tensor]) -> List[Tensor]:
         if self._keras_constant_inputs is None:
-            inputs = iutils.keras.broadcast_np_tensors_to_keras_tensors(
+            inputs = ibackend.broadcast_np_tensors_to_keras_tensors(
                 self._reference_inputs, Xs
             )
             self._keras_set_constant_inputs(inputs)

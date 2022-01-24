@@ -8,11 +8,11 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.checks as ichecks
 from innvestigate.analyzer.base import AnalyzerBase
-from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
+from innvestigate.backend.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = ["AnalyzerNetworkBase"]
 
@@ -182,9 +182,9 @@ class AnalyzerNetworkBase(AnalyzerBase):
             constant_inputs = []
             debug_outputs = []
 
-        analysis_outputs = iutils.to_list(analysis_outputs)
-        debug_outputs = iutils.to_list(debug_outputs)
-        constant_inputs = iutils.to_list(constant_inputs)
+        analysis_outputs = ibackend.to_list(analysis_outputs)
+        debug_outputs = ibackend.to_list(debug_outputs)
+        constant_inputs = ibackend.to_list(constant_inputs)
 
         self._n_data_input = len(model_inputs)
         self._n_constant_input = len(constant_inputs)
@@ -278,7 +278,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
             self._handle_debug_output(ret[-self._n_debug_output :])
             ret = ret[: -self._n_debug_output]
 
-        return iutils.unpack_singleton(ret)
+        return ibackend.unpack_singleton(ret)
 
     def _get_neuron_selection_array(
         self, X: Tensor, neuron_selection: OptionalList[int]

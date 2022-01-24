@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import tensorflow.keras.applications as kapps
 
-from innvestigate.utils.keras.graph import model_wo_softmax
-from innvestigate.utils.types import Model
+from innvestigate.backend.graph import model_wo_softmax
+from innvestigate.backend.types import Model
 
 __all__ = [
     "vgg16",

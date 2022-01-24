@@ -1,7 +1,7 @@
 import pytest
 import tensorflow.keras.layers as klayers
 
-import innvestigate.utils.keras.checks as ichecks
+import innvestigate.backend.checks as ichecks
 
 
 @pytest.mark.fast

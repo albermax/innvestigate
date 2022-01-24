@@ -9,9 +9,9 @@ import numpy as np
 import tensorflow.keras.models as kmodels
 
 import innvestigate.analyzer
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.graph as igraph
-from innvestigate.utils.types import LayerCheck, Model, ModelCheckDict, OptionalList
+import innvestigate.backend.graph as igraph
+import innvestigate.backend.sequence as isequence
+from innvestigate.backend.types import LayerCheck, Model, ModelCheckDict, OptionalList
 
 __all__ = [
     "NotAnalyzeableModelException",
@@ -268,7 +268,7 @@ class TrainerMixin:
         """
         Takes the same parameters as Keras's :func:`model.fit` function.
         """
-        generator = iutils.BatchSequence(X, batch_size)
+        generator = isequence.BatchSequence(X, batch_size)
         return self._fit_generator(generator, **kwargs)  # type: ignore
 
     def fit_generator(self, *args, **kwargs):

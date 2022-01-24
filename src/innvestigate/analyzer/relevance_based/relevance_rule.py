@@ -8,11 +8,10 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
 import innvestigate.analyzer.relevance_based.utils as rutils
+import innvestigate.backend as ibackend
+import innvestigate.backend.graph as igraph
 import innvestigate.layers as ilayers
-import innvestigate.utils.keras as ikeras
-import innvestigate.utils.keras.backend as ibackend
-import innvestigate.utils.keras.graph as igraph
-from innvestigate.utils.types import Layer, Tensor
+from innvestigate.backend.types import Layer, Tensor
 
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions
@@ -63,7 +62,7 @@ class ZRule(igraph.ReverseMappingBase):
     ) -> List[Tensor]:
 
         # Get activations.
-        Zs = ikeras.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons
@@ -113,7 +112,7 @@ class EpsilonRule(igraph.ReverseMappingBase):
         )
 
         # Get activations.
-        Zs = ikeras.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
 
         # Divide incoming relevance by the activations.
         tmp = [a / prepare_div(b) for a, b in zip(Rs, Zs)]
@@ -156,7 +155,7 @@ class WSquareRule(igraph.ReverseMappingBase):
         _reverse_state: Dict,
     ) -> List[Tensor]:
         # Create dummy forward path to take the derivative below.
-        Ys = ikeras.apply(self._layer_wo_act_b, Xs)
+        Ys = ibackend.apply(self._layer_wo_act_b, Xs)
 
         # Compute the sum of the weights.
         ones = ilayers.OnesLike()(Xs)
@@ -269,8 +268,8 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
 
         def f(layer1, layer2, X1, X2):
             # Get activations of full positive or negative part.
-            Z1 = ikeras.apply(layer1, X1)
-            Z2 = ikeras.apply(layer2, X2)
+            Z1 = ibackend.apply(layer1, X1)
+            Z2 = ibackend.apply(layer2, X2)
             Zs = [klayers.Add()([a, b]) for a, b in zip(Z1, Z2)]
             # Divide incoming relevance by the activations.
             tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
@@ -285,8 +284,8 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
             return [klayers.Add()([a, b]) for a, b in zip(tmp1, tmp2)]
 
         # Distinguish postive and negative inputs.
-        Xs_pos = ikeras.apply(keep_positives, Xs)
-        Xs_neg = ikeras.apply(keep_negatives, Xs)
+        Xs_pos = ibackend.apply(keep_positives, Xs)
+        Xs_neg = ibackend.apply(keep_negatives, Xs)
         # xpos*wpos + xneg*wneg
         activator_relevances = f(
             self._layer_wo_act_positive, self._layer_wo_act_negative, Xs_pos, Xs_neg
@@ -404,7 +403,7 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
         )
 
         def f(layer: Layer, X):
-            Zs = ikeras.apply(layer, X)
+            Zs = ibackend.apply(layer, X)
             # Divide incoming relevance by the activations.
             tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
@@ -414,8 +413,8 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
             return [klayers.Multiply()([a, b]) for a, b in zip(X, grads)]
 
         # Distinguish postive and negative inputs.
-        Xs_pos = ikeras.apply(keep_positives, Xs)
-        Xs_neg = ikeras.apply(keep_negatives, Xs)
+        Xs_pos = ibackend.apply(keep_positives, Xs)
+        Xs_neg = ibackend.apply(keep_negatives, Xs)
 
         # xpos*wpos
         r_pp = f(self._layer_wo_act_positive, Xs_pos)
@@ -512,9 +511,9 @@ class BoundedRule(igraph.ReverseMappingBase):
         high = [to_high(x) for x in Xs]
 
         # Get values for the division.
-        A = ikeras.apply(self._layer_wo_act, Xs)
-        B = ikeras.apply(self._layer_wo_act_positive, low)
-        C = ikeras.apply(self._layer_wo_act_negative, high)
+        A = ibackend.apply(self._layer_wo_act, Xs)
+        B = ibackend.apply(self._layer_wo_act_positive, low)
+        C = ibackend.apply(self._layer_wo_act_negative, high)
         Zs = [
             klayers.Subtract()([a, klayers.Add()([b, c])]) for a, b, c in zip(A, B, C)
         ]
@@ -583,10 +582,10 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
         # keep_positives = klayers.Lambda(
         #     lambda x: x * kbackend.cast(kbackend.greater(x, 0), kbackend.floatx())
         # )
-        # Xs = ikeras.apply(keep_positives, Xs)
+        # Xs = ibackend.apply(keep_positives, Xs)
 
         # Get activations.
-        Zs = ikeras.apply(self._layer_wo_act_b_positive, Xs)
+        Zs = ibackend.apply(self._layer_wo_act_b_positive, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
         # Propagate the relevance to input neurons

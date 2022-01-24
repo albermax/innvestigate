@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import tensorflow as tf
 
-import innvestigate.utils.keras.graph as igraph
+import innvestigate.backend.graph as igraph
 
 from tests import networks
 

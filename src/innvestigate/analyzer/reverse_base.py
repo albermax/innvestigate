@@ -5,12 +5,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 import numpy as np
 import tensorflow.keras.backend as kbackend
 
+import innvestigate.backend as ibackend
+import innvestigate.backend.graph as igraph
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as ibackend
-import innvestigate.utils.keras.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
-from innvestigate.utils.types import (
+from innvestigate.backend.types import (
     CondReverseMapping,
     Layer,
     Model,
@@ -26,14 +25,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
 
     This class contains many helper functions around the graph
-    reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
+    reverse function :func:`innvestigate.backend.graph.reverse_model`.
 
     The deriving classes should specify how the graph should be reverted
     by implementing the following functions:
 
     * :func:`_reverse_mapping(layer)` given a layer this function
       returns a reverse mapping for the layer as specified in
-      :func:`innvestigate.utils.keras.graph.reverse_model` or None.
+      :func:`innvestigate.backend.graph.reverse_model` or None.
 
       This function can be implemented, but it is encouraged to
       implement a default mapping and add additional changes with
@@ -48,7 +47,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       network.
 
     Furthermore other parameters of the function
-    :func:`innvestigate.utils.keras.graph.reverse_model` can
+    :func:`innvestigate.backend.graph.reverse_model` can
     be changed by setting the according parameters of the
     init function:
 
@@ -66,7 +65,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       backward pass and stores them in the attribute
       :attr:`_reversed_tensors`.
     :param reverse_reapply_on_copied_layers: See
-      :func:`innvestigate.utils.keras.graph.reverse_model`.
+      :func:`innvestigate.backend.graph.reverse_model`.
     """
 
     def __init__(
@@ -121,7 +120,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         """Returns masked gradient."""
         mask = [id(X) not in reverse_state["stop_mapping_at_ids"] for X in Xs]
         grad = ibackend.gradients(Xs, Ys, reversed_Ys)
-        return iutils.apply_mask(grad, mask)
+        return ibackend.apply_mask(grad, mask)
 
     def _reverse_mapping(self, layer: Layer):
         """
@@ -229,7 +228,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return X
 
     def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
-        return iutils.to_list(Xs)
+        return ibackend.to_list(Xs)
 
     def _reverse_model(
         self,
@@ -303,7 +302,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 debug_tensors += tmp
 
             if self._reverse_check_finite:
-                tmp = iutils.to_list(ilayers.FiniteCheck()(tensors))
+                tmp = ibackend.to_list(ilayers.FiniteCheck()(tensors))
                 self._debug_tensors_indices["finite"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),

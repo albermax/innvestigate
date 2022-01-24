@@ -4,7 +4,7 @@ from __future__ import annotations
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 __all__ = [
     "dot",

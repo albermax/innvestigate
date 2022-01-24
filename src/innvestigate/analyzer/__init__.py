@@ -40,7 +40,7 @@ from innvestigate.analyzer.wrapper import AugmentReduceBase  # noqa
 from innvestigate.analyzer.wrapper import GaussianSmoother  # noqa
 from innvestigate.analyzer.wrapper import PathIntegrator  # noqa
 from innvestigate.analyzer.wrapper import WrapperBase  # noqa
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 # Silence flake8
 assert BaselineLRPZ

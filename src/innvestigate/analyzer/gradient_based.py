@@ -6,15 +6,13 @@ import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as ikeras
-import innvestigate.utils.keras.backend as ibackend
-import innvestigate.utils.keras.checks as ichecks
-import innvestigate.utils.keras.graph as igraph
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
+import innvestigate.backend.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 from innvestigate.analyzer.wrapper import GaussianSmoother, PathIntegrator
-from innvestigate.utils.types import List, OptionalList, Tensor
+from innvestigate.backend.types import List, OptionalList, Tensor
 
 __all__ = [
     "BaselineGradient",
@@ -54,9 +52,11 @@ class BaselineGradient(AnalyzerNetworkBase):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
-        ret = iutils.to_list(kbackend.gradients(model.outputs[0], tensors_to_analyze))
+        ret = ibackend.to_list(kbackend.gradients(model.outputs[0], tensors_to_analyze))
 
         if self._postprocess == "abs":
             ret = [kbackend.abs(r) for r in ret]
@@ -156,7 +156,9 @@ class InputTimesGradient(Gradient):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
         gradients = super()._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors
@@ -179,10 +181,10 @@ class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
 
     def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict) -> List[Tensor]:
         # Apply relus conditioned on backpropagated values.
-        reversed_Ys = ikeras.apply(self._activation, reversed_Ys)
+        reversed_Ys = ibackend.apply(self._activation, reversed_Ys)
 
         # Apply gradient of forward pass without relus.
-        Ys_wo_relu = ikeras.apply(self._layer_wo_relu, Xs)
+        Ys_wo_relu = ibackend.apply(self._layer_wo_relu, Xs)
         return ibackend.gradients(Xs, Ys_wo_relu, reversed_Ys)
 
 
@@ -220,7 +222,7 @@ class Deconvnet(ReverseAnalyzerBase):
 def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
     activation = klayers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
-    reversed_Ys = ikeras.apply(activation, reversed_Ys)
+    reversed_Ys = ibackend.apply(activation, reversed_Ys)
 
     # Apply gradient of forward pass.
     return ibackend.gradients(Xs, Ys, reversed_Ys)

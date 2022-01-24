@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import List
 
+import innvestigate.backend as ibackend
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as ibackend
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
-from innvestigate.utils.types import Tensor
+from innvestigate.backend.types import Tensor
 
 __all__ = ["Random", "Input"]
 
@@ -25,7 +24,9 @@ class Input(AnalyzerNetworkBase):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
         return [ilayers.Identity()(x) for x in tensors_to_analyze]
 
@@ -47,7 +48,9 @@ class Random(AnalyzerNetworkBase):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            X for X in iutils.to_list(model.inputs) if X not in stop_analysis_at_tensors
+            X
+            for X in ibackend.to_list(model.inputs)
+            if X not in stop_analysis_at_tensors
         ]
         tensors_with_noise = [
             ibackend.add_gaussian_noise(X, stddev=self._stddev)

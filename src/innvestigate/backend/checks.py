@@ -8,8 +8,8 @@ from typing import Set
 import tensorflow.keras.layers as klayers
 from tensorflow import Module, keras
 
-import innvestigate.utils as iutils
-from innvestigate.utils.types import Layer
+import innvestigate.backend as ibackend
+from innvestigate.backend.types import Layer
 
 __all__ = [
     "get_activation_search_safe_layers",
@@ -292,7 +292,7 @@ def get_input_layers(layer: Layer) -> Set[Layer]:
     ret = set()
 
     for node_index in range(len(layer._inbound_nodes)):
-        Xs = iutils.to_list(layer.get_input_at(node_index))
+        Xs = ibackend.to_list(layer.get_input_at(node_index))
         for X in Xs:
             ret.add(X._keras_history[0])
 

@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.utils as kutils
 
-import innvestigate.utils as iutils
+import innvestigate.backend.sequence as isequence
 
 
 class Perturbation:
@@ -264,7 +264,7 @@ class PerturbationAnalysis:
     :type analyzer: innvestigate.analyzer.base.AnalyzerBase
     :param model: Trained Keras model.
     :param generator: Data generator.
-    :type generator: innvestigate.utils.BatchSequence
+    :type generator: innvestigate.sequence.BatchSequence
     :param perturbation: Instance of Perturbation class that performs the perturbation.
     :type perturbation: innvestigate.tools.Perturbation
     :param steps: Number of perturbation steps.
@@ -310,7 +310,7 @@ class PerturbationAnalysis:
             X = np.array(X)
             Y = np.array(Y)
             analysis = np.array(analysis)
-            self.analysis_generator = iutils.BatchSequence(
+            self.analysis_generator = isequence.BatchSequence(
                 [X, Y, analysis], batch_size=256
             )
         self.verbose = verbose

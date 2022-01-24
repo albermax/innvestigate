@@ -8,9 +8,8 @@ import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as ibackend
-from innvestigate.utils.types import OptionalList, ShapeTuple, Tensor
+import innvestigate.backend as ibackend
+from innvestigate.backend.types import OptionalList, ShapeTuple, Tensor
 
 __all__ = [
     "OnesLike",
@@ -42,19 +41,19 @@ class OnesLike(klayers.Layer):
     """Create list of all-ones tensors of the same shapes as provided tensors."""
 
     def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [kbackend.ones_like(tmp) for tmp in iutils.to_list(x)]
+        return [kbackend.ones_like(tmp) for tmp in ibackend.to_list(x)]
 
 
 class AsFloatX(klayers.Layer):
     def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [ibackend.cast_to_floatx(tmp) for tmp in iutils.to_list(x)]
+        return [ibackend.cast_to_floatx(tmp) for tmp in ibackend.to_list(x)]
 
 
 class FiniteCheck(klayers.Layer):
     def call(self, Xs: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
         return [
             kbackend.sum(ibackend.cast_to_floatx(ibackend.is_not_finite(X)))
-            for X in iutils.to_list(Xs)
+            for X in ibackend.to_list(Xs)
         ]
 
 

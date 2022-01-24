@@ -7,7 +7,7 @@ from typing import Iterator, List, Tuple
 
 import tensorflow.keras.backend as kbackend
 
-from innvestigate.utils.types import Model
+from innvestigate.backend.types import Model
 
 from tests.networks import imagenet, mnist, trivia
 

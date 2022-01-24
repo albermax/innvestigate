@@ -9,14 +9,12 @@ import tensorflow.keras.layers as klayers
 
 import innvestigate.analyzer.relevance_based.relevance_rule as rrule
 import innvestigate.analyzer.relevance_based.utils as rutils
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as ikeras
-import innvestigate.utils.keras.backend as ibackend
-import innvestigate.utils.keras.checks as ichecks
-import innvestigate.utils.keras.graph as igraph
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
+import innvestigate.backend.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
-from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
+from innvestigate.backend.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = [
     "BaselineLRPZ",
@@ -133,9 +131,11 @@ class BaselineLRPZ(AnalyzerNetworkBase):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
-        gradients = iutils.to_list(
+        gradients = ibackend.to_list(
             kbackend.gradients(model.outputs[0], tensors_to_analyze)
         )
         return [
@@ -241,9 +241,9 @@ class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
             * kbackend.epsilon()
         )
 
-        x_minus_mu = ikeras.apply(minus_mu, Xs)
+        x_minus_mu = ibackend.apply(minus_mu, Xs)
         if self._center:
-            y_minus_beta = ikeras.apply(minus_beta, Ys)
+            y_minus_beta = ibackend.apply(minus_beta, Ys)
         else:
             y_minus_beta = Ys
 
@@ -279,7 +279,7 @@ class AddReverseLayer(igraph.ReverseMappingBase):
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
         # Get activations.
-        Zs = ikeras.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 
@@ -311,7 +311,7 @@ class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
         # Get activations.
-        Zs = ikeras.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
         tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 

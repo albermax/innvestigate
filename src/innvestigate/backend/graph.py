@@ -12,11 +12,10 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.checks as ichecks
-from innvestigate.utils.keras import apply as kapply
-from innvestigate.utils.types import (
+from innvestigate.backend.types import (
     Layer,
     LayerCheck,
     Model,
@@ -92,9 +91,9 @@ def get_layer_neuronwise_io(
         raise NotImplementedError()
 
     if Xs is None:
-        Xs = iutils.to_list(layer.get_input_at(node_index))
+        Xs = ibackend.to_list(layer.get_input_at(node_index))
     if Ys is None:
-        Ys = iutils.to_list(layer.get_output_at(node_index))
+        Ys = ibackend.to_list(layer.get_output_at(node_index))
 
     if isinstance(layer, klayers.Dense):
         # Xs and Ys are already in shape.
@@ -344,7 +343,7 @@ def pre_softmax_tensors(Xs: Tensor, should_find_softmax: bool = True) -> List[Te
     """Finds the tensors that were preceeding a potential softmax."""
     softmax_found = False
 
-    Xs = iutils.to_list(Xs)
+    Xs = ibackend.to_list(Xs)
     ret = []
     for x in Xs:
         layer, node_index, _tensor_index = x._keras_history
@@ -407,7 +406,7 @@ def model_contains(
         contains a list of layers which satisfy that condition.
     :rtype: List[List[Layer]]
     """
-    conditions = iutils.to_list(layer_condition)
+    conditions = ibackend.to_list(layer_condition)
     layers = get_model_layers(model)
 
     # return layers for which condition c holds true
@@ -525,7 +524,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 reverse_state,
             ):
 
-                X2s = kapply(surrogate_layer1, Xs)
+                X2s = ibackend.apply(surrogate_layer1, Xs)
                 # Apply first mapping
                 # TODO (alber): update reverse state
                 reversed_X2s = actual_mapping_2(X2s, Ys, reversed_Ys, reverse_state)
@@ -616,7 +615,7 @@ def trace_model_execution(
             model_copy: Model = kmodels.Model(
                 inputs=model.inputs, outputs=model.outputs
             )
-            outputs = iutils.to_list(model_copy(model.inputs))
+            outputs = ibackend.to_list(model_copy(model.inputs))
         finally:
             # Revert the monkey patches
             for layer, old_method in monkey_patches:
@@ -637,14 +636,14 @@ def trace_model_execution(
 
         for layer, Xs, Ys in executed_nodes:
             layer = layer_mapping[layer]
-            Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
+            Xs, Ys = ibackend.to_list(Xs), ibackend.to_list(Ys)
 
             if isinstance(layer, klayers.InputLayer):
                 # Special case. Do nothing.
                 new_Xs, new_Ys = Xs, Ys
             else:
                 new_Xs = [tensor_mapping[x] for x in Xs]
-                new_Ys = iutils.to_list(kapply(layer, new_Xs))
+                new_Ys = ibackend.to_list(ibackend.apply(layer, new_Xs))
 
             # Update values of Ys in tensor_mapping with new_Ys
             tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
@@ -661,8 +660,8 @@ def trace_model_execution(
         reverse_executed_nodes = [
             (
                 node.outbound_layer,
-                iutils.to_list(node.input_tensors),
-                iutils.to_list(node.output_tensors),
+                ibackend.to_list(node.input_tensors),
+                ibackend.to_list(node.output_tensors),
             )
             for depth in sorted(model._nodes_by_depth.keys())
             for node in model._nodes_by_depth[depth]
@@ -1219,7 +1218,7 @@ def reverse_model(
         elif ichecks.is_module(layer):
             raise Exception("This is not supposed to happen!")
         else:
-            Xs, Ys = iutils.to_list(Xs), iutils.to_list(Ys)
+            Xs, Ys = ibackend.to_list(Xs), ibackend.to_list(Ys)
             if not all(id(Y) in reversed_tensors for Y in Ys):
                 # This node is not part of our computational graph.
                 # The (node-)world is bigger than this model.
@@ -1245,7 +1244,7 @@ def reverse_model(
                     "stop_mapping_at_ids": local_stop_mapping_at_ids,
                 },
             )
-            reversed_Xs = iutils.to_list(reversed_Xs)
+            reversed_Xs = ibackend.to_list(reversed_Xs)
             add_reversed_tensors(nid, Xs, reversed_Xs)
 
     # Return requested values
