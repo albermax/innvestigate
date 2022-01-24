@@ -121,7 +121,7 @@ class AnalyzerBase(metaclass=ABCMeta):
 
                     if check_type == "exception":
                         raise NotAnalyzeableModelException(tmp_message)
-                    elif check_type == "warning":
+                    if check_type == "warning":
                         # TODO(albermax) only the first warning will be shown
                         warnings.warn(tmp_message)
                     raise NotImplementedError()

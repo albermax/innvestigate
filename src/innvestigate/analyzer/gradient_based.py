@@ -149,7 +149,7 @@ class InputTimesGradient(Gradient):
 
     def __init__(self, model, **kwargs):
 
-        super(InputTimesGradient, self).__init__(model, **kwargs)
+        super().__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=None):
         if stop_analysis_at_tensors is None:
@@ -172,7 +172,7 @@ class InputTimesGradient(Gradient):
 
 
 class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
-    def __init__(self, layer, state):
+    def __init__(self, layer, _state):
         self._activation = klayers.Activation("relu")
         self._layer_wo_relu = igraph.copy_layer_wo_activation(
             layer,
@@ -219,7 +219,7 @@ class Deconvnet(ReverseAnalyzerBase):
         return super()._create_analysis(*args, **kwargs)
 
 
-def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
+def guided_backprop_reverse_relu_layer(Xs, Ys, reversed_Ys, _reverse_state: Dict):
     activation = klayers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
     reversed_Ys = ibackend.apply(activation, reversed_Ys)
@@ -243,7 +243,7 @@ class GuidedBackprop(ReverseAnalyzerBase):
         self._add_model_softmax_check()
         self._add_model_check(
             lambda layer: not ichecks.only_relu_activation(layer),
-            "GuidedBackprop is only specified for " "networks with ReLU activations.",
+            "GuidedBackprop is only specified for networks with ReLU activations.",
             check_type="exception",
         )
         self._do_model_checks()
@@ -252,7 +252,7 @@ class GuidedBackprop(ReverseAnalyzerBase):
 
         self._add_conditional_reverse_mapping(
             lambda layer: ichecks.contains_activation(layer, "relu"),
-            GuidedBackpropReverseReLULayer,
+            guided_backprop_reverse_relu_layer,
             name="guided_backprop_reverse_relu_layer",
         )
 

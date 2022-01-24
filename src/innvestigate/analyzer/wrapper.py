@@ -160,9 +160,8 @@ class AugmentReduceBase(WrapperBase):
             indices = np.argmax(pred, axis=1)
         elif ns_mode == "index":
             # TODO: make neuron_selection arg or kwarg, not both
-            if len(args):
-                arglist = list(args)
-                indices = arglist.pop(0)
+            if args:
+                indices = list(args).pop(0)
             else:
                 indices = kwargs.pop("neuron_selection")
 
@@ -246,8 +245,8 @@ class GaussianSmoother(AugmentReduceBase):
         super().__init__(subanalyzer, *args, **kwargs)
         self._noise_scale = noise_scale
 
-    def _augment(self, X: OptionalList[Tensor]) -> List[Tensor]:
-        repeated_Xs = super()._augment(X)
+    def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        repeated_Xs = super()._augment(Xs)
         noisy_Xs = [
             ibackend.add_gaussian_noise(X, stddev=self._noise_scale)
             for X in repeated_Xs
@@ -318,8 +317,8 @@ class PathIntegrator(AugmentReduceBase):
         reference_inputs = self._keras_get_constant_inputs()  # type: ignore
         return [klayers.subtract([x, ri]) for x, ri in zip(Xs, reference_inputs)]
 
-    def _augment(self, X):
-        difference = self._compute_difference(X)
+    def _augment(self, Xs):
+        difference = self._compute_difference(Xs)
         self._keras_difference = difference
         # Make broadcastable.
         difference = [
@@ -337,8 +336,8 @@ class PathIntegrator(AugmentReduceBase):
         ret = [ilayers.Reshape((-1,) + kbackend.int_shape(x)[2:])(x) for x in ret]
         return ret
 
-    def _reduce(self, X):
-        tmp = super()._reduce(X)
+    def _reduce(self, Xs):
+        tmp = super()._reduce(Xs)
         difference = self._keras_difference
         del self._keras_difference
 

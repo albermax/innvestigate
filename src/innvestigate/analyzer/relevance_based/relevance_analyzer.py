@@ -166,9 +166,9 @@ LRP_RULES: Dict = {
 
 
 class EmbeddingReverseLayer(igraph.ReverseMappingBase):
-    def __init__(self, layer, state):
+    def __init__(self, _layer, _state):
         # TODO: implement rule support.
-        return
+        pass
 
     def apply(self, _Xs, _Ys, Rs, _reverse_state: Dict):
         # the embedding layer outputs for an (indexed) input a vector.
@@ -261,7 +261,7 @@ class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
 class AddReverseLayer(igraph.ReverseMappingBase):
     """Special Add layer handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
+    def __init__(self, layer, _state):
         self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_kernel_%s"
         )
@@ -293,7 +293,7 @@ class AddReverseLayer(igraph.ReverseMappingBase):
 class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
     """Special AveragePooling handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
+    def __init__(self, layer, _state):
         self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_kernel_%s"
         )
@@ -416,8 +416,7 @@ class LRP(ReverseAnalyzerBase):
                 input_layer_rule = BoundedProxyRule
 
             if use_conditions is True:
-                is_input: LayerCheck = lambda layer: ichecks.is_input_layer(layer)
-                rules.insert(0, (is_input, input_layer_rule))
+                rules.insert(0, (ichecks.is_input_layer, input_layer_rule))
             else:
                 rules.insert(0, input_layer_rule)
 
@@ -506,7 +505,7 @@ class LRP(ReverseAnalyzerBase):
             len(Xs) == len(Ys)
             and isinstance(reverse_state["layer"], (klayers.Activation,))
             and all(
-                [kbackend.int_shape(x) == kbackend.int_shape(y) for x, y in zip(Xs, Ys)]
+                kbackend.int_shape(x) == kbackend.int_shape(y) for x, y in zip(Xs, Ys)
             )
         ):
             # Expect Xs and Ys to have the same shapes.

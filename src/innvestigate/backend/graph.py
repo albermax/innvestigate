@@ -257,7 +257,7 @@ def get_layer_from_config(
                 )
 
             symbolic_names = get_symbolic_weight_names(old_layer)
-            update = {name: weight for name, weight in zip(symbolic_names, weights)}
+            update = dict(zip(symbolic_names, weights))
             update_symbolic_weights(new_layer, update)
 
     return new_layer
@@ -431,7 +431,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
         raise ValueError("fuse_mode can only be 'one_linear' or 'two_linear'")
 
     # TODO (alber): remove this workaround and make a proper class
-    def ScaleLayer(kernel, bias):
+    def get_scale_layer(kernel, bias):
         _kernel = kernel
         _bias = bias
 
@@ -469,8 +469,8 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                     )
                 super().build(input_shape)
 
-            def call(self, x):
-                ret = x * self.kernel
+            def call(self, inputs, *_args, **_kwargs):
+                ret = inputs * self.kernel
                 if self.use_bias:
                     ret += self.bias
                 return ret
@@ -496,7 +496,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
             tmp_b = -mean / tmp + beta
 
             inputs = layer.get_input_at(0)
-            surrogate_layer = ScaleLayer(tmp_k, tmp_b)
+            surrogate_layer = get_scale_layer(tmp_k, tmp_b)
             # init layer
             surrogate_layer(inputs)
             actual_mapping = mapping(surrogate_layer, reverse_state).apply
@@ -508,8 +508,8 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
             tmp_b2 = beta
 
             inputs = layer.get_input_at(0)
-            surrogate_layer1 = ScaleLayer(tmp_k1, tmp_b1)
-            surrogate_layer2 = ScaleLayer(tmp_k2, tmp_b2)
+            surrogate_layer1 = get_scale_layer(tmp_k1, tmp_b1)
+            surrogate_layer2 = get_scale_layer(tmp_k2, tmp_b2)
             # init layers
             surrogate_layer1(inputs)
             surrogate_layer2(inputs)
@@ -559,7 +559,7 @@ def trace_model_execution(
     # Check if some layers are containers.
     # Ignoring the outermost container, i.e. the passed model.
     contains_container: bool = any(
-        [((l is not model) and ichecks.is_module(l)) for l in layers]
+        l is not model and ichecks.is_module(l) for l in layers
     )
 
     outputs: List[Tensor]
@@ -598,14 +598,14 @@ def trace_model_execution(
                         "Should not happen as we patch objects, not classes."
                     )
 
-                def f(*args, **kwargs):
+                def patched_fn(*args, **kwargs):
                     input_tensors = args[0]
                     output_tensors = method(*args, **kwargs)
                     executed_nodes.append((self, input_tensors, output_tensors))
                     return output_tensors
 
-                f.__patched__ = True  # type: ignore
-                return f
+                patched_fn.__patched__ = True  # type: ignore
+                return patched_fn
 
             # Apply the patches.
             for layer in layers:
@@ -646,7 +646,7 @@ def trace_model_execution(
                 new_Ys = ibackend.to_list(ibackend.apply(layer, new_Xs))
 
             # Update values of Ys in tensor_mapping with new_Ys
-            tensor_mapping.update({k: v for k, v in zip(Ys, new_Ys)})
+            tensor_mapping.update(dict(zip(Ys, new_Ys)))
             new_executed_nodes.append((layer, new_Xs, new_Ys))
 
         layers = [layer_mapping[layer] for layer in layers]
@@ -678,7 +678,7 @@ def trace_model_execution(
     used_as_input = [id(out) for out in outputs]
     tmp = []
     for l, Xs, Ys in reversed(executed_nodes):
-        if all([id(Y) in used_as_input for Y in Ys]):
+        if all(id(Y) in used_as_input for Y in Ys):
             used_as_input += [id(X) for X in Xs]
             tmp.append((l, Xs, Ys))
     executed_nodes = list(reversed(tmp))
@@ -967,9 +967,6 @@ def get_bottleneck_tensors(
 
 
 class ReverseMappingBase(metaclass=ABCMeta):
-    def __init__(self, layer: Layer, state: Dict[str, Any]) -> None:
-        pass
-
     @abstractmethod
     def apply(
         self,
@@ -1057,9 +1054,9 @@ def reverse_model(
             "expected to be `False` or tuple with min/max values.",
         )
 
-    def _print(s):
+    def _print(x):
         if verbose is True:
-            print(s)
+            print(x)
 
     # Initialize structure that keeps track of reversed tensors
     # maps tensor to reverse tensor and additional node information

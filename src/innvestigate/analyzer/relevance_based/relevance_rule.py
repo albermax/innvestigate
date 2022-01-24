@@ -11,7 +11,7 @@ import innvestigate.analyzer.relevance_based.utils as rutils
 import innvestigate.backend as ibackend
 import innvestigate.backend.graph as igraph
 import innvestigate.layers as ilayers
-from innvestigate.backend.types import Layer, Tensor
+from innvestigate.backend.types import Layer, OptionalList, Tensor
 
 # TODO: differentiate between LRP and DTD rules?
 # DTD rules are special cases of LRP rules with additional assumptions
@@ -47,11 +47,10 @@ class ZRule(igraph.ReverseMappingBase):
     which considers the bias a constant input neuron.
     """
 
-    def __init__(self, layer: Layer, state, bias: bool = True) -> None:
+    def __init__(self, layer: Layer, _state, bias: bool = True) -> None:
         self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s"
         )
-        super().__init__(layer, state)
 
     def apply(
         self,
@@ -90,7 +89,7 @@ class EpsilonRule(igraph.ReverseMappingBase):
     0 is considered to be positive, ie sign(0) = 1
     """
 
-    def __init__(self, layer: Layer, state, epsilon=1e-7, bias: bool = True):
+    def __init__(self, layer: Layer, _state, epsilon=1e-7, bias: bool = True):
         self._epsilon = rutils.assert_lrp_epsilon_param(epsilon, self)
         self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, keep_bias=bias, name_template="reversed_kernel_%s"
@@ -133,7 +132,7 @@ class EpsilonIgnoreBiasRule(EpsilonRule):
 class WSquareRule(igraph.ReverseMappingBase):
     """W**2 rule from Deep Taylor Decomposition"""
 
-    def __init__(self, layer: Layer, state, copy_weights=False) -> None:
+    def __init__(self, layer: Layer, _state, copy_weights=False) -> None:
         # W-square rule works with squared weights and no biases.
         if copy_weights:
             weights = layer.get_weights()
@@ -170,7 +169,7 @@ class WSquareRule(igraph.ReverseMappingBase):
 class FlatRule(WSquareRule):
     """Same as W**2 rule but sets all weights to ones."""
 
-    def __init__(self, layer: Layer, state, copy_weights: bool = False) -> None:
+    def __init__(self, layer: Layer, _state, copy_weights: bool = False) -> None:
         # The flat rule works with weights equal to one and
         # no biases.
         if copy_weights:
@@ -266,7 +265,12 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
             lambda x: x * kbackend.cast(kbackend.less(x, 0), kbackend.floatx())
         )
 
-        def f(layer1, layer2, X1, X2):
+        def fn_tmp(
+            layer1: Layer,
+            layer2: Layer,
+            X1: OptionalList[Tensor],
+            X2: OptionalList[Tensor],
+        ):
             # Get activations of full positive or negative part.
             Z1 = ibackend.apply(layer1, X1)
             Z2 = ibackend.apply(layer2, X2)
@@ -287,13 +291,13 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
         Xs_pos = ibackend.apply(keep_positives, Xs)
         Xs_neg = ibackend.apply(keep_negatives, Xs)
         # xpos*wpos + xneg*wneg
-        activator_relevances = f(
+        activator_relevances = fn_tmp(
             self._layer_wo_act_positive, self._layer_wo_act_negative, Xs_pos, Xs_neg
         )
 
         if self._beta:  # only compute beta-weighted contributions of beta is not zero
             # xpos*wneg + xneg*wpos
-            inhibitor_relevances = f(
+            inhibitor_relevances = fn_tmp(
                 self._layer_wo_act_negative, self._layer_wo_act_positive, Xs_pos, Xs_neg
             )
             return [
@@ -402,24 +406,24 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
             lambda x: x * kbackend.cast(kbackend.less(x, 0), kbackend.floatx())
         )
 
-        def f(layer: Layer, X):
-            Zs = ibackend.apply(layer, X)
+        def fn_tmp(layer: Layer, Xs: OptionalList[Tensor]):
+            Zs = ibackend.apply(layer, Xs)
             # Divide incoming relevance by the activations.
             tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
             # Propagate the relevance to the input neurons
             # using the gradient
-            grads = ibackend.gradients(X, Zs, tmp)
+            grads = ibackend.gradients(Xs, Zs, tmp)
             # Re-weight relevance with the input values.
-            return [klayers.Multiply()([a, b]) for a, b in zip(X, grads)]
+            return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
         # Distinguish postive and negative inputs.
         Xs_pos = ibackend.apply(keep_positives, Xs)
         Xs_neg = ibackend.apply(keep_negatives, Xs)
 
         # xpos*wpos
-        r_pp = f(self._layer_wo_act_positive, Xs_pos)
+        r_pp = fn_tmp(self._layer_wo_act_positive, Xs_pos)
         # xneg*wneg
-        r_nn = f(self._layer_wo_act_negative, Xs_neg)
+        r_nn = fn_tmp(self._layer_wo_act_negative, Xs_neg)
         # a0 * r_pp + a1 * r_nn
         r_pos = [
             klayers.Add()([times_alpha0(pp), times_beta1(nn)])
@@ -427,9 +431,9 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
         ]
 
         # xpos*wneg
-        r_pn = f(self._layer_wo_act_negative, Xs_pos)
+        r_pn = fn_tmp(self._layer_wo_act_negative, Xs_pos)
         # xneg*wpos
-        r_np = f(self._layer_wo_act_positive, Xs_neg)
+        r_np = fn_tmp(self._layer_wo_act_positive, Xs_neg)
         # b0 * r_pn + b1 * r_np
         r_neg = [
             klayers.Add()([times_beta0(pn), times_beta1(np)])
@@ -555,7 +559,7 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
     for alpha=1, beta=0 and assumes inputs x >= 0.
     """
 
-    def __init__(self, layer: Layer, state, copy_weights=False):
+    def __init__(self, layer: Layer, _state, copy_weights=False):
         # The z-plus rule only works with positive weights and
         # no biases.
         # TODO: assert that layer inputs are always >= 0
