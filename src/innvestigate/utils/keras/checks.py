@@ -91,6 +91,16 @@ def contains_activation(layer: Layer, activation: str = None) -> bool:
     return False
 
 
+ACTIVATION_LAYERS = (
+    klayers.ReLU,
+    klayers.ELU,
+    klayers.LeakyReLU,
+    klayers.PReLU,
+    klayers.Softmax,
+    klayers.ThresholdedReLU,
+)
+
+
 def contains_any_activation(layer: Layer) -> bool:
     """Check whether layer contains any activation or is activation layer.
 
@@ -99,15 +109,8 @@ def contains_any_activation(layer: Layer) -> bool:
     :return: True if activation was found.
     :rtype: bool
     """
-    activation_layers = (
-        klayers.ReLU,
-        klayers.ELU,
-        klayers.LeakyReLU,
-        klayers.PReLU,
-        klayers.Softmax,
-        klayers.ThresholdedReLU,
-    )
-    return hasattr(layer, "activation") or isinstance(layer, activation_layers)
+
+    return hasattr(layer, "activation") or isinstance(layer, ACTIVATION_LAYERS)
 
 
 def contains_kernel(layer: Layer) -> bool:
@@ -142,19 +145,22 @@ def is_module(layer) -> bool:
     return isinstance(layer, Module)
 
 
+CONV_LAYERS = (
+    klayers.Conv1D,
+    klayers.Conv2D,
+    klayers.Conv2DTranspose,
+    klayers.Conv3D,
+    klayers.Conv3DTranspose,
+    klayers.SeparableConv1D,
+    klayers.SeparableConv2D,
+    klayers.DepthwiseConv2D,
+)
+
+
 def is_conv_layer(layer: Layer, *_args, **_kwargs) -> bool:
     """Checks if layer is a convolutional layer."""
-    conv_layers = (
-        klayers.Conv1D,
-        klayers.Conv2D,
-        klayers.Conv2DTranspose,
-        klayers.Conv3D,
-        klayers.Conv3DTranspose,
-        klayers.SeparableConv1D,
-        klayers.SeparableConv2D,
-        klayers.DepthwiseConv2D,
-    )
-    return isinstance(layer, conv_layers)
+
+    return isinstance(layer, CONV_LAYERS)
 
 
 def is_embedding_layer(layer: Layer, *_args, **_kwargs) -> bool:
@@ -177,100 +183,108 @@ def is_dense_layer(layer: Layer, *_args, **_kwargs) -> bool:
     return isinstance(layer, klayers.Dense)
 
 
+CONVNET_LAYERS = (
+    klayers.InputLayer,
+    klayers.ELU,
+    klayers.LeakyReLU,
+    klayers.PReLU,
+    klayers.Softmax,
+    klayers.ThresholdedReLU,
+    klayers.Conv1D,
+    klayers.Conv2D,
+    klayers.Conv2DTranspose,
+    klayers.Conv3D,
+    klayers.Conv3DTranspose,
+    klayers.Cropping1D,
+    klayers.Cropping2D,
+    klayers.Cropping3D,
+    klayers.SeparableConv1D,
+    klayers.SeparableConv2D,
+    klayers.UpSampling1D,
+    klayers.UpSampling2D,
+    klayers.UpSampling3D,
+    klayers.ZeroPadding1D,
+    klayers.ZeroPadding2D,
+    klayers.ZeroPadding3D,
+    klayers.Activation,
+    klayers.ActivityRegularization,
+    klayers.Dense,
+    klayers.Dropout,
+    klayers.Flatten,
+    klayers.Lambda,
+    klayers.Masking,
+    klayers.Permute,
+    klayers.RepeatVector,
+    klayers.Reshape,
+    klayers.SpatialDropout1D,
+    klayers.SpatialDropout2D,
+    klayers.SpatialDropout3D,
+    klayers.Embedding,
+    klayers.LocallyConnected1D,
+    klayers.LocallyConnected2D,
+    klayers.Add,
+    klayers.Average,
+    klayers.Concatenate,
+    klayers.Dot,
+    klayers.Maximum,
+    klayers.Minimum,
+    klayers.Multiply,
+    klayers.Subtract,
+    klayers.AlphaDropout,
+    klayers.GaussianDropout,
+    klayers.GaussianNoise,
+    klayers.BatchNormalization,
+    klayers.AveragePooling1D,
+    klayers.AveragePooling2D,
+    klayers.AveragePooling3D,
+    klayers.GlobalAveragePooling1D,
+    klayers.GlobalAveragePooling2D,
+    klayers.GlobalAveragePooling3D,
+    klayers.GlobalMaxPooling1D,
+    klayers.GlobalMaxPooling2D,
+    klayers.GlobalMaxPooling3D,
+    klayers.MaxPooling1D,
+    klayers.MaxPooling2D,
+    klayers.MaxPooling3D,
+)
+
+
 def is_convnet_layer(layer: Layer) -> bool:
     """Checks if layer is from a convolutional network."""
     # Inside function to not break import if Keras changes.
-    convnet_layers = (
-        klayers.InputLayer,
-        klayers.ELU,
-        klayers.LeakyReLU,
-        klayers.PReLU,
-        klayers.Softmax,
-        klayers.ThresholdedReLU,
-        klayers.Conv1D,
-        klayers.Conv2D,
-        klayers.Conv2DTranspose,
-        klayers.Conv3D,
-        klayers.Conv3DTranspose,
-        klayers.Cropping1D,
-        klayers.Cropping2D,
-        klayers.Cropping3D,
-        klayers.SeparableConv1D,
-        klayers.SeparableConv2D,
-        klayers.UpSampling1D,
-        klayers.UpSampling2D,
-        klayers.UpSampling3D,
-        klayers.ZeroPadding1D,
-        klayers.ZeroPadding2D,
-        klayers.ZeroPadding3D,
-        klayers.Activation,
-        klayers.ActivityRegularization,
-        klayers.Dense,
-        klayers.Dropout,
-        klayers.Flatten,
-        klayers.Lambda,
-        klayers.Masking,
-        klayers.Permute,
-        klayers.RepeatVector,
-        klayers.Reshape,
-        klayers.SpatialDropout1D,
-        klayers.SpatialDropout2D,
-        klayers.SpatialDropout3D,
-        klayers.Embedding,
-        klayers.LocallyConnected1D,
-        klayers.LocallyConnected2D,
-        klayers.Add,
-        klayers.Average,
-        klayers.Concatenate,
-        klayers.Dot,
-        klayers.Maximum,
-        klayers.Minimum,
-        klayers.Multiply,
-        klayers.Subtract,
-        klayers.AlphaDropout,
-        klayers.GaussianDropout,
-        klayers.GaussianNoise,
-        klayers.BatchNormalization,
-        klayers.AveragePooling1D,
-        klayers.AveragePooling2D,
-        klayers.AveragePooling3D,
-        klayers.GlobalAveragePooling1D,
-        klayers.GlobalAveragePooling2D,
-        klayers.GlobalAveragePooling3D,
-        klayers.GlobalMaxPooling1D,
-        klayers.GlobalMaxPooling2D,
-        klayers.GlobalMaxPooling3D,
-        klayers.MaxPooling1D,
-        klayers.MaxPooling2D,
-        klayers.MaxPooling3D,
-    )
-    return isinstance(layer, convnet_layers)
+
+    return isinstance(layer, CONVNET_LAYERS)
+
+
+AVERAGEPOOLING_LAYERS = (
+    klayers.AveragePooling1D,
+    klayers.AveragePooling2D,
+    klayers.AveragePooling3D,
+    klayers.GlobalAveragePooling1D,
+    klayers.GlobalAveragePooling2D,
+    klayers.GlobalAveragePooling3D,
+)
 
 
 def is_average_pooling(layer: Layer) -> bool:
     """Checks if layer is an average-pooling layer."""
-    averagepooling_layers = (
-        klayers.AveragePooling1D,
-        klayers.AveragePooling2D,
-        klayers.AveragePooling3D,
-        klayers.GlobalAveragePooling1D,
-        klayers.GlobalAveragePooling2D,
-        klayers.GlobalAveragePooling3D,
-    )
-    return isinstance(layer, averagepooling_layers)
+
+    return isinstance(layer, AVERAGEPOOLING_LAYERS)
+
+
+MAXPOOLING_LAYERS = (
+    klayers.MaxPooling1D,
+    klayers.MaxPooling2D,
+    klayers.MaxPooling3D,
+    klayers.GlobalMaxPooling1D,
+    klayers.GlobalMaxPooling2D,
+    klayers.GlobalMaxPooling3D,
+)
 
 
 def is_max_pooling(layer: Layer) -> bool:
     """Checks if layer is a max-pooling layer."""
-    maxpooling_layers = (
-        klayers.MaxPooling1D,
-        klayers.MaxPooling2D,
-        klayers.MaxPooling3D,
-        klayers.GlobalMaxPooling1D,
-        klayers.GlobalMaxPooling2D,
-        klayers.GlobalMaxPooling3D,
-    )
-    return isinstance(layer, maxpooling_layers)
+    return isinstance(layer, MAXPOOLING_LAYERS)
 
 
 def get_input_layers(layer: Layer) -> Set[Layer]:
