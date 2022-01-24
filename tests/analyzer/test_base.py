@@ -55,8 +55,7 @@ methods.update(
 )
 
 # Dryrun all methods
-
-
+@pytest.mark.base
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -73,6 +72,7 @@ def test_fast(method, kwargs):
     dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.base
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -89,6 +89,7 @@ def test_fast_serialize(method, kwargs):
     dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.base
 @pytest.mark.mnist
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -104,6 +105,7 @@ def test_precommit(method, kwargs):
 #######
 
 
+@pytest.mark.base
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__BasicGraphReversal():
@@ -118,6 +120,7 @@ def test_fast__BasicGraphReversal():
     dryrun.test_equal_analyzer(method1, method2, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.base
 @pytest.mark.mnist
 @pytest.mark.precommit
 def test_precommit__BasicGraphReversal():

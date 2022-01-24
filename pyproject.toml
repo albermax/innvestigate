@@ -87,7 +87,12 @@ markers = [
     "vgg16",
     "imagenet",
     "resnet50",
-    "_based",
+    "base",
+    "deeptaylor",
+    "gradient",
+    "init",
+    "lrp",
+    "wrapper",
 ]
 
 [tool.coverage.paths]

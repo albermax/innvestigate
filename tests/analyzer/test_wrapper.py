@@ -20,6 +20,7 @@ methods = {
 }
 
 
+@pytest.mark.wrapper
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -32,6 +33,7 @@ def test_fast(method, kwargs):
     dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.wrapper
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -44,6 +46,7 @@ def test_fast_serialize(method, kwargs):
     dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.wrapper
 @pytest.mark.mnist
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))

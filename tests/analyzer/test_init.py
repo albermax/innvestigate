@@ -11,6 +11,7 @@ from innvestigate import create_analyzer
 from innvestigate.analyzer import analyzers
 
 
+@pytest.mark.init
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__create_analyzers():
@@ -29,6 +30,7 @@ def test_fast__create_analyzers():
             logging.error("Error when creating analyzer from name.", exc_info=True)
 
 
+@pytest.mark.init
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__create_analyzers_wrong_name():

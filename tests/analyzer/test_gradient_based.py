@@ -29,6 +29,7 @@ methods = {
 }
 
 
+@pytest.mark.gradient
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -41,6 +42,7 @@ def test_fast(method, kwargs):
     dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.gradient
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -53,6 +55,7 @@ def test_fast_serialize(method, kwargs):
     dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.gradient
 @pytest.mark.mnist
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -65,6 +68,7 @@ def test_precommit(method, kwargs):
     dryrun.test_analyzer(analyzer, "mnist.*")
 
 
+@pytest.mark.gradient
 @pytest.mark.resnet50
 @pytest.mark.precommit
 @pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
@@ -77,6 +81,7 @@ def test_precommit_resnet50(method, kwargs):
     dryrun.test_analyzer(analyzer, "imagenet.resnet50")
 
 
+@pytest.mark.gradient
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
