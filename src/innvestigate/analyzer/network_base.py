@@ -290,7 +290,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
         # is 'nsa' is singleton, repeat it so that it matches number of rows of X
         if nsa.size == 1:
-            batch_size = tf.shape(X)[0]
+            batch_size = len(X[0])
             nsa = np.repeat(nsa, batch_size)
 
         return nsa
