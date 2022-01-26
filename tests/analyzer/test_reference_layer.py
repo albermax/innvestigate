@@ -16,6 +16,7 @@ from innvestigate.analyzer.gradient_based import (
     GuidedBackprop,
     InputTimesGradient,
     IntegratedGradients,
+    SmoothGrad,
 )
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPZ,
@@ -45,6 +46,7 @@ methods = {
     "Deconvnet": (Deconvnet, {}),
     "GuidedBackprop": (GuidedBackprop, {}),
     "IntegratedGradients": (IntegratedGradients, {}),
+    "SmoothGrad": (SmoothGrad, {}),
     # Relevance based
     "LRPZ": (LRPZ, {}),
     "LRPZ_Flat_input_layer_rule": (LRPZ, {"input_layer_rule": "Flat"}),
@@ -72,13 +74,19 @@ methods = {
 rtol = 1e-2
 atol = 1e-8
 
+# Loosen tolerances for SmoothGrad because of random Gaussian noise
+atol_smoothgrad = 0.15
+rtol_smoothgrad = 0.25
+
 # Sizes used for data generation
 INPUT_SHAPE = (10, 10, 3)
 KERNEL_SIZE = (3, 3)
 POOL_SIZE = (2, 2)
 
 
-def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
+def debug_failed_all_close(
+    val, ref, val_name, layer_name, analyzer_name, rtol=rtol, atol=atol
+):
     diff = np.absolute(val - ref)
     # Function evaluated by np.allclose, see "Notes":
     # https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
@@ -100,6 +108,7 @@ def debug_failed_all_close(val, ref, val_name, layer_name, analyzer_name):
 
 @pytest.mark.reference
 @pytest.mark.layer
+@pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
     "analyzer_name, val", methods.items(), ids=list(methods.keys())
@@ -164,7 +173,17 @@ def test_reference_layer(val, analyzer_name):
 
             # Test attribution
             a_ref = f_layer["attribution"][:]
-            attributions_match = np.allclose(a, a_ref, rtol=rtol, atol=atol)
+
+            if analyzer_name == "SmoothGrad":
+                _atol = atol_smoothgrad
+                _rtol = rtol_smoothgrad
+            else:
+                _atol = atol
+                _rtol = rtol
+
+            attributions_match = np.allclose(a, a_ref, rtol=_rtol, atol=_atol)
             if not attributions_match:
-                debug_failed_all_close(a, a_ref, "a", layer_name, analyzer_name)
+                debug_failed_all_close(
+                    a, a_ref, "a", layer_name, analyzer_name, rtol=_rtol, atol=_atol
+                )
             assert attributions_match

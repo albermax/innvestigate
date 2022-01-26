@@ -20,7 +20,9 @@ def test_fast__PerturbationAnalysis():
     else:
         input_shape = (2, 4, 4, 1)
     x = np.arange(2 * 4 * 4).reshape(input_shape)
-    generator = isequence.BatchSequence([x, np.zeros(x.shape[0])], batch_size=x.shape[0])
+    generator = isequence.BatchSequence(
+        [x, np.zeros(x.shape[0])], batch_size=x.shape[0]
+    )
 
     # Simple model
     model = kmodels.Sequential(
