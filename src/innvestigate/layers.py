@@ -24,6 +24,7 @@ __all__ = [
     "Clip",
     "Project",
     "SafeDivide",
+    "Repeat",
     "Reshape",
     "MultiplyWithLinspace",
     "ExtractConv2DPatches",
@@ -210,6 +211,32 @@ class SafeDivide(klayers.Layer):
 
 
 ###############################################################################
+class Repeat(klayers.Layer):
+    """Repeats the input n times. Similar to Keras' `RepeatVector`,
+    except that it works on any Tensor.
+
+    Input shape: 2D tensor of shape `(num_samples, features)`.
+    Output shape: 3D tensor of shape `(num_samples, n, features)`.
+
+    Args:
+        n: Integer, repetition factor.
+    """
+
+    def __init__(self, n, **kwargs):
+        super().__init__(**kwargs)
+        self.n = n
+        if not isinstance(n, int):
+            raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
+
+    def call(self, inputs):
+        dims = inputs.shape.rank  # number of axes in Tensor
+        assert dims >= 2
+        inputs = tf.expand_dims(inputs, 1)
+
+        # Construct array [1, n, 1, ..., 1] for tf.tile
+        multiples = [1] * dims
+        multiples.insert(1, self.n)
+        return tf.tile(inputs, tf.constant(multiples))
 
 
 class Reshape(klayers.Layer):

@@ -84,6 +84,7 @@ markers = [
     "mnist",
     "reference",
     "layer",
+    "ilayers",
     "vgg16",
     "imagenet",
     "resnet50",

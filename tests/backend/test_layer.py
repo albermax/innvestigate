@@ -9,6 +9,47 @@ from innvestigate.analyzer.gradient_based import Gradient
 import innvestigate.layers as ilayers
 
 
+@pytest.mark.ilayers
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_repeat_layer():
+    inputs = klayers.Input(shape=(2, 3))
+    outputs = ilayers.Repeat(8)(inputs)
+    model = kmodels.Model(inputs=inputs, outputs=outputs, name="TestRepeat")
+
+    x = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+    out = model.predict(x)
+
+    assert np.shape(out) == (2, 8, 2, 3)
+    assert np.all(
+        out
+        == np.array(
+            [
+                [
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                    [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                ],
+                [
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                    [[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]],
+                ],
+            ]
+        )
+    )
+
+
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_one_layer():
