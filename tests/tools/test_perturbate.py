@@ -6,8 +6,8 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
-import innvestigate.tools.perturbate
 import innvestigate.backend.sequence as isequence
+import innvestigate.tools.perturbate
 
 
 @pytest.mark.perturbate

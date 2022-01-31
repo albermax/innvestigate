@@ -6,6 +6,7 @@ import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
 from innvestigate.analyzer.gradient_based import Gradient
+import innvestigate.layers as ilayers
 
 
 @pytest.mark.fast
