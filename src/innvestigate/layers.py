@@ -25,8 +25,12 @@ __all__ = [
     "Project",
     "SafeDivide",
     "Repeat",
+    "ReduceMean",
     "Reshape",
+    "AugmentationToBatchAxis",
+    "AugmentationFromBatchAxis",
     "MultiplyWithLinspace",
+    "AddGaussianNoise",
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
@@ -222,13 +226,13 @@ class Repeat(klayers.Layer):
         n: Integer, repetition factor.
     """
 
-    def __init__(self, n, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.n = n
         if not isinstance(n, int):
             raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
 
-    def call(self, inputs):
+    def call(self, inputs, *_args, **_kwargs):
         dims = inputs.shape.rank  # number of axes in Tensor
         assert dims >= 2
         inputs = tf.expand_dims(inputs, 1)
@@ -239,16 +243,56 @@ class Repeat(klayers.Layer):
         return tf.tile(inputs, tf.constant(multiples))
 
 
+class ReduceMean(klayers.Layer):
+    """Reduce input augmented along `axis=1` by taking the mean."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.math.reduce_mean(inputs, axis=1, keepdims=False)
+
+
 class Reshape(klayers.Layer):
     """Layer that reshapes tensor to the shape specified on init."""
 
     def __init__(self, shape: ShapeTuple, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         self._shape = shape
 
     def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
-        return kbackend.reshape(inputs, self._shape)
+        return tf.reshape(inputs, self._shape)
+
+
+class AugmentationToBatchAxis(klayers.Layer):
+    """Move augmentation from axis=1 to batch axis."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        input_shape = inputs.get_shape().as_list()
+        output_shape = [-1] + input_shape[2:]
+        return tf.reshape(inputs, output_shape)
+
+
+class AugmentationFromBatchAxis(klayers.Layer):
+    """Move augmentation from batch axis to axis=1.
+
+    Args:
+        n: Factor of augmentation.
+    """
+
+    def __init__(self, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.n = n
+        if not isinstance(n, int):
+            raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        input_shape = inputs.get_shape().as_list()
+        output_shape = [-1, self.n] + input_shape[1:]
+        return tf.reshape(inputs, output_shape)
 
 
 class MultiplyWithLinspace(klayers.Layer):
@@ -269,6 +313,25 @@ class MultiplyWithLinspace(klayers.Layer):
         shape[self._axis] = self._n
         linspace = kbackend.reshape(linspace, shape)
         return inputs * linspace
+
+
+class AddGaussianNoise(klayers.Layer):
+    "Add Gaussian noise to Tensor. Also applies to test phase."
+
+    def __init__(self, *args, mean: float = 0.0, stddev: float = 1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mean = mean
+        self.stddev = stddev
+
+    def call(self, inputs: Tensor, *_args, seed=None, **_kwargs) -> Tensor:
+        noise = tf.random.normal(
+            shape=tf.shape(inputs),
+            mean=self.mean,
+            stddev=self.stddev,
+            dtype=inputs.dtype,
+            seed=seed,
+        )
+        return tf.add(inputs, noise)
 
 
 class ExtractConv2DPatches(klayers.Layer):

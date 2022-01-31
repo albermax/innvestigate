@@ -5,8 +5,8 @@ import pytest
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
-from innvestigate.analyzer.gradient_based import Gradient
 import innvestigate.layers as ilayers
+from innvestigate.analyzer.gradient_based import Gradient
 
 
 @pytest.mark.ilayers
@@ -48,6 +48,21 @@ def test_repeat_layer():
             ]
         )
     )
+
+
+@pytest.mark.ilayers
+@pytest.mark.fast
+@pytest.mark.precommit
+def test_reducemean_layer():
+    inputs = klayers.Input(shape=(2, 3))
+    repeated = ilayers.Repeat(8)(inputs)
+    outputs = ilayers.ReduceMean()(repeated)
+    model = kmodels.Model(inputs=inputs, outputs=outputs, name="TestRepeat")
+
+    x = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+    out = model.predict(x)
+
+    assert np.all(out == x)
 
 
 @pytest.mark.fast
