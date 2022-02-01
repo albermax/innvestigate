@@ -179,15 +179,15 @@ class AugmentReduceBase(WrapperBase):
     def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
         return []
 
-    @abstractmethod
     def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
         """Augment inputs before analyzing them with subanalyzer."""
+        repeat = ilayers.Repeat(self._augment_by_n)
+        reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
+        return [reshape(repeat(X)) for X in ibackend.to_list(Xs)]
 
     def _reduce(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
         """Reduce input Xs by reshaping and taking the mean along
         the axis of augmentation."""
-        # reshaped = [self._reshape(X) for X in ibackend.to_list(Xs)]
-        # means = [kbackend.mean(X, axis=1, keepdims=False) for X in reshaped]
         reshape = ilayers.AugmentationFromBatchAxis(self._augment_by_n)
         reduce = ilayers.ReduceMean()
         means = [reduce(reshape(X)) for X in ibackend.to_list(Xs)]
