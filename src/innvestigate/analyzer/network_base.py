@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
@@ -127,7 +126,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         elif neuron_selection_mode == "index":
             # Creates a placeholder tensor when `dtype` is passed.
             neuron_indexing: Layer = klayers.Input(
-                shape=(None,),  # unknown amount of output neurons
+                shape=(2,),  # infer amount of output neurons
                 dtype=np.int32,
                 name="iNNvestigate_neuron_indexing",
             )
@@ -235,7 +234,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def analyze(
         self,
-        X: Tensor,
+        X: OptionalList[np.ndarray],
         neuron_selection: Optional[OptionalList[int]] = None,
     ) -> OptionalList[np.ndarray]:
         """
@@ -264,8 +263,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         ret: OptionalList[np.ndarray]
         if self._neuron_selection_mode == "index":
             if neuron_selection is not None:
-                # TODO: document how this works
-                indices = self._get_neuron_selection_array(X, neuron_selection)
+                batch_size = np.shape(X)[0]
+                indices = self._get_neuron_selection_array(neuron_selection, batch_size)
                 ret = self._analyzer_model.predict_on_batch([X, indices])
             else:
                 raise RuntimeError(
@@ -281,19 +280,27 @@ class AnalyzerNetworkBase(AnalyzerBase):
         return ibackend.unpack_singleton(ret)
 
     def _get_neuron_selection_array(
-        self, X: Tensor, neuron_selection: OptionalList[int]
+        self, neuron_selection: OptionalList[int], batch_size: int
     ) -> np.ndarray:
         """Get neuron selection array for neuron_selection_mode "index"."""
-        # TODO: detailed documentation on how this selects neurons
+        nsa = np.asarray(neuron_selection).flatten()
 
-        nsa = np.asarray(neuron_selection).flatten()  # singleton ndarray
-
-        # is 'nsa' is singleton, repeat it so that it matches number of rows of X
+        # If `nsa` is singleton, repeat it so that it matches the batch size
         if nsa.size == 1:
-            batch_size = len(X[0])
             nsa = np.repeat(nsa, batch_size)
 
-        return nsa
+        # Multiples of batch size are allowed for use with AugmentReduceBase:
+        if nsa.size % batch_size != 0:
+            raise ValueError(
+                f"""`neuron_selection` should be integer or array matching
+                batch size {batch_size}. Got: {neuron_selection}"""
+            )
+
+        # We prepend a counter for the position in the batch,
+        # which will be used by the layer `NeuronSelection`.
+        # Using `nsa.size` for compatibility with AugmentReduceBase.
+        batch_position_index = np.arange(nsa.size)
+        return np.hstack((batch_position_index.reshape((-1, 1)), nsa.reshape((-1, 1))))
 
     def _get_state(self) -> Dict[str, Any]:
         state = super()._get_state()

@@ -425,10 +425,16 @@ class NeuronSelection(klayers.Layer):
     """Applied to the last layer of a model, this selects output neurons at given indices
     by wrapping `tf.gather`."""
 
-    def call(self, inputs: Tensor, *_args, **_kwargs):
+    def call(self, inputs: List[Tensor], *_args, **_kwargs):
         if len(inputs) != 2:
             raise ValueError(
                 "A `NeuronSelection` layer should be called on exactly 2 inputs"
             )
-        x, indices = inputs
-        return tf.gather(x, indices, axis=1)
+        X, index = inputs
+        index_shape = ibackend.shape(index)
+        if len(index_shape) != 2 or index_shape[1] != 2:
+            raise ValueError(
+                "Layer `NeuronSelection` expects index of shape (batch_size, 2),",
+                f"got {index_shape}.",
+            )
+        return tf.gather_nd(X, index)
