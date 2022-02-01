@@ -40,7 +40,7 @@ matplotlib = "^3.5.1"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"
-black  = {extras = ["jupyter"], version = "*", allow-prereleases = true }
+black  = {extras = ["jupyter"], version = "^22.1"}
 flake8 = "^3.9.2"
 flake8-black = "^0.2.3"
 flake8-bugbear = "^21.11.29"
@@ -69,8 +69,8 @@ known_first_party = "innvestigate"
 known_local_folder = "tests"
 
 [tool.pytest.ini_options]
-# addopts = "-v -m fast --strict-markers --cov"
-addopts = "-v -m precommit --strict-markers --cov"
+addopts = "-v -m fast --strict-markers --cov"
+# NOTE: locally run tests with `poetry run pytest -m precommit` before a commit 
 filterwarnings = [
     "ignore::DeprecationWarning:tensorflow",
     "ignore::DeprecationWarning:tensorboard",

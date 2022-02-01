@@ -1648,7 +1648,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">= 3.7, < 3.10" # < 3.10 required by TF
-content-hash = "67c2b949f0b78bc4633dc593ed31435024c732e20cd1babf7953308b3a0d72a0"
+content-hash = "d10eada01b51bd03e5428f873fac6db39d862658d2486eef2c4748d91c972335"
 
 [metadata.files]
 absl-py = [
