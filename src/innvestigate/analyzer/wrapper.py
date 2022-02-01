@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from builtins import zip
 from typing import List, Optional
 
@@ -124,7 +125,7 @@ class AugmentReduceBase(WrapperBase):
         inputs = model.inputs[: self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input :]
 
-        outputs = model.outputs[: self._subanalyzer._n_data_output]
+        # outputs = model.outputs[: self._subanalyzer._n_data_output]
         extra_outputs = model.outputs[self._subanalyzer._n_data_output :]
 
         if len(extra_outputs) > 0:
@@ -178,38 +179,18 @@ class AugmentReduceBase(WrapperBase):
     def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
         return []
 
+    @abstractmethod
     def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
-        """Augments inputs `Xs` by repeating them `self._augment_by_n`-times
-        along the batch-axis `axis=0`.
-        Typically overridden by inherited analyzers.
-        """
-        return [
-            kbackend.repeat_elements(X, self._augment_by_n, axis=0)
-            for X in ibackend.to_list(Xs)
-        ]
-
-    def _reshape(self, X: Tensor) -> Tensor:
-        """Moves the axis of augmentations from the batch-axis `axis=0`
-        to a new axis `axis=1`.
-
-        :param X: Augmented tensor
-        :type X: Tensor
-        :return: Reshaped augmented tensor
-        :rtype: Tensor
-        """
-        in_shape = kbackend.int_shape(X)
-        out_shape = (
-            -1,
-            self._augment_by_n,
-        ) + in_shape[1:]
-        return kbackend.reshape(X, out_shape)
+        """Augment inputs before analyzing them with subanalyzer."""
 
     def _reduce(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
         """Reduce input Xs by reshaping and taking the mean along
         the axis of augmentation."""
-
-        reshaped = [self._reshape(X) for X in ibackend.to_list(Xs)]
-        means = [kbackend.mean(X, axis=1) for X in reshaped]
+        # reshaped = [self._reshape(X) for X in ibackend.to_list(Xs)]
+        # means = [kbackend.mean(X, axis=1, keepdims=False) for X in reshaped]
+        reshape = ilayers.AugmentationFromBatchAxis(self._augment_by_n)
+        reduce = ilayers.ReduceMean()
+        means = [reduce(reshape(X)) for X in ibackend.to_list(Xs)]
         return means
 
     def _get_state(self):
@@ -246,12 +227,12 @@ class GaussianSmoother(AugmentReduceBase):
         self._noise_scale = noise_scale
 
     def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
-        repeated_Xs = super()._augment(Xs)
-        noisy_Xs = [
-            ibackend.add_gaussian_noise(X, stddev=self._noise_scale)
-            for X in repeated_Xs
-        ]
-        return noisy_Xs
+        repeat = ilayers.Repeat(self._augment_by_n)
+        add_noise = ilayers.AddGaussianNoise()
+        reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
+
+        ret = [reshape(add_noise(repeat(X))) for X in ibackend.to_list(Xs)]
+        return ret
 
     def _get_state(self):
         state = super()._get_state()
