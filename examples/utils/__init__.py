@@ -5,10 +5,10 @@ import shutil
 from builtins import range
 from io import open
 
+import urllib
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
-import six
 
 ###############################################################################
 # Download utilities
@@ -18,7 +18,7 @@ import six
 def download(url, filename):
     if not os.path.exists(filename):
         print("Download: %s ---> %s" % (url, filename))
-        response = six.moves.urllib.request.urlopen(url)
+        response = urllib.request.urlopen(url)
         with open(filename, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
@@ -43,15 +43,15 @@ def get_imagenet_data(size=224):
     base_dir = os.path.dirname(__file__)
 
     # ImageNet 2012 validation set images?
-    with open(os.path.join(base_dir, "images", "ground_truth_val2012")) as f:
+    with open(os.path.join(base_dir, "..", "images", "ground_truth_val2012")) as f:
         ground_truth_val2012 = {
             x.split()[0]: int(x.split()[1]) for x in f.readlines() if len(x.strip()) > 0
         }
-    with open(os.path.join(base_dir, "images", "synset_id_to_class")) as f:
+    with open(os.path.join(base_dir, "..", "images", "synset_id_to_class")) as f:
         synset_to_class = {
             x.split()[1]: int(x.split()[0]) for x in f.readlines() if len(x.strip()) > 0
         }
-    with open(os.path.join(base_dir, "images", "imagenet_label_mapping")) as f:
+    with open(os.path.join(base_dir, "..", "images", "imagenet_label_mapping")) as f:
         image_label_mapping = {
             int(x.split(":")[0]): x.split(":")[1].strip()
             for x in f.readlines()
@@ -70,8 +70,8 @@ def get_imagenet_data(size=224):
         return ret
 
     images = [
-        (load_image(os.path.join(base_dir, "images", f), size), get_class(f))
-        for f in os.listdir(os.path.join(base_dir, "images"))
+        (load_image(os.path.join(base_dir, "..", "images", f), size), get_class(f))
+        for f in os.listdir(os.path.join(base_dir, "..", "images"))
         if (f.lower().endswith(".jpg") or f.lower().endswith(".jpeg"))
         and get_class(f) != "--"
     ]
