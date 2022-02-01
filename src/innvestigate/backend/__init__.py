@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TypeVar, Union
+from typing import List, Optional, TypeVar, Union
 
 import numpy as np
 import tensorflow as tf
@@ -11,6 +11,8 @@ from innvestigate.backend.types import Layer, OptionalList, ShapeTuple, Tensor
 __all__ = [
     "to_list",
     "unpack_singleton",
+    "shape",
+    "batch_size",
     "gradients",
     "cast_to_floatx",
     "is_not_finite",
@@ -53,6 +55,20 @@ def unpack_singleton(x: OptionalList[T]) -> OptionalList[T]:
     if isinstance(x, list) and len(x) == 1:
         return x[0]
     return x
+
+
+def shape(X: Tensor) -> List[Optional[int]]:
+    """Return shape of Tensor as list of ints."""
+    shape: List[Optional[int]] = X.get_shape().as_list()
+    return shape
+
+
+def batch_size(X: Tensor) -> int:
+    """Return batch size of Tensor as integer."""
+    bs: Optional[int] = X.get_shape()[0]
+    if isinstance(bs, int):
+        return bs
+    raise ValueError(f"Found non-integer batch_size {bs} for Tensor {X}")
 
 
 def gradients(

@@ -35,6 +35,7 @@ __all__ = [
     "RunningMeans",
     "Broadcast",
     "MaxNeuronSelection",
+    "MaxNeuronIndex",
     "NeuronSelection",
 ]
 
@@ -271,8 +272,8 @@ class AugmentationToBatchAxis(klayers.Layer):
         super().__init__(*args, **kwargs)
 
     def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
-        input_shape = inputs.get_shape().as_list()
-        output_shape = [-1] + input_shape[2:]
+        input_shape = ibackend.shape(inputs)
+        output_shape = [-1] + input_shape[2:]  # type: ignore
         return tf.reshape(inputs, output_shape)
 
 
@@ -290,7 +291,7 @@ class AugmentationFromBatchAxis(klayers.Layer):
             raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
 
     def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
-        input_shape = inputs.get_shape().as_list()
+        input_shape = ibackend.shape(inputs)
         output_shape = [-1, self.n] + input_shape[1:]
         return tf.reshape(inputs, output_shape)
 
@@ -407,7 +408,17 @@ class MaxNeuronSelection(klayers.Layer):
     to the max neuron activation."""
 
     def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
-        return kbackend.max(inputs, axis=-1)  # max along batch axis
+        return tf.math.reduce_max(
+            inputs, axis=-1, keepdims=False
+        )  # max along batch axis
+
+
+class MaxNeuronIndex(klayers.Layer):
+    """Applied to the last layer of a model, this reduces the output
+    to the index of the max activated neuron."""
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.math.argmax(inputs, axis=-1)  # max along batch axis
 
 
 class NeuronSelection(klayers.Layer):
