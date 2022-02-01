@@ -140,7 +140,7 @@ class WSquareRule(igraph.ReverseMappingBase):
             weights = layer.weights
         if layer.use_bias:
             weights = weights[:-1]
-        weights = [x ** 2 for x in weights]
+        weights = [x**2 for x in weights]
 
         self._layer_wo_act_b = igraph.copy_layer_wo_activation(
             layer, keep_bias=False, weights=weights, name_template="reversed_kernel_%s"

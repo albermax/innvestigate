@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     np.savez(
         "%s_pattern_type_%s_tf_dim_ordering_tf_kernels.npz" % (netname, pattern_type),
-        *patterns
+        *patterns,
     )
 
     ###########################################################################

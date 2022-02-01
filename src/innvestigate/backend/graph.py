@@ -491,7 +491,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
         mean, variance = weights
 
         if fuse_mode == "one_linear":
-            tmp = kbackend.sqrt(variance ** 2 + layer.epsilon)
+            tmp = kbackend.sqrt(variance**2 + layer.epsilon)
             tmp_k = gamma / tmp
             tmp_b = -mean / tmp + beta
 
@@ -501,7 +501,7 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
             surrogate_layer(inputs)
             actual_mapping = mapping(surrogate_layer, reverse_state).apply
         else:
-            tmp = kbackend.sqrt(variance ** 2 + layer.epsilon)
+            tmp = kbackend.sqrt(variance**2 + layer.epsilon)
             tmp_k1 = 1 / tmp
             tmp_b1 = -mean / tmp
             tmp_k2 = gamma
@@ -863,16 +863,16 @@ def print_model_execution_graph(
 
     def print_node(node) -> None:
         print(
-            f"""[NID: {node["nid"]:d}] """
-            f"""[Layer: {node["layer"].name:20s}] """
-            f"""[Inputs from: {nids_as_str(node["Xs_nids"]):20s}] """
-            f"""[Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
+            f"""[NID: {node["nid"]:d}]
+            [Layer: {node["layer"].name:20s}]
+            [Inputs from: {nids_as_str(node["Xs_nids"]):20s}]
+            [Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
         )
 
     def print_input_node(node) -> None:  # node of type NodeDict?
         print(
-            f"""[Layer: {node["layer"].name:20s}] """
-            f"""[Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
+            f"""[Layer: {node["layer"].name:20s}]
+            [Outputs to: {nids_as_str(node["Ys_nids"]):20s}]"""
         )
 
     if None in graph:  # Input layers in graph have Node-ID `None`

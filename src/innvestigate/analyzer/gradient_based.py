@@ -179,13 +179,13 @@ class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
             name_template="reversed_%s",
         )
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict) -> List[Tensor]:
+    def apply(self, Xs, Ys, Rs, reverse_state: Dict) -> List[Tensor]:
         # Apply relus conditioned on backpropagated values.
-        reversed_Ys = ibackend.apply(self._activation, reversed_Ys)
+        Rs = ibackend.apply(self._activation, Rs)
 
         # Apply gradient of forward pass without relus.
         Ys_wo_relu = ibackend.apply(self._layer_wo_relu, Xs)
-        return ibackend.gradients(Xs, Ys_wo_relu, reversed_Ys)
+        return ibackend.gradients(Xs, Ys_wo_relu, Rs)
 
 
 class Deconvnet(ReverseAnalyzerBase):
@@ -277,14 +277,13 @@ class IntegratedGradients(PathIntegrator):
         steps=64,
         neuron_selection_mode="max_activation",
         postprocess=None,
-        **kwargs
+        **kwargs,
     ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
             subanalyzer = kwargs.pop("subanalyzer")
         # If initialized normally:
         else:
-
             subanalyzer = Gradient(
                 model,
                 neuron_selection_mode=neuron_selection_mode,
@@ -295,7 +294,7 @@ class IntegratedGradients(PathIntegrator):
             subanalyzer,
             steps=steps,
             neuron_selection_mode=neuron_selection_mode,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -317,7 +316,7 @@ class SmoothGrad(GaussianSmoother):
         augment_by_n=64,
         neuron_selection_mode="max_activation",
         postprocess=None,
-        **kwargs
+        **kwargs,
     ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
@@ -335,5 +334,5 @@ class SmoothGrad(GaussianSmoother):
             subanalyzer,
             augment_by_n=augment_by_n,
             neuron_selection_mode=neuron_selection_mode,
-            **kwargs
+            **kwargs,
         )
