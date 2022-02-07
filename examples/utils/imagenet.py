@@ -4,12 +4,6 @@ import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
 
 
-def preprocess(X, net):
-    X = X.copy()
-    X = net["preprocess_f"](X)
-    return X
-
-
 def postprocess(X, color_conversion, channels_first):
     X = X.copy()
     X = iutils.postprocess_images(
