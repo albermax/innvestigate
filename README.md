@@ -208,3 +208,8 @@ please open an issue or submit a pull request.
 ## Releases
 
 [Can be found here.](https://github.com/albermax/innvestigate/blob/master/VERSION.md)
+
+
+## Acknowledgements
+
+> Adrian Hill acknowledges support by the Federal Ministry of Education and Research (BMBF) for the Berlin Institute for the Foundations of Learning and Data (BIFOLD) (01IS18037A).
