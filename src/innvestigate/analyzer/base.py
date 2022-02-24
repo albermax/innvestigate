@@ -10,7 +10,7 @@ import tensorflow.keras.models as kmodels
 
 import innvestigate.analyzer
 import innvestigate.backend.graph as igraph
-import innvestigate.backend.sequence as isequence
+import innvestigate.utils.sequence as isequence
 from innvestigate.backend.types import LayerCheck, Model, ModelCheckDict, OptionalList
 
 __all__ = [

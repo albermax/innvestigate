@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.utils as kutils
 
-import innvestigate.backend.sequence as isequence
+import innvestigate.utils.sequence as isequence
 
 
 class Perturbation:
