@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import keras
 import numpy as np
-from keras.backend import image_data_format
-from keras.datasets import mnist
-from keras.models import Model
-from keras.optimizers import Adam
+import tensorflow.keras as keras
+from tensorflow.keras.backend import image_data_format
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.optimizers import Adam
 
-import innvestigate
-import innvestigate.applications.mnist
-import innvestigate.utils
 import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
-
-from tests.networks import base
 
 ###############################################################################
 # Data Preprocessing Utility
@@ -59,6 +53,8 @@ def create_preprocessing_f(X, input_range=None):
     c, d = input_range
 
     def preprocessing(X):
+        # Make sure images have shape (28, 28, 1) and cast from uint8 to float32
+        X = np.expand_dims(X, -1).astype(np.float32)
         # shift original data to [0, b-a] (and copy)
         X = X - a
         # scale to new range gap [0, d-c]
@@ -83,30 +79,6 @@ def create_preprocessing_f(X, input_range=None):
 ############################
 
 
-def create_model(modelname, **kwargs):
-    channels_first = image_data_format() == "channels_first"
-    num_classes = 10
-
-    if channels_first:
-        input_shape = (None, 1, 28, 28)
-    else:
-        input_shape = (None, 28, 28, 1)
-
-    # load PreTrained models
-    if modelname in innvestigate.applications.mnist.__all__:
-        model_init_fxn = getattr(innvestigate.applications.mnist, modelname)
-        model_wo_sm, model_w_sm = model_init_fxn(input_shape[1:])
-
-    elif modelname in base.__all__:
-        network_init_fxn = getattr(base, modelname)
-        network = network_init_fxn(input_shape, num_classes, **kwargs)
-        model_w_sm = Model(inputs=network["in"], outputs=network["sm_out"])
-    else:
-        raise ValueError("Invalid model name {}".format(modelname))
-
-    return model_w_sm
-
-
 def train_model(model, data, batch_size=128, epochs=20):
     num_classes = 10
 
@@ -118,7 +90,7 @@ def train_model(model, data, batch_size=128, epochs=20):
     model.compile(
         loss="categorical_crossentropy", optimizer=Adam(), metrics=["accuracy"]
     )
-
+    model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1)
     score = model.evaluate(x_test, y_test, verbose=0)
     return score
 

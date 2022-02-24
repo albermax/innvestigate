@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import shutil
+import urllib
 from builtins import range
 from io import open
 
-import urllib
 import matplotlib.pyplot as plt
 import numpy as np
 import PIL.Image
