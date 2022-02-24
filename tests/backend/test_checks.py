@@ -4,6 +4,7 @@ import tensorflow.keras.layers as klayers
 import innvestigate.backend.checks as ichecks
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -22,6 +23,7 @@ def test_only_relu_activation(activation, layer, expected):
     assert ichecks.only_relu_activation(layer) == expected
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -40,6 +42,7 @@ def test_contains_activation_relu(activation, layer, expected):
     assert ichecks.contains_activation(layer, "relu") == expected
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -58,6 +61,7 @@ def test_contains_activation_elu(activation, layer, expected):
     assert ichecks.contains_activation(layer, "elu") == expected
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(
@@ -75,6 +79,7 @@ def test_contains_activation_softmax(activation, expected):
     assert ichecks.contains_activation(layer, "softmax") == expected
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 @pytest.mark.parametrize(

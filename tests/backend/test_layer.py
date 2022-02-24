@@ -65,6 +65,7 @@ def test_reducemean_layer():
     assert np.all(out == x)
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_one_layer():
@@ -85,6 +86,7 @@ def test_fast_one_layer():
     assert np.allclose(analysis, gradient)
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_two_layers():

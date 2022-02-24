@@ -8,6 +8,7 @@ import innvestigate.backend.graph as igraph
 from tests import networks
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__get_model_execution_graph():
@@ -20,6 +21,7 @@ def test_fast__get_model_execution_graph():
         igraph.print_model_execution_graph(graph)
 
 
+@pytest.mark.graph
 @pytest.mark.mnist
 @pytest.mark.precommit
 def test_commit__get_model_execution_graph():
@@ -32,6 +34,7 @@ def test_commit__get_model_execution_graph():
         igraph.print_model_execution_graph(graph)
 
 
+@pytest.mark.graph
 @pytest.mark.resnet50
 @pytest.mark.precommit
 def test_precommit__get_model_execution_graph_resnet50():
@@ -44,6 +47,7 @@ def test_precommit__get_model_execution_graph_resnet50():
         igraph.print_model_execution_graph(graph)
 
 
+@pytest.mark.graph
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast__get_model_execution_graph_with_inputs():

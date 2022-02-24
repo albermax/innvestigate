@@ -9,6 +9,7 @@ import tensorflow.keras.models as kmodels
 import innvestigate.layers as ilayers
 
 
+@pytest.mark.graph
 @pytest.mark.ilayers
 @pytest.mark.fast
 @pytest.mark.precommit
@@ -31,6 +32,7 @@ def test_max_neuron_selection_layer():
     assert np.all(out == np.array([[3.0, 6.0], [42.0, 12.0]]))
 
 
+@pytest.mark.graph
 @pytest.mark.ilayers
 @pytest.mark.fast
 @pytest.mark.precommit
@@ -52,6 +54,7 @@ def test_max_neuron_index_layer():
     assert np.all(out == np.array([[2, 0], [1, 2]]))
 
 
+@pytest.mark.graph
 @pytest.mark.ilayers
 @pytest.mark.fast
 @pytest.mark.precommit

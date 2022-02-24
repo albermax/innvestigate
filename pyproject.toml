@@ -80,6 +80,7 @@ markers = [
     "precommit",
     "slow",
     "fast",
+    "graph",
     "application",
     "mnist",
     "reference",
