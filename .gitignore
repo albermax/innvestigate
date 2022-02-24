@@ -127,3 +127,9 @@ nosetests.cfg
 
 # ignore nbconvert script output
 examples/nbconvert_tmp
+
+# ignore data downloaded by notebooks
+examples/images
+examples/stanfordSentimentTreebank
+examples/stanfordSentimentTreebank.zip
+examples/__MACOSX
