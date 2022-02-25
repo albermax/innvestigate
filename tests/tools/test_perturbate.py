@@ -6,7 +6,7 @@ import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels
 
-import innvestigate.backend.sequence as isequence
+import innvestigate.utils.sequence as isequence
 import innvestigate.tools.perturbate
 
 
