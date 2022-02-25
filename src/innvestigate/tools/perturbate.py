@@ -464,7 +464,7 @@ class PerturbationAnalysis:
     def compute_perturbation_analysis(self):
         scores = []
         # Evaluate first on original data
-        scores.append(self.model.evaluate_generator(self.generator))
+        scores.append(self.model.evaluate(self.generator))
         self.perturbation.num_perturbed_regions = 1
         time_start = time.time()
         for step in range(self.steps):

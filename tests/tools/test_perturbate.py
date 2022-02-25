@@ -60,7 +60,7 @@ def test_fast__PerturbationAnalysis():
 
     scores = perturbation_analysis.compute_perturbation_analysis()
 
-    expected_scores = np.array([5761600.0, 2193364.0, 777872.0, 226484.0])
+    expected_scores = np.array([5761600.0, 1654564.0, 182672.0, 21284.0])
     assert np.all(np.isclose(scores, expected_scores))
 
 
