@@ -723,7 +723,6 @@ def get_model_execution_trace(
     nid: Optional[int]
     current_nid: int
     id_execution_trace: List[Tuple[Optional[int], Layer, List[Tensor], List[Tensor]]]
-    tmp: List[Tuple[Optional[int], Layer, List[Tensor], List[Tensor]]]
 
     current_nid = 0
     id_execution_trace = []

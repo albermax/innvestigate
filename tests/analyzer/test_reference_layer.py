@@ -95,7 +95,7 @@ def debug_failed_all_close(
 
     print(
         f"{len(idx)}/{np.prod(val.shape)} "
-        f'failed on referece "{val_name}" using layer {layer_name} with {analyzer_name}'
+        f'failed on reference "{val_name}" using layer {layer_name} with {analyzer_name}'
         f"(atol={atol}, rtol={rtol})"
     )
     for i in idx:

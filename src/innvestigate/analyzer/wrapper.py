@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from builtins import zip
 from typing import List, Optional
 
