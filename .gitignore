@@ -125,6 +125,9 @@ nosetests.cfg
 *.h5
 *.png
 
+# ignore VGG16
+tests/references/vgg16
+
 # ignore nbconvert script output
 examples/nbconvert_tmp
 
