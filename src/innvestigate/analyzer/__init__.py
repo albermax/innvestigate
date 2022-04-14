@@ -24,7 +24,6 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPAlpha2Beta1IgnoreBias,
     LRPAlphaBeta,
     LRPEpsilon,
-    LRPEpsilonIgnoreBias,
     LRPFlat,
     LRPSequentialPresetA,
     LRPSequentialPresetAFlat,
@@ -32,7 +31,6 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPSequentialPresetBFlat,
     LRPSequentialPresetBFlatUntilIdx,
     LRPWSquare,
-    LRPZIgnoreBias,
     LRPZPlus,
     LRPZPlusFast,
 )
@@ -60,9 +58,7 @@ analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Relevance based
     "lrp": LRP,
     "lrp.z": LRPZ,
-    "lrp.z_IB": LRPZIgnoreBias,
     "lrp.epsilon": LRPEpsilon,
-    "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
     "lrp.w_square": LRPWSquare,
     "lrp.flat": LRPFlat,
     "lrp.alpha_beta": LRPAlphaBeta,

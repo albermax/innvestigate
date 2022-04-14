@@ -19,9 +19,7 @@ __all__ = [
     # dedicated treatment for special layers
     # general rules
     "ZRule",
-    "ZIgnoreBiasRule",
     "EpsilonRule",
-    "EpsilonIgnoreBiasRule",
     "WSquareRule",
     "FlatRule",
     "AlphaBetaRule",
@@ -71,14 +69,6 @@ class ZRule(igraph.ReverseMappingBase):
         return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
-class ZIgnoreBiasRule(ZRule):
-    """
-    Basic LRP decomposition rule, ignoring the bias neuron
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, bias=False, **kwargs)
-
 
 class EpsilonRule(igraph.ReverseMappingBase):
     """
@@ -121,12 +111,6 @@ class EpsilonRule(igraph.ReverseMappingBase):
         # Re-weight relevance with the input values.
         return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
-
-class EpsilonIgnoreBiasRule(EpsilonRule):
-    """Same as EpsilonRule but ignores the bias."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, bias=False, **kwargs)
 
 
 class WSquareRule(igraph.ReverseMappingBase):

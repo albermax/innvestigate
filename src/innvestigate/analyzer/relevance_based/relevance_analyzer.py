@@ -21,9 +21,7 @@ __all__ = [
     "LRP",
     "LRP_RULES",
     "LRPZ",
-    "LRPZIgnoreBias",
     "LRPEpsilon",
-    "LRPEpsilonIgnoreBias",
     "LRPWSquare",
     "LRPFlat",
     "LRPAlphaBeta",
@@ -148,9 +146,7 @@ class BaselineLRPZ(AnalyzerNetworkBase):
 # Utility list enabling name mappings via string
 LRP_RULES: Dict = {
     "Z": rrule.ZRule,
-    "ZIgnoreBias": rrule.ZIgnoreBiasRule,
     "Epsilon": rrule.EpsilonRule,
-    "EpsilonIgnoreBias": rrule.EpsilonIgnoreBiasRule,
     "WSquare": rrule.WSquareRule,
     "Flat": rrule.FlatRule,
     "AlphaBeta": rrule.AlphaBetaRule,
@@ -573,16 +569,6 @@ class LRPZ(_LRPFixedParams):
         self._do_model_checks()
 
 
-class LRPZIgnoreBias(_LRPFixedParams):
-    """LRP-analyzer that uses the LRP-Z-ignore-bias rule"""
-
-    def __init__(self, model, *args, **kwargs):
-        super().__init__(
-            model, *args, rule="ZIgnoreBias", bn_layer_rule="ZIgnoreBias", **kwargs
-        )
-        self._do_model_checks()
-
-
 class LRPEpsilon(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Epsilon rule"""
 
@@ -610,13 +596,6 @@ class LRPEpsilon(_LRPFixedParams):
 
         self._do_model_checks()
 
-
-class LRPEpsilonIgnoreBias(LRPEpsilon):
-    """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
-
-    def __init__(self, model, *args, epsilon=1e-7, **kwargs):
-        super().__init__(model, *args, epsilon=epsilon, bias=False, **kwargs)
-        self._do_model_checks()
 
 
 class LRPWSquare(_LRPFixedParams):
