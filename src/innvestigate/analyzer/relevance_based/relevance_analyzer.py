@@ -597,7 +597,6 @@ class LRPEpsilon(_LRPFixedParams):
         self._do_model_checks()
 
 
-
 class LRPWSquare(_LRPFixedParams):
     """LRP-analyzer that uses the DeepTaylor W**2 rule"""
 

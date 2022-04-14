@@ -69,7 +69,6 @@ class ZRule(igraph.ReverseMappingBase):
         return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
-
 class EpsilonRule(igraph.ReverseMappingBase):
     """
     Similar to ZRule.
@@ -110,7 +109,6 @@ class EpsilonRule(igraph.ReverseMappingBase):
         grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
         return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
-
 
 
 class WSquareRule(igraph.ReverseMappingBase):
