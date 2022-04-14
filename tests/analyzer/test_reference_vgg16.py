@@ -35,6 +35,7 @@ from innvestigate.analyzer.gradient_based import (
     SmoothGrad,
 )
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
+    LRP,
     LRPZ,
     LRPAlpha1Beta0,
     LRPAlpha1Beta0IgnoreBias,
@@ -88,7 +89,7 @@ methods = {
 }
 
 rtol = 1e-2
-atol = 1e-6
+atol = 1e-5
 
 # Loosen tolerances for SmoothGrad because of random Gaussian noise
 atol_smoothgrad = 0.15
@@ -112,12 +113,6 @@ def debug_failed_all_close(val, ref, val_name, analyzer_name, rtol=rtol, atol=at
         f'failed on reference "{val_name}" using {analyzer_name}'
         f"(atol={atol}, rtol={rtol})"
     )
-    for i in idx:
-        ti = tuple(i)
-        print(
-            f"{ti}: diff {diff[ti]} > tol {tol[ti]}"
-            f"\tfor values {val_name}={val[ti]}, {val_name}_ref={ref[ti]}"
-        )
 
 
 @pytest.mark.local
@@ -150,12 +145,13 @@ def test_reference_layer(val, analyzer_name):
 
         # Analyze model
         analyzer = method(model, **kwargs)
+        if isinstance(analyzer, LRP):
+            analyzer._reverse_keep_tensors = True
+
         a = analyzer.analyze(x)
         assert np.shape(a) == np.shape(x)
 
-        # Test attribution
-        a_ref = f["attribution"][:]
-
+        # Set tolerances for reference tests
         if analyzer_name == "SmoothGrad":
             _atol = atol_smoothgrad
             _rtol = rtol_smoothgrad
@@ -163,6 +159,26 @@ def test_reference_layer(val, analyzer_name):
             _atol = atol
             _rtol = rtol
 
+        # Test reverse tensors
+        if isinstance(analyzer, LRP):
+            relevances = analyzer._reversed_tensors
+            # unzip reverse tensors to strip indices
+            indices, relevances = zip(*relevances)
+
+            for i, r in zip(reversed(indices), reversed(relevances)):
+                idx = str(i[0])
+                r_ref = f["layerwise_relevances"][idx][:]
+                rels_match = np.allclose(r, r_ref, rtol=_rtol, atol=_atol)
+                if not rels_match:
+                    debug_failed_all_close(
+                        r, r_ref, f"r_{idx}", analyzer_name, rtol=_rtol, atol=_atol
+                    )
+                else:
+                    print(f"r_{idx} passed")
+                assert rels_match
+
+        # Test attribution
+        a_ref = f["attribution"][:]
         attributions_match = np.allclose(a, a_ref, rtol=_rtol, atol=_atol)
         if not attributions_match:
             debug_failed_all_close(a, a_ref, "a", analyzer_name, rtol=_rtol, atol=_atol)
