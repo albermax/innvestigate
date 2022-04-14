@@ -138,7 +138,7 @@ class WSquareRule(igraph.ReverseMappingBase):
             weights = layer.get_weights()
         else:
             weights = layer.weights
-        if layer.use_bias:
+        if getattr(layer, "use_bias", False):
             weights = weights[:-1]
         weights = [x**2 for x in weights]
 
@@ -174,12 +174,12 @@ class FlatRule(WSquareRule):
         # no biases.
         if copy_weights:
             weights = layer.get_weights()
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             weights = [np.ones_like(x) for x in weights]
         else:
             weights = layer.weights
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             weights = [kbackend.ones_like(x) for x in weights]
 
@@ -224,13 +224,13 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
         # and negative preactivations z in apply_accordingly.
         if copy_weights:
             weights = layer.get_weights()
-            if not bias and layer.use_bias:
+            if not bias and getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
             weights = layer.weights
-            if not bias and layer.use_bias:
+            if not bias and getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             positive_weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
             negative_weights = [x * ibackend.cast_to_floatx(x < 0) for x in weights]
@@ -479,13 +479,13 @@ class BoundedRule(igraph.ReverseMappingBase):
         # negative weights.
         if copy_weights:
             weights = layer.get_weights()
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             positive_weights = [x * (x > 0) for x in weights]
             negative_weights = [x * (x < 0) for x in weights]
         else:
             weights = layer.weights
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             positive_weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
             negative_weights = [x * ibackend.cast_to_floatx(x < 0) for x in weights]
@@ -565,12 +565,12 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
         # TODO: assert that layer inputs are always >= 0
         if copy_weights:
             weights = layer.get_weights()
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             weights = [x * (x > 0) for x in weights]
         else:
             weights = layer.weights
-            if layer.use_bias:
+            if getattr(layer, "use_bias", False):
                 weights = weights[:-1]
             weights = [x * ibackend.cast_to_floatx(x > 0) for x in weights]
 
