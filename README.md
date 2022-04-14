@@ -5,7 +5,7 @@
 
 [![PyPI package version](https://img.shields.io/pypi/v/innvestigate)](https://pypi.org/project/innvestigate/)
 [![GitHub package version](https://img.shields.io/github/v/tag/albermax/innvestigate)](https://github.com/albermax/innvestigate/tags)
-[![Keras package version](https://img.shields.io/badge/TensorFlow-v2.7-orange.svg)](https://github.com/albermax/innvestigate)
+[![Keras package version](https://img.shields.io/badge/TensorFlow-^2.7-orange.svg)](https://github.com/albermax/innvestigate)
 [![License: BSD-2](https://img.shields.io/badge/License-BSD--2-purple.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
 [![Black](https://img.shields.io/badge/code_style-black-black.svg)](https://github.com/psf/black)
 
