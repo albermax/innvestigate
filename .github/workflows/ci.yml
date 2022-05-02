@@ -5,8 +5,9 @@ on:
   - pull_request
 
 jobs:
-  linting:
-    # Run linting outside of matrix
+  formatting:
+    # Run formatting checks outside of matrix
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       # Check-out repo and set-up python  
@@ -25,12 +26,14 @@ jobs:
       - name: Format check with isort
         run: isort --check .
   test:
-    needs: linting
+    name: Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ github.event_name }}
     strategy:
       fail-fast: true
       matrix:
-        os: [ "ubuntu-latest", "windows-latest" ]
-        python-version: [ "3.7", ]
+        os: 
+          - ubuntu-latest
+        python-version: 
+          - '3.7'
     defaults:
       run:
         shell: bash
