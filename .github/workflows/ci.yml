@@ -67,7 +67,7 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction
       # Run fast tests on matrix.
       # Coverage options can be found in pyproject.toml
       - name: Run tests
