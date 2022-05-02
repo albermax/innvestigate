@@ -13,7 +13,7 @@ classifiers = [
 ]
 authors = [
     "Maxmilian Alber <workDoTalberDoTmaximilian@gmail.com>",
-    "Adrian Hill <hill@campus.tu-berlin.de>",
+    "Adrian Hill <hill@tu-berlin.de>",
     "Sebastian Lapuschkin",
     "Miriam Haegele",
     "Kristof Schuett",
@@ -23,7 +23,7 @@ authors = [
     "Leander Weber",
     "and others",
 ]
-maintainers = ["Adrian Hill <hill@campus.tu-berlin.de>"]
+maintainers = ["Adrian Hill <hill@tu-berlin.de>"]
 license = "BSD-2-Clause"
 readme = "README.md"
 homepage = "https://github.com/albermax/innvestigate"
@@ -32,15 +32,15 @@ documentation = "https://innvestigate.readthedocs.io/en/latest/"
 keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
-python = ">= 3.7.1, < 3.10" # < 3.10 required by TF
-tensorflow = "^2.7"
+python = ">=3.7.1,<3.11"
+tensorflow = "~2.6"
 future = "^0.18.2"
-numpy = "^1.21.5"
+numpy = "^1.19.2"
 matplotlib = "^3.5.1"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"
-black  = "^22.1"
+black  = "^22.3"
 flake8 = "^3.9.2"
 flake8-black = "^0.2.3"
 flake8-bugbear = "^21.11.29"
@@ -73,11 +73,6 @@ known_local_folder = "tests"
 [tool.pytest.ini_options]
 addopts = "-v -m fast --strict-markers --cov"
 # NOTE: locally run tests with `poetry run pytest -m precommit` before a commit 
-filterwarnings = [
-    "ignore::DeprecationWarning:tensorflow",
-    "ignore::DeprecationWarning:tensorboard",
-    "ignore::DeprecationWarning:keras",
-]
 markers = [
     "precommit",
     "slow",
