@@ -41,9 +41,7 @@ def create_preprocessing_f(X, input_range=None):
         input_range = [0, 1]
 
     if len(input_range) != 2:
-        raise ValueError(
-            f"Input range must be of length 2, but was {len(input_range)}"
-        )
+        raise ValueError(f"Input range must be of length 2, but was {len(input_range)}")
     if input_range[0] >= input_range[1]:
         raise ValueError(
             f"Values in input_range must be ascending. It is {input_range}"
