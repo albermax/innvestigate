@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import inspect
-from builtins import zip
-from typing import Dict, List
 
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
@@ -123,7 +121,7 @@ class BaselineLRPZ(AnalyzerNetworkBase):
         self._do_model_checks()
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
     ):
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
@@ -144,7 +142,7 @@ class BaselineLRPZ(AnalyzerNetworkBase):
 ###############################################################################
 
 # Utility list enabling name mappings via string
-LRP_RULES: Dict = {
+LRP_RULES: dict = {
     "Z": rrule.ZRule,
     "Epsilon": rrule.EpsilonRule,
     "WSquare": rrule.WSquareRule,
@@ -166,7 +164,7 @@ class EmbeddingReverseLayer(igraph.ReverseMappingBase):
         # TODO: implement rule support.
         pass
 
-    def apply(self, _Xs, _Ys, Rs, _reverse_state: Dict):
+    def apply(self, _Xs, _Ys, Rs, _reverse_state: dict):
         # the embedding layer outputs for an (indexed) input a vector.
         # thus, in the relevance backward pass, the embedding layer receives
         # relevances Rs corresponding to those vectors.
@@ -202,7 +200,7 @@ class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
         # check if isinstance(self_rule, EpsiloneRule), then reroute
         # to BatchNormEpsilonRule. Not pretty, but should work.
 
-    def apply(self, Xs, Ys, Rs, _reverse_state: Dict):
+    def apply(self, Xs, Ys, Rs, _reverse_state: dict):
         input_shape = [kbackend.int_shape(x) for x in Xs]
         if len(input_shape) != 1:
             # extend below lambda layers towards multiple parameters.
@@ -265,7 +263,7 @@ class AddReverseLayer(igraph.ReverseMappingBase):
         # TODO: implement rule support.
         # super().__init__(layer, state)
 
-    def apply(self, Xs, _Ys, Rs, _reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, _reverse_state: dict):
         # The outputs of the pooling operation at each location
         # is the sum of its inputs.
         # The forward message must be known in this case,
@@ -297,7 +295,7 @@ class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
         # TODO: implement rule support.
         # super().__init__(layer, state)
 
-    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, reverse_state: dict):
         # The outputs of the pooling operation at each location
         # is the sum of its inputs.
         # The forward message must be known in this case,
@@ -419,7 +417,7 @@ class LRP(ReverseAnalyzerBase):
         self._rules_use_conditions = use_conditions
         self._rules = rules
 
-    def create_rule_mapping(self, layer: Layer, reverse_state: Dict):
+    def create_rule_mapping(self, layer: Layer, reverse_state: dict):
         if self._rules_use_conditions is True:
             for condition, rule in self._rules:
                 if condition(layer):
@@ -494,7 +492,7 @@ class LRP(ReverseAnalyzerBase):
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
         # default_return_layers = [klayers.Activation]# TODO extend
         if (

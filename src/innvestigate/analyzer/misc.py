@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import innvestigate.backend as ibackend
 import innvestigate.layers as ilayers
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
@@ -43,7 +41,7 @@ class Random(AnalyzerNetworkBase):
 
         super().__init__(model, **kwargs)
 
-    def _create_analysis(self, model, stop_analysis_at_tensors=None) -> List[Tensor]:
+    def _create_analysis(self, model, stop_analysis_at_tensors=None) -> list[Tensor]:
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 

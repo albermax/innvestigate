@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from builtins import zip
-from typing import Dict, List, Tuple
-
 import numpy as np
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
@@ -52,11 +49,11 @@ class ZRule(igraph.ReverseMappingBase):
 
     def apply(
         self,
-        Xs: List[Tensor],
-        _Ys: List[Tensor],
-        Rs: List[Tensor],
+        Xs: list[Tensor],
+        _Ys: list[Tensor],
+        Rs: list[Tensor],
         _reverse_state,
-    ) -> List[Tensor]:
+    ) -> list[Tensor]:
 
         # Get activations.
         Zs = ibackend.apply(self._layer_wo_act, Xs)
@@ -86,10 +83,10 @@ class EpsilonRule(igraph.ReverseMappingBase):
 
     def apply(
         self,
-        Xs: List[Tensor],
-        _Ys: List[Tensor],
-        Rs: List[Tensor],
-        _reverse_state: Dict,
+        Xs: list[Tensor],
+        _Ys: list[Tensor],
+        Rs: list[Tensor],
+        _reverse_state: dict,
     ):
         # The epsilon rule aligns epsilon with the (extended) sign:
         # 0 is considered to be positive
@@ -130,11 +127,11 @@ class WSquareRule(igraph.ReverseMappingBase):
 
     def apply(
         self,
-        Xs: List[Tensor],
-        Ys: List[Tensor],
-        Rs: List[Tensor],
-        _reverse_state: Dict,
-    ) -> List[Tensor]:
+        Xs: list[Tensor],
+        Ys: list[Tensor],
+        Rs: list[Tensor],
+        _reverse_state: dict,
+    ) -> list[Tensor]:
         # Create dummy forward path to take the derivative below.
         Ys = ibackend.apply(self._layer_wo_act_b, Xs)
 
@@ -232,10 +229,10 @@ class AlphaBetaRule(igraph.ReverseMappingBase):
 
     def apply(
         self,
-        Xs: List[Tensor],
-        _Ys: List[Tensor],
-        Rs: List[Tensor],
-        _reverse_state: Dict,
+        Xs: list[Tensor],
+        _Ys: list[Tensor],
+        Rs: list[Tensor],
+        _reverse_state: dict,
     ):
         # this method is correct, but wasteful
         times_alpha = klayers.Lambda(lambda x: x * self._alpha)
@@ -333,8 +330,8 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
         self,
         layer: Layer,
         _state,
-        alpha: Tuple[float, float] = (0.5, 0.5),
-        beta: Tuple[float, float] = (0.5, 0.5),
+        alpha: tuple[float, float] = (0.5, 0.5),
+        beta: tuple[float, float] = (0.5, 0.5),
         bias: bool = True,
         copy_weights: bool = False,
     ) -> None:
@@ -371,10 +368,10 @@ class AlphaBetaXRule(igraph.ReverseMappingBase):
 
     def apply(
         self,
-        Xs: List[Tensor],
-        _Ys: List[Tensor],
-        Rs: List[Tensor],
-        _reverse_state: Dict,
+        Xs: list[Tensor],
+        _Ys: list[Tensor],
+        Rs: list[Tensor],
+        _reverse_state: dict,
     ):
         # this method is correct, but wasteful
         times_alpha0 = klayers.Lambda(lambda x: x * self._alpha[0])
@@ -489,7 +486,7 @@ class BoundedRule(igraph.ReverseMappingBase):
         )
 
     # TODO: clean up this implementation and add more documentation
-    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, reverse_state: dict):
         to_low = klayers.Lambda(lambda x: x * 0 + self._low)
         to_high = klayers.Lambda(lambda x: x * 0 + self._high)
 
@@ -563,7 +560,7 @@ class ZPlusFastRule(igraph.ReverseMappingBase):
             name_template="reversed_kernel_positive_%s",
         )
 
-    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, reverse_state: dict):
         # TODO: assert all inputs are positive, instead of only keeping the positives.
         # keep_positives = klayers.Lambda(
         #     lambda x: x * kbackend.cast(kbackend.greater(x, 0), kbackend.floatx())

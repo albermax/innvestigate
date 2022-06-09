@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import fnmatch
 import types
-from typing import Iterator, List, Tuple
+from typing import Iterator
 
 import tensorflow.keras.backend as kbackend
 
@@ -40,15 +40,15 @@ def iterator(
 
 def _fetch_networks(
     module_name: str, module, network_filter: str
-) -> List[Tuple[str, Tuple[types.ModuleType, str]]]:
+) -> list[tuple[str, tuple[types.ModuleType, str]]]:
     """Fetch all networks in the given module that match the network_filter string."""
     networks = [
-        ("%s.%s" % (module_name, name), (module, name))
+        (f"{module_name}.{name}", (module, name))
         for name in module.__all__
         if any(
             (
                 fnmatch.fnmatch(name, one_filter)
-                or fnmatch.fnmatch("%s.%s" % (module_name, name), one_filter)
+                or fnmatch.fnmatch(f"{module_name}.{name}", one_filter)
             )
             for one_filter in network_filter.split(":")
         )

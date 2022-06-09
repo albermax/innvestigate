@@ -3,8 +3,6 @@ e.g. if it is an input or a pooling layer"""
 
 from __future__ import annotations
 
-from typing import Set
-
 import tensorflow.keras.layers as klayers
 from tensorflow import Module, keras
 
@@ -287,7 +285,7 @@ def is_max_pooling(layer: Layer) -> bool:
     return isinstance(layer, MAXPOOLING_LAYERS)
 
 
-def get_input_layers(layer: Layer) -> Set[Layer]:
+def get_input_layers(layer: Layer) -> set[Layer]:
     """Returns all layers that created this layer's inputs."""
     ret = set()
 

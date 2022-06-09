@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, List, Tuple, Union
+from typing import Callable
 
 import tensorflow.keras.utils as kutils
 
@@ -25,7 +25,7 @@ class BatchSequence(kutils.Sequence):
     """
 
     def __init__(self, Xs: OptionalList[Tensor], batch_size: int = 32) -> None:
-        self.Xs: List[Tensor] = to_list(Xs)
+        self.Xs: list[Tensor] = to_list(Xs)
         self.single_tensor: bool = len(Xs) == 1
         self.batch_size: int = batch_size
 
@@ -37,8 +37,8 @@ class BatchSequence(kutils.Sequence):
     def __len__(self) -> int:
         return int(math.ceil(float(len(self.Xs[0])) / self.batch_size))
 
-    def __getitem__(self, idx: int) -> Union[Tensor, Tuple[Tensor]]:
-        ret: List[Tensor] = [
+    def __getitem__(self, idx: int) -> Tensor | tuple[Tensor]:
+        ret: list[Tensor] = [
             X[idx * self.batch_size : (idx + 1) * self.batch_size] for X in self.Xs
         ]
 
@@ -60,7 +60,7 @@ class TargetAugmentedSequence(kutils.Sequence):
     """
 
     def __init__(
-        self, sequence: List[Tensor], augment_f: Callable[[List[Tensor]], List[Tensor]]
+        self, sequence: list[Tensor], augment_f: Callable[[list[Tensor]], list[Tensor]]
     ) -> None:
         self.sequence = sequence
         self.augment_f = augment_f
@@ -70,7 +70,7 @@ class TargetAugmentedSequence(kutils.Sequence):
     def __len__(self) -> int:
         return len(self.sequence)
 
-    def __getitem__(self, idx: int) -> Tuple[List[Tensor], List[Tensor]]:
+    def __getitem__(self, idx: int) -> tuple[list[Tensor], list[Tensor]]:
         inputs = self.sequence[idx]
         if isinstance(inputs, tuple):  # TODO: check if this can be removed
             assert len(inputs) == 1

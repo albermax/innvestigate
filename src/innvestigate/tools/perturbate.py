@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 import warnings
-from builtins import range
 
 import numpy as np
 import tensorflow.keras.backend as kbackend

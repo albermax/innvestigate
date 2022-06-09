@@ -4,7 +4,6 @@ import argparse
 import os
 import subprocess
 import sys
-from io import open
 
 if __name__ == "__main__":
     # TODO: reduce complexity
@@ -84,7 +83,7 @@ if __name__ == "__main__":
             subprocess.check_call(call)
 
             # Fix magic lines
-            with open(output_file, "r", encoding="utf-8") as f:
+            with open(output_file, encoding="utf-8") as f:
                 script_content = f.read()
 
             fixed_lines = []

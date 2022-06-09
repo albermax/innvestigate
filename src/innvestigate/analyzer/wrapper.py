@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from builtins import zip
-from typing import List, Optional
-
 import numpy as np
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
@@ -175,16 +172,16 @@ class AugmentReduceBase(WrapperBase):
         kwargs["neuron_selection"] = indices
         return self._subanalyzer.analyze(X, *args, **kwargs)
 
-    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
+    def _keras_get_constant_inputs(self) -> list[Tensor] | None:
         return []
 
-    def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+    def _augment(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
         """Augment inputs before analyzing them with subanalyzer."""
         repeat = ilayers.Repeat(self._augment_by_n)
         reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
         return [reshape(repeat(X)) for X in ibackend.to_list(Xs)]
 
-    def _reduce(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+    def _reduce(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
         """Reduce input Xs by reshaping and taking the mean along
         the axis of augmentation."""
         reshape = ilayers.AugmentationFromBatchAxis(self._augment_by_n)
@@ -225,7 +222,7 @@ class GaussianSmoother(AugmentReduceBase):
         super().__init__(subanalyzer, *args, **kwargs)
         self._noise_scale = noise_scale
 
-    def _augment(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+    def _augment(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
         repeat = ilayers.Repeat(self._augment_by_n)
         add_noise = ilayers.AddGaussianNoise()
         reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
@@ -274,18 +271,18 @@ class PathIntegrator(AugmentReduceBase):
         super().__init__(subanalyzer, *args, augment_by_n=steps, **kwargs)
 
         self._reference_inputs = reference_inputs
-        self._keras_constant_inputs: Optional[List[Tensor]] = None
+        self._keras_constant_inputs: list[Tensor] | None = None
 
-    def _keras_set_constant_inputs(self, inputs: List[Tensor]) -> None:
+    def _keras_set_constant_inputs(self, inputs: list[Tensor]) -> None:
         tmp = [kbackend.variable(X) for X in inputs]
         self._keras_constant_inputs = [
             klayers.Input(tensor=X, shape=X.shape[1:]) for X in tmp
         ]
 
-    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
+    def _keras_get_constant_inputs(self) -> list[Tensor] | None:
         return self._keras_constant_inputs
 
-    def _compute_difference(self, Xs: List[Tensor]) -> List[Tensor]:
+    def _compute_difference(self, Xs: list[Tensor]) -> list[Tensor]:
         if self._keras_constant_inputs is None:
             inputs = ibackend.broadcast_np_tensors_to_keras_tensors(
                 self._reference_inputs, Xs
@@ -293,7 +290,7 @@ class PathIntegrator(AugmentReduceBase):
             self._keras_set_constant_inputs(inputs)
 
         # Type not Optional anymore as as `_keras_set_constant_inputs` has been called.
-        reference_inputs: List[Tensor]
+        reference_inputs: list[Tensor]
         reference_inputs = self._keras_get_constant_inputs()  # type: ignore
         return [klayers.subtract([x, ri]) for x, ri in zip(Xs, reference_inputs)]
 

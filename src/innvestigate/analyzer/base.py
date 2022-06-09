@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABCMeta, abstractmethod
-from builtins import zip
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import tensorflow.keras.models as kmodels
@@ -56,7 +55,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         neuron_selection_mode: str = "max_activation",
         disable_model_checks: bool = False,
         _model_check_done: bool = False,
-        _model_checks: List[ModelCheckDict] = None,
+        _model_checks: list[ModelCheckDict] = None,
     ) -> None:
         self._model = model
         self._disable_model_checks = disable_model_checks
@@ -75,7 +74,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         # that child analyzers can append to.
         if _model_checks is None:
             _model_checks = []
-        self._model_checks: List[ModelCheckDict] = _model_checks
+        self._model_checks: list[ModelCheckDict] = _model_checks
 
     def _add_model_check(
         self, check: LayerCheck, message: str, check_type: str = "exception"
@@ -180,7 +179,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         }
         return state
 
-    def save(self) -> Tuple[str, dict]:
+    def save(self) -> tuple[str, dict]:
         """
         Save state of analyzer, can be passed to :func:`Analyzer.load`
         to resemble the analyzer.
@@ -222,7 +221,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         }
 
     @staticmethod
-    def load(class_name: str, state: Dict[str, Any]) -> AnalyzerBase:
+    def load(class_name: str, state: dict[str, Any]) -> AnalyzerBase:
         """
         Resembles an analyzer from the state created by
         :func:`analyzer.save()`.
@@ -262,9 +261,7 @@ class TrainerMixin:
     """
 
     # TODO: extend with Y
-    def fit(
-        self, X: Optional[np.ndarray] = None, batch_size: int = 32, **kwargs
-    ) -> None:
+    def fit(self, X: np.ndarray | None = None, batch_size: int = 32, **kwargs) -> None:
         """
         Takes the same parameters as Keras's :func:`model.fit` function.
         """

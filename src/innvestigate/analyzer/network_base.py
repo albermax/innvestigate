@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -59,8 +59,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         # Attributes of prepared model created by '_prepare_model'
         self._analyzer_model_done: bool = False
         self._analyzer_model: Model = None
-        self._special_helper_layers: List[Layer] = []  # added for _reverse_mapping
-        self._analysis_inputs: Optional[List[Tensor]] = None
+        self._special_helper_layers: list[Layer] = []  # added for _reverse_mapping
+        self._analysis_inputs: list[Tensor] | None = None
         self._n_data_input: int = 0
         self._n_constant_input: int = 0
         self._n_data_output: int = 0
@@ -92,17 +92,17 @@ class AnalyzerNetworkBase(AnalyzerBase):
             check_type="exception",
         )
 
-    def _prepare_model(self, model: Model) -> Tuple[Model, List[Tensor], List[Tensor]]:
+    def _prepare_model(self, model: Model) -> tuple[Model, list[Tensor], list[Tensor]]:
         """
         Prepares the model to analyze before it gets actually analyzed.
 
         This class adds the code to select a specific output neuron.
         """
         neuron_selection_mode: str
-        model_inputs: List[Tensor]
-        model_output: List[Tensor]
-        analysis_inputs: List[Tensor]
-        stop_analysis_at_tensors: List[Tensor]
+        model_inputs: list[Tensor]
+        model_output: list[Tensor]
+        analysis_inputs: list[Tensor]
+        stop_analysis_at_tensors: list[Tensor]
 
         neuron_selection_mode = self._neuron_selection_mode
         model_inputs = model.inputs
@@ -154,7 +154,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
-        model_inputs: List[Tensor] = self._model.inputs
+        model_inputs: list[Tensor] = self._model.inputs
         model, analysis_inputs, stop_analysis_at_tensors = self._prepare_model(
             self._model
         )
@@ -201,12 +201,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
         self._analyzer_model_done = True
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
-    ) -> Union[
-        Tuple[List[Tensor]],
-        Tuple[List[Tensor], List[Tensor]],
-        Tuple[List[Tensor], List[Tensor], List[Tensor]],
-    ]:
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
+    ) -> (
+        tuple[list[Tensor]]
+        | tuple[list[Tensor], list[Tensor]]
+        | tuple[list[Tensor], list[Tensor], list[Tensor]]
+    ):
         """
         Interface that needs to be implemented by a derived class.
 
@@ -235,7 +235,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def analyze(
         self,
         X: OptionalList[np.ndarray],
-        neuron_selection: Optional[OptionalList[int]] = None,
+        neuron_selection: OptionalList[int] | None = None,
     ) -> OptionalList[np.ndarray]:
         """
         Same interface as :class:`Analyzer` besides
@@ -302,13 +302,13 @@ class AnalyzerNetworkBase(AnalyzerBase):
         batch_position_index = np.arange(nsa.size)
         return np.hstack((batch_position_index.reshape((-1, 1)), nsa.reshape((-1, 1))))
 
-    def _get_state(self) -> Dict[str, Any]:
+    def _get_state(self) -> dict[str, Any]:
         state = super()._get_state()
         state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
-    def _state_to_kwargs(cls, state: Dict[str, Any]) -> Dict[str, Any]:
+    def _state_to_kwargs(cls, state: dict[str, Any]) -> dict[str, Any]:
         allow_lambda_layers = state.pop("allow_lambda_layers")
         # call super after popping class-specific states:
         kwargs = super()._state_to_kwargs(state)

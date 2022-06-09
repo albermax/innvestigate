@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 import shutil
 import urllib
-from builtins import range
-from io import open
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +15,7 @@ import PIL.Image
 
 def download(url, filename):
     if not os.path.exists(filename):
-        print("Download: %s ---> %s" % (url, filename))
+        print(f"Download: {url} ---> {filename}")
         response = urllib.request.urlopen(url)
         with open(filename, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
@@ -154,6 +152,6 @@ def plot_image_grid(
     if file_name is None:
         plt.show()
     else:
-        print("Saving figure to {}".format(file_name))
+        print(f"Saving figure to {file_name}")
         plt.savefig(file_name, orientation="landscape", dpi=dpi, bbox_inches="tight")
         plt.show()

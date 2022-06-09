@@ -42,11 +42,11 @@ def create_preprocessing_f(X, input_range=None):
 
     if len(input_range) != 2:
         raise ValueError(
-            "Input range must be of length 2, but was {}".format(len(input_range))
+            f"Input range must be of length 2, but was {len(input_range)}"
         )
     if input_range[0] >= input_range[1]:
         raise ValueError(
-            "Values in input_range must be ascending. It is {}".format(input_range)
+            f"Values in input_range must be ascending. It is {input_range}"
         )
 
     a, b = X.min(), X.max()

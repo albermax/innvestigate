@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, TypeVar, Union
+from typing import TypeVar
 
 import numpy as np
 import tensorflow as tf
@@ -34,7 +34,7 @@ def disable_eager_execution() -> None:
     tf.compat.v1.disable_eager_execution()
 
 
-def to_list(X: OptionalList[T]) -> List[T]:
+def to_list(X: OptionalList[T]) -> list[T]:
     """Wraps tensor `X` into a list, if it isn't a list of Tensors yet."""
     if isinstance(X, list):
         return X
@@ -57,15 +57,15 @@ def unpack_singleton(x: OptionalList[T]) -> OptionalList[T]:
     return x
 
 
-def shape(X: Tensor) -> List[Optional[int]]:
+def shape(X: Tensor) -> list[int | None]:
     """Return shape of Tensor as list of ints."""
-    shape: List[Optional[int]] = X.get_shape().as_list()
+    shape: list[int | None] = X.get_shape().as_list()
     return shape
 
 
 def batch_size(X: Tensor) -> int:
     """Return batch size of Tensor as integer."""
-    bs: Optional[int] = X.get_shape()[0]
+    bs: int | None = X.get_shape()[0]
     if isinstance(bs, int):
         return bs
     raise ValueError(f"Found non-integer batch_size {bs} for Tensor {X}")
@@ -73,7 +73,7 @@ def batch_size(X: Tensor) -> int:
 
 def gradients(
     Xs: OptionalList[Tensor], Ys: OptionalList[Tensor], known_Ys: OptionalList[Tensor]
-) -> List[Tensor]:
+) -> list[Tensor]:
     if len(Ys) != len(known_Ys):
         raise ValueError(
             "Gradient computation failesd, Ys and known_Ys not of same length"
@@ -114,7 +114,7 @@ def add_gaussian_noise(X: Tensor, mean: float = 0.0, stddev: float = 1.0) -> Ten
     )
 
 
-def apply_mask(Xs: List[T], mask: List[bool]) -> List[T]:
+def apply_mask(Xs: list[T], mask: list[bool]) -> list[T]:
     """Apply mask to list `Xs`, keeping only the elements for which
     mask is True.
 
@@ -133,7 +133,7 @@ def apply_mask(Xs: List[T], mask: List[bool]) -> List[T]:
 ###############################################################################
 
 
-def apply(layer: Layer, inputs: OptionalList[Tensor]) -> List[Tensor]:
+def apply(layer: Layer, inputs: OptionalList[Tensor]) -> list[Tensor]:
     """
     Apply a layer to input[s].
 
@@ -164,9 +164,9 @@ def apply(layer: Layer, inputs: OptionalList[Tensor]) -> List[Tensor]:
 
 
 def broadcast_np_tensors_to_keras_tensors(
-    np_tensors: Union[float, np.ndarray, List[np.ndarray]],
+    np_tensors: float | np.ndarray | list[np.ndarray],
     keras_tensors: OptionalList[Tensor],
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """Broadcasts numpy tensors to the shape of Keras tensors.
 
     :param np_tensors: Numpy tensors that should be broadcasted.

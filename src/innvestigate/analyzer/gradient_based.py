@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 import tensorflow as tf
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers
@@ -93,7 +91,7 @@ class Gradient(ReverseAnalyzerBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, postprocess: Optional[str] = None, **kwargs):
+    def __init__(self, model, postprocess: str | None = None, **kwargs):
         super().__init__(model, **kwargs)
 
         if postprocess not in [None, "abs", "square"]:
@@ -179,7 +177,7 @@ class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
             name_template="reversed_%s",
         )
 
-    def apply(self, Xs, Ys, Rs, reverse_state: Dict) -> List[Tensor]:
+    def apply(self, Xs, Ys, Rs, reverse_state: dict) -> List[Tensor]:
         # Apply relus conditioned on backpropagated values.
         Rs = ibackend.apply(self._activation, Rs)
 
@@ -219,7 +217,7 @@ class Deconvnet(ReverseAnalyzerBase):
         return super()._create_analysis(*args, **kwargs)
 
 
-def guided_backprop_reverse_relu_layer(Xs, Ys, reversed_Ys, _reverse_state: Dict):
+def guided_backprop_reverse_relu_layer(Xs, Ys, reversed_Ys, _reverse_state: dict):
     activation = klayers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
     reversed_Ys = ibackend.apply(activation, reversed_Ys)

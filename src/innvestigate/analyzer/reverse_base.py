@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable
 
 import numpy as np
 import tensorflow.keras.backend as kbackend
@@ -105,17 +105,17 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_mapping_applied: bool = False
 
         # map priorities to lists of conditional reverse mappings
-        self._conditional_reverse_mappings: Dict[int, List[CondReverseMapping]] = {}
+        self._conditional_reverse_mappings: dict[int, list[CondReverseMapping]] = {}
 
         # Maps keys "min", "max", "finite", "keep" to tuples of indices
-        self._debug_tensors_indices: Dict[str, Tuple[int, int]] = {}
+        self._debug_tensors_indices: dict[str, tuple[int, int]] = {}
 
     def _gradient_reverse_mapping(
         self,
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
         """Returns masked gradient."""
         mask = [id(X) not in reverse_state["stop_mapping_at_ids"] for X in Xs]
@@ -150,7 +150,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         condition: Callable[[Layer], bool],
         mapping: Callable,  # TODO: specify type of Callable
         priority: int = -1,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         This function should return a reverse mapping for the passed layer.
@@ -209,7 +209,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
         """
         Fallback function to map reversed_Ys to reversed_Xs
@@ -227,15 +227,15 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         # Refer to the "Introduction to development notebook".
         return X
 
-    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
         return ibackend.to_list(Xs)
 
     def _reverse_model(
         self,
         model: Model,
-        stop_analysis_at_tensors: List[Tensor] = None,
+        stop_analysis_at_tensors: list[Tensor] = None,
         return_all_reversed_tensors=False,
-    ) -> Tuple[List[Tensor], Optional[Dict[Tensor, ReverseTensorDict]]]:
+    ) -> tuple[list[Tensor], dict[Tensor, ReverseTensorDict] | None]:
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
@@ -252,7 +252,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         )
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
     ):
 
         if stop_analysis_at_tensors is None:
@@ -277,8 +277,8 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             if reversed_tensors is None:
                 raise TypeError("Expected reversed_tensors, got None.")
 
-            debug_tensors: List[Tensor]
-            tmp: List[Tensor]
+            debug_tensors: list[Tensor]
+            tmp: list[Tensor]
 
             debug_tensors = []
             values = reversed_tensors.values()
@@ -325,14 +325,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             indices = self._debug_tensors_indices["min"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
             print(f"Minimum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
             indices = self._debug_tensors_indices["max"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
             print(f"Maximum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
@@ -343,7 +343,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
             if len(nfinite_tensors) > 0:
                 nfinite_tensors = sorted(
-                    [self._reverse_tensors_mapping[i] for i in nfinite_tensors]
+                    self._reverse_tensors_mapping[i] for i in nfinite_tensors
                 )
                 print(
                     "Not finite values found in following nodes: "
@@ -354,7 +354,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             indices = self._debug_tensors_indices["keep"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
             self._reversed_tensors = tmp
 

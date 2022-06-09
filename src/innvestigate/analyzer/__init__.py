@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Type
-
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
@@ -43,7 +41,7 @@ from innvestigate.backend.types import Model
 # Silence flake8
 assert BaselineLRPZ
 
-analyzers: Dict[str, Type[AnalyzerBase]] = {
+analyzers: dict[str, type[AnalyzerBase]] = {
     # Utility.
     "input": Input,
     "random": Random,
