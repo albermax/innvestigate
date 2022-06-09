@@ -442,6 +442,11 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 self.use_bias = use_bias
                 super().__init__(**kwargs)
 
+            def get_config(self):
+                config = super().get_config()
+                config["use_bias"] = self.use_bias
+                return config
+
             def build(self, input_shape):
                 def kernel_initializer(_shape, dtype=None):
                     if dtype is not None:
