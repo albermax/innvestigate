@@ -1,7 +1,5 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
+import tensorflow as tf
 
 from innvestigate.analyzer import (
     BaselineGradient,
@@ -15,279 +13,83 @@ from innvestigate.analyzer import (
 
 from tests import dryrun
 
+# Dict that maps test name to tuple of method and kwargs
+methods = {
+    "Gradient": (Gradient, {}),
+    "Gradient_pp_None": (Gradient, {"postprocess": None}),
+    "Gradient_pp_square": (Gradient, {"postprocess": "square"}),
+    "BaselineGradient": (BaselineGradient, {}),
+    "BaselineGradient_pp_None": (BaselineGradient, {"postprocess": None}),
+    "BaselineGradient_pp_square": (BaselineGradient, {"postprocess": "square"}),
+    "InputTimesGradient": (InputTimesGradient, {}),
+    "Deconvnet": (Deconvnet, {}),
+    "GuidedBackprop": (GuidedBackprop, {}),
+    "IntegratedGradients": (IntegratedGradients, {}),
+    "SmoothGrad": (SmoothGrad, {}),
+}
 
+
+@pytest.mark.gradient
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BaselineGradient():
-    def method(model):
-        return BaselineGradient(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.gradient
+@pytest.mark.fast
 @pytest.mark.precommit
-def test_precommit__BaselineGradient():
-    def method(model):
-        return BaselineGradient(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast_serialize(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "mnist.*")
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.gradient
+@pytest.mark.mnist
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "mnist.*")
+
+
+@pytest.mark.gradient
+@pytest.mark.resnet50
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit_resnet50(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "imagenet.resnet50")
+
+
+@pytest.mark.gradient
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
-def test_imagenet__BaselineGradient():
-    def method(model):
-        return BaselineGradient(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_imagenet(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "imagenet.*")
+    def analyzer(model):
+        return method(model, **kwargs)
 
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__BaselineGradient_pp_None():
-    def method(model):
-        return BaselineGradient(model, postprocess=None)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__BaselineGradient_pp_None():
-    def method(model):
-        return BaselineGradient(model, postprocess=None)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__BaselineGradient_pp_square():
-    def method(model):
-        return BaselineGradient(model, postprocess="square")
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__BaselineGradient_pp_square():
-    def method(model):
-        return BaselineGradient(model, postprocess="square")
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__Gradient():
-    def method(model):
-        return Gradient(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__Gradient():
-    def method(model):
-        return Gradient(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__Gradient():
-    def method(model):
-        return Gradient(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__Gradient_pp_None():
-    def method(model):
-        return Gradient(model, postprocess=None)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__Gradient_pp_None():
-    def method(model):
-        return Gradient(model, postprocess=None)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__Gradient_pp_square():
-    def method(model):
-        return Gradient(model, postprocess="square")
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__Gradient_pp_square():
-    def method(model):
-        return Gradient(model, postprocess="square")
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__InputTimesGradient():
-    def method(model):
-        return InputTimesGradient(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__InputTimesGradient():
-    def method(model):
-        return InputTimesGradient(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__InputTimesGradient():
-    def method(model):
-        return InputTimesGradient(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__Deconvnet():
-    def method(model):
-        return Deconvnet(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__Deconvnet():
-    def method(model):
-        return Deconvnet(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__Deconvnet():
-    def method(model):
-        return Deconvnet(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__GuidedBackprop():
-    def method(model):
-        return GuidedBackprop(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__GuidedBackprop():
-    def method(model):
-        return GuidedBackprop(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__GuidedBackprop():
-    def method(model):
-        return GuidedBackprop(model)
-
-    dryrun.test_analyzer(method, "imagenet.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__IntegratedGradients():
-    def method(model):
-        return IntegratedGradients(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__IntegratedGradients():
-    def method(model):
-        return IntegratedGradients(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__IntegratedGradients():
-    def method(model):
-        return IntegratedGradients(model, steps=2)
-
-    dryrun.test_analyzer(method, "imagenet.*")
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SmoothGrad():
-    def method(model):
-        return SmoothGrad(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__SmoothGrad():
-    def method(model):
-        return SmoothGrad(model)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__SmoothGrad():
-    def method(model):
-        return SmoothGrad(model, augment_by_n=2)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(analyzer, "imagenet.*")

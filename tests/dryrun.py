@@ -1,49 +1,22 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+"""Dryrun analyzers to catch crashes."""
+from __future__ import annotations
 
-import unittest
+from typing import Callable
 
-import keras.backend as K
-import keras.models
 import numpy as np
-import six
+import tensorflow
+import tensorflow.keras.backend as kbackend
 
+tensorflow.compat.v1.disable_eager_execution()
+
+from innvestigate.analyzer import Random
 from innvestigate.analyzer.base import AnalyzerBase
+from innvestigate.backend.types import Model
 
 from tests import networks
 
-###############################################################################
-###############################################################################
-###############################################################################
 
-
-__all__ = [
-    "AnalyzerTestCase",
-    "EqualAnalyzerTestCase",
-    "PatternComputerTestCase",
-]
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-def _set_zero_weights_to_random(weights):
-    ret = []
-    for weight in weights:
-        if weight.sum() == 0:
-            weight = np.random.rand(*weight.shape)
-        ret.append(weight)
-    return ret
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class BaseLayerTestCase(unittest.TestCase):
+class BaseLayerTestCase:
     """
     A dryrun test on various networks for an analyzing method.
 
@@ -52,31 +25,20 @@ class BaseLayerTestCase(unittest.TestCase):
     and executed with random inputs.
     """
 
-    _network_filter = "trivia.*"
+    def __init__(self, network_filter: str = None) -> None:
+        self._network_filter = network_filter
 
-    def __init__(self, *args, **kwargs):
-        network_filter = kwargs.pop("network_filter", None)
-        if network_filter is not None:
-            self._network_filter = network_filter
-        super(BaseLayerTestCase, self).__init__(*args, **kwargs)
-
-    def _apply_test(self, network):
+    def _apply_test(self, _model: Model) -> None:
         raise NotImplementedError("Set in subclass.")
 
-    def runTest(self):
+    def run_test(self) -> None:
         np.random.seed(2349784365)
-        K.clear_session()
+        kbackend.clear_session()
 
-        for network in networks.iterator(self._network_filter, clear_sessions=True):
-            if six.PY2:
-                self._apply_test(network)
-            else:
-                with self.subTest(network_name=network["name"]):
-                    self._apply_test(network)
+        for model in networks.iterator(self._network_filter, clear_sessions=True):
+            self._apply_test(model)
 
 
-###############################################################################
-###############################################################################
 ###############################################################################
 
 
@@ -89,39 +51,29 @@ class AnalyzerTestCase(BaseLayerTestCase):
     :param method: A function that returns an Analyzer class.
     """
 
-    def __init__(self, *args, **kwargs):
-        method = kwargs.pop("method", None)
-        if method is not None:
-            self._method = method
-        super(AnalyzerTestCase, self).__init__(*args, **kwargs)
+    def __init__(self, method: AnalyzerBase, *args, **kwargs) -> None:
+        self._method = method
+        super().__init__(*args, **kwargs)
 
-    def _method(self, model):
-        raise NotImplementedError("Set in subclass.")
-
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
-        # Get analyzer.
+    def _apply_test(self, model: Model) -> None:
+        # Generate random test input
+        input_shape = model.input_shape[1:]
+        x = np.random.rand(1, *input_shape).astype(np.float32)
+        # Call model with test input
+        model.predict(x)
+        # Call analyzer
         analyzer = self._method(model)
-        # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:]))
         analysis = analyzer.analyze(x)
-        self.assertEqual(
-            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
-        )
-        self.assertFalse(np.any(np.isinf(analysis.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis.ravel())))
+
+        assert tuple(analysis.shape) == (1,) + input_shape
+        assert not np.any(np.isinf(analysis.ravel()))
+        assert not np.any(np.isnan(analysis.ravel()))
 
 
-def test_analyzer(method, network_filter):
+def test_analyzer(method: Callable, network_filter: str) -> None:
     """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
-    test_case = AnalyzerTestCase(method=method, network_filter=network_filter)
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
+    test_case = AnalyzerTestCase(method, network_filter=network_filter)
+    test_case.run_test()
 
 
 class AnalyzerTrainTestCase(BaseLayerTestCase):
@@ -133,42 +85,35 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
     :param method: A function that returns an Analyzer class.
     """
 
-    def __init__(self, *args, **kwargs):
-        method = kwargs.pop("method", None)
+    def __init__(self, *args, method=None, **kwargs) -> None:
         if method is not None:
             self._method = method
-        super(AnalyzerTrainTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def _method(self, model):
+    def _method(self, _model: Model):
         raise NotImplementedError("Set in subclass.")
 
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
+    def _apply_test(self, model: Model) -> None:
+        # Generate random training input
+        input_shape = model.input_shape[1:]
+        x = np.random.rand(1, *input_shape).astype(np.float32)
+        x_fit = np.random.rand(16, *input_shape).astype(np.float32)
+        # Call model with test input
+        model.predict(x)
         # Get analyzer.
         analyzer = self._method(model)
-        # Dryrun.
-        x = np.random.rand(16, *(network["input_shape"][1:]))
-        analyzer.fit(x)
-        x = np.random.rand(1, *(network["input_shape"][1:]))
+        analyzer.fit(x_fit)
+        # Generate random test input
         analysis = analyzer.analyze(x)
-        self.assertEqual(
-            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
-        )
-        self.assertFalse(np.any(np.isinf(analysis.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis.ravel())))
-        self.assertFalse(True)
+        assert tuple(analysis.shape) == (1,) + input_shape
+        assert not np.any(np.isinf(analysis.ravel()))
+        assert not np.any(np.isnan(analysis.ravel()))
 
 
-def test_train_analyzer(method, network_filter):
+def test_train_analyzer(method, network_filter) -> None:
     """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
     test_case = AnalyzerTrainTestCase(method=method, network_filter=network_filter)
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
+    test_case.run_test()
 
 
 class EqualAnalyzerTestCase(BaseLayerTestCase):
@@ -182,64 +127,49 @@ class EqualAnalyzerTestCase(BaseLayerTestCase):
     :param method2: A function that returns an Analyzer class.
     """
 
-    def __init__(self, *args, **kwargs):
-        method1 = kwargs.pop("method1", None)
-        method2 = kwargs.pop("method2", None)
+    def __init__(self, *args, method1=None, method2=None, **kwargs) -> None:
         if method1 is not None:
             self._method1 = method1
         if method2 is not None:
             self._method2 = method2
 
-        super(EqualAnalyzerTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def _method1(self, model):
+    def _method1(self, _model: Model):
         raise NotImplementedError("Set in subclass.")
 
-    def _method2(self, model):
+    def _method2(self, _model: Model):
         raise NotImplementedError("Set in subclass.")
 
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
+    def _apply_test(self, model: Model) -> None:
+        # Generate random training input
+        input_shape = model.input_shape[1:]
+        x = np.random.rand(1, *input_shape).astype(np.float32)
+        # Call model with test input
+        model.predict(x)
         # Get analyzer.
         analyzer1 = self._method1(model)
         analyzer2 = self._method2(model)
         # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:])) * 100
         analysis1 = analyzer1.analyze(x)
         analysis2 = analyzer2.analyze(x)
 
-        self.assertEqual(
-            tuple(analysis1.shape), (1,) + tuple(network["input_shape"][1:])
-        )
-        self.assertFalse(np.any(np.isinf(analysis1.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis1.ravel())))
-        self.assertEqual(
-            tuple(analysis2.shape), (1,) + tuple(network["input_shape"][1:])
-        )
-        self.assertFalse(np.any(np.isinf(analysis2.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis2.ravel())))
+        assert tuple(analysis1.shape) == (1,) + input_shape
+        assert not np.any(np.isinf(analysis1.ravel()))
+        assert not np.any(np.isnan(analysis1.ravel()))
 
-        all_close_kwargs = {}
-        if hasattr(self, "_all_close_rtol"):
-            all_close_kwargs["rtol"] = self._all_close_rtol
-        if hasattr(self, "_all_close_atol"):
-            all_close_kwargs["atol"] = self._all_close_atol
-        # print(analysis1.sum(), analysis2.sum())
-        self.assertTrue(np.allclose(analysis1, analysis2, **all_close_kwargs))
+        assert tuple(analysis2.shape) == (1,) + input_shape
+        assert not np.any(np.isinf(analysis2.ravel()))
+        assert not np.any(np.isnan(analysis2.ravel()))
+        assert np.allclose(analysis1, analysis2)
 
 
-def test_equal_analyzer(method1, method2, network_filter):
+def test_equal_analyzer(method1, method2, network_filter) -> None:
     """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
     test_case = EqualAnalyzerTestCase(
         method1=method1, method2=method2, network_filter=network_filter
     )
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
+    test_case.run_test()
 
 
 # todo: merge with base test case? if we don't run the analysis
@@ -254,81 +184,36 @@ class SerializeAnalyzerTestCase(BaseLayerTestCase):
     :param method: A function that returns an Analyzer class.
     """
 
-    def __init__(self, *args, **kwargs):
-        method = kwargs.pop("method", None)
+    def __init__(self, *args, method=None, **kwargs) -> None:
         if method is not None:
             self._method = method
-        super(SerializeAnalyzerTestCase, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def _method(self, model):
+    def _method(self, model: Model):
         raise NotImplementedError("Set in subclass.")
 
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
+    def _apply_test(self, model: Model) -> None:
         # Get analyzer.
         analyzer = self._method(model)
         # Dryrun.
-        x = np.random.rand(1, *(network["input_shape"][1:]))
+        input_shape = model.input_shape[1:]
+        x = np.random.rand(1, *input_shape)
+        old_analysis = analyzer.analyze(x)
 
         class_name, state = analyzer.save()
         new_analyzer = AnalyzerBase.load(class_name, state)
 
-        analysis = new_analyzer.analyze(x)
-        self.assertEqual(
-            tuple(analysis.shape), (1,) + tuple(network["input_shape"][1:])
-        )
-        self.assertFalse(np.any(np.isinf(analysis.ravel())))
-        self.assertFalse(np.any(np.isnan(analysis.ravel())))
+        new_analysis = new_analyzer.analyze(x)
+        assert tuple(new_analysis.shape) == (1,) + input_shape
+        assert not np.any(np.isinf(new_analysis.ravel()))
+        assert not np.any(np.isnan(new_analysis.ravel()))
+
+        # Check equality of analysis for all deterministic analyzers
+        if not isinstance(analyzer, (Random)):
+            assert np.allclose(new_analysis, old_analysis)
 
 
-def test_serialize_analyzer(method, network_filter):
+def test_serialize_analyzer(method, network_filter) -> None:
     """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
     test_case = SerializeAnalyzerTestCase(method=method, network_filter=network_filter)
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
-
-class PatternComputerTestCase(BaseLayerTestCase):
-    """TestCase pattern computation
-
-    :param method: A function that returns an PatternComputer class.
-    """
-
-    def __init__(self, *args, **kwargs):
-        method = kwargs.pop("method", None)
-        if method is not None:
-            self._method = method
-        super(PatternComputerTestCase, self).__init__(*args, **kwargs)
-
-    def _method(self, model):
-        raise NotImplementedError("Set in subclass.")
-
-    def _apply_test(self, network):
-        # Create model.
-        model = keras.models.Model(inputs=network["in"], outputs=network["out"])
-        model.set_weights(_set_zero_weights_to_random(model.get_weights()))
-        # Get computer.
-        computer = self._method(model)
-        # Dryrun.
-        x = np.random.rand(10, *(network["input_shape"][1:]))
-        computer.compute(x)
-
-
-def test_pattern_computer(method, network_filter):
-    """Workaround for move from unit-tests to pytest."""
-    # todo: Mixing of pytest and unittest is not ideal.
-    # Move completely to pytest.
-    test_case = PatternComputerTestCase(method=method, network_filter=network_filter)
-    test_result = unittest.TextTestRunner().run(test_case)
-    assert len(test_result.errors) == 0
-    assert len(test_result.failures) == 0
+    test_case.run_test()

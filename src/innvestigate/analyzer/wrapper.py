@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-import warnings
-from builtins import zip
-from typing import List, Optional, Union
-
-import keras.backend as kbackend
-import keras.models
 import numpy as np
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
+import innvestigate.backend as ibackend
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as kutils
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
-from innvestigate.utils.types import OptionalList, Tensor
+from innvestigate.backend.types import OptionalList, Tensor
 
 __all__ = [
     "WrapperBase",
@@ -32,6 +28,9 @@ class WrapperBase(AnalyzerBase):
     """
 
     def __init__(self, subanalyzer: AnalyzerBase, *args, **kwargs):
+        if not isinstance(subanalyzer, AnalyzerNetworkBase):
+            raise NotImplementedError("Keras-based subanalyzer required.")
+
         # To simplify serialization, additionaly passed models are popped
         # and the subanalyzer model is passed to `AnalyzerBase`.
         kwargs.pop("model", None)
@@ -122,22 +121,21 @@ class AugmentReduceBase(WrapperBase):
         inputs = model.inputs[: self._subanalyzer._n_data_input]
         extra_inputs = model.inputs[self._subanalyzer._n_data_input :]
 
-        outputs = model.outputs[: self._subanalyzer._n_data_output]
+        # outputs = model.outputs[: self._subanalyzer._n_data_output]
         extra_outputs = model.outputs[self._subanalyzer._n_data_output :]
 
         if len(extra_outputs) > 0:
-            raise Exception("No extra output is allowed " "with this wrapper.")
+            raise Exception("No extra output is allowed with this wrapper.")
 
-        new_inputs = iutils.to_list(self._augment(inputs))
-        # print(type(new_inputs), type(extra_inputs))
-        tmp = iutils.to_list(model(new_inputs + extra_inputs))
-        new_outputs = iutils.to_list(self._reduce(tmp))
+        new_inputs = self._augment(ibackend.to_list(inputs))
+
+        augmented_outputs = ibackend.to_list(model(new_inputs + extra_inputs))
+        new_outputs = self._reduce(augmented_outputs)
         new_constant_inputs = self._keras_get_constant_inputs()
 
-        new_model = keras.models.Model(
-            inputs=inputs + extra_inputs + new_constant_inputs,
-            outputs=new_outputs + extra_outputs,
-        )
+        inputs = inputs + extra_inputs + new_constant_inputs
+        outputs = new_outputs + extra_outputs
+        new_model = kmodels.Model(inputs=inputs, outputs=outputs)
         self._subanalyzer._analyzer_model = new_model
 
     def analyze(
@@ -153,15 +151,14 @@ class AugmentReduceBase(WrapperBase):
         # As described in the AugmentReduceBase init,
         # both ns_mode "max_activation" and "index" make use
         # of a subanalyzer using neuron_selection_mode="index".
-        elif ns_mode == "max_activation":
+        if ns_mode == "max_activation":
             # obtain max neuron activations over batch
             pred = self._subanalyzer._model.predict(X)
             indices = np.argmax(pred, axis=1)
         elif ns_mode == "index":
             # TODO: make neuron_selection arg or kwarg, not both
-            if len(args):
-                arglist = list(args)
-                indices = arglist.pop(0)
+            if args:
+                indices = list(args).pop(0)
             else:
                 indices = kwargs.pop("neuron_selection")
 
@@ -175,21 +172,22 @@ class AugmentReduceBase(WrapperBase):
         kwargs["neuron_selection"] = indices
         return self._subanalyzer.analyze(X, *args, **kwargs)
 
-    def _keras_get_constant_inputs(self):
-        return list()
+    def _keras_get_constant_inputs(self) -> list[Tensor] | None:
+        return []
 
-    def _augment(self, X):
-        repeat = ilayers.Repeat(self._augment_by_n, axis=0)
-        return [repeat(x) for x in iutils.to_list(X)]
+    def _augment(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
+        """Augment inputs before analyzing them with subanalyzer."""
+        repeat = ilayers.Repeat(self._augment_by_n)
+        reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
+        return [reshape(repeat(X)) for X in ibackend.to_list(Xs)]
 
-    def _reduce(self, X):
-        X_shape = [kbackend.int_shape(x) for x in iutils.to_list(X)]
-        reshape = [
-            ilayers.Reshape((-1, self._augment_by_n) + shape[1:]) for shape in X_shape
-        ]
-        mean = ilayers.Mean(axis=1)
-
-        return [mean(reshape_x(x)) for x, reshape_x in zip(X, reshape)]
+    def _reduce(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
+        """Reduce input Xs by reshaping and taking the mean along
+        the axis of augmentation."""
+        reshape = ilayers.AugmentationFromBatchAxis(self._augment_by_n)
+        reduce = ilayers.ReduceMean()
+        means = [reduce(reshape(X)) for X in ibackend.to_list(Xs)]
+        return means
 
     def _get_state(self):
         state = super()._get_state()
@@ -224,10 +222,13 @@ class GaussianSmoother(AugmentReduceBase):
         super().__init__(subanalyzer, *args, **kwargs)
         self._noise_scale = noise_scale
 
-    def _augment(self, X):
-        tmp = super()._augment(X)
-        noise = ilayers.TestPhaseGaussianNoise(stddev=self._noise_scale)
-        return [noise(x) for x in tmp]
+    def _augment(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
+        repeat = ilayers.Repeat(self._augment_by_n)
+        add_noise = ilayers.AddGaussianNoise()
+        reshape = ilayers.AugmentationToBatchAxis(self._augment_by_n)
+
+        ret = [reshape(add_noise(repeat(X))) for X in ibackend.to_list(Xs)]
+        return ret
 
     def _get_state(self):
         state = super()._get_state()
@@ -270,37 +271,31 @@ class PathIntegrator(AugmentReduceBase):
         super().__init__(subanalyzer, *args, augment_by_n=steps, **kwargs)
 
         self._reference_inputs = reference_inputs
-        self._keras_constant_inputs: Optional[List[Tensor]] = None
+        self._keras_constant_inputs: list[Tensor] | None = None
 
-    def _keras_set_constant_inputs(self, inputs: List[Tensor]) -> None:
-        tmp = [kbackend.variable(x) for x in inputs]
+    def _keras_set_constant_inputs(self, inputs: list[Tensor]) -> None:
+        tmp = [kbackend.variable(X) for X in inputs]
         self._keras_constant_inputs = [
-            keras.layers.Input(tensor=X, shape=X.shape[1:]) for X in tmp
+            klayers.Input(tensor=X, shape=X.shape[1:]) for X in tmp
         ]
 
-    def _keras_get_constant_inputs(self) -> Optional[List[Tensor]]:
+    def _keras_get_constant_inputs(self) -> list[Tensor] | None:
         return self._keras_constant_inputs
 
-    def _compute_difference(self, X: List[Tensor]) -> List[Tensor]:
+    def _compute_difference(self, Xs: list[Tensor]) -> list[Tensor]:
         if self._keras_constant_inputs is None:
-            tmp = kutils.broadcast_np_tensors_to_keras_tensors(
-                X, self._reference_inputs
+            inputs = ibackend.broadcast_np_tensors_to_keras_tensors(
+                self._reference_inputs, Xs
             )
-            self._keras_set_constant_inputs(tmp)
+            self._keras_set_constant_inputs(inputs)
 
         # Type not Optional anymore as as `_keras_set_constant_inputs` has been called.
-        reference_inputs: List[Tensor]
+        reference_inputs: list[Tensor]
         reference_inputs = self._keras_get_constant_inputs()  # type: ignore
-        return [keras.layers.Subtract()([x, ri]) for x, ri in zip(X, reference_inputs)]
+        return [klayers.subtract([x, ri]) for x, ri in zip(Xs, reference_inputs)]
 
-    def _augment(self, X):
-        tmp = super()._augment(X)
-        tmp = [
-            ilayers.Reshape((-1, self._augment_by_n) + kbackend.int_shape(x)[1:])(x)
-            for x in tmp
-        ]
-
-        difference = self._compute_difference(X)
+    def _augment(self, Xs):
+        difference = self._compute_difference(Xs)
         self._keras_difference = difference
         # Make broadcastable.
         difference = [
@@ -314,16 +309,16 @@ class PathIntegrator(AugmentReduceBase):
         path_steps = [multiply_with_linspace(d) for d in difference]
 
         reference_inputs = self._keras_get_constant_inputs()
-        ret = [keras.layers.Add()([x, p]) for x, p in zip(reference_inputs, path_steps)]
+        ret = [klayers.Add()([x, p]) for x, p in zip(reference_inputs, path_steps)]
         ret = [ilayers.Reshape((-1,) + kbackend.int_shape(x)[2:])(x) for x in ret]
         return ret
 
-    def _reduce(self, X):
-        tmp = super()._reduce(X)
+    def _reduce(self, Xs):
+        tmp = super()._reduce(Xs)
         difference = self._keras_difference
         del self._keras_difference
 
-        return [keras.layers.Multiply()([x, d]) for x, d in zip(tmp, difference)]
+        return [klayers.Multiply()([x, d]) for x, d in zip(tmp, difference)]
 
     def _get_state(self):
         state = super()._get_state()

@@ -1,41 +1,25 @@
 from __future__ import annotations
 
 import inspect
-from builtins import zip
-from typing import Dict, List
 
-import keras
-import keras.backend as K
-import keras.engine.topology
-import keras.layers
-import keras.layers.convolutional
-import keras.layers.core
-import keras.layers.local
-import keras.layers.noise
-import keras.layers.normalization
-import keras.layers.pooling
-import keras.models
-import six
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
 
 import innvestigate.analyzer.relevance_based.relevance_rule as rrule
 import innvestigate.analyzer.relevance_based.utils as rutils
-import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as kutils
-import innvestigate.utils.keras.checks as kchecks
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
+import innvestigate.backend.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
-from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
+from innvestigate.backend.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = [
     "BaselineLRPZ",
     "LRP",
     "LRP_RULES",
     "LRPZ",
-    "LRPZIgnoreBias",
     "LRPEpsilon",
-    "LRPEpsilonIgnoreBias",
     "LRPWSquare",
     "LRPFlat",
     "LRPAlphaBeta",
@@ -55,54 +39,54 @@ __all__ = [
 
 ###############################################################################
 BASELINE_LRPZ_LAYERS = (
-    keras.engine.topology.InputLayer,
-    keras.layers.convolutional.Conv1D,
-    keras.layers.convolutional.Conv2D,
-    keras.layers.convolutional.Conv2DTranspose,
-    keras.layers.convolutional.Conv3D,
-    keras.layers.convolutional.Conv3DTranspose,
-    keras.layers.convolutional.Cropping1D,
-    keras.layers.convolutional.Cropping2D,
-    keras.layers.convolutional.Cropping3D,
-    keras.layers.convolutional.SeparableConv1D,
-    keras.layers.convolutional.SeparableConv2D,
-    keras.layers.convolutional.UpSampling1D,
-    keras.layers.convolutional.UpSampling2D,
-    keras.layers.convolutional.UpSampling3D,
-    keras.layers.convolutional.ZeroPadding1D,
-    keras.layers.convolutional.ZeroPadding2D,
-    keras.layers.convolutional.ZeroPadding3D,
-    keras.layers.core.Activation,
-    keras.layers.core.ActivityRegularization,
-    keras.layers.core.Dense,
-    keras.layers.core.Dropout,
-    keras.layers.core.Flatten,
-    keras.layers.core.Lambda,
-    keras.layers.core.Masking,
-    keras.layers.core.Permute,
-    keras.layers.core.RepeatVector,
-    keras.layers.core.Reshape,
-    keras.layers.core.SpatialDropout1D,
-    keras.layers.core.SpatialDropout2D,
-    keras.layers.core.SpatialDropout3D,
-    keras.layers.local.LocallyConnected1D,
-    keras.layers.local.LocallyConnected2D,
-    keras.layers.Add,
-    keras.layers.Concatenate,
-    keras.layers.Dot,
-    keras.layers.Maximum,
-    keras.layers.Minimum,
-    keras.layers.Subtract,
-    keras.layers.noise.AlphaDropout,
-    keras.layers.noise.GaussianDropout,
-    keras.layers.noise.GaussianNoise,
-    keras.layers.normalization.BatchNormalization,
-    keras.layers.pooling.GlobalMaxPooling1D,
-    keras.layers.pooling.GlobalMaxPooling2D,
-    keras.layers.pooling.GlobalMaxPooling3D,
-    keras.layers.pooling.MaxPooling1D,
-    keras.layers.pooling.MaxPooling2D,
-    keras.layers.pooling.MaxPooling3D,
+    klayers.InputLayer,
+    klayers.Conv1D,
+    klayers.Conv2D,
+    klayers.Conv2DTranspose,
+    klayers.Conv3D,
+    klayers.Conv3DTranspose,
+    klayers.Cropping1D,
+    klayers.Cropping2D,
+    klayers.Cropping3D,
+    klayers.SeparableConv1D,
+    klayers.SeparableConv2D,
+    klayers.UpSampling1D,
+    klayers.UpSampling2D,
+    klayers.UpSampling3D,
+    klayers.ZeroPadding1D,
+    klayers.ZeroPadding2D,
+    klayers.ZeroPadding3D,
+    klayers.Activation,
+    klayers.ActivityRegularization,
+    klayers.Dense,
+    klayers.Dropout,
+    klayers.Flatten,
+    klayers.Lambda,
+    klayers.Masking,
+    klayers.Permute,
+    klayers.RepeatVector,
+    klayers.Reshape,
+    klayers.SpatialDropout1D,
+    klayers.SpatialDropout2D,
+    klayers.SpatialDropout3D,
+    klayers.LocallyConnected1D,
+    klayers.LocallyConnected2D,
+    klayers.Add,
+    klayers.Concatenate,
+    klayers.Dot,
+    klayers.Maximum,
+    klayers.Minimum,
+    klayers.Subtract,
+    klayers.AlphaDropout,
+    klayers.GaussianDropout,
+    klayers.GaussianNoise,
+    klayers.BatchNormalization,
+    klayers.GlobalMaxPooling1D,
+    klayers.GlobalMaxPooling2D,
+    klayers.GlobalMaxPooling3D,
+    klayers.MaxPooling1D,
+    klayers.MaxPooling2D,
+    klayers.MaxPooling3D,
 )
 
 
@@ -125,7 +109,7 @@ class BaselineLRPZ(AnalyzerNetworkBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             "BaselineLRPZ only works with  ReLU activations.",
             check_type="exception",
         )
@@ -137,31 +121,30 @@ class BaselineLRPZ(AnalyzerNetworkBase):
         self._do_model_checks()
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
     ):
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
-        gradients = iutils.to_list(
-            ilayers.Gradient()(tensors_to_analyze + [model.outputs[0]])
+        gradients = ibackend.to_list(
+            kbackend.gradients(model.outputs[0], tensors_to_analyze)
         )
         return [
-            keras.layers.Multiply()([i, g])
-            for i, g in zip(tensors_to_analyze, gradients)
+            klayers.Multiply()([i, g]) for i, g in zip(tensors_to_analyze, gradients)
         ]
 
 
 ###############################################################################
 
 # Utility list enabling name mappings via string
-LRP_RULES: Dict = {
+LRP_RULES: dict = {
     "Z": rrule.ZRule,
-    "ZIgnoreBias": rrule.ZIgnoreBiasRule,
     "Epsilon": rrule.EpsilonRule,
-    "EpsilonIgnoreBias": rrule.EpsilonIgnoreBiasRule,
     "WSquare": rrule.WSquareRule,
     "Flat": rrule.FlatRule,
     "AlphaBeta": rrule.AlphaBetaRule,
@@ -176,12 +159,12 @@ LRP_RULES: Dict = {
 }
 
 
-class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
-    def __init__(self, layer, state):
+class EmbeddingReverseLayer(igraph.ReverseMappingBase):
+    def __init__(self, _layer, _state):
         # TODO: implement rule support.
-        return
+        pass
 
-    def apply(self, _Xs, _Ys, Rs, _reverse_state: Dict):
+    def apply(self, _Xs, _Ys, Rs, _reverse_state: dict):
         # the embedding layer outputs for an (indexed) input a vector.
         # thus, in the relevance backward pass, the embedding layer receives
         # relevances Rs corresponding to those vectors.
@@ -190,11 +173,11 @@ class EmbeddingReverseLayer(kgraph.ReverseMappingBase):
         # over the vector axis.
 
         # relevances are given shaped [batch_size, sequence_length, embedding_dims]
-        pool_relevance = keras.layers.Lambda(lambda x: keras.backend.sum(x, axis=-1))
+        pool_relevance = klayers.Lambda(lambda x: kbackend.sum(x, axis=-1))
         return [pool_relevance(R) for R in Rs]
 
 
-class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
+class BatchNormalizationReverseLayer(igraph.ReverseMappingBase):
     """Special BN handler that applies the Z-Rule"""
 
     def __init__(self, layer, _state):
@@ -217,14 +200,13 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         # check if isinstance(self_rule, EpsiloneRule), then reroute
         # to BatchNormEpsilonRule. Not pretty, but should work.
 
-    def apply(self, Xs, Ys, Rs, _reverse_state: Dict):
-        input_shape = [K.int_shape(x) for x in Xs]
+    def apply(self, Xs, Ys, Rs, _reverse_state: dict):
+        input_shape = [kbackend.int_shape(x) for x in Xs]
         if len(input_shape) != 1:
             # extend below lambda layers towards multiple parameters.
             raise ValueError(
-                "BatchNormalizationReverseLayer expects Xs with len(Xs) = 1, but was len(Xs) = {}".format(  # noqa
-                    len(Xs)
-                )
+                "BatchNormalizationReverseLayer expects Xs with length 1, "
+                f"but was len(Xs)={len(Xs)}"
             )
         input_shape = input_shape[0]
 
@@ -241,49 +223,47 @@ class BatchNormalizationReverseLayer(kgraph.ReverseMappingBase):
         # multiplication and then addition. The multiplicative scaling layer
         # has no effect on LRP and functions as a linear activation layer
 
-        minus_mu = keras.layers.Lambda(
-            lambda x: x - K.reshape(self._mean, broadcast_shape)
+        minus_mu = klayers.Lambda(
+            lambda x: x - kbackend.reshape(self._mean, broadcast_shape)
         )
-        minus_beta = keras.layers.Lambda(
-            lambda x: x - K.reshape(self._beta, broadcast_shape)
+        minus_beta = klayers.Lambda(
+            lambda x: x - kbackend.reshape(self._beta, broadcast_shape)
         )
-        prepare_div = keras.layers.Lambda(
+        prepare_div = klayers.Lambda(
             lambda x: x
-            + (K.cast(K.greater_equal(x, 0), K.floatx()) * 2 - 1) * K.epsilon()
+            + (kbackend.cast(kbackend.greater_equal(x, 0), kbackend.floatx()) * 2 - 1)
+            * kbackend.epsilon()
         )
 
-        x_minus_mu = kutils.apply(minus_mu, Xs)
+        x_minus_mu = ibackend.apply(minus_mu, Xs)
         if self._center:
-            y_minus_beta = kutils.apply(minus_beta, Ys)
+            y_minus_beta = ibackend.apply(minus_beta, Ys)
         else:
             y_minus_beta = Ys
 
         numerator = [
-            keras.layers.Multiply()([x, ymb, r])
-            for x, ymb, r in zip(Xs, y_minus_beta, Rs)
+            klayers.Multiply()([x, ymb, r]) for x, ymb, r in zip(Xs, y_minus_beta, Rs)
         ]
-        denominator = [
-            keras.layers.Multiply()([xmm, y]) for xmm, y in zip(x_minus_mu, Ys)
-        ]
+        denominator = [klayers.Multiply()([xmm, y]) for xmm, y in zip(x_minus_mu, Ys)]
 
         return [
-            ilayers.SafeDivide()([n, prepare_div(d)])
+            ibackend.safe_divide(n, prepare_div(d))
             for n, d in zip(numerator, denominator)
         ]
 
 
-class AddReverseLayer(kgraph.ReverseMappingBase):
+class AddReverseLayer(igraph.ReverseMappingBase):
     """Special Add layer handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
+    def __init__(self, layer, _state):
+        self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_kernel_%s"
         )
 
         # TODO: implement rule support.
         # super().__init__(layer, state)
 
-    def apply(self, Xs, _Ys, Rs, _reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, _reverse_state: dict):
         # The outputs of the pooling operation at each location
         # is the sum of its inputs.
         # The forward message must be known in this case,
@@ -292,31 +272,30 @@ class AddReverseLayer(kgraph.ReverseMappingBase):
         # which corresponds to the "weights" of the layer.
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
-        grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
-class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
+class AveragePoolingReverseLayer(igraph.ReverseMappingBase):
     """Special AveragePooling handler that applies the Z-Rule"""
 
-    def __init__(self, layer, state):
-        self._layer_wo_act = kgraph.copy_layer_wo_activation(
+    def __init__(self, layer, _state):
+        self._layer_wo_act = igraph.copy_layer_wo_activation(
             layer, name_template="reversed_kernel_%s"
         )
 
         # TODO: implement rule support.
         # super().__init__(layer, state)
 
-    def apply(self, Xs, _Ys, Rs, reverse_state: Dict):
+    def apply(self, Xs, _Ys, Rs, reverse_state: dict):
         # The outputs of the pooling operation at each location
         # is the sum of its inputs.
         # The forward message must be known in this case,
@@ -325,17 +304,16 @@ class AveragePoolingReverseLayer(kgraph.ReverseMappingBase):
         # which corresponds to the "weights" of the layer.
         # It should thus be sufficient to reweight the relevances
         # and do a gradient_wrt
-        grad = ilayers.GradientWRT(len(Xs))
         # Get activations.
-        Zs = kutils.apply(self._layer_wo_act, Xs)
+        Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.
-        tmp = [ilayers.SafeDivide()([a, b]) for a, b in zip(Rs, Zs)]
+        tmp = [ibackend.safe_divide(a, b) for a, b in zip(Rs, Zs)]
 
         # Propagate the relevance to input neurons
         # using the gradient.
-        tmp = iutils.to_list(grad(Xs + Zs + tmp))
+        grads = ibackend.gradients(Xs, Zs, tmp)
         # Re-weight relevance with the input values.
-        return [keras.layers.Multiply()([a, b]) for a, b in zip(Xs, tmp)]
+        return [klayers.Multiply()([a, b]) for a, b in zip(Xs, grads)]
 
 
 class LRP(ReverseAnalyzerBase):
@@ -375,15 +353,15 @@ class LRP(ReverseAnalyzerBase):
         self._bn_layer_rule = bn_layer_rule
         self._bn_layer_fuse_mode = bn_layer_fuse_mode
 
-        # Add
+        if self._bn_layer_fuse_mode not in ["one_linear", "two_linear"]:
+            raise ValueError(f"Unknown _bn_layer_fuse_mode {self._bn_layer_fuse_mode}")
+
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.is_convnet_layer(layer),
+            lambda layer: not ichecks.is_convnet_layer(layer),
             "LRP is only tested for convolutional neural networks.",
             check_type="warning",
         )
-
-        assert bn_layer_fuse_mode in ["one_linear", "two_linear"]
 
         # TODO: refactor rule type checking into separate function
         # check if rule was given explicitly.
@@ -398,8 +376,8 @@ class LRP(ReverseAnalyzerBase):
             self._rule = rule
 
         if isinstance(rule, str) or (
-            inspect.isclass(rule) and issubclass(rule, kgraph.ReverseMappingBase)
-        ):  # NOTE: All LRP rules inherit from kgraph.ReverseMappingBase
+            inspect.isclass(rule) and issubclass(rule, igraph.ReverseMappingBase)
+        ):  # NOTE: All LRP rules inherit from igraph.ReverseMappingBase
             # the given rule is a single string or single rule implementing cla ss
             use_conditions = True
             rules = [(lambda _: True, rule)]
@@ -416,7 +394,7 @@ class LRP(ReverseAnalyzerBase):
         # apply rule to first self._until_layer_idx layers
         if self._until_layer_rule is not None and self._until_layer_idx is not None:
             for i in range(self._until_layer_idx + 1):
-                is_at_idx: LayerCheck = lambda layer: kchecks.is_layer_at_idx(layer, i)
+                is_at_idx: LayerCheck = lambda layer: ichecks.is_layer_at_idx(layer, i)
                 rules.insert(0, (is_at_idx, self._until_layer_rule))
 
         # create a BoundedRule for input layer handling from given tuple
@@ -432,15 +410,14 @@ class LRP(ReverseAnalyzerBase):
                 input_layer_rule = BoundedProxyRule
 
             if use_conditions is True:
-                is_input: LayerCheck = lambda layer: kchecks.is_input_layer(layer)
-                rules.insert(0, (is_input, input_layer_rule))
+                rules.insert(0, (ichecks.is_input_layer, input_layer_rule))
             else:
                 rules.insert(0, input_layer_rule)
 
         self._rules_use_conditions = use_conditions
         self._rules = rules
 
-    def create_rule_mapping(self, layer: Layer, reverse_state: Dict):
+    def create_rule_mapping(self, layer: Layer, reverse_state: dict):
         if self._rules_use_conditions is True:
             for condition, rule in self._rules:
                 if condition(layer):
@@ -465,7 +442,7 @@ class LRP(ReverseAnalyzerBase):
 
         # default backward hook
         self._add_conditional_reverse_mapping(
-            kchecks.contains_kernel,
+            ichecks.contains_kernel,
             self.create_rule_mapping,
             name="lrp_layer_with_kernel_mapping",
         )
@@ -479,30 +456,30 @@ class LRP(ReverseAnalyzerBase):
             # alternatively a default rule should be applied.
             bn_mapping = BatchNormalizationReverseLayer
         else:
-            if isinstance(bn_layer_rule, six.string_types):
+            if isinstance(bn_layer_rule, str):
                 bn_layer_rule = LRP_RULES[bn_layer_rule]
 
-            bn_mapping = kgraph.apply_mapping_to_fused_bn_layer(
+            bn_mapping = igraph.apply_mapping_to_fused_bn_layer(
                 bn_layer_rule,
                 fuse_mode=self._bn_layer_fuse_mode,
             )
         self._add_conditional_reverse_mapping(
-            kchecks.is_batch_normalization_layer,
+            ichecks.is_batch_normalization_layer,
             bn_mapping,
             name="lrp_batch_norm_mapping",
         )
         self._add_conditional_reverse_mapping(
-            kchecks.is_average_pooling,
+            ichecks.is_average_pooling,
             AveragePoolingReverseLayer,
             name="lrp_average_pooling_mapping",
         )
         self._add_conditional_reverse_mapping(
-            kchecks.is_add_layer,
+            ichecks.is_add_layer,
             AddReverseLayer,
             name="lrp_add_layer_mapping",
         )
         self._add_conditional_reverse_mapping(
-            kchecks.is_embedding_layer,
+            ichecks.is_embedding_layer,
             EmbeddingReverseLayer,
             name="lrp_embedding_mapping",
         )
@@ -515,27 +492,24 @@ class LRP(ReverseAnalyzerBase):
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
-        # default_return_layers = [keras.layers.Activation]# TODO extend
+        # default_return_layers = [klayers.Activation]# TODO extend
         if (
             len(Xs) == len(Ys)
-            and isinstance(reverse_state["layer"], (keras.layers.Activation,))
-            and all([K.int_shape(x) == K.int_shape(y) for x, y in zip(Xs, Ys)])
+            and isinstance(reverse_state["layer"], (klayers.Activation,))
+            and all(
+                kbackend.int_shape(x) == kbackend.int_shape(y) for x, y in zip(Xs, Ys)
+            )
         ):
             # Expect Xs and Ys to have the same shapes.
             # There is not mixing of relevances as there is kernel,
             # therefore we pass them as they are.
             return reversed_Ys
-        else:
-            # This branch covers:
-            # MaxPooling
-            # Max
-            # Flatten
-            # Reshape
-            # Concatenate
-            # Cropping
-            return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
+
+        # This branch covers:
+        # MaxPooling, Max, Flatten, Reshape, Concatenate, Cropping
+        return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
     ######################################
     # End of Rule Selection Business. ####
@@ -593,16 +567,6 @@ class LRPZ(_LRPFixedParams):
         self._do_model_checks()
 
 
-class LRPZIgnoreBias(_LRPFixedParams):
-    """LRP-analyzer that uses the LRP-Z-ignore-bias rule"""
-
-    def __init__(self, model, *args, **kwargs):
-        super().__init__(
-            model, *args, rule="ZIgnoreBias", bn_layer_rule="ZIgnoreBias", **kwargs
-        )
-        self._do_model_checks()
-
-
 class LRPEpsilon(_LRPFixedParams):
     """LRP-analyzer that uses the LRP-Epsilon rule"""
 
@@ -631,14 +595,6 @@ class LRPEpsilon(_LRPFixedParams):
         self._do_model_checks()
 
 
-class LRPEpsilonIgnoreBias(LRPEpsilon):
-    """LRP-analyzer that uses the LRP-Epsilon-ignore-bias rule"""
-
-    def __init__(self, model, epsilon=1e-7, *args, **kwargs):
-        super().__init__(model, *args, epsilon=epsilon, bias=False, **kwargs)
-        self._do_model_checks()
-
-
 class LRPWSquare(_LRPFixedParams):
     """LRP-analyzer that uses the DeepTaylor W**2 rule"""
 
@@ -660,7 +616,7 @@ class LRPFlat(_LRPFixedParams):
 class LRPAlphaBeta(LRP):
     """Base class for LRP AlphaBeta"""
 
-    def __init__(self, model, alpha=None, beta=None, bias=True, *args, **kwargs):
+    def __init__(self, model, *args, alpha=None, beta=None, bias=True, **kwargs):
         alpha, beta = rutils.assert_infer_lrp_alpha_beta_param(alpha, beta, self)
         self._alpha = alpha
         self._beta = beta
@@ -781,8 +737,8 @@ class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
     def __init__(
         self,
         model,
-        epsilon=1e-1,
         *args,
+        epsilon=1e-1,
         bn_layer_rule=rrule.AlphaBetaX2m100Rule,
         **kwargs,
     ):
@@ -791,8 +747,8 @@ class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
                 super().__init__(*args, epsilon=epsilon, bias=True, **kwargs)
 
         conditional_rules = [
-            (kchecks.is_dense_layer, EpsilonProxyRule),
-            (kchecks.is_conv_layer, rrule.Alpha1Beta0Rule),
+            (ichecks.is_dense_layer, EpsilonProxyRule),
+            (ichecks.is_conv_layer, rrule.Alpha1Beta0Rule),
         ]
 
         super().__init__(
@@ -800,7 +756,7 @@ class LRPSequentialPresetA(_LRPFixedParams):  # for the lack of a better name
         )
 
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             # TODO: fix. specify. extend.
             (
                 "LRPSequentialPresetA is not advised "
@@ -818,8 +774,8 @@ class LRPSequentialPresetB(_LRPFixedParams):
     def __init__(
         self,
         model: Model,
-        epsilon: float = 1e-1,
         *args,
+        epsilon: float = 1e-1,
         bn_layer_rule=rrule.AlphaBetaX2m100Rule,
         **kwargs,
     ):
@@ -828,8 +784,8 @@ class LRPSequentialPresetB(_LRPFixedParams):
                 super().__init__(*args, epsilon=epsilon, bias=True, **kwargs)
 
         conditional_rules = [
-            (kchecks.is_dense_layer, EpsilonProxyRule),
-            (kchecks.is_conv_layer, rrule.Alpha2Beta1Rule),
+            (ichecks.is_dense_layer, EpsilonProxyRule),
+            (ichecks.is_conv_layer, rrule.Alpha2Beta1Rule),
         ]
 
         super().__init__(
@@ -838,7 +794,7 @@ class LRPSequentialPresetB(_LRPFixedParams):
 
         # Add and run model checks
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             # TODO: fix. specify. extend.
             (
                 "LRPSequentialPresetB is not advised "
@@ -873,7 +829,7 @@ class LRPSequentialPresetBFlat(LRPSequentialPresetB):
         if "input_layer_rule" in kwargs:
             if kwargs["input_layer_rule"] != "Flat":
                 raise RuntimeError(
-                    "Unexpected input_layer_rule when loading LRPSequentialPresetAFlat."
+                    "Unexpected input_layer_rule when loading LRPSequentialPresetBFlat."
                 )
             kwargs.pop("input_layer_rule")
         super().__init__(model, *args, input_layer_rule="Flat", **kwargs)

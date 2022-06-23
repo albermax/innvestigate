@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "innvestigate"
-version = "1.1.0"
+version = "2.0.0"
 description = "A toolbox to innvestigate neural networks' predictions."
 classifiers = [
     "License :: OSI Approved :: BSD License",
@@ -13,6 +13,7 @@ classifiers = [
 ]
 authors = [
     "Maxmilian Alber <workDoTalberDoTmaximilian@gmail.com>",
+    "Adrian Hill <hill@tu-berlin.de>",
     "Sebastian Lapuschkin",
     "Miriam Haegele",
     "Kristof Schuett",
@@ -20,10 +21,9 @@ authors = [
     "Pieter-Jan Kindermans",
     "Henry Webel",
     "Leander Weber",
-    "Adrian Hill <hill@campus.tu-berlin.de>",
     "and others",
 ]
-maintainers = ["Adrian Hill <hill@campus.tu-berlin.de>"]
+maintainers = ["Adrian Hill <hill@tu-berlin.de>"]
 license = "BSD-2-Clause"
 readme = "README.md"
 homepage = "https://github.com/albermax/innvestigate"
@@ -32,36 +32,39 @@ documentation = "https://innvestigate.readthedocs.io/en/latest/"
 keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
-python = "~3.7"
-Keras = "~2.3"
-tensorflow = "~1.15"
-Pillow = "^8.1.1"
-numpy = "^1.18.5"
-matplotlib = "^3.4.0"
-typing-extensions = "^3.7.4"
+python = ">=3.7.1,<3.11"
+tensorflow = "^2.6"
+future = "^0.18.2"
+numpy = "^1.19.2"
+matplotlib = "^3.5.1"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.0"
-black  = { version = "*", allow-prereleases = true }
-flake8 = "^3.8.4"
-flake8-black = "^0.2.1"
-flake8-bugbear = "^21.3.1"
+black  = "^22.3"
+flake8 = "^3.9.2"
+flake8-black = "^0.2.3"
+flake8-bugbear = "^21.11.29"
 flake8-builtins = "^1.5.3"
-flake8-docstrings = "^1.5.0"
-flake8-isort = "^4.0.0"
+flake8-docstrings = "^1.6.0"
+flake8-isort = "^4.1.1"
 pep8-naming = "^0.11.1"
-pytest = "^6.2.2"
-pytest-cov = "^2.11.1"
+Pillow = "^9.0.0"
+pytest = "^6.2.5"
+pytest-cov = "^2.12.1"
 coverage = {extras = ["toml"], version = "^5.5"}
 codecov = "^2.1.11"
 rope = "^0.18.0"
-pylint = "^2.7.3"
-ipykernel = "^5.5.0"
-isort = "^5.8.0"
+pylint = "^2.12.2"
+ipykernel = "^5.5.6"
+isort = "^5.10.1"
 mypy = "^0.812"
 MonkeyType = "^20.5.0"
 vulture = "^2.3"
-Sphinx = "^4.0.0"
+Sphinx = "^4.4.0"
+pandas = "^1.3"
+ftfy = "^6.1.1"
+pyupgrade = "^2.32.1"
+pre-commit = "^2.19.0"
 
 [tool.isort]
 profile = "black"
@@ -71,18 +74,28 @@ known_local_folder = "tests"
 
 [tool.pytest.ini_options]
 addopts = "-v -m fast --strict-markers --cov"
-# addopts = "-v -m precommit --strict-markers --cov"
-filterwarnings = [
-    "ignore::DeprecationWarning:tensorflow",
-    "ignore::DeprecationWarning:tensorboard",
-    "ignore::DeprecationWarning:keras",
-]
+# NOTE: locally run tests with `poetry run pytest -m precommit` before a commit 
 markers = [
     "precommit",
     "slow",
     "fast",
+    "local",
+    "graph",
     "application",
+    "mnist",
+    "reference",
+    "layer",
+    "ilayers",
+    "vgg16",
     "imagenet",
+    "resnet50",
+    "base",
+    "deeptaylor",
+    "gradient",
+    "init",
+    "lrp",
+    "wrapper",
+    "perturbate",
 ]
 
 [tool.coverage.paths]

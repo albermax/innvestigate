@@ -1,22 +1,20 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable
 
-import keras
-import keras.layers
-import keras.models
 import numpy as np
-import six
+import tensorflow.keras.backend as kbackend
 
+import innvestigate.backend as ibackend
+import innvestigate.backend.graph as igraph
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.graph as kgraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
-from innvestigate.utils.types import (
+from innvestigate.backend.types import (
     CondReverseMapping,
     Layer,
     Model,
     OptionalList,
+    ReverseTensorDict,
     Tensor,
 )
 
@@ -27,14 +25,14 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     """Convenience class for analyzers that revert the model's structure.
 
     This class contains many helper functions around the graph
-    reverse function :func:`innvestigate.utils.keras.graph.reverse_model`.
+    reverse function :func:`innvestigate.backend.graph.reverse_model`.
 
     The deriving classes should specify how the graph should be reverted
     by implementing the following functions:
 
     * :func:`_reverse_mapping(layer)` given a layer this function
       returns a reverse mapping for the layer as specified in
-      :func:`innvestigate.utils.keras.graph.reverse_model` or None.
+      :func:`innvestigate.backend.graph.reverse_model` or None.
 
       This function can be implemented, but it is encouraged to
       implement a default mapping and add additional changes with
@@ -49,7 +47,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       network.
 
     Furthermore other parameters of the function
-    :func:`innvestigate.utils.keras.graph.reverse_model` can
+    :func:`innvestigate.backend.graph.reverse_model` can
     be changed by setting the according parameters of the
     init function:
 
@@ -67,12 +65,12 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
       backward pass and stores them in the attribute
       :attr:`_reversed_tensors`.
     :param reverse_reapply_on_copied_layers: See
-      :func:`innvestigate.utils.keras.graph.reverse_model`.
+      :func:`innvestigate.backend.graph.reverse_model`.
     """
 
     def __init__(
         self,
-        model: keras.Model,
+        model: Model,
         reverse_verbose: bool = False,
         reverse_clip_values: bool = False,
         reverse_project_bottleneck_layers: bool = False,
@@ -80,7 +78,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         reverse_check_finite: bool = False,
         reverse_keep_tensors: bool = False,
         reverse_reapply_on_copied_layers: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         """
         From AnalyzerBase super init:
@@ -107,23 +105,24 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         self._reverse_mapping_applied: bool = False
 
         # map priorities to lists of conditional reverse mappings
-        self._conditional_reverse_mappings: Dict[int, List[CondReverseMapping]] = {}
+        self._conditional_reverse_mappings: dict[int, list[CondReverseMapping]] = {}
 
         # Maps keys "min", "max", "finite", "keep" to tuples of indices
-        self._debug_tensors_indices: Dict[str, Tuple[int, int]] = {}
+        self._debug_tensors_indices: dict[str, tuple[int, int]] = {}
 
     def _gradient_reverse_mapping(
         self,
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
-        mask = [x not in reverse_state["stop_mapping_at_tensors"] for x in Xs]
-        masked_grad = ilayers.GradientWRT(len(Xs), mask=mask)
-        return masked_grad(Xs + Ys + reversed_Ys)
+        """Returns masked gradient."""
+        mask = [id(X) not in reverse_state["stop_mapping_at_ids"] for X in Xs]
+        grad = ibackend.gradients(Xs, Ys, reversed_Ys)
+        return ibackend.apply_mask(grad, mask)
 
-    def _reverse_mapping(self, layer: keras.layers.Layer):
+    def _reverse_mapping(self, layer: Layer):
         """
         This function should return a reverse mapping for the passed layer.
 
@@ -151,7 +150,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         condition: Callable[[Layer], bool],
         mapping: Callable,  # TODO: specify type of Callable
         priority: int = -1,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         This function should return a reverse mapping for the passed layer.
@@ -196,12 +195,13 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
         # Search for mapping. First consider ones with highest priority,
         # inside priority in order of adding.
-        sorted_keys = sorted(mappings.keys())[::-1]
+        sorted_keys = reversed(sorted(mappings.keys()))
         for key in sorted_keys:
             for mapping in mappings[key]:
                 if mapping["condition"](layer):
                     return mapping["mapping"]
 
+        # Otherwise return None and default reverse mapping will be applied
         return None
 
     def _default_reverse_mapping(
@@ -209,7 +209,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         Xs: OptionalList[Tensor],
         Ys: OptionalList[Tensor],
         reversed_Ys: OptionalList[Tensor],
-        reverse_state: Dict,
+        reverse_state: dict,
     ):
         """
         Fallback function to map reversed_Ys to reversed_Xs
@@ -217,7 +217,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         """
         return self._gradient_reverse_mapping(Xs, Ys, reversed_Ys, reverse_state)
 
-    def _head_mapping(self, X):
+    def _head_mapping(self, X: Tensor) -> Tensor:
         """
         Map output tensors to new values before passing
         them into the reverted network.
@@ -227,19 +227,19 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         # Refer to the "Introduction to development notebook".
         return X
 
-    def _postprocess_analysis(self, X: OptionalList[Tensor]) -> OptionalList[Tensor]:
-        return X
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> list[Tensor]:
+        return ibackend.to_list(Xs)
 
     def _reverse_model(
         self,
         model: Model,
-        stop_analysis_at_tensors: List[Tensor] = None,
+        stop_analysis_at_tensors: list[Tensor] = None,
         return_all_reversed_tensors=False,
-    ):
+    ) -> tuple[list[Tensor], dict[Tensor, ReverseTensorDict] | None]:
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
-        return kgraph.reverse_model(
+        return igraph.reverse_model(
             model,
             reverse_mappings=self._reverse_mapping,
             default_reverse_mapping=self._default_reverse_mapping,
@@ -252,7 +252,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         )
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
     ):
 
         if stop_analysis_at_tensors is None:
@@ -263,36 +263,38 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             or self._reverse_check_finite
             or self._reverse_keep_tensors
         )
-        ret = self._reverse_model(
+
+        # if return_all_reversed_tensors is False,
+        # reversed_tensors will be None
+        reversed_input_tensors, reversed_tensors = self._reverse_model(
             model,
             stop_analysis_at_tensors=stop_analysis_at_tensors,
             return_all_reversed_tensors=return_all_reversed_tensors,
         )
+        ret = self._postprocess_analysis(reversed_input_tensors)
 
         if return_all_reversed_tensors:
-            ret = (self._postprocess_analysis(ret[0]), ret[1])
-        else:
-            ret = self._postprocess_analysis(ret)
+            if reversed_tensors is None:
+                raise TypeError("Expected reversed_tensors, got None.")
 
-        if return_all_reversed_tensors:
-            debug_tensors: List[Tensor]
-            tmp: List[Tensor]
+            debug_tensors: list[Tensor]
+            tmp: list[Tensor]
 
             debug_tensors = []
-            values = list(six.itervalues(ret[1]))
-            mapping = {i: v["id"] for i, v in enumerate(values)}
+            values = reversed_tensors.values()
+            mapping = {i: v["nid"] for i, v in enumerate(values)}
             tensors = [v["final_tensor"] for v in values]
             self._reverse_tensors_mapping = mapping
 
             if self._reverse_check_min_max_values:
-                tmp = [ilayers.Min(None)(x) for x in tensors]
+                tmp = [kbackend.min(x) for x in tensors]
                 self._debug_tensors_indices["min"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),
                 )
                 debug_tensors += tmp
 
-                tmp = [ilayers.Max(None)(x) for x in tensors]
+                tmp = [kbackend.min(x) for x in tensors]
                 self._debug_tensors_indices["max"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),
@@ -300,7 +302,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 debug_tensors += tmp
 
             if self._reverse_check_finite:
-                tmp = iutils.to_list(ilayers.FiniteCheck()(tensors))
+                tmp = ibackend.to_list(ilayers.FiniteCheck()(tensors))
                 self._debug_tensors_indices["finite"] = (
                     len(debug_tensors),
                     len(debug_tensors) + len(tmp),
@@ -314,7 +316,7 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
                 )
                 debug_tensors += tensors
 
-            ret = (ret[0], debug_tensors)
+            return ret, debug_tensors
         return ret
 
     def _handle_debug_output(self, debug_values):
@@ -323,22 +325,16 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
             indices = self._debug_tensors_indices["min"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
-            print(
-                "Minimum values in tensors: "
-                "((NodeID, TensorID), Value) - {}".format(tmp)
-            )
+            print(f"Minimum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
             indices = self._debug_tensors_indices["max"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
-            print(
-                "Maximum values in tensors: "
-                "((NodeID, TensorID), Value) - {}".format(tmp)
-            )
+            print(f"Maximum values in tensors: ((NodeID, TensorID), Value) - {tmp}")
 
         if self._reverse_check_finite:
             indices = self._debug_tensors_indices["finite"]
@@ -347,18 +343,18 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
 
             if len(nfinite_tensors) > 0:
                 nfinite_tensors = sorted(
-                    [self._reverse_tensors_mapping[i] for i in nfinite_tensors]
+                    self._reverse_tensors_mapping[i] for i in nfinite_tensors
                 )
                 print(
                     "Not finite values found in following nodes: "
-                    "(NodeID, TensorID) - {}".format(nfinite_tensors)
+                    f"(NodeID, TensorID) - {nfinite_tensors}"
                 )
 
         if self._reverse_keep_tensors:
             indices = self._debug_tensors_indices["keep"]
             tmp = debug_values[indices[0] : indices[1]]
             tmp = sorted(
-                [(self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)]
+                (self._reverse_tensors_mapping[i], v) for i, v in enumerate(tmp)
             )
             self._reversed_tensors = tmp
 

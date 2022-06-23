@@ -1,0 +1,24 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.5.0
+    hooks:
+    - id: check-added-large-files
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.34.0
+    hooks:
+    -   id: pyupgrade
+        args: [--py37-plus]
+  - repo: local
+    hooks:
+    - id: black
+      name: black
+      entry: poetry run black src/
+      language: system
+      always_run: true
+      pass_filenames: false
+    - id: isort
+      name: isort
+      entry: poetry run isort src/
+      language: system
+      always_run: true
+      pass_filenames: false

@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
-import keras
-import keras.backend as K
-import keras.layers
-import keras.models
 import numpy as np
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
+import tensorflow.keras.models as kmodels
 
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
 import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.checks as kchecks
 from innvestigate.analyzer.base import AnalyzerBase
-from innvestigate.utils.types import Layer, LayerCheck, Model, OptionalList, Tensor
+from innvestigate.backend.types import Layer, LayerCheck, Model, OptionalList, Tensor
 
 __all__ = ["AnalyzerNetworkBase"]
 
@@ -60,8 +59,8 @@ class AnalyzerNetworkBase(AnalyzerBase):
         # Attributes of prepared model created by '_prepare_model'
         self._analyzer_model_done: bool = False
         self._analyzer_model: Model = None
-        self._special_helper_layers: List[Layer] = []  # added for _reverse_mapping
-        self._analysis_inputs: Optional[List[Tensor]] = None
+        self._special_helper_layers: list[Layer] = []  # added for _reverse_mapping
+        self._analysis_inputs: list[Tensor] | None = None
         self._n_data_input: int = 0
         self._n_constant_input: int = 0
         self._n_data_output: int = 0
@@ -71,7 +70,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         """
         Adds check that prevents models from containing a softmax.
         """
-        contains_softmax: LayerCheck = lambda layer: kchecks.contains_activation(
+        contains_softmax: LayerCheck = lambda layer: ichecks.contains_activation(
             layer, activation="softmax"
         )
         self._add_model_check(
@@ -82,29 +81,28 @@ class AnalyzerNetworkBase(AnalyzerBase):
 
     def _add_lambda_layers_check(self) -> None:
         check_lambda_layers: LayerCheck = lambda layer: (
-            not self._allow_lambda_layers
-            and isinstance(layer, keras.layers.core.Lambda)
+            not self._allow_lambda_layers and isinstance(layer, klayers.Lambda)
         )
         self._add_model_check(
             check=check_lambda_layers,
             message=(
-                "Lamda layers are not allowed. "
+                "Lambda layers are not allowed. "
                 "To force use set 'allow_lambda_layers' parameter."
             ),
             check_type="exception",
         )
 
-    def _prepare_model(self, model: Model) -> Tuple[Model, List[Tensor], List[Tensor]]:
+    def _prepare_model(self, model: Model) -> tuple[Model, list[Tensor], list[Tensor]]:
         """
         Prepares the model to analyze before it gets actually analyzed.
 
         This class adds the code to select a specific output neuron.
         """
         neuron_selection_mode: str
-        model_inputs: OptionalList[Tensor]
-        model_output: OptionalList[Tensor]
-        analysis_inputs: List[Tensor]
-        stop_analysis_at_tensors: List[Tensor]
+        model_inputs: list[Tensor]
+        model_output: list[Tensor]
+        analysis_inputs: list[Tensor]
+        stop_analysis_at_tensors: list[Tensor]
 
         neuron_selection_mode = self._neuron_selection_mode
         model_inputs = model.inputs
@@ -117,38 +115,38 @@ class AnalyzerNetworkBase(AnalyzerBase):
         stop_analysis_at_tensors = []
 
         # Flatten to form (batch_size, other_dimensions):
-        if K.ndim(model_output[0]) > 2:
-            model_output = keras.layers.Flatten()(model_output)
+        if kbackend.ndim(model_output[0]) > 2:
+            model_output = klayers.Flatten()(model_output)
 
         if neuron_selection_mode == "max_activation":
-            inn_max = ilayers.Max(name="iNNvestigate_max")
+            inn_max = ilayers.MaxNeuronSelection(name="MaxNeuronSelection")
             model_output = inn_max(model_output)
             self._special_helper_layers.append(inn_max)
 
         elif neuron_selection_mode == "index":
             # Creates a placeholder tensor when `dtype` is passed.
-            neuron_indexing: Layer = keras.layers.Input(
-                batch_shape=[None, None],
+            neuron_indexing: Layer = klayers.Input(
+                shape=(2,),  # infer amount of output neurons
                 dtype=np.int32,
                 name="iNNvestigate_neuron_indexing",
             )
             # TODO: what does _keras_history[0] do?
             self._special_helper_layers.append(neuron_indexing._keras_history[0])
             analysis_inputs.append(neuron_indexing)
-            # The indexing tensor should not be analyzed.
             stop_analysis_at_tensors.append(neuron_indexing)
 
-            inn_gather = ilayers.GatherND(name="iNNvestigate_gather_nd")
-            model_output = inn_gather(model_output + [neuron_indexing])
-            self._special_helper_layers.append(inn_gather)
+            select = ilayers.NeuronSelection(name="NeuronSelection")
+            model_output = select(model_output + [neuron_indexing])
+            self._special_helper_layers.append(select)
         elif neuron_selection_mode == "all":
             pass
         else:
             raise NotImplementedError()
 
-        model = keras.models.Model(
-            inputs=model_inputs + analysis_inputs, outputs=model_output
-        )
+        inputs = model_inputs + analysis_inputs
+        outputs = model_output
+        model = kmodels.Model(inputs=inputs, outputs=outputs)
+
         return model, analysis_inputs, stop_analysis_at_tensors
 
     def create_analyzer_model(self) -> None:
@@ -156,7 +154,7 @@ class AnalyzerNetworkBase(AnalyzerBase):
         Creates the analyze functionality. If not called beforehand
         it will be called by :func:`analyze`.
         """
-        model_inputs = self._model.inputs
+        model_inputs: list[Tensor] = self._model.inputs
         model, analysis_inputs, stop_analysis_at_tensors = self._prepare_model(
             self._model
         )
@@ -183,28 +181,32 @@ class AnalyzerNetworkBase(AnalyzerBase):
             constant_inputs = []
             debug_outputs = []
 
-        analysis_outputs = iutils.to_list(analysis_outputs)
-        debug_outputs = iutils.to_list(debug_outputs)
-        constant_inputs = iutils.to_list(constant_inputs)
+        analysis_outputs = ibackend.to_list(analysis_outputs)
+        debug_outputs = ibackend.to_list(debug_outputs)
+        constant_inputs = ibackend.to_list(constant_inputs)
 
         self._n_data_input = len(model_inputs)
         self._n_constant_input = len(constant_inputs)
         self._n_data_output = len(analysis_outputs)
         self._n_debug_output = len(debug_outputs)
-        self._analyzer_model = keras.models.Model(
-            inputs=model_inputs + analysis_inputs + constant_inputs,
-            outputs=analysis_outputs + debug_outputs,
-        )
 
+        inputs = model_inputs + analysis_inputs + constant_inputs
+        outputs = analysis_outputs + debug_outputs
+
+        self._analyzer_model = kmodels.Model(
+            inputs=inputs,
+            outputs=outputs,
+            name=f"{self.__class__.__name__}_analyzer_model",
+        )
         self._analyzer_model_done = True
 
     def _create_analysis(
-        self, model: Model, stop_analysis_at_tensors: List[Tensor] = None
-    ) -> Union[
-        Tuple[List[Tensor]],
-        Tuple[List[Tensor], List[Tensor]],
-        Tuple[List[Tensor], List[Tensor], List[Tensor]],
-    ]:
+        self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
+    ) -> (
+        tuple[list[Tensor]]
+        | tuple[list[Tensor], list[Tensor]]
+        | tuple[list[Tensor], list[Tensor], list[Tensor]]
+    ):
         """
         Interface that needs to be implemented by a derived class.
 
@@ -233,13 +235,14 @@ class AnalyzerNetworkBase(AnalyzerBase):
     def analyze(
         self,
         X: OptionalList[np.ndarray],
-        neuron_selection: Optional[int] = None,
+        neuron_selection: OptionalList[int] | None = None,
     ) -> OptionalList[np.ndarray]:
         """
         Same interface as :class:`Analyzer` besides
 
         :param neuron_selection: If neuron_selection_mode is 'index' this
         should be an integer with the index for the chosen neuron.
+        When analyzing batches, this should be a List of integer indices.
         """
         # TODO: what does should mean in docstring?
 
@@ -257,14 +260,12 @@ class AnalyzerNetworkBase(AnalyzerBase):
                 "neuron_selection_mode 'index' expects 'neuron_selection' parameter."
             )
 
-        X = iutils.to_list(X)
-
         ret: OptionalList[np.ndarray]
         if self._neuron_selection_mode == "index":
             if neuron_selection is not None:
-                # TODO: document how this works
-                selection = self._get_neuron_selection_array(X, neuron_selection)
-                ret = self._analyzer_model.predict_on_batch(X + [selection])
+                batch_size = np.shape(X)[0]
+                indices = self._get_neuron_selection_array(neuron_selection, batch_size)
+                ret = self._analyzer_model.predict_on_batch([X, indices])
             else:
                 raise RuntimeError(
                     'neuron_selection_mode "index" requires neuron_selection.'
@@ -276,31 +277,38 @@ class AnalyzerNetworkBase(AnalyzerBase):
             self._handle_debug_output(ret[-self._n_debug_output :])
             ret = ret[: -self._n_debug_output]
 
-        return iutils.unpack_singleton(ret)
+        return ibackend.unpack_singleton(ret)
 
     def _get_neuron_selection_array(
-        self, X: List[np.ndarray], neuron_selection: int
+        self, neuron_selection: OptionalList[int], batch_size: int
     ) -> np.ndarray:
         """Get neuron selection array for neuron_selection_mode "index"."""
-        # TODO: detailed documentation on how this selects neurons
+        nsa = np.asarray(neuron_selection).flatten()
 
-        nsa = np.asarray(neuron_selection).flatten()  # singleton ndarray
-
-        # is 'nsa' is singleton, repeat it so that it matches number of rows of X
+        # If `nsa` is singleton, repeat it so that it matches the batch size
         if nsa.size == 1:
-            nsa = np.repeat(nsa, len(X[0]))
+            nsa = np.repeat(nsa, batch_size)
 
-        # Add first axis indices for gather_nd
-        nsa = np.hstack((np.arange(len(nsa)).reshape((-1, 1)), nsa.reshape((-1, 1))))
-        return nsa
+        # Multiples of batch size are allowed for use with AugmentReduceBase:
+        if nsa.size % batch_size != 0:
+            raise ValueError(
+                f"""`neuron_selection` should be integer or array matching
+                batch size {batch_size}. Got: {neuron_selection}"""
+            )
 
-    def _get_state(self) -> Dict[str, Any]:
+        # We prepend a counter for the position in the batch,
+        # which will be used by the layer `NeuronSelection`.
+        # Using `nsa.size` for compatibility with AugmentReduceBase.
+        batch_position_index = np.arange(nsa.size)
+        return np.hstack((batch_position_index.reshape((-1, 1)), nsa.reshape((-1, 1))))
+
+    def _get_state(self) -> dict[str, Any]:
         state = super()._get_state()
         state.update({"allow_lambda_layers": self._allow_lambda_layers})
         return state
 
     @classmethod
-    def _state_to_kwargs(cls, state: Dict[str, Any]) -> Dict[str, Any]:
+    def _state_to_kwargs(cls, state: dict[str, Any]) -> dict[str, Any]:
         allow_lambda_layers = state.pop("allow_lambda_layers")
         # call super after popping class-specific states:
         kwargs = super()._state_to_kwargs(state)

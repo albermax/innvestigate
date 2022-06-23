@@ -1,35 +1,13 @@
-# Begin: Python 2/3 compatibility header small
-# Get Python 3 functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import annotations
 
 import imp
 import os
 
-# catch exception with: except Exception as e
-from builtins import filter, map, range, zip
-from io import open
-
 import matplotlib.pyplot as plt
 import numpy as np
-import six
-from future.utils import raise_from, raise_with_traceback
-
-# End: Python 2/3 compatability header small
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 base_dir = os.path.dirname(__file__)
 utils = imp.load_source("utils", os.path.join(base_dir, "utils.py"))
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 
 if __name__ == "__main__":
     # Load an image.
@@ -42,7 +20,7 @@ if __name__ == "__main__":
     # Code snippet.
     plt.imshow(image / 255)
     plt.axis("off")
-    plt.savefig("readme_example_input.png")
+    plt.savefig(os.path.join(base_dir, "images", "readme_example_input.png"))
 
     import keras.applications.vgg16 as vgg16
 
@@ -65,7 +43,8 @@ if __name__ == "__main__":
     # Aggregate along color channels and normalize to [-1, 1]
     a = a.sum(axis=np.argmax(np.asarray(a.shape) == 3))
     a /= np.max(np.abs(a))
+
     # Plot
     plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
     plt.axis("off")
-    plt.savefig("readme_example_analysis.png")
+    plt.savefig(os.path.join(base_dir, "images", "readme_example_analysis.png"))

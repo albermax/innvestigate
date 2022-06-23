@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import time
 import warnings
-from builtins import range
 
 import numpy as np
-import six
-from keras.backend import image_data_format
-from keras.utils import Sequence
-from keras.utils.data_utils import GeneratorEnqueuer, OrderedEnqueuer
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.utils as kutils
 
-import innvestigate.utils
+import innvestigate.utils.sequence as isequence
 
 
 class Perturbation:
@@ -60,7 +57,7 @@ class Perturbation:
         in_place=False,
         value_range=None,
     ):
-        if isinstance(perturbation_function, six.string_types):
+        if isinstance(perturbation_function, str):
             if perturbation_function == "zeros":
                 # This is equivalent to setting the perturbated values
                 # to the channel mean if the data are standardized.
@@ -76,17 +73,13 @@ class Perturbation:
                 self.perturbation_function = lambda x: -x
             else:
                 raise ValueError(
-                    "Perturbation function type '{}' not known.".format(
-                        perturbation_function
-                    )
+                    f"Perturbation function type '{perturbation_function}' not known."
                 )
         elif callable(perturbation_function):
             self.perturbation_function = perturbation_function
         else:
             raise TypeError(
-                "Cannot handle perturbation function of type {}.".format(
-                    type(perturbation_function)
-                )
+                f"Cannot handle perturbation function of type {perturbation_function}."
             )
 
         self.num_perturbed_regions = num_perturbed_regions
@@ -220,7 +213,7 @@ class Perturbation:
         :return: Batch of perturbated images
         :rtype: numpy.ndarray
         """
-        if image_data_format() == "channels_last":
+        if kbackend.image_data_format() == "channels_last":
             x = np.moveaxis(x, 3, 1)
             analysis = np.moveaxis(analysis, 3, 1)
         if not self.in_place:
@@ -255,7 +248,7 @@ class Perturbation:
                 pad_shape_before_x[1] : pad_shape_before_x[1] + original_shape[3],
             ]
 
-        if image_data_format() == "channels_last":
+        if kbackend.image_data_format() == "channels_last":
             x_perturbated = np.moveaxis(x_perturbated, 1, 3)
             x = np.moveaxis(x, 1, 3)
             analysis = np.moveaxis(analysis, 1, 3)
@@ -269,9 +262,8 @@ class PerturbationAnalysis:
     :param analyzer: Analyzer.
     :type analyzer: innvestigate.analyzer.base.AnalyzerBase
     :param model: Trained Keras model.
-    :type model: keras.engine.training.Model
     :param generator: Data generator.
-    :type generator: innvestigate.utils.BatchSequence
+    :type generator: innvestigate.sequence.BatchSequence
     :param perturbation: Instance of Perturbation class that performs the perturbation.
     :type perturbation: innvestigate.tools.Perturbation
     :param steps: Number of perturbation steps.
@@ -307,9 +299,9 @@ class PerturbationAnalysis:
 
         if not self.recompute_analysis:
             # Compute the analysis once in the beginning
-            analysis = list()
-            X = list()
-            Y = list()
+            analysis = []
+            X = []
+            Y = []
             for XX, YY in self.generator:
                 X.extend(list(XX))
                 Y.extend(list(YY))
@@ -317,7 +309,7 @@ class PerturbationAnalysis:
             X = np.array(X)
             Y = np.array(Y)
             analysis = np.array(analysis)
-            self.analysis_generator = innvestigate.utils.BatchSequence(
+            self.analysis_generator = isequence.BatchSequence(
                 [X, Y, analysis], batch_size=256
             )
         self.verbose = verbose
@@ -336,8 +328,7 @@ class PerturbationAnalysis:
         x_perturbated = self.perturbation.perturbate_on_batch(x, analysis)
         if return_analysis:
             return x_perturbated, analysis
-        else:
-            return x_perturbated
+        return x_perturbated
 
     def evaluate_on_batch(self, x, y, analysis=None, sample_weight=None):
         """
@@ -377,10 +368,9 @@ class PerturbationAnalysis:
         """
 
         steps_done = 0
-        wait_time = 0.01
         all_outs = []
         batch_sizes = []
-        is_sequence = isinstance(generator, Sequence)
+        is_sequence = isinstance(generator, kutils.Sequence)
         if not is_sequence and use_multiprocessing and workers > 1:
             warnings.warn(
                 UserWarning(
@@ -405,14 +395,13 @@ class PerturbationAnalysis:
         try:
             if workers > 0:
                 if is_sequence:
-                    enqueuer = OrderedEnqueuer(
+                    enqueuer = kutils.OrderedEnqueuer(
                         generator, use_multiprocessing=use_multiprocessing
                     )
                 else:
-                    enqueuer = GeneratorEnqueuer(
+                    enqueuer = kutils.GeneratorEnqueuer(
                         generator,
                         use_multiprocessing=use_multiprocessing,
-                        wait_time=wait_time,
                     )
                 enqueuer.start(workers=workers, max_queue_size=max_queue_size)
                 output_generator = enqueuer.get()
@@ -464,43 +453,40 @@ class PerturbationAnalysis:
 
         if not isinstance(outs, list):
             return np.average(np.asarray(all_outs), weights=batch_sizes)
-        else:
-            averages = []
-            for i in range(len(outs)):
-                averages.append(
-                    np.average([out[i] for out in all_outs], weights=batch_sizes)
-                )
-            return averages
+        averages = []
+        for i in range(len(outs)):
+            averages.append(
+                np.average([out[i] for out in all_outs], weights=batch_sizes)
+            )
+        return averages
 
     def compute_perturbation_analysis(self):
-        scores = list()
+        scores = []
         # Evaluate first on original data
-        scores.append(self.model.evaluate_generator(self.generator))
+        scores.append(self.model.evaluate(self.generator))
         self.perturbation.num_perturbed_regions = 1
         time_start = time.time()
         for step in range(self.steps):
             tic = time.time()
             if self.verbose:
                 print(
-                    "Step {} of {}: {} regions perturbed.".format(
-                        step + 1, self.steps, self.perturbation.num_perturbed_regions
-                    ),
+                    f"Step {step + 1} of {self.steps}: "
+                    f"{self.perturbation.num_perturbed_regions} regions perturbed.",
                     end=" ",
                 )
             scores.append(self.evaluate_generator(self.analysis_generator))
             self.perturbation.num_perturbed_regions += self.regions_per_step
             toc = time.time()
             if self.verbose:
-                print("Time elapsed: {:.3f} seconds.".format(toc - tic))
+                print(f"Time elapsed: {toc - tic:.3f} seconds.")
         time_end = time.time()
 
         if self.verbose:
             print(
                 # Use step + 1 instead of self.steps
                 # because the analysis can stop prematurely
-                "Time elapsed for {} steps: {:.3f} seconds.".format(
-                    step + 1, time_end - time_start
-                )
+                f"Time elapsed for {step + 1} steps: "
+                f"{time_end - time_start:.3f} seconds."
             )
 
         self.perturbation.num_perturbed_regions = 1  # Reset to original value

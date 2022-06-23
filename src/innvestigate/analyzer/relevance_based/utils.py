@@ -17,8 +17,8 @@ def assert_lrp_epsilon_param(epsilon, caller):
     """
 
     if epsilon <= 0:
-        err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
-        err_msg = err_head + "Parameter epsilon must be > 0 but was {}".format(epsilon)
+        err_head = f"Constructor call to {caller.__class__.__name__} : "
+        err_msg = err_head + f"Parameter epsilon must be > 0 but was {epsilon}"
         raise ValueError(err_msg)
     return epsilon
 
@@ -46,7 +46,7 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
 
     # TODO: Rework error messages
 
-    err_head = "Constructor call to {} : ".format(caller.__class__.__name__)
+    err_head = f"Constructor call to {caller.__class__.__name__} : "
     if alpha is None and beta is None:
         err_msg = err_head + "Neither alpha or beta were given"
         raise ValueError(err_msg)
@@ -55,18 +55,14 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
     if alpha is not None and alpha < 1:
         err_msg = (
             err_head
-            + "Passed parameter alpha invalid. Expecting alpha >= 1 but was {}".format(
-                alpha
-            )
+            + f"Passed parameter alpha invalid. Expecting alpha >= 1 but was {alpha}"
         )
         raise ValueError(err_msg)
 
     if beta is not None and beta < 0:
         err_msg = (
             err_head
-            + "Passed parameter beta invalid. Expecting beta >= 0 but was {}".format(
-                beta
-            )
+            + f"Passed parameter beta invalid. Expecting beta >= 0 but was {beta}"
         )
         raise ValueError(err_msg)
 
@@ -76,9 +72,8 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
         if alpha < 1:
             err_msg = (
                 err_head
-                + "Inferring alpha from given beta {} s.t. alpha - beta = 1, with condition alpha >= 1 not possible.".format(  # noqa
-                    beta
-                )
+                + f"Inferring alpha from given beta {beta} s.t. alpha - beta = 1, "
+                + "with condition alpha >= 1 not possible."
             )
             raise ValueError(err_msg)
 
@@ -87,9 +82,8 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
         if beta < 0:
             err_msg = (
                 err_head
-                + "Inferring beta from given alpha {} s.t. alpha - beta = 1, with condition beta >= 0 not possible.".format(  # noqa
-                    alpha
-                )
+                + f"Inferring beta from given alpha {alpha} s.t. alpha - beta = 1, "
+                + "with condition beta >= 0 not possible."
             )
             raise ValueError(err_msg)
 
@@ -98,9 +92,8 @@ def assert_infer_lrp_alpha_beta_param(alpha, beta, caller):
     if amb != 1:
         err_msg = (
             err_head
-            + "Condition alpha - beta = 1 not fulfilled. alpha={} ; beta={} -> alpha - beta = {}".format(  # noqa
-                alpha, beta, amb
-            )
+            + "Condition alpha - beta = 1 not fulfilled. "
+            + f"alpha={alpha} ; beta={beta} -> alpha - beta = {amb}"
         )
         raise ValueError(err_msg)
 

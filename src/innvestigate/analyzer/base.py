@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import warnings
 from abc import ABCMeta, abstractmethod
-from builtins import zip
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
-import keras
-import keras.layers
-import keras.models
 import numpy as np
+import tensorflow.keras.models as kmodels
 
 import innvestigate.analyzer
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.graph as kgraph
-from innvestigate.utils.types import LayerCheck, Model, ModelCheckDict, OptionalList
+import innvestigate.backend.graph as igraph
+import innvestigate.utils.sequence as isequence
+from innvestigate.backend.types import LayerCheck, Model, ModelCheckDict, OptionalList
 
 __all__ = [
     "NotAnalyzeableModelException",
@@ -58,9 +55,8 @@ class AnalyzerBase(metaclass=ABCMeta):
         neuron_selection_mode: str = "max_activation",
         disable_model_checks: bool = False,
         _model_check_done: bool = False,
-        _model_checks: List[ModelCheckDict] = None,
+        _model_checks: list[ModelCheckDict] = None,
     ) -> None:
-
         self._model = model
         self._disable_model_checks = disable_model_checks
         self._model_check_done = _model_check_done
@@ -78,7 +74,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         # that child analyzers can append to.
         if _model_checks is None:
             _model_checks = []
-        self._model_checks: List[ModelCheckDict] = _model_checks
+        self._model_checks: list[ModelCheckDict] = _model_checks
 
     def _add_model_check(
         self, check: LayerCheck, message: str, check_type: str = "exception"
@@ -112,20 +108,19 @@ class AnalyzerBase(metaclass=ABCMeta):
             types = [x["check_type"] for x in self._model_checks]
             messages = [x["message"] for x in self._model_checks]
 
-            checked = kgraph.model_contains(self._model, check)
+            checked = igraph.model_contains(self._model, check)
 
             tmp = zip(checked, messages, types)
 
             for checked_layers, message, check_type in tmp:
                 if len(checked_layers) > 0:
-                    tmp_message = "%s\nCheck triggered by layers: %s" % (
-                        message,
-                        checked_layers,
+                    tmp_message = (
+                        message + f"\nCheck triggered by layers: {checked_layers}"
                     )
 
                     if check_type == "exception":
                         raise NotAnalyzeableModelException(tmp_message)
-                    elif check_type == "warning":
+                    if check_type == "warning":
                         # TODO(albermax) only the first warning will be shown
                         warnings.warn(tmp_message)
                     raise NotImplementedError()
@@ -184,7 +179,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         }
         return state
 
-    def save(self) -> Tuple[str, dict]:
+    def save(self) -> tuple[str, dict]:
         """
         Save state of analyzer, can be passed to :func:`Analyzer.load`
         to resemble the analyzer.
@@ -214,9 +209,10 @@ class AnalyzerBase(metaclass=ABCMeta):
 
         # since `super()._state_to_kwargs(state)` should be called last
         # in every child class, the dict `state` should be empty at this point.
-        assert len(state) == 0
+        if len(state) != 0:
+            raise RuntimeError(f"Serialization failed. Got left-over state {state}.")
 
-        model = keras.models.model_from_json(model_json)
+        model = kmodels.model_from_json(model_json)
         model.set_weights(model_weights)
         return {
             "model": model,
@@ -225,7 +221,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         }
 
     @staticmethod
-    def load(class_name: str, state: Dict[str, Any]) -> AnalyzerBase:
+    def load(class_name: str, state: dict[str, Any]) -> AnalyzerBase:
         """
         Resembles an analyzer from the state created by
         :func:`analyzer.save()`.
@@ -233,7 +229,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         :param class_name: The analyzer's class name.
         :param state: The analyzer's state.
         """
-        # TODO: do in a smarter way!
+        # TODO: do in a smarter way without cyclic imports
         cls = getattr(innvestigate.analyzer, class_name)
 
         kwargs = cls._state_to_kwargs(state)
@@ -257,7 +253,7 @@ class AnalyzerBase(metaclass=ABCMeta):
 ###############################################################################
 
 
-class TrainerMixin(object):
+class TrainerMixin:
     """Mixin for analyzer that adapt to data.
 
     This convenience interface exposes a Keras like training routing
@@ -265,13 +261,11 @@ class TrainerMixin(object):
     """
 
     # TODO: extend with Y
-    def fit(
-        self, X: Optional[np.ndarray] = None, batch_size: int = 32, **kwargs
-    ) -> None:
+    def fit(self, X: np.ndarray | None = None, batch_size: int = 32, **kwargs) -> None:
         """
         Takes the same parameters as Keras's :func:`model.fit` function.
         """
-        generator = iutils.BatchSequence(X, batch_size)
+        generator = isequence.BatchSequence(X, batch_size)
         return self._fit_generator(generator, **kwargs)  # type: ignore
 
     def fit_generator(self, *args, **kwargs):
@@ -281,17 +275,7 @@ class TrainerMixin(object):
         """
         return self._fit_generator(*args, **kwargs)
 
-    def _fit_generator(
-        self,
-        generator: iutils.BatchSequence,
-        steps_per_epoch: int = None,
-        epochs: int = 1,
-        max_queue_size: int = 10,
-        workers: int = 1,
-        use_multiprocessing: bool = False,
-        verbose=0,
-        disable_no_training_warning: bool = None,
-    ):
+    def _fit_generator(self, *_args, **_kwargs):
         raise NotImplementedError()
 
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Type
-
-from innvestigate.analyzer.base import AnalyzerBase, NotAnalyzeableModelException
+from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
     BaselineGradient,
@@ -14,7 +12,6 @@ from innvestigate.analyzer.gradient_based import (
     SmoothGrad,
 )
 from innvestigate.analyzer.misc import Input, Random
-from innvestigate.analyzer.pattern_based import PatternAttribution, PatternNet
 from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRP,
     LRPZ,
@@ -25,7 +22,6 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPAlpha2Beta1IgnoreBias,
     LRPAlphaBeta,
     LRPEpsilon,
-    LRPEpsilonIgnoreBias,
     LRPFlat,
     LRPSequentialPresetA,
     LRPSequentialPresetAFlat,
@@ -33,28 +29,19 @@ from innvestigate.analyzer.relevance_based.relevance_analyzer import (
     LRPSequentialPresetBFlat,
     LRPSequentialPresetBFlatUntilIdx,
     LRPWSquare,
-    LRPZIgnoreBias,
     LRPZPlus,
     LRPZPlusFast,
 )
-from innvestigate.analyzer.wrapper import (
-    AugmentReduceBase,
-    GaussianSmoother,
-    PathIntegrator,
-    WrapperBase,
-)
-from innvestigate.utils.types import Model
+from innvestigate.analyzer.wrapper import AugmentReduceBase  # noqa
+from innvestigate.analyzer.wrapper import GaussianSmoother  # noqa
+from innvestigate.analyzer.wrapper import PathIntegrator  # noqa
+from innvestigate.analyzer.wrapper import WrapperBase  # noqa
+from innvestigate.backend.types import Model
 
-# Disable pyflaks warnings:
-assert NotAnalyzeableModelException
+# Silence flake8
 assert BaselineLRPZ
-assert WrapperBase
-assert AugmentReduceBase
-assert GaussianSmoother
-assert PathIntegrator
 
-
-analyzers: Dict[str, Type[AnalyzerBase]] = {
+analyzers: dict[str, type[AnalyzerBase]] = {
     # Utility.
     "input": Input,
     "random": Random,
@@ -69,9 +56,7 @@ analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Relevance based
     "lrp": LRP,
     "lrp.z": LRPZ,
-    "lrp.z_IB": LRPZIgnoreBias,
     "lrp.epsilon": LRPEpsilon,
-    "lrp.epsilon_IB": LRPEpsilonIgnoreBias,
     "lrp.w_square": LRPWSquare,
     "lrp.flat": LRPFlat,
     "lrp.alpha_beta": LRPAlphaBeta,
@@ -89,9 +74,6 @@ analyzers: Dict[str, Type[AnalyzerBase]] = {
     # Deep Taylor
     "deep_taylor": DeepTaylor,
     "deep_taylor.bounded": BoundedDeepTaylor,
-    # Pattern based
-    "pattern.net": PatternNet,
-    "pattern.attribution": PatternAttribution,
 }
 
 
@@ -114,7 +96,7 @@ def create_analyzer(name: str, model: Model, **kwargs) -> AnalyzerBase:
         analyzer_class = analyzers[name]
     except KeyError:
         raise KeyError(
-            "No analyzer with the name '%s' could be found."
-            " All possible names are: %s" % (name, list(analyzers.keys()))
+            f"No analyzer with the name '{name}' could be found."
+            f" All possible names are: {list(analyzers.keys())}"
         )
     return analyzer_class(model, **kwargs)

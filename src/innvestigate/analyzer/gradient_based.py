@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+import tensorflow as tf
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
 
-import keras
-import keras.models
-
-import innvestigate.layers as ilayers
-import innvestigate.utils as iutils
-import innvestigate.utils.keras as kutils
-import innvestigate.utils.keras.checks as kchecks
-import innvestigate.utils.keras.graph as kgraph
+import innvestigate.backend as ibackend
+import innvestigate.backend.checks as ichecks
+import innvestigate.backend.graph as igraph
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase
 from innvestigate.analyzer.reverse_base import ReverseAnalyzerBase
 from innvestigate.analyzer.wrapper import GaussianSmoother, PathIntegrator
+from innvestigate.backend.types import List, OptionalList, Tensor
 
 __all__ = [
     "BaselineGradient",
@@ -52,18 +50,18 @@ class BaselineGradient(AnalyzerNetworkBase):
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
-        ret = iutils.to_list(
-            ilayers.Gradient()(tensors_to_analyze + [model.outputs[0]])
-        )
+        ret = ibackend.to_list(kbackend.gradients(model.outputs[0], tensors_to_analyze))
 
         if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
+            ret = [kbackend.abs(r) for r in ret]
         elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+            ret = [kbackend.square(r) for r in ret]
 
-        return iutils.to_list(ret)
+        return ret
 
     def _get_state(self):
         state = super()._get_state()
@@ -93,8 +91,8 @@ class Gradient(ReverseAnalyzerBase):
     :param model: A Keras model.
     """
 
-    def __init__(self, model, postprocess: Optional[str] = None, **kwargs):
-        super(Gradient, self).__init__(model, **kwargs)
+    def __init__(self, model, postprocess: str | None = None, **kwargs):
+        super().__init__(model, **kwargs)
 
         if postprocess not in [None, "abs", "square"]:
             raise ValueError(
@@ -106,18 +104,18 @@ class Gradient(ReverseAnalyzerBase):
         self._add_model_softmax_check()
         self._do_model_checks()
 
-    def _head_mapping(self, X):
-        return ilayers.OnesLike()(X)
+    def _head_mapping(self, X: Tensor) -> Tensor:
+        return tf.ones_like(X)
 
-    def _postprocess_analysis(self, X):
-        ret = super()._postprocess_analysis(X)
+    def _postprocess_analysis(self, Xs: OptionalList[Tensor]) -> List[Tensor]:
+        ret = super()._postprocess_analysis(Xs)
 
         if self._postprocess == "abs":
-            ret = ilayers.Abs()(ret)
+            ret = [kbackend.abs(r) for r in ret]
         elif self._postprocess == "square":
-            ret = ilayers.Square()(ret)
+            ret = [kbackend.square(r) for r in ret]
 
-        return iutils.to_list(ret)
+        return ret
 
     def _get_state(self):
         state = super()._get_state()
@@ -149,42 +147,43 @@ class InputTimesGradient(Gradient):
 
     def __init__(self, model, **kwargs):
 
-        super(InputTimesGradient, self).__init__(model, **kwargs)
+        super().__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=None):
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
         tensors_to_analyze = [
-            x for x in iutils.to_list(model.inputs) if x not in stop_analysis_at_tensors
+            x
+            for x in ibackend.to_list(model.inputs)
+            if x not in stop_analysis_at_tensors
         ]
         gradients = super()._create_analysis(
             model, stop_analysis_at_tensors=stop_analysis_at_tensors
         )
         return [
-            keras.layers.Multiply()([i, g])
-            for i, g in zip(tensors_to_analyze, gradients)
+            klayers.Multiply()([i, g]) for i, g in zip(tensors_to_analyze, gradients)
         ]
 
 
 ###############################################################################
 
 
-class DeconvnetReverseReLULayer(kgraph.ReverseMappingBase):
-    def __init__(self, layer, state):
-        self._activation = keras.layers.Activation("relu")
-        self._layer_wo_relu = kgraph.copy_layer_wo_activation(
+class DeconvnetReverseReLULayer(igraph.ReverseMappingBase):
+    def __init__(self, layer, _state):
+        self._activation = klayers.Activation("relu")
+        self._layer_wo_relu = igraph.copy_layer_wo_activation(
             layer,
             name_template="reversed_%s",
         )
 
-    def apply(self, Xs, Ys, reversed_Ys, reverse_state: Dict):
+    def apply(self, Xs, Ys, Rs, reverse_state: dict) -> List[Tensor]:
         # Apply relus conditioned on backpropagated values.
-        reversed_Ys = kutils.apply(self._activation, reversed_Ys)
+        Rs = ibackend.apply(self._activation, Rs)
 
         # Apply gradient of forward pass without relus.
-        Ys_wo_relu = kutils.apply(self._layer_wo_relu, Xs)
-        return ilayers.GradientWRT(len(Xs))(Xs + Ys_wo_relu + reversed_Ys)
+        Ys_wo_relu = ibackend.apply(self._layer_wo_relu, Xs)
+        return ibackend.gradients(Xs, Ys_wo_relu, Rs)
 
 
 class Deconvnet(ReverseAnalyzerBase):
@@ -201,7 +200,7 @@ class Deconvnet(ReverseAnalyzerBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
+            lambda layer: not ichecks.only_relu_activation(layer),
             "Deconvnet is only specified for networks with ReLU activations.",
             check_type="exception",
         )
@@ -210,7 +209,7 @@ class Deconvnet(ReverseAnalyzerBase):
     def _create_analysis(self, *args, **kwargs):
 
         self._add_conditional_reverse_mapping(
-            lambda layer: kchecks.contains_activation(layer, "relu"),
+            lambda layer: ichecks.contains_activation(layer, "relu"),
             DeconvnetReverseReLULayer,
             name="deconvnet_reverse_relu_layer",
         )
@@ -218,13 +217,13 @@ class Deconvnet(ReverseAnalyzerBase):
         return super()._create_analysis(*args, **kwargs)
 
 
-def GuidedBackpropReverseReLULayer(Xs, Ys, reversed_Ys, reverse_state: Dict):
-    activation = keras.layers.Activation("relu")
+def guided_backprop_reverse_relu_layer(Xs, Ys, reversed_Ys, _reverse_state: dict):
+    activation = klayers.Activation("relu")
     # Apply relus conditioned on backpropagated values.
-    reversed_Ys = kutils.apply(activation, reversed_Ys)
+    reversed_Ys = ibackend.apply(activation, reversed_Ys)
 
     # Apply gradient of forward pass.
-    return ilayers.GradientWRT(len(Xs))(Xs + Ys + reversed_Ys)
+    return ibackend.gradients(Xs, Ys, reversed_Ys)
 
 
 class GuidedBackprop(ReverseAnalyzerBase):
@@ -241,8 +240,8 @@ class GuidedBackprop(ReverseAnalyzerBase):
         # Add and run model checks
         self._add_model_softmax_check()
         self._add_model_check(
-            lambda layer: not kchecks.only_relu_activation(layer),
-            "GuidedBackprop is only specified for " "networks with ReLU activations.",
+            lambda layer: not ichecks.only_relu_activation(layer),
+            "GuidedBackprop is only specified for networks with ReLU activations.",
             check_type="exception",
         )
         self._do_model_checks()
@@ -250,8 +249,8 @@ class GuidedBackprop(ReverseAnalyzerBase):
     def _create_analysis(self, *args, **kwargs):
 
         self._add_conditional_reverse_mapping(
-            lambda layer: kchecks.contains_activation(layer, "relu"),
-            GuidedBackpropReverseReLULayer,
+            lambda layer: ichecks.contains_activation(layer, "relu"),
+            guided_backprop_reverse_relu_layer,
             name="guided_backprop_reverse_relu_layer",
         )
 
@@ -276,14 +275,13 @@ class IntegratedGradients(PathIntegrator):
         steps=64,
         neuron_selection_mode="max_activation",
         postprocess=None,
-        **kwargs
+        **kwargs,
     ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
             subanalyzer = kwargs.pop("subanalyzer")
         # If initialized normally:
         else:
-
             subanalyzer = Gradient(
                 model,
                 neuron_selection_mode=neuron_selection_mode,
@@ -294,7 +292,7 @@ class IntegratedGradients(PathIntegrator):
             subanalyzer,
             steps=steps,
             neuron_selection_mode=neuron_selection_mode,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -316,7 +314,7 @@ class SmoothGrad(GaussianSmoother):
         augment_by_n=64,
         neuron_selection_mode="max_activation",
         postprocess=None,
-        **kwargs
+        **kwargs,
     ):
         # If initialized through serialization:
         if "subanalyzer" in kwargs:
@@ -334,5 +332,5 @@ class SmoothGrad(GaussianSmoother):
             subanalyzer,
             augment_by_n=augment_by_n,
             neuron_selection_mode=neuron_selection_mode,
-            **kwargs
+            **kwargs,
         )

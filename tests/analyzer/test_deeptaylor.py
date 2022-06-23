@@ -1,62 +1,65 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
+import tensorflow as tf
 
 from innvestigate.analyzer import BoundedDeepTaylor, DeepTaylor
 
 from tests import dryrun
 
+# Dict that maps test name to tuple of method and kwargs
+methods = {
+    "DeepTaylor": (DeepTaylor, {}),
+    "BoundedDeepTaylor": (BoundedDeepTaylor, {"low": -1, "high": 1}),
+}
 
+
+@pytest.mark.deeptaylor
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__DeepTaylor():
-    def method(model):
-        return DeepTaylor(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.deeptaylor
+@pytest.mark.fast
 @pytest.mark.precommit
-def test_precommit__DeepTaylor():
-    def method(model):
-        return DeepTaylor(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast_serialize(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "mnist.*")
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
 
 
+@pytest.mark.deeptaylor
+@pytest.mark.mnist
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "mnist.*")
+
+
+@pytest.mark.deeptaylor
 @pytest.mark.slow
 @pytest.mark.application
 @pytest.mark.imagenet
-def test_imagenet__DeepTaylor():
-    def method(model):
-        return DeepTaylor(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_imagenet(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "imagenet.*")
+    def analyzer(model):
+        return method(model, **kwargs)
 
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__BoundedDeepTaylor():
-    def method(model):
-        return BoundedDeepTaylor(model, low=-1, high=1)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_precommit__BoundedDeepTaylor():
-    def method(model):
-        return BoundedDeepTaylor(model, low=-1, high=1)
-
-    dryrun.test_analyzer(method, "mnist.*")
-
-
-@pytest.mark.slow
-@pytest.mark.application
-@pytest.mark.imagenet
-def test_imagenet__BoundedDeepTaylor():
-    def method(model):
-        return BoundedDeepTaylor(model, low=-1, high=1)
-
-    dryrun.test_analyzer(method, "imagenet.*")
+    dryrun.test_analyzer(analyzer, "imagenet.*")

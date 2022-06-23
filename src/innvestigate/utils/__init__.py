@@ -1,121 +1,13 @@
 from __future__ import annotations
 
-import math
-from typing import Callable, List, Tuple, TypeVar, Union
+import tensorflow.keras.backend as kbackend
 
-import keras.utils as kutils
-from keras import backend
-
-from innvestigate.utils.keras.graph import model_wo_softmax
-from innvestigate.utils.types import OptionalList, Tensor
+from innvestigate.backend.types import Tensor
 
 __all__ = [
-    "model_wo_softmax",
-    "to_list",
-    "unpack_singleton",
-    "BatchSequence",
-    "TargetAugmentedSequence",
     "preprocess_images",
     "postprocess_images",
 ]
-
-
-T = TypeVar("T")  # Generic type, can be anything
-
-
-def to_list(X: OptionalList[T]) -> List[T]:
-    """Wraps tensor `X` into a list, if it isn't a list of Tensors yet."""
-    if isinstance(X, list):
-        return X
-    return [X]
-
-
-def unpack_singleton(x: OptionalList[T]) -> OptionalList[T]:
-    """Gets the first element of a list if it has only one value.
-
-    Otherwise return the list.
-
-    # Argument
-        x: A list or singleton.
-
-    # Returns
-        The same list or the first element.
-    """
-    if isinstance(x, list) and len(x) == 1:
-        return x[0]
-    return x
-
-
-###############################################################################
-
-
-class BatchSequence(kutils.Sequence):
-    """Batch sequence generator.
-
-    Take a (list of) input tensors and a batch size
-    and creates a generators that creates a sequence of batches.
-
-    :param Xs: One or a list of tensors. First axis needs to have same length.
-    :param batch_size: Batch size. Default 32.
-    """
-
-    def __init__(self, Xs: OptionalList[Tensor], batch_size: int = 32) -> None:
-        self.Xs: List[Tensor] = to_list(Xs)
-        self.single_tensor: bool = len(Xs) == 1
-        self.batch_size: int = batch_size
-
-        if not self.single_tensor:
-            for X in self.Xs[1:]:
-                assert X.shape[0] == self.Xs[0].shape[0]
-        super().__init__()
-
-    def __len__(self) -> int:
-        return int(math.ceil(float(len(self.Xs[0])) / self.batch_size))
-
-    def __getitem__(self, idx: int) -> Union[Tensor, Tuple[Tensor]]:
-        ret: List[Tensor] = [
-            X[idx * self.batch_size : (idx + 1) * self.batch_size] for X in self.Xs
-        ]
-
-        if self.single_tensor:
-            return ret[0]
-        return tuple(ret)
-
-
-class TargetAugmentedSequence(kutils.Sequence):
-    """Augments a sequence with a target on the fly.
-
-    Takes a sequence/generator and a function that
-    creates on the fly for each batch a target.
-    The generator takes a batch from that sequence,
-    computes the target and returns both.
-
-    :param sequence: A sequence or generator.
-    :param augment_f: Takes a batch and returns a target.
-    """
-
-    def __init__(
-        self, sequence: List[Tensor], augment_f: Callable[[List[Tensor]], List[Tensor]]
-    ) -> None:
-        self.sequence = sequence
-        self.augment_f = augment_f
-
-        super().__init__()
-
-    def __len__(self) -> int:
-        return len(self.sequence)
-
-    def __getitem__(self, idx: int) -> Tuple[List[Tensor], List[Tensor]]:
-        inputs = self.sequence[idx]
-        if isinstance(inputs, tuple):  # TODO: check if this can be removed
-            assert len(inputs) == 1
-            inputs = inputs[0]
-
-        targets = self.augment_f(to_list(inputs))
-        return inputs, targets
-
-
-###############################################################################
 
 
 def preprocess_images(images: Tensor, color_coding: str = None) -> Tensor:
@@ -131,8 +23,8 @@ def preprocess_images(images: Tensor, color_coding: str = None) -> Tensor:
     :return: The preprocessed batch.
     """
 
-    ret = images
-    image_data_format: str = backend.image_data_format()
+    ret: Tensor = images
+    image_data_format: str = kbackend.image_data_format()
 
     # TODO: not very general:
     channels_first: bool = images.shape[1] in [1, 3]
@@ -165,8 +57,8 @@ def postprocess_images(
     :return: The postprocessed images.
     """
 
-    ret = images
-    image_data_format: str = backend.image_data_format()
+    ret: Tensor = images
+    image_data_format: str = kbackend.image_data_format()
 
     assert color_coding in [None, "RGBtoBGR", "BGRtoRGB"]
     if color_coding in ["RGBtoBGR", "BGRtoRGB"]:

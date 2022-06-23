@@ -1,7 +1,5 @@
-# Get Python six functionality:
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import pytest
+import tensorflow as tf
 
 from innvestigate.analyzer import (
     LRPZ,
@@ -11,49 +9,114 @@ from innvestigate.analyzer import (
     LRPAlpha2Beta1,
     LRPAlpha2Beta1IgnoreBias,
     LRPEpsilon,
-    LRPEpsilonIgnoreBias,
     LRPFlat,
+    LRPSequentialPresetA,
+    LRPSequentialPresetAFlat,
+    LRPSequentialPresetB,
+    LRPSequentialPresetBFlat,
     LRPWSquare,
-    LRPZIgnoreBias,
     LRPZPlus,
     LRPZPlusFast,
 )
 
 from tests import dryrun
 
+methods = {
+    "LRPZ": (LRPZ, {}),
+    "LRPZ_Flat_input_layer_rule": (LRPZ, {"input_layer_rule": "Flat"}),
+    "LRPZ_boxed_input_layer_rule": (LRPZ, {"input_layer_rule": (-10, 10)}),
+    "LRPZPlus": (LRPZPlus, {}),
+    "LRPZPlusFast": (LRPZPlusFast, {}),
+    "BaselineLRPZ": (BaselineLRPZ, {}),
+    "LRPAlpha1Beta0": (LRPAlpha1Beta0, {}),
+    "LRPAlpha1Beta0IgnoreBias": (LRPAlpha1Beta0IgnoreBias, {}),
+    "LRPAlpha2Beta1": (LRPAlpha2Beta1, {}),
+    "LRPAlpha2Beta1IgnoreBias": (LRPAlpha2Beta1IgnoreBias, {}),
+    "LRPEpsilon": (LRPEpsilon, {}),
+    "LRPFlat": (LRPFlat, {}),
+    "LRPWSquare": (LRPWSquare, {}),
+    "LRPSequentialPresetA": (LRPSequentialPresetA, {}),
+    "LRPSequentialPresetB": (LRPSequentialPresetB, {}),
+    "LRPSequentialPresetAFlat": (LRPSequentialPresetAFlat, {}),
+    "LRPSequentialPresetBFlat": (LRPSequentialPresetBFlat, {}),
+}
 
+
+@pytest.mark.lrp
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__BaselineLRPZ():
-    def method(model):
-        return BaselineLRPZ(model)
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast(method, kwargs):
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.lrp
+@pytest.mark.fast
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_fast_serialize(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_serialize_analyzer(analyzer, "trivia.*:mnist.log_reg")
+
+
+@pytest.mark.lrp
+@pytest.mark.mnist
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "mnist.*")
+
+
+@pytest.mark.lrp
+@pytest.mark.resnet50
+@pytest.mark.precommit
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_precommit_resnet50(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "imagenet.resnet50")
+
+
+@pytest.mark.lrp
+@pytest.mark.slow
+@pytest.mark.application
+@pytest.mark.imagenet
+@pytest.mark.parametrize("method, kwargs", methods.values(), ids=list(methods.keys()))
+def test_imagenet(method, kwargs):
+    tf.keras.backend.clear_session()
+
+    def analyzer(model):
+        return method(model, **kwargs)
+
+    dryrun.test_analyzer(analyzer, "imagenet.*")
 
 
 ###############################################################################
 
 
+@pytest.mark.lrp
 @pytest.mark.fast
 @pytest.mark.precommit
-def test_fast__LRPZ():
-    def method(model):
-        return LRPZ(model)
+def test_fast_LRPZ_equal_BaselineLRPZ():
+    tf.keras.backend.clear_session()
 
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.precommit
-def test_fast__LRPZ_resnet50():
-    def method(model):
-        return LRPZ(model)
-
-    dryrun.test_analyzer(method, "imagenet.resnet50")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZ__equal_BaselineLRPZ():
     def method1(model):
         return BaselineLRPZ(model)
 
@@ -64,147 +127,7 @@ def test_fast__LRPZ__equal_BaselineLRPZ():
     dryrun.test_equal_analyzer(
         method1,
         method2,
-        # mind this only works for
-        # networks with relu, max,
-        # activations and no
-        # skip connections!
+        # mind this only works for networks with relu, max, activations
+        # and no skip connections!
         "trivia.dot:mnist.log_reg",
     )
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZ__with_input_layer_rule():
-    def method(model):
-        return LRPZ(model, input_layer_rule="Flat")
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZ__with_boxed_input_layer_rule():
-    def method(model):
-        return LRPZ(model, input_layer_rule=(-10, 10))
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZIgnoreBias():
-    def method(model):
-        return LRPZIgnoreBias(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZPlus():
-    def method(model):
-        return LRPZPlus(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPZPlusFast():
-    def method(model):
-        return LRPZPlusFast(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPEpsilon():
-    def method(model):
-        return LRPEpsilon(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPEpsilonIgnoreBias():
-    def method(model):
-        return LRPEpsilonIgnoreBias(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPWSquare():
-    def method(model):
-        return LRPWSquare(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPFlat():
-    def method(model):
-        return LRPFlat(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha2Beta1():
-    def method(model):
-        return LRPAlpha2Beta1(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha2Beta1IgnoreBias():
-    def method(model):
-        return LRPAlpha2Beta1IgnoreBias(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha1Beta0():
-    def method(model):
-        return LRPAlpha1Beta0(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__LRPAlpha1Beta0IgnoreBias():
-    def method(model):
-        return LRPAlpha1Beta0IgnoreBias(model)
-
-    dryrun.test_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-###############################################################################
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeLRPZ():
-    def method(model):
-        return LRPZ(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")
-
-
-@pytest.mark.fast
-@pytest.mark.precommit
-def test_fast__SerializeLRPAlpha2Beta1():
-    def method(model):
-        return LRPAlpha2Beta1(model)
-
-    dryrun.test_serialize_analyzer(method, "trivia.*:mnist.log_reg")

@@ -1,10 +1,13 @@
 # [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
 
+[![Build Status](https://github.com/albermax/innvestigate/actions/workflows/ci.yml/badge.svg)](https://github.com/albermax/innvestigate/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://innvestigate.readthedocs.io/en/latest/)
 
-[![GitHub package version](https://img.shields.io/badge/Version-v1.0.9-green.svg)](https://github.com/albermax/innvestigate)
-[![Keras package version](https://img.shields.io/badge/KerasVersion-v2.2.4-green.svg)](https://github.com/albermax/innvestigate)
-[![License: BSD-2](https://img.shields.io/badge/License-BSD--2-blue.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
-[![Build Status](https://travis-ci.org/albermax/innvestigate.svg?branch=master)](https://travis-ci.org/albermax/innvestigate)
+[![PyPI package version](https://img.shields.io/pypi/v/innvestigate)](https://pypi.org/project/innvestigate/)
+[![GitHub package version](https://img.shields.io/github/v/tag/albermax/innvestigate)](https://github.com/albermax/innvestigate/tags)
+[![Keras package version](https://img.shields.io/badge/TensorFlow-^2.7-orange.svg)](https://github.com/albermax/innvestigate)
+[![License: BSD-2](https://img.shields.io/badge/License-BSD--2-purple.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
+[![Black](https://img.shields.io/badge/code_style-black-black.svg)](https://github.com/psf/black)
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 
@@ -46,13 +49,10 @@ Our goal is to make analyzing neural networks' predictions easy!
 ## Installation
 
 iNNvestigate can be installed with the following commands.
-The library is based on Keras and therefore requires a supported [Keras-backend](https://keras.io/backend/)
-o(Currently only the TensorFlow backend is supported. We test with Python 3.6, TensorFlow 1.12 and Cuda 9.x.):
+The library is based on Keras and therefore requires TensorFlow 2:
 
 ```bash
 pip install innvestigate
-# Installing Keras backend
-pip install [tensorflow | theano | cntk]
 ```
 
 To use the example scripts and notebooks one additionally needs to install the package matplotlib:
@@ -61,11 +61,13 @@ To use the example scripts and notebooks one additionally needs to install the p
 pip install matplotlib
 ```
 
-The library's tests can be executed via:
+The library's tests can be executed via `pytest`. The easiest way to do reproducible development on iNNvestigate is to install all dev dependencies via [Poetry](https://python-poetry.org):
 ```bash
 git clone https://github.com/albermax/innvestigate.git
 cd innvestigate
-python setup.py test
+
+poetry install
+poetry run pytest
 ```
 
 ## Usage and Examples
@@ -78,11 +80,10 @@ The iNNvestigate library contains implementations for the following methods:
 * *signal:*
   * **deconvnet:** [DeConvNet](https://arxiv.org/abs/1311.2901) applies a ReLU in the gradient computation instead of the gradient of a ReLU.
   * **guided:** [Guided BackProp](https://arxiv.org/abs/1412.6806) applies a ReLU in the gradient computation additionally to the gradient of a ReLU.
-  * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598) estimates the input signal of the output neuron.
+  * **pattern.net:** [PatternNet](https://arxiv.org/abs/1705.05598) estimates the input signal of the output neuron. (*Note: not available in iNNvestigate 2.0*)
 * *attribution:*
   * **input_t_gradient:** Input \* Gradient
   * **deep_taylor[.bounded]:** [DeepTaylor](https://www.sciencedirect.com/science/article/pii/S0031320316303582?via%3Dihub) computes for each neuron a root point, that is close to the input, but which's output value is 0, and uses this difference to estimate the attribution of each neuron recursively.
-  * **pattern.attribution:** [PatternAttribution](https://arxiv.org/abs/1705.05598) applies Deep Taylor by searching root points along the signal direction of each neuron.
   * **lrp.\*:** [LRP](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0130140) attributes recursively to each neuron's input relevance proportional to its contribution of the neuron output.
   * **integrated_gradients:** [IntegratedGradients](https://arxiv.org/abs/1703.01365) integrates the gradient along a path from the input to a reference.
 * *miscellaneous:*
@@ -126,7 +127,7 @@ Let's look at an example ([code](https://github.com/albermax/innvestigate/blob/m
 ```python
 import innvestigate
 import innvestigate.utils
-import keras.applications.vgg16 as vgg16
+import tensorflow.keras.applications.vgg16 as vgg16
 
 # Get model
 model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
@@ -207,3 +208,8 @@ please open an issue or submit a pull request.
 ## Releases
 
 [Can be found here.](https://github.com/albermax/innvestigate/blob/master/VERSION.md)
+
+
+## Acknowledgements
+
+> Adrian Hill acknowledges support by the Federal Ministry of Education and Research (BMBF) for the Berlin Institute for the Foundations of Learning and Data (BIFOLD) (01IS18037A).

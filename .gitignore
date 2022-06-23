@@ -125,5 +125,14 @@ nosetests.cfg
 *.h5
 *.png
 
+# ignore VGG16
+tests/references/vgg16
+
 # ignore nbconvert script output
 examples/nbconvert_tmp
+
+# ignore data downloaded by notebooks
+examples/images
+examples/stanfordSentimentTreebank
+examples/stanfordSentimentTreebank.zip
+examples/__MACOSX

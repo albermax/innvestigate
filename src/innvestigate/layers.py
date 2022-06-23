@@ -1,241 +1,114 @@
 from __future__ import annotations
 
-from builtins import range, zip
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Sequence
 
-import keras
-import keras.backend as K
-import keras.constraints
-import keras.layers
-import keras.regularizers
 import numpy as np
-from keras.utils import conv_utils
+import tensorflow as tf
+import tensorflow.keras.backend as kbackend
+import tensorflow.keras.layers as klayers
 
-import innvestigate.utils as iutils
-import innvestigate.utils.keras.backend as iK
-from innvestigate.utils.types import OptionalList, ShapeTuple, Tensor
+import innvestigate.backend as ibackend
+from innvestigate.backend.types import OptionalList, ShapeTuple, Tensor
 
 __all__ = [
     "OnesLike",
     "AsFloatX",
     "FiniteCheck",
-    "Gradient",
-    "GradientWRT",
-    "Min",
-    "Max",
     "GreaterThanZero",
     "LessEqualThanZero",
     "Sum",
-    "Mean",
-    "CountNonZero",
     "Identity",
     "Abs",
     "Square",
     "Clip",
     "Project",
-    "Transpose",
-    "Dot",
     "SafeDivide",
     "Repeat",
+    "ReduceMean",
     "Reshape",
+    "AugmentationToBatchAxis",
+    "AugmentationFromBatchAxis",
     "MultiplyWithLinspace",
-    "TestPhaseGaussianNoise",
+    "AddGaussianNoise",
     "ExtractConv2DPatches",
     "RunningMeans",
     "Broadcast",
-    "GatherND",
+    "MaxNeuronSelection",
+    "MaxNeuronIndex",
+    "NeuronSelection",
 ]
 
 
 ###############################################################################
 
 
-class OnesLike(keras.layers.Layer):
+class OnesLike(klayers.Layer):
     """Create list of all-ones tensors of the same shapes as provided tensors."""
 
-    def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [K.ones_like(tmp) for tmp in iutils.to_list(x)]
+    def call(self, inputs: OptionalList[Tensor], *_args, **_kwargs) -> list[Tensor]:
+        return [kbackend.ones_like(x) for x in ibackend.to_list(inputs)]
 
 
-class AsFloatX(keras.layers.Layer):
-    def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [iK.to_floatx(tmp) for tmp in iutils.to_list(x)]
+class AsFloatX(klayers.Layer):
+    def call(self, inputs: OptionalList[Tensor], *_args, **_kwargs) -> list[Tensor]:
+        return [ibackend.cast_to_floatx(x) for x in ibackend.to_list(inputs)]
 
 
-class FiniteCheck(keras.layers.Layer):
-    def call(self, x: OptionalList[Tensor], **_kwargs) -> List[Tensor]:
-        return [K.sum(iK.to_floatx(iK.is_not_finite(tmp))) for tmp in iutils.to_list(x)]
-
-
-###############################################################################
-
-
-class Gradient(keras.layers.Layer):
-    "Returns gradient of sum(output), expects inputs+[output,]."
-
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        inputs, output = x[:-1], x[-1]
-        return K.gradients(K.sum(output), inputs)  # type: ignore
-
-    def compute_output_shape(self, input_shapes: List[ShapeTuple]) -> List[ShapeTuple]:
-        return input_shapes[:-1]
-
-
-class GradientWRT(keras.layers.Layer):
-    """Returns gradient wrt to another layer and given gradient,
-    expects inputs+[output,]."""
-
-    # TODO: add documentation
-
-    def __init__(
-        self, n_inputs: int, mask: Optional[List[bool]] = None, **kwargs
-    ) -> None:
-        self.n_inputs = n_inputs
-        self.mask = mask
-        super().__init__(**kwargs)
-
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        assert isinstance(x, list)
-        Xs, tmp_Ys = x[: self.n_inputs], x[self.n_inputs :]
-        assert len(tmp_Ys) % 2 == 0
-        len_Ys = len(tmp_Ys) // 2
-        Ys, known_Ys = tmp_Ys[:len_Ys], tmp_Ys[len_Ys:]
-        ret = iK.gradients(Xs, Ys, known_Ys)
-        if self.mask is not None:
-            ret = [x for c, x in zip(self.mask, ret) if c]
-        self.__workaround__len_ret = len(ret)
-        return ret
-
-    def compute_output_shape(self, input_shapes: List[ShapeTuple]) -> List[ShapeTuple]:
-        if self.mask is None:
-            return input_shapes[: self.n_inputs]
-        else:
-            return [
-                shape
-                for shape, keep in zip(input_shapes[: self.n_inputs], self.mask)
-                if keep
-            ]
-
-    # TODO: remove once keras is fixed.
-    # this is a workaround for cases when
-    # wrapper and skip connections are used together.
-    # bring the fix into keras and remove once
-    # keras is patched.
-    def compute_mask(self, inputs, mask=None):
-        """Computes an output mask tensor.
-
-        # Arguments
-            inputs: Tensor or list of tensors.
-            mask: Tensor or list of tensors.
-
-        # Returns
-            None or a tensor (or list of tensors,
-                one per output tensor of the layer).
-        """
-        if not self.supports_masking:
-            if not isinstance(mask, list) or any(m is not None for m in mask):
-                raise TypeError(
-                    f"Layer {self.name} does not support masking, ",
-                    f"but was passed an input_mask: {str(mask)}",
-                )
-            # masking not explicitly supported: return None as mask
-
-            # this is the workaround for model.run_internal_graph.
-            # it is required that there as many masks as outputs:
-            return [None for _ in range(self.__workaround__len_ret)]
-        # if masking is explicitly supported, by default
-        # carry over the input mask
-        return mask
+class FiniteCheck(klayers.Layer):
+    def call(self, inputs: OptionalList[Tensor], *_args, **_kwargs) -> list[Tensor]:
+        return [
+            kbackend.sum(ibackend.cast_to_floatx(ibackend.is_not_finite(x)))
+            for x in ibackend.to_list(inputs)
+        ]
 
 
 ###############################################################################
 
 
-class _Reduce(keras.layers.Layer):
+class _Reduce(klayers.Layer):
     def __init__(
         self,
-        axis: Optional[OptionalList[int]] = -1,
-        keepdims: bool = False,
         *args,
+        axis: OptionalList[int] | None = -1,
+        keepdims: bool = False,
         **kwargs,
     ) -> None:
         self.axis = axis
         self.keepdims = keepdims
-        super(_Reduce, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-    def call(self, x: OptionalList[Tensor]) -> Tensor:
-        return self._apply_reduce(x, axis=self.axis, keepdims=self.keepdims)
-
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        if self.axis is None:
-            if self.keepdims is False:
-                return (1,)
-            else:
-                return tuple(np.ones_like(input_shape))  # type: ignore
-        else:
-            axes = np.arange(len(input_shape))
-            if self.keepdims is False:
-                for i in iutils.to_list(self.axis):
-                    axes = np.delete(axes, i, 0)
-            else:
-                for i in iutils.to_list(self.axis):
-                    axes[i] = 1
-            return tuple([idx for i, idx in enumerate(input_shape) if i in axes])
+    def call(self, inputs: OptionalList[Tensor], *_args, **_kwargs) -> Tensor:
+        return self._apply_reduce(inputs, axis=self.axis, keepdims=self.keepdims)
 
     def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
+        self,
+        inputs: OptionalList[Tensor],
+        axis: OptionalList[int] | None,
+        keepdims: bool,
     ) -> Tensor:
         raise NotImplementedError()
 
 
-class Min(_Reduce):
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return K.min(x, axis=axis, keepdims=keepdims)
-
-
-class Max(_Reduce):
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return K.max(x, axis=axis, keepdims=keepdims)
-
-
 class Sum(_Reduce):
     def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
+        self,
+        inputs: OptionalList[Tensor],
+        axis: OptionalList[int] | None,
+        keepdims: bool,
     ) -> Tensor:
-        return K.sum(x, axis=axis, keepdims=keepdims)
-
-
-class Mean(_Reduce):
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return K.mean(x, axis=axis, keepdims=keepdims)
-
-
-class CountNonZero(_Reduce):
-    def _apply_reduce(
-        self, x: Tensor, axis: Optional[OptionalList[int]], keepdims: bool
-    ) -> Tensor:
-        return K.sum(
-            iK.to_floatx(K.not_equal(x, K.constant(0))), axis=axis, keepdims=keepdims
-        )
+        return kbackend.sum(inputs, axis=axis, keepdims=keepdims)
 
 
 ###############################################################################
 
 
-class _Map(keras.layers.Layer):
-    def call(self, X: OptionalList[Tensor]) -> OptionalList[Tensor]:
-        if isinstance(X, list) and len(X) == 1:
-            X = X[0]
-        return self._apply_map(X)
-
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        return input_shape
+class _Map(klayers.Layer):
+    def call(
+        self, inputs: OptionalList[Tensor], *_args, **_kwargs
+    ) -> OptionalList[Tensor]:
+        if isinstance(inputs, list) and len(inputs) == 1:
+            inputs = inputs[0]
+        return self._apply_map(inputs)
 
     def _apply_map(self, X: Tensor):
         raise NotImplementedError()
@@ -243,29 +116,29 @@ class _Map(keras.layers.Layer):
 
 class Identity(_Map):
     def _apply_map(self, X: Tensor) -> Tensor:
-        return K.identity(X)
+        return tf.identity(X)
 
 
 class Abs(_Map):
     def _apply_map(self, X: Tensor) -> Tensor:
-        return K.abs(X)
+        return kbackend.abs(X)
 
 
 class Square(_Map):
     def _apply_map(self, X: Tensor) -> Tensor:
-        return K.square(X)
+        return kbackend.square(X)
 
 
 class Clip(_Map):
     def __init__(
-        self, min_value: Union[float, int, Tensor], max_value: Union[float, int, Tensor]
+        self, min_value: float | int | Tensor, max_value: float | int | Tensor
     ) -> None:
         self._min_value = min_value
         self._max_value = max_value
         super().__init__()
 
     def _apply_map(self, X: Tensor) -> Tensor:
-        return K.clip(X, self._min_value, self._max_value)
+        return kbackend.clip(X, self._min_value, self._max_value)
 
 
 class Project(_Map):
@@ -276,10 +149,7 @@ class Project(_Map):
         super().__init__()
 
     def _apply_map(self, X: Tensor):
-        def safe_divide(A: Tensor, B: Tensor) -> Tensor:
-            return A / (B + iK.to_floatx(K.equal(B, K.constant(0))) * 1)
-
-        dims: Tuple[int] = K.int_shape(X)
+        dims: tuple[int] = kbackend.int_shape(X)
         n_dim: int = len(dims)
         axes = tuple(range(1, n_dim))
 
@@ -289,19 +159,19 @@ class Project(_Map):
             # Cannot reduce
             return X
 
-        absmax = K.max(K.abs(X), axis=axes, keepdims=True)
-        X = safe_divide(X, absmax)
+        absmax = kbackend.max(kbackend.abs(X), axis=axes, keepdims=True)
+        X = ibackend.safe_divide(X, absmax, factor=1)
 
         if self._output_range not in (False, True):  # True = (-1, +1)
             output_range = self._output_range
 
             if not self._input_is_positive_only:
                 X = (X + 1) / 2
-            X = K.clip(X, 0, 1)
+            X = kbackend.clip(X, 0, 1)
 
             X = output_range[0] + (X * (output_range[1] - output_range[0]))
         else:
-            X = K.clip(X, -1, 1)
+            X = kbackend.clip(X, -1, 1)
 
         return X
 
@@ -309,146 +179,162 @@ class Project(_Map):
 ###############################################################################
 
 
-class GreaterThanZero(keras.layers.Layer):
-    def call(self, x: Tensor) -> Tensor:
-        return K.greater(x, K.constant(0))
+class GreaterThanZero(klayers.Layer):
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return kbackend.greater(inputs, kbackend.constant(0))
 
 
-class LessEqualThanZero(keras.layers.Layer):
-    def call(self, x: Tensor) -> Tensor:
-        return K.less_equal(x, K.constant(0))
+class LessEqualThanZero(klayers.Layer):
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return kbackend.less_equal(inputs, kbackend.constant(0))
 
 
-class Transpose(keras.layers.Layer):
-    def __init__(self, axes=None, **kwargs) -> None:
-        self._axes = axes
-        super().__init__(**kwargs)
-
-    def call(self, x: Tensor) -> Tensor:
-        if self._axes is None:
-            return K.transpose(x)
-        else:
-            return K.permute_dimensions(x, self._axes)
-
-    def compute_output_shape(self, input_shape: ShapeTuple) -> ShapeTuple:
-        if self._axes is None:
-            return input_shape[::-1]  # invert input shape
-        else:
-            return tuple(np.asarray(input_shape)[list(self._axes)])
-
-
-class Dot(keras.layers.Layer):
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
-        return K.dot(a, b)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return (input_shapes[0][0], input_shapes[1][1])
-
-
-class Divide(keras.layers.Layer):
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
+class Divide(klayers.Layer):
+    def call(self, inputs: list[Tensor], *_args, **_kwargs) -> Tensor:
+        if len(inputs) != 2:
+            raise ValueError("A `Divide` layer should be called on exactly 2 inputs")
+        a, b = inputs
         return a / b
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
 
-
-class SafeDivide(keras.layers.Layer):
+class SafeDivide(klayers.Layer):
     def __init__(self, *args, factor: float = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         if factor is None:
-            factor = K.epsilon()
+            factor = kbackend.epsilon()
         self._factor = factor
 
-    def call(self, x: Tuple[Tensor, Tensor]) -> Tensor:
-        a, b = x
-        return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * self._factor)
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
+    def call(self, inputs: list[Tensor], *_args, **_kwargs) -> Tensor:
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `SafeDivide` layer should be called on exactly 2 inputs"
+            )
+        a, b = inputs
+        return ibackend.safe_divide(a, b, factor=self._factor)
 
 
 ###############################################################################
+class Repeat(klayers.Layer):
+    """Repeats the input n times. Similar to Keras' `RepeatVector`,
+    except that it works on any Tensor.
 
+    Input shape: 2D tensor of shape `(num_samples, features)`.
+    Output shape: 3D tensor of shape `(num_samples, n, features)`.
 
-class Repeat(keras.layers.Layer):
-    def __init__(self, n: int, axis, *args, **kwargs):
+    Args:
+        n: Integer, repetition factor.
+    """
+
+    def __init__(self, n, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._n = n
-        self._axis = axis
+        self.n = n
+        if not isinstance(n, int):
+            raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
 
-    def call(self, x: Tensor) -> Tensor:
-        return K.repeat_elements(x, self._n, self._axis)
+    def call(self, inputs, *_args, **_kwargs):
+        dims = inputs.shape.rank  # number of axes in Tensor
+        assert dims >= 2
+        inputs = tf.expand_dims(inputs, 1)
 
-    def compute_output_shape(
-        self, input_shapes: OptionalList[ShapeTuple]
-    ) -> ShapeTuple:
-        input_shape: ShapeTuple
-
-        if isinstance(input_shapes, list):
-            input_shape = input_shapes[0]
-        elif isinstance(input_shapes, tuple):
-            input_shape = input_shapes
-        else:
-            raise TypeError(
-                "Expected shape tuple (tuple of integers) or list of shape tuples."
-            )
-
-        if input_shape[0] is None:
-            return input_shape
-        else:
-            return (input_shape[0] * self._n,) + input_shape[1:]
+        # Construct array [1, n, 1, ..., 1] for tf.tile
+        multiples = [1] * dims
+        multiples.insert(1, self.n)
+        return tf.tile(inputs, tf.constant(multiples))
 
 
-class Reshape(keras.layers.Layer):
-    def __init__(self, shape: Iterable[int], *args, **kwargs):
+class ReduceMean(klayers.Layer):
+    """Reduce input augmented along `axis=1` by taking the mean."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.math.reduce_mean(inputs, axis=1, keepdims=False)
+
+
+class Reshape(klayers.Layer):
+    """Layer that reshapes tensor to the shape specified on init."""
+
+    def __init__(self, shape: ShapeTuple, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._shape = shape
 
-    def call(self, x: Tensor) -> Tensor:
-        return K.reshape(x, self._shape)
-
-    def compute_output_shape(self, _input_shapes) -> ShapeTuple:
-        return tuple(x if x >= 0 else None for x in self._shape)
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.reshape(inputs, self._shape)
 
 
-class MultiplyWithLinspace(keras.layers.Layer):
-    def __init__(self, start, end, n=1, axis=-1, *args, **kwargs):
+class AugmentationToBatchAxis(klayers.Layer):
+    """Move augmentation from axis=1 to batch axis."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        input_shape = ibackend.shape(inputs)
+        output_shape = [-1] + input_shape[2:]  # type: ignore
+        return tf.reshape(inputs, output_shape)
+
+
+class AugmentationFromBatchAxis(klayers.Layer):
+    """Move augmentation from batch axis to axis=1.
+
+    Args:
+        n: Factor of augmentation.
+    """
+
+    def __init__(self, n, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.n = n
+        if not isinstance(n, int):
+            raise TypeError(f"Expected an integer value for `n`, got {type(n)}.")
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        input_shape = ibackend.shape(inputs)
+        output_shape = [-1, self.n] + input_shape[1:]
+        return tf.reshape(inputs, output_shape)
+
+
+class MultiplyWithLinspace(klayers.Layer):
+    def __init__(self, start, end, *args, n=1, axis=-1, **kwargs):
         super().__init__(*args, **kwargs)
         self._start = start
         self._end = end
         self._n = n
         self._axis = axis
 
-    def call(self, x: Tensor) -> Tensor:
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
         linspace = self._start + (self._end - self._start) * (
-            K.arange(self._n, dtype=K.floatx()) / self._n
+            kbackend.arange(self._n, dtype=kbackend.floatx()) / self._n
         )
 
         # Make broadcastable.
-        shape = np.ones(len(K.int_shape(x)))
+        shape = np.ones(len(kbackend.int_shape(inputs)))
         shape[self._axis] = self._n
-        linspace = K.reshape(linspace, shape)
-        return x * linspace
+        linspace = kbackend.reshape(linspace, shape)
+        return inputs * linspace
 
-    def compute_output_shape(self, input_shapes: ShapeTuple) -> ShapeTuple:
-        return (
-            input_shapes[: self._axis]
-            + (max(self._n, input_shapes[self._axis]),)
-            + input_shapes[self._axis + 1 :]
+
+class AddGaussianNoise(klayers.Layer):
+    "Add Gaussian noise to Tensor. Also applies to test phase."
+
+    def __init__(self, *args, mean: float = 0.0, stddev: float = 1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mean = mean
+        self.stddev = stddev
+
+    def call(self, inputs: Tensor, *_args, seed=None, **_kwargs) -> Tensor:
+        noise = tf.random.normal(
+            shape=tf.shape(inputs),
+            mean=self.mean,
+            stddev=self.stddev,
+            dtype=inputs.dtype,
+            seed=seed,
         )
+        return tf.add(inputs, noise)
 
 
-class TestPhaseGaussianNoise(keras.layers.GaussianNoise):
-    def call(self, inputs: Tensor) -> Tensor:
-        # Always add Gaussian noise!
-        return super().call(inputs, training=True)
-
-
-class ExtractConv2DPatches(keras.layers.Layer):
+class ExtractConv2DPatches(klayers.Layer):
     def __init__(self, kernel_shape, depth, strides, rates, padding, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._kernel_shape = kernel_shape
@@ -457,52 +343,21 @@ class ExtractConv2DPatches(keras.layers.Layer):
         self._rates = rates
         self._padding = padding
 
-    def call(self, x):
-        return iK.extract_conv2d_patches(
-            x, self._kernel_shape, self._strides, self._rates, self._padding
-        )
-
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        if K.image_data_format() == "channels_first":
-            space = input_shapes[2:]
-            new_space = []
-            for i in range(len(space)):
-                new_dim = conv_utils.conv_output_length(
-                    space[i],
-                    self._kernel_shape[i],
-                    padding=self._padding,
-                    stride=self._strides[i],
-                    dilation=self._rates[i],
-                )
-                new_space.append(new_dim)
-
-        if K.image_data_format() == "channels_last":
-            space = input_shapes[1:-1]
-            new_space = []
-            for i in range(len(space)):
-                new_dim = conv_utils.conv_output_length(
-                    space[i],
-                    self._kernel_shape[i],
-                    padding=self._padding,
-                    stride=self._strides[i],
-                    dilation=self._rates[i],
-                )
-                new_space.append(new_dim)
-
-        return (
-            (input_shapes[0],)
-            + tuple(new_space)
-            + (np.product(self._kernel_shape) * self._depth,)
+    def call(self, inputs, *_args, **_kwargs):
+        return ibackend.extract_conv2d_patches(
+            inputs, self._kernel_shape, self._strides, self._rates, self._padding
         )
 
 
-class RunningMeans(keras.layers.Layer):
+class RunningMeans(klayers.Layer):
+    """Layer used to keep track of a running mean."""
+
     def __init__(self, *args, **kwargs) -> None:
-        self.stateful = True
         super().__init__(*args, **kwargs)
+        self.stateful = True
 
-    def build(self, input_shapes: Sequence[ShapeTuple]) -> None:
-        means_shape, counts_shape = input_shapes
+    def build(self, input_shape: Sequence[ShapeTuple]) -> None:
+        means_shape, counts_shape = input_shape
 
         self.means = self.add_weight(
             shape=means_shape, initializer="zeros", name="means", trainable=False
@@ -512,49 +367,73 @@ class RunningMeans(keras.layers.Layer):
         )
         self.built = True
 
-    def call(self, x: List[Tensor]) -> List[Tensor]:
-        def safe_divide(a, b):
-            return a / (b + iK.to_floatx(K.equal(b, K.constant(0))) * 1)
-
-        means, counts = x
-
+    def call(self, inputs: list[Tensor], *_args, **_kwargs) -> list[Tensor]:
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `RunningMeans` layer should be called on exactly 2 inputs"
+            )
+        means, counts = inputs
         new_counts = counts + self.counts
 
         # If new_means are not used for the model output,
         # the following part of the code will be executed after
         # self.counts is updated, therefore we cannot use it
         # hereafter.
-        factor_new = safe_divide(counts, new_counts)
-        factor_old = K.ones_like(factor_new) - factor_new
+        factor_new = ibackend.safe_divide(counts, new_counts, factor=1)
+        factor_old = kbackend.ones_like(factor_new) - factor_new
         new_means = self.means * factor_old + means * factor_new
 
         # Update state.
         self.add_update(
             [
-                K.update(self.means, new_means),
-                K.update(self.counts, new_counts),
+                kbackend.update(self.means, new_means),
+                kbackend.update(self.counts, new_counts),
             ]
         )
 
         return [new_means, new_counts]
 
-    def compute_output_shape(self, input_shapes: ShapeTuple) -> ShapeTuple:
-        return input_shapes
 
-
-class Broadcast(keras.layers.Layer):
-    def call(self, x: List[Tensor]) -> Tensor:
-        target_shapped, x = x
+class Broadcast(klayers.Layer):
+    def call(self, inputs: list[Tensor], *_args, **_kwargs) -> Tensor:
+        if len(inputs) != 2:
+            raise ValueError("A `Broadcast` layer should be called on exactly 2 inputs")
+        target_shapped, x = inputs
         return target_shapped * 0 + x
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[0]
+
+class MaxNeuronSelection(klayers.Layer):
+    """Applied to the last layer of a model, this reduces the output
+    to the max neuron activation."""
+
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.math.reduce_max(
+            inputs, axis=-1, keepdims=False
+        )  # max along batch axis
 
 
-class GatherND(keras.layers.Layer):
-    def call(self, inputs):
-        x, indices = inputs
-        return iK.gather_nd(x, indices)
+class MaxNeuronIndex(klayers.Layer):
+    """Applied to the last layer of a model, this reduces the output
+    to the index of the max activated neuron."""
 
-    def compute_output_shape(self, input_shapes: Sequence[ShapeTuple]) -> ShapeTuple:
-        return input_shapes[1][:2] + input_shapes[0][2:]
+    def call(self, inputs: Tensor, *_args, **_kwargs) -> Tensor:
+        return tf.math.argmax(inputs, axis=-1)  # max along batch axis
+
+
+class NeuronSelection(klayers.Layer):
+    """Applied to the last layer of a model, this selects output neurons at given indices
+    by wrapping `tf.gather`."""
+
+    def call(self, inputs: list[Tensor], *_args, **_kwargs):
+        if len(inputs) != 2:
+            raise ValueError(
+                "A `NeuronSelection` layer should be called on exactly 2 inputs"
+            )
+        X, index = inputs
+        index_shape = ibackend.shape(index)
+        if len(index_shape) != 2 or index_shape[1] != 2:
+            raise ValueError(
+                "Layer `NeuronSelection` expects index of shape (batch_size, 2),",
+                f"got {index_shape}.",
+            )
+        return tf.gather_nd(X, index)
