@@ -134,12 +134,11 @@ import tensorflow.keras.applications.vgg16 as vgg16
 tf.compat.v1.disable_eager_execution()
 
 import innvestigate
-import innvestigate.utils
 
 # Get model
 model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
 # Strip softmax layer
-model = innvestigate.utils.model_wo_softmax(model)
+model = innvestigate.model_wo_softmax(model)
 
 # Create analyzer
 analyzer = innvestigate.create_analyzer("deep_taylor", model)
