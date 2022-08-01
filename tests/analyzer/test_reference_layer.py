@@ -71,7 +71,7 @@ rtol = 1e-2
 atol = 1e-8
 
 # Loosen tolerances for SmoothGrad because of random Gaussian noise
-atol_smoothgrad = 0.15
+atol_smoothgrad = 0.20
 rtol_smoothgrad = 0.25
 
 # Sizes used for data generation
