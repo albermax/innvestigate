@@ -1,14 +1,23 @@
-## Version 1.10.0
-Spring cleaning release in preparation of iNNvestigate 2.0:
-- switch setup to Poetry
-- adopt `src` layout
-- move tests to separate `tests` folder
-- format code with Black
-- update dependencies to Python 3.7, TF 1.15 and Keras 2.3
-- setup tox
+## Version 2.0.0
+iNNvestigate for TensorFlow 2. This is a [major version release](https://semver.org) and therefore breaking backward compatibility.
 
-Backwards compatibility breaking changes:
-- remove DeepLIFT
+Breaking changes:
+- update lower dependency bounds to Python 3.8 and TensorFlow 2.6
+- use TensorFlow's Keras instead of deprecated stand-alone Keras
+- manual disabling of eager execution is required via `tf.compat.v1.disable_eager_execution()` ([#277](https://github.com/albermax/innvestigate/pull/277))
+- temporarily remove `PatternNet`, `PatternAttribution`, `LRPZIgnoreBias` and `LRPEpsilonIgnoreBias` ([#277](https://github.com/albermax/innvestigate/pull/277))
+- remove DeepLIFT ([#257](https://github.com/albermax/innvestigate/pull/257))
+
+Changes for developers:
+- switch setup to Poetry ([#257](https://github.com/albermax/innvestigate/pull/257))
+- adopt `src` and `tests` layout ([#257](https://github.com/albermax/innvestigate/pull/257))
+- adopt Black code style ([#247](https://github.com/albermax/innvestigate/pull/247))
+- add linters to dev dependencies ([#257](https://github.com/albermax/innvestigate/pull/257))
+- added type annotations ([#263](https://github.com/albermax/innvestigate/pull/263), [#266](https://github.com/albermax/innvestigate/pull/266), [#277](https://github.com/albermax/innvestigate/pull/277))
+- added reference tests & CI to guarantee identical attributions compared to `v1.0.9`  ([#258](https://github.com/albermax/innvestigate/pull/258), [#277](https://github.com/albermax/innvestigate/pull/277))
+- refactor backend ([#263](https://github.com/albermax/innvestigate/pull/263), [#277](https://github.com/albermax/innvestigate/pull/277))
+- refactor analyzers: explicit class attributes, fixes for serialization ([#266](https://github.com/albermax/innvestigate/pull/266), [#277](https://github.com/albermax/innvestigate/pull/277))
+- bug fixes ([#263](https://github.com/albermax/innvestigate/pull/263))
 
 ## Version 1.0.9
 

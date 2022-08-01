@@ -1,13 +1,15 @@
 # [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
 
+[![Documentation](https://img.shields.io/badge/Documentation-stable-blue.svg)](https://innvestigate.readthedocs.io/en/latest/)
 [![Build Status](https://github.com/albermax/innvestigate/actions/workflows/ci.yml/badge.svg)](https://github.com/albermax/innvestigate/actions/workflows/ci.yml)
-[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://innvestigate.readthedocs.io/en/latest/)
 
 [![PyPI package version](https://img.shields.io/pypi/v/innvestigate)](https://pypi.org/project/innvestigate/)
 [![GitHub package version](https://img.shields.io/github/v/tag/albermax/innvestigate)](https://github.com/albermax/innvestigate/tags)
-[![Keras package version](https://img.shields.io/badge/TensorFlow-^2.7-orange.svg)](https://github.com/albermax/innvestigate)
 [![License: BSD-2](https://img.shields.io/badge/License-BSD--2-purple.svg)](https://github.com/albermax/innvestigate/blob/master/LICENSE)
 [![Black](https://img.shields.io/badge/code_style-black-black.svg)](https://github.com/psf/black)
+
+[![Python](https://img.shields.io/pypi/pyversions/innvestigate.svg)](https://badge.fury.io/py/innvestigate)
+[![TensorFlow package version](https://img.shields.io/badge/TensorFlow-^2.6-orange.svg)](https://github.com/albermax/innvestigate)
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 
@@ -97,7 +99,9 @@ Typically one analyses the neuron with the largest activation in the output laye
 For example, given a Keras model, one can create a 'gradient' analyzer:
 
 ```python
+import tensorflow as tf
 import innvestigate
+tf.compat.v1.disable_eager_execution()
 
 model = create_keras_model()
 
@@ -125,9 +129,12 @@ Let's look at an example ([code](https://github.com/albermax/innvestigate/blob/m
 
 
 ```python
+import tensorflow as tf
+import tensorflow.keras.applications.vgg16 as vgg16
+tf.compat.v1.disable_eager_execution()
+
 import innvestigate
 import innvestigate.utils
-import tensorflow.keras.applications.vgg16 as vgg16
 
 # Get model
 model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
