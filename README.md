@@ -50,12 +50,13 @@ Our goal is to make analyzing neural networks' predictions easy!
 
 ## Installation
 
-iNNvestigate can be installed with the following commands.
-The library is based on Keras and therefore requires TensorFlow 2:
+iNNvestigate is based on Keras and TensorFlow 2 and can be installed with the following commands:
 
 ```bash
 pip install innvestigate
 ```
+
+**Please note that iNNvestigate currently requires disabling TF2's eager execution.**
 
 To use the example scripts and notebooks one additionally needs to install the package matplotlib:
 
@@ -156,20 +157,6 @@ plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
 ```
 
 ![Analysis image.](https://github.com/albermax/innvestigate/raw/master/examples/images/readme_example_analysis.png)
-
-
-#### Trainable methods
-
-Some methods like PatternNet and PatternAttribution are data-specific and need to be trained.
-Given a data set with train and test data, this can be done in the following way:
-
-```python
-import innvestigate
-
-analyzer = innvestigate.create_analyzer("pattern.net", model)
-analyzer.fit(X_train)
-analysis = analyzer.analyze(X_test)
-```
 
 ### Tutorials
 
