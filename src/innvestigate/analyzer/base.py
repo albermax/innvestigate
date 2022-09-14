@@ -31,7 +31,6 @@ class AnalyzerBase(metaclass=ABCMeta):
 
     >>> model = create_keras_model()
     >>> a = Analyzer(model)
-    >>> a.fit(X_train)  # If analyzer needs training.
     >>> analysis = a.analyze(X_test)
     >>>
     >>> state = a.save()
@@ -127,39 +126,6 @@ class AnalyzerBase(metaclass=ABCMeta):
 
         self._model_check_done = True
 
-    def fit(self, *_args, disable_no_training_warning: bool = False, **_kwargs):
-        """
-        Stub that eats arguments. If an analyzer needs training
-        include :class:`TrainerMixin`.
-
-        :param disable_no_training_warning: Do not warn if this function is
-          called despite no training is needed.
-        """
-        if not disable_no_training_warning:
-            # issue warning if no training is foreseen, but fit() is still called.
-            warnings.warn(
-                "This analyzer does not need to be trained." " Still fit() is called.",
-                RuntimeWarning,
-            )
-
-    def fit_generator(
-        self, *_args, disable_no_training_warning: bool = False, **_kwargs
-    ):
-        """
-        Stub that eats arguments. If an analyzer needs training
-        include :class:`TrainerMixin`.
-
-        :param disable_no_training_warning: Do not warn if this function is
-          called despite no training is needed.
-        """
-        if not disable_no_training_warning:
-            # issue warning if no training is foreseen, but fit() is still called.
-            warnings.warn(
-                "This analyzer does not need to be trained."
-                " Still fit_generator() is called.",
-                RuntimeWarning,
-            )
-
     @abstractmethod
     def analyze(
         self, X: OptionalList[np.ndarray], *args: Any, **kwargs: Any
@@ -248,52 +214,3 @@ class AnalyzerBase(metaclass=ABCMeta):
         class_name = npz_file["class_name"].item()
         state = npz_file["state"].item()
         return AnalyzerBase.load(class_name, state)
-
-
-###############################################################################
-
-
-class TrainerMixin:
-    """Mixin for analyzer that adapt to data.
-
-    This convenience interface exposes a Keras like training routing
-    to the user.
-    """
-
-    # TODO: extend with Y
-    def fit(self, X: np.ndarray | None = None, batch_size: int = 32, **kwargs) -> None:
-        """
-        Takes the same parameters as Keras's :func:`model.fit` function.
-        """
-        generator = isequence.BatchSequence(X, batch_size)
-        return self._fit_generator(generator, **kwargs)  # type: ignore
-
-    def fit_generator(self, *args, **kwargs):
-        """
-        Takes the same parameters as Keras's :func:`model.fit_generator`
-        function.
-        """
-        return self._fit_generator(*args, **kwargs)
-
-    def _fit_generator(self, *_args, **_kwargs):
-        raise NotImplementedError()
-
-
-class OneEpochTrainerMixin(TrainerMixin):
-    """Exposes the same interface and functionality as :class:`TrainerMixin`
-    except that the training is limited to one epoch.
-    """
-
-    def fit(self, *args, **kwargs) -> None:
-        """
-        Same interface as :func:`fit` of :class:`TrainerMixin` except that
-        the parameter epoch is fixed to 1.
-        """
-        return super().fit(*args, epochs=1, **kwargs)
-
-    def fit_generator(self, *args, steps: int = None, **kwargs):
-        """
-        Same interface as :func:`fit_generator` of :class:`TrainerMixin` except that
-        the parameter epoch is fixed to 1.
-        """
-        return super().fit_generator(*args, steps_per_epoch=steps, epochs=1, **kwargs)

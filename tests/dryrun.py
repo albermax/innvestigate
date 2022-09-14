@@ -97,12 +97,10 @@ class AnalyzerTrainTestCase(BaseLayerTestCase):
         # Generate random training input
         input_shape = model.input_shape[1:]
         x = np.random.rand(1, *input_shape).astype(np.float32)
-        x_fit = np.random.rand(16, *input_shape).astype(np.float32)
         # Call model with test input
         model.predict(x)
         # Get analyzer.
         analyzer = self._method(model)
-        analyzer.fit(x_fit)
         # Generate random test input
         analysis = analyzer.analyze(x)
         assert tuple(analysis.shape) == (1,) + input_shape
