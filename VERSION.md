@@ -1,3 +1,7 @@
+## Version 2.0.1
+- Remove dead `analyzer.fit` code left from PatternNet and PatternAttribution ([#289](https://github.com/albermax/innvestigate/pull/289))
+- Fixes to README and documentation
+
 ## Version 2.0.0
 iNNvestigate for TensorFlow 2. This is a [major version release](https://semver.org) and therefore breaking backward compatibility.
 
