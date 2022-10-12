@@ -24,4 +24,4 @@ repos:
       - id: poetry-lock
         args: ["--check"]
       - id: poetry-export
-        args: ["-format", "requirements.txt", "-output", "dev_env_requirements.txt", "--without-hashes"]
+        args: ["-f", "requirements.txt", "-o", "dev_env_requirements.txt", "--without-hashes"]
