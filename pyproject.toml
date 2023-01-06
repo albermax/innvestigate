@@ -39,15 +39,8 @@ numpy = "^1.22"
 matplotlib = "^3.5.1"
 
 [tool.poetry.dev-dependencies]
-bandit = "^1.7.0"
 black  = "^22.3"
-flake8 = "^3.9.2"
-flake8-black = "^0.2.3"
-flake8-bugbear = "^21.11.29"
-flake8-builtins = "^1.5.3"
-flake8-docstrings = "^1.6.0"
-flake8-isort = "^4.1.1"
-pep8-naming = "^0.11.1"
+ruff = "^0.0.212"
 Pillow = "^9.0.0"
 pytest = "^6.2.5"
 pytest-cov = "^2.12.1"
@@ -107,6 +100,20 @@ source = ["innvestigate"]
 
 [tool.coverage.report]
 show_missing = false
+
+[tool.ruff]
+select = [
+    "A", # flake8-builtins
+    "B", # flake8-bugbear
+    "E", # pycodestyle / PEP8
+    "F", # pyflakes
+    "I", # flake8-isort
+    "W", # pycodestyle / PEP8
+]
+
+ignore = [
+    "E741", # Ignore warning "ambiguous variable name 'l'" as it is useful to iterate over layers
+] 
 
 [tool.pylint."messages control"]
 disable = [
