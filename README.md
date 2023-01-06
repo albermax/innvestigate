@@ -26,7 +26,7 @@
 
 In the recent years neural networks furthered the state of the art in many domains like, e.g., object detection and speech recognition.
 Despite the success neural networks are typically still treated as black boxes. Their internal workings are not fully understood and the basis for their predictions is unclear.
-In the attempt to understand neural networks better several methods were proposed, e.g., Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntergratedGradients, LRP, PatternNet\&-Attribution.
+In the attempt to understand neural networks better several methods were proposed, e.g., Saliency, Deconvnet, GuidedBackprop, SmoothGrad, IntegratedGradients, LRP, PatternNet and PatternAttribution.
 Due to the lack of a reference implementations comparing them is a major effort.
 This library addresses this by providing a common interface and out-of-the-box implementation for many analysis methods.
 Our goal is to make analyzing neural networks' predictions easy!
