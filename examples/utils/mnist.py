@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow.keras as keras
 from tensorflow.keras.backend import image_data_format
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.optimizers import Adam
 
 import innvestigate.utils as iutils
 import innvestigate.utils.visualizations as ivis
@@ -86,7 +85,7 @@ def train_model(model, data, batch_size=128, epochs=20):
     y_test = keras.utils.to_categorical(y_test, num_classes)
 
     model.compile(
-        loss="categorical_crossentropy", optimizer=Adam(), metrics=["accuracy"]
+        loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
     )
     model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1)
     score = model.evaluate(x_test, y_test, verbose=0)
