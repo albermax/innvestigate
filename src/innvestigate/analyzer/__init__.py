@@ -38,7 +38,7 @@ from innvestigate.analyzer.wrapper import PathIntegrator  # noqa
 from innvestigate.analyzer.wrapper import WrapperBase  # noqa
 from innvestigate.backend.types import Model
 
-# Silence flake8
+# Silence ruff
 assert BaselineLRPZ
 
 analyzers: dict[str, type[AnalyzerBase]] = {
