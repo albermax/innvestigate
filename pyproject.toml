@@ -108,6 +108,27 @@ source = ["innvestigate"]
 [tool.coverage.report]
 show_missing = false
 
+[tool.pylint."messages control"]
+disable = [
+    "raw-checker-failed", 
+    "bad-inline-option", 
+    "locally-disabled", 
+    "file-ignored", 
+    "suppressed-message", 
+    "useless-suppression", 
+    "deprecated-pragma", 
+    "use-symbolic-message-instead",
+    "no-name-in-module",
+    "missing-module-docstring", 
+    "missing-class-docstring", 
+    "missing-function-docstring", 
+    "too-few-public-methods",
+]
+
+[tool.pylint.basic]
+good-names = ["i", "j", "k", "l", "n", "x", "y", "a", "b", "ex", "Run", "_"]
+good-names-rgxs = ["(.*_)?[XYZRABC]s?"]
+
 # Build with Poetry
 [build-system]
 requires = ["poetry-core>=1.0.0"]
