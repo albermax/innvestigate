@@ -50,7 +50,7 @@ rope = "^0.18.0"
 pylint = "^2.12.2"
 ipykernel = "^5.5.6"
 isort = "^5.10.1"
-mypy = "^0.812"
+mypy = "^0.991"
 MonkeyType = "^20.5.0"
 vulture = "^2.3"
 Sphinx = "^4.4.0"
@@ -110,10 +110,9 @@ select = [
     "I", # flake8-isort
     "W", # pycodestyle / PEP8
 ]
-
 ignore = [
     "E741", # Ignore warning "ambiguous variable name 'l'" as it is useful to iterate over layers
-] 
+]
 
 [tool.pylint."messages control"]
 disable = [
@@ -135,6 +134,19 @@ disable = [
 [tool.pylint.basic]
 good-names = ["i", "j", "k", "l", "n", "x", "y", "a", "b", "ex", "Run", "_"]
 good-names-rgxs = ["(.*_)?[XYZRABC]s?"]
+
+[tool.mypy]
+files = "src/innvestigate"
+pretty = true
+show_error_codes = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tensorflow.*",
+]
+ignore_missing_imports = true
 
 # Build with Poetry
 [build-system]
