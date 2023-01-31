@@ -115,6 +115,7 @@ select = [
 ]
 ignore = [
     "E741", # Ignore warning "ambiguous variable name 'l'" as it is useful to iterate over layers
+    "B905", # zip's `strict` parameter was only added in Python 3.10
 ]
 
 [tool.pylint."messages control"]
