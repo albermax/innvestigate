@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 import tensorflow.keras.layers as klayers

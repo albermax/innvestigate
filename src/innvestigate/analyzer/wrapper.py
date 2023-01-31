@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import tensorflow.keras.backend as kbackend
 import tensorflow.keras.layers as klayers

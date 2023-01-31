@@ -1,6 +1,7 @@
 """Check Keras Layers for properties,
 e.g. if it is an input or a pooling layer"""
 
+from __future__ import annotations
 
 import tensorflow.keras.layers as klayers
 from tensorflow import Module, keras

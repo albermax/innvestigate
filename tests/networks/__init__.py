@@ -1,5 +1,5 @@
 """Iterate over test networks specified by filter string."""
-
+from __future__ import annotations
 
 import fnmatch
 import types

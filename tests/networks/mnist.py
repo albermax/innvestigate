@@ -1,7 +1,7 @@
 """Apply network architectures defined in base.py using MNIST input shape,
 512 units per dense layer and a dropout rate of 0.25.
 """
-
+from __future__ import annotations
 
 import tensorflow.keras.backend as kbackend
 

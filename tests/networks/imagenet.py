@@ -1,7 +1,7 @@
 """Load networks from Keras applications for dryrunning.
 By default, weights are just randomly initialized.
 """
-
+from __future__ import annotations
 
 import tensorflow.keras.applications as kapps
 

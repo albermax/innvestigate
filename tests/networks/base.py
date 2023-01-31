@@ -1,5 +1,5 @@
 """Predefined network architectures for testing."""
-
+from __future__ import annotations
 
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels

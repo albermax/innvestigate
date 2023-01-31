@@ -1,5 +1,5 @@
 """Simple model architectures for fast testing of analyzers."""
-
+from __future__ import annotations
 
 import tensorflow.keras.layers as klayers
 import tensorflow.keras.models as kmodels

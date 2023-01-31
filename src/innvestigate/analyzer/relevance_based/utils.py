@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ["assert_lrp_epsilon_param", "assert_infer_lrp_alpha_beta_param"]
 
 

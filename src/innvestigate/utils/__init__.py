@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tensorflow.keras.backend as kbackend
 
 from innvestigate.backend.types import Tensor
