@@ -90,19 +90,19 @@ def test_fast__Perturbation():
 
     analysis = perturbation.reduce_function(analysis, axis=1, keepdims=True)
 
-    aggregated_regions = perturbation.aggregate_regions(analysis)
+    aggregated_regions = perturbation._aggregate_regions(analysis)
     assert np.all(
         np.isclose(aggregated_regions[0, 0, :, :], np.array([[0, 1], [2, 3]]))
     )
 
-    ranks = perturbation.compute_region_ordering(aggregated_regions)
+    ranks = perturbation._compute_region_ordering(aggregated_regions)
     assert np.all(np.isclose(ranks[0, 0, :, :], np.array([[3, 2], [1, 0]])))
 
-    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 1)
+    perturbation_mask_regions = perturbation._compute_perturbation_mask(ranks, 1)
     assert np.all(perturbation_mask_regions == np.array([[0, 0], [0, 1]]))
 
-    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 4)
+    perturbation_mask_regions = perturbation._compute_perturbation_mask(ranks, 4)
     assert np.all(perturbation_mask_regions == np.array([[1, 1], [1, 1]]))
 
-    perturbation_mask_regions = perturbation.compute_perturbation_mask(ranks, 0)
+    perturbation_mask_regions = perturbation._compute_perturbation_mask(ranks, 0)
     assert np.all(perturbation_mask_regions == np.array([[0, 0], [0, 0]]))
