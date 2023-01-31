@@ -15,6 +15,6 @@ Visualizations
 Keras-Utils
 ------------
 
-.. automodule:: innvestigate.utils.keras.graph
-   :members: copy_layer, copy_layer_wo_act, model_wo_softmax, get_model_execution_graph, reverse_model
+.. automodule:: innvestigate.backend.graph
+   :members: copy_layer, copy_layer_wo_activation, model_wo_softmax, get_model_execution_graph, reverse_model
    :undoc-members:

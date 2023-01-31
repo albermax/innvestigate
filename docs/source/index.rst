@@ -23,7 +23,6 @@ API reference
 
   modules/innvestigate
   modules/analyzer
-  modules/applications
   modules/tools
   modules/utils
 

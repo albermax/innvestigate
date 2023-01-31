@@ -24,13 +24,6 @@ Layer-wise relevance propagation
    :undoc-members:
 
 
-Pattern methods
----------------
-
-.. automodule:: innvestigate.analyzer.pattern_based
-   :members:
-   :undoc-members:
-
 Deep Taylor
 ---------------
 

@@ -1000,6 +1000,7 @@ def reverse_model(
     """
     Reverses a Keras model based on the given reverse functions.
     Returns two values:
+
     1. the reverted tensors for the according model inputs.
     2. If `return_all_reversed_tensors` is true, a dictionary of all reversed tensors,
         otherwise None.
@@ -1008,10 +1009,12 @@ def reverse_model(
     :param reverse_mappings: Either a callable that matches layers to
       mappings or a dictionary with layers as keys and mappings as values.
       Allowed as mapping forms are:
+
           * A function of form (A) f(Xs, Ys, reversed_Ys, reverse_state).
           * A function of form f(B) f(layer, reverse_state) that returns
             a function of form (A).
           * A :class:`ReverseMappingBase` subclass.
+
     :param default_reverse_mapping: A function that reverses layers for
       which no mapping was given by param "reverse_mappings".
     :param head_mapping: Map output tensors to new values before passing
