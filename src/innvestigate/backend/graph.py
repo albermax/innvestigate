@@ -1,5 +1,5 @@
 """Low-level operations on Keras graph."""
-from __future__ import annotations
+
 
 import inspect
 import warnings

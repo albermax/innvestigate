@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 from abc import ABCMeta, abstractmethod
 from typing import Any
@@ -187,7 +185,7 @@ class AnalyzerBase(metaclass=ABCMeta):
         }
 
     @staticmethod
-    def load(class_name: str, state: dict[str, Any]) -> AnalyzerBase:
+    def load(class_name: str, state: dict[str, Any]):
         """
         Resembles an analyzer from the state created by
         :func:`analyzer.save()`.

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import innvestigate.backend as ibackend
 import innvestigate.layers as ilayers
 from innvestigate.analyzer.network_base import AnalyzerNetworkBase

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from innvestigate.analyzer.base import AnalyzerBase
 from innvestigate.analyzer.deeptaylor import BoundedDeepTaylor, DeepTaylor
 from innvestigate.analyzer.gradient_based import (
