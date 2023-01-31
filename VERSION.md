@@ -1,6 +1,23 @@
+<!--
+# Badges
+![BREAKING][badge-breaking]
+![Deprecation][badge-deprecation]
+![Feature][badge-feature]
+![Enhancement][badge-enhancement]
+![Bugfix][badge-bugfix]
+![Experimental][badge-experimental]
+![Maintenance][badge-maintenance]
+![Documentation][badge-docs]
+-->
+# iNNvestigate Changelog
+## Version 2.0.2
+- ![Bugfix][badge-bugfix] Fix `Perturbate` on RGB images ([#306](https://github.com/albermax/innvestigate/pull/306))
+- ![Bugfix][badge-bugfix] Fix documentation
+- ![Maintenance][badge-maintenance] Support TensorFlow 2.11 ([#300](https://github.com/albermax/innvestigate/pull/300))
+- ![Maintenance][badge-maintenance] Update CI workflows and dev-dependencies ([#301](https://github.com/albermax/innvestigate/pull/301))
 ## Version 2.0.1
-- Remove dead `analyzer.fit` code left from PatternNet and PatternAttribution ([#289](https://github.com/albermax/innvestigate/pull/289))
-- Fixes to README and documentation
+- ![Maintenance][badge-maintenance] Remove dead `analyzer.fit` code left from PatternNet and PatternAttribution ([#289](https://github.com/albermax/innvestigate/pull/289))
+- ![Documentation][badge-docs] Fixes to README and documentation
 
 ## Version 2.0.0
 iNNvestigate for TensorFlow 2. This is a [major version release](https://semver.org) and therefore breaking backward compatibility.
@@ -24,7 +41,6 @@ Changes for developers:
 - bug fixes ([#263](https://github.com/albermax/innvestigate/pull/263))
 
 ## Version 1.0.9
-
 - BatchNormalization Layer compatible with LRP
 - EmbeddingLayer support
 - new Alpha-Beta-LRP-rules
@@ -33,26 +49,21 @@ Additionally various PR were merged and bugs fixed,
 for details see [PR #222](https://github.com/albermax/innvestigate/pull/222)
 
 ## Version 1.0.8
-
 Bugfixes, increased code coverage, CI.
 
 ## Version 1.0.7
-
 Add Python 2 compatibility again.
 
 Bugfixes.
 
 ## Version 1.0.6
-
 * Add beta version of DeepLIFT (as in Ancona et.al.) and wrapper for DeepLIFT package.
 * Updating readme and bugfixes.
 
 ## Version 1.0.5
-
 Treat IntegratedGradients as attribution method and bugfixes.
 
 ## Version 1.0.1-1.0.4
-
 Added the following functionality:
 
 * Additional notebooks.
@@ -63,8 +74,17 @@ Added the following functionality:
 * Support for read-the-docs documentation.
 
 ## Version 1.0.0
-
 Includes the following functionality:
 
 * Analyzers: Gradient, SmoothGrad, IntegratedGradients, PatternNet, PatternAttribution, LRP, DeepTaylor, Input, Random.
 * Pattern computer.
+
+[badge-breaking]: https://img.shields.io/badge/BREAKING-red.svg
+[badge-deprecation]: https://img.shields.io/badge/deprecation-orange.svg
+[badge-feature]: https://img.shields.io/badge/feature-green.svg
+[badge-enhancement]: https://img.shields.io/badge/enhancement-blue.svg
+[badge-bugfix]: https://img.shields.io/badge/bugfix-purple.svg
+[badge-security]: https://img.shields.io/badge/security-black.svg
+[badge-experimental]: https://img.shields.io/badge/experimental-lightgrey.svg
+[badge-maintenance]: https://img.shields.io/badge/maintenance-gray.svg
+[badge-docs]: https://img.shields.io/badge/docs-orange.svg
