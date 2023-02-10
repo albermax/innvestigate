@@ -394,7 +394,9 @@ class LRP(ReverseAnalyzerBase):
         # apply rule to first self._until_layer_idx layers
         if self._until_layer_rule is not None and self._until_layer_idx is not None:
             for i in range(self._until_layer_idx + 1):
-                is_at_idx: LayerCheck = lambda layer: ichecks.is_layer_at_idx(layer, i)
+                is_at_idx: LayerCheck = lambda layer, i=i: ichecks.is_layer_at_idx(
+                    model, layer, i
+                )
                 rules.insert(0, (is_at_idx, self._until_layer_rule))
 
         # create a BoundedRule for input layer handling from given tuple
