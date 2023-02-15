@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import tensorflow.keras.applications as kapps
 
-from innvestigate.backend.graph import model_wo_softmax
+from innvestigate.backend.graph import model_wo_output_activation
 from innvestigate.backend.types import Model
 
 __all__ = [
@@ -44,7 +44,7 @@ def resnet50() -> Model:
         weights=WEIGHTS,
         # classifier_activation=ACTIVATION,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")
 
 
 ###############################################################################
@@ -71,21 +71,21 @@ def densenet121() -> Model:
     model = kapps.DenseNet121(
         weights=WEIGHTS,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")
 
 
 def densenet169() -> Model:
     model = kapps.DenseNet169(
         weights=WEIGHTS,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")
 
 
 def densenet201() -> Model:
     model = kapps.DenseNet201(
         weights=WEIGHTS,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")
 
 
 ###############################################################################
@@ -95,11 +95,11 @@ def nasnet_large() -> Model:
     model = kapps.NASNetLarge(
         weights=WEIGHTS,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")
 
 
 def nasnet_mobile() -> Model:
     model = kapps.NASNetMobile(
         weights=WEIGHTS,
     )
-    return model_wo_softmax(model)
+    return model_wo_output_activation(model, "softmax")

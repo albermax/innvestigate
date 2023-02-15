@@ -139,7 +139,7 @@ import innvestigate
 # Get model
 model, preprocess = vgg16.VGG16(), vgg16.preprocess_input
 # Strip softmax layer
-model = innvestigate.model_wo_softmax(model)
+model = innvestigate.model_wo_output_activation(model, "softmax")
 
 # Create analyzer
 analyzer = innvestigate.create_analyzer("deep_taylor", model)
