@@ -30,8 +30,8 @@ __all__ = [
     "get_layer_neuronwise_io",
     "copy_layer_wo_activation",
     "copy_layer",
-    "pre_output_tensors",
-    "model_wo_output_activation",
+    "pre_softmax_tensors",
+    "model_wo_softmax",
     "get_model_layers",
     "model_contains",
     "trace_model_execution",
@@ -338,34 +338,32 @@ def copy_layer(
     return get_layer_from_config(layer, config, weights=weights, **kwargs)
 
 
-def pre_output_tensors(Xs: Tensor, activation: str) -> list[Tensor]:
-    """Finds the tensors that were preceeding a potential activation."""
-    activation_found = False
+def pre_softmax_tensors(Xs: Tensor, should_find_softmax: bool = True) -> list[Tensor]:
+    """Finds the tensors that were preceeding a potential softmax."""
+    softmax_found = False
 
     Xs = ibackend.to_list(Xs)
     ret = []
     for x in Xs:
         layer, node_index, _tensor_index = x._keras_history
-        if ichecks.contains_activation(layer, activation=activation):
-            activation_found = True
+        if ichecks.contains_activation(layer, activation="softmax"):
+            softmax_found = True
             if isinstance(layer, klayers.Activation):
                 ret.append(layer.get_input_at(node_index))
             else:
                 layer_wo_act = copy_layer_wo_activation(layer)
                 ret.append(layer_wo_act(layer.get_input_at(node_index)))
 
-    if not activation_found:
-        raise Exception(f"No {activation} found.")
+    if should_find_softmax and not softmax_found:
+        raise Exception("No softmax found.")
 
     return ret
 
 
-def model_wo_output_activation(model: Model, activation: str) -> Model:
-    """Creates a new model w/o the final activation."""
+def model_wo_softmax(model: Model) -> Model:
+    """Creates a new model w/o the final softmax activation."""
     return kmodels.Model(
-        inputs=model.inputs,
-        outputs=pre_output_tensors(model.outputs, activation),
-        name=model.name,
+        inputs=model.inputs, outputs=pre_softmax_tensors(model.outputs), name=model.name
     )
 
 
