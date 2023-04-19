@@ -327,4 +327,4 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
 
 def is_layer_at_idx(model: Model, layer: Layer, index) -> bool:
     """Checks if layer is a layer at specified index of model."""
-    return layer == model.layers(index)
+    return layer == model.layers[index]
