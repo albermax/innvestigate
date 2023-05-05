@@ -28,7 +28,7 @@ jobs:
   test:
     name: Tests Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.architecture }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: 
           - ubuntu-latest
