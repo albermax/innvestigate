@@ -9,7 +9,7 @@
 [![Black](https://img.shields.io/badge/code_style-black-black.svg)](https://github.com/psf/black)
 
 [![Python](https://img.shields.io/pypi/pyversions/innvestigate.svg)](https://badge.fury.io/py/innvestigate)
-[![TensorFlow package version](https://img.shields.io/badge/TensorFlow-2.6_--_2.11-orange.svg)](https://github.com/albermax/innvestigate)
+[![TensorFlow package version](https://img.shields.io/badge/TensorFlow-2.6_--_2.12-orange.svg)](https://github.com/albermax/innvestigate)
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
 

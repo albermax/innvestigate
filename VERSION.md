@@ -10,6 +10,12 @@
 ![Documentation][badge-docs]
 -->
 # iNNvestigate Changelog
+## Version 2.1.0
+- ![Feature][badge-feature] Add way to strip arbitrary output activations ([#310](https://github.com/albermax/innvestigate/pull/310))
+- ![Bugfix][badge-bugfix] Fix `is_layer_at_idx` for LRP ([#308](https://github.com/albermax/innvestigate/pull/308))
+- ![Maintenance][badge-maintenance] Support Python 3.11 and TensorFlow 2.12 ([#313](https://github.com/albermax/innvestigate/pull/313))
+- ![Maintenance][badge-maintenance] Update CI workflows and dev-dependencies ([#313](https://github.com/albermax/innvestigate/pull/313))
+
 ## Version 2.0.2
 - ![Bugfix][badge-bugfix] Fix `Perturbate` on RGB images ([#306](https://github.com/albermax/innvestigate/pull/306))
 - ![Bugfix][badge-bugfix] Fix documentation
