@@ -36,7 +36,7 @@ jobs:
           - x64
         python-version: 
           - '3.8'
-          - '3.11'
+          - '3.10'
     defaults:
       run:
         shell: bash
