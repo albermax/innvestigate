@@ -254,7 +254,6 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
     def _create_analysis(
         self, model: Model, stop_analysis_at_tensors: list[Tensor] = None
     ):
-
         if stop_analysis_at_tensors is None:
             stop_analysis_at_tensors = []
 
@@ -320,7 +319,6 @@ class ReverseAnalyzerBase(AnalyzerNetworkBase):
         return ret
 
     def _handle_debug_output(self, debug_values):
-
         if self._reverse_check_min_max_values:
             indices = self._debug_tensors_indices["min"]
             tmp = debug_values[indices[0] : indices[1]]

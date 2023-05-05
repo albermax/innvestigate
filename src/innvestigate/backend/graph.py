@@ -542,7 +542,6 @@ def apply_mapping_to_fused_bn_layer(mapping, fuse_mode: str = "one_linear") -> C
                 reversed_Ys: list[Tensor],
                 reverse_state,
             ):
-
                 X2s = ibackend.apply(surrogate_layer1, Xs)
                 # Apply first mapping
                 # TODO (alber): update reverse state
@@ -788,7 +787,6 @@ def get_model_execution_trace(
 
     model_execution_trace = []
     for nid, l, Xs, Ys in id_execution_trace:
-
         if isinstance(l, klayers.InputLayer):
             # The nids that created or receive the tensors.
             Xs_nids = []  # Input layer does not receive.

@@ -84,7 +84,6 @@ class AugmentReduceBase(WrapperBase):
         neuron_selection_mode="max_activation",
         **kwargs,
     ):
-
         if neuron_selection_mode == "max_activation":
             # TODO: find a more transparent way.
             #

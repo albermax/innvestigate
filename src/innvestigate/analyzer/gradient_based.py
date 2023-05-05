@@ -146,7 +146,6 @@ class InputTimesGradient(Gradient):
     """
 
     def __init__(self, model, **kwargs):
-
         super().__init__(model, **kwargs)
 
     def _create_analysis(self, model, stop_analysis_at_tensors=None):
@@ -207,7 +206,6 @@ class Deconvnet(ReverseAnalyzerBase):
         self._do_model_checks()
 
     def _create_analysis(self, *args, **kwargs):
-
         self._add_conditional_reverse_mapping(
             lambda layer: ichecks.contains_activation(layer, "relu"),
             DeconvnetReverseReLULayer,
@@ -247,7 +245,6 @@ class GuidedBackprop(ReverseAnalyzerBase):
         self._do_model_checks()
 
     def _create_analysis(self, *args, **kwargs):
-
         self._add_conditional_reverse_mapping(
             lambda layer: ichecks.contains_activation(layer, "relu"),
             guided_backprop_reverse_relu_layer,
@@ -321,7 +318,6 @@ class SmoothGrad(GaussianSmoother):
             subanalyzer = kwargs.pop("subanalyzer")
         # If initialized normally:
         else:
-
             subanalyzer = Gradient(
                 model,
                 neuron_selection_mode=neuron_selection_mode,

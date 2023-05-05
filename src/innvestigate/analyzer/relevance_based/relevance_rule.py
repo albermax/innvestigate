@@ -54,7 +54,6 @@ class ZRule(igraph.ReverseMappingBase):
         Rs: list[Tensor],
         _reverse_state,
     ) -> list[Tensor]:
-
         # Get activations.
         Zs = ibackend.apply(self._layer_wo_act, Xs)
         # Divide incoming relevance by the activations.

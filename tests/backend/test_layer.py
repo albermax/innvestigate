@@ -69,7 +69,6 @@ def test_reducemean_layer():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_one_layer():
-
     model = kmodels.Sequential([klayers.Dense(2, input_shape=(3,), use_bias=False)])
     weights = [np.asarray(((1, 2), (3, 4), (5, 6)))]
     model.set_weights(weights)
@@ -90,7 +89,6 @@ def test_fast_one_layer():
 @pytest.mark.fast
 @pytest.mark.precommit
 def test_fast_two_layers():
-
     model = kmodels.Sequential(
         [
             klayers.Dense(2, input_shape=(3,), use_bias=False),

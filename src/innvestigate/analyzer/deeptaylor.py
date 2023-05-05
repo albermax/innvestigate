@@ -39,7 +39,6 @@ class DeepTaylor(ReverseAnalyzerBase):
         self._do_model_checks()
 
     def _create_analysis(self, *args: Any, **kwargs: Any):
-
         # Kernel layers.
         self._add_conditional_reverse_mapping(
             lambda l: (ichecks.contains_kernel(l) and ichecks.contains_activation(l)),
@@ -176,7 +175,6 @@ class BoundedDeepTaylor(DeepTaylor):
         self._bounds_high = high
 
     def _create_analysis(self, *args, **kwargs):
-
         low, high = self._bounds_low, self._bounds_high
 
         class BoundedProxyRule(lrp_rules.BoundedRule):
