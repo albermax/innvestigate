@@ -7,7 +7,7 @@ import tensorflow.keras.layers as klayers
 from tensorflow import Module, keras
 
 import innvestigate.backend as ibackend
-from innvestigate.backend.types import Layer
+from innvestigate.backend.types import Layer, Model
 
 __all__ = [
     "get_activation_search_safe_layers",
@@ -325,8 +325,6 @@ def is_input_layer(layer: Layer, ignore_reshape_layers: bool = True) -> bool:
     return all(isinstance(x, klayers.InputLayer) for x in layer_inputs)
 
 
-def is_layer_at_idx(layer: Layer, index, ignore_reshape_layers=True) -> bool:
-    """Checks if layer is a layer at index index,
-    by repeatedly applying is_input_layer()."""
-    # TODO: implement layer index check
-    raise NotImplementedError("Layer index checking hasn't been implemented yet.")
+def is_layer_at_idx(model: Model, layer: Layer, index) -> bool:
+    """Checks if layer is a layer at specified index of model."""
+    return layer == model.layers[index]
