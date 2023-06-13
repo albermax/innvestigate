@@ -1,7 +1,22 @@
-# [iNNvestigate neural networks!](https://github.com/albermax/innvestigate) [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
+<div align="center">
+  <a href="https://github.com/albermax/innvestigate/">
+    <img
+      src="docs/assets/logo.svg"
+      alt="iNNvestigate Logo"
+      height="100"
+    />
+  </a>
+  <br />
+  <p>
+    <h1>
+      <b>
+        iNNvestigate neural networks!
+      </b>
+    </h1>
 
 [![Documentation](https://img.shields.io/badge/Documentation-stable-blue.svg)](https://innvestigate.readthedocs.io/en/latest/)
 [![Build Status](https://github.com/albermax/innvestigate/actions/workflows/ci.yml/badge.svg)](https://github.com/albermax/innvestigate/actions/workflows/ci.yml)
+[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=iNNvestigate%20neural%20networks!&url=https://github.com/albermax/innvestigate&hashtags=iNNvestigate,artificialintelligence,machinelearning,deeplearning,datascience)
 
 [![PyPI package version](https://img.shields.io/pypi/v/innvestigate)](https://pypi.org/project/innvestigate/)
 [![GitHub package version](https://img.shields.io/github/v/tag/albermax/innvestigate)](https://github.com/albermax/innvestigate/tags)
@@ -12,6 +27,9 @@
 [![TensorFlow package version](https://img.shields.io/badge/TensorFlow-2.6_--_2.12-orange.svg)](https://github.com/albermax/innvestigate)
 
 ![Different explanation methods on ImageNet.](https://github.com/albermax/innvestigate/raw/master/examples/images/analysis_grid.png)
+
+  </p>
+</div>
 
 ## Table of contents
 
