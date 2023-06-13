@@ -129,7 +129,6 @@ nosetests.cfg
 *.jpeg
 *.JPEG
 *.h5
-*.png
 
 # ignore VGG16 test references
 tests/references/vgg16
