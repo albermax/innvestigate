@@ -36,14 +36,14 @@ keywords = ["XAI", "LRP", "Deep Taylor",]
 
 [tool.poetry.dependencies]
 python = ">=3.8, <3.12"
-tensorflow = ">=2.6, <2.13"
+tensorflow = ">=2.6, <2.14"
 numpy = ">=1.22, <2"
 matplotlib = ">=3.5, <4"
 future = ">=0.18, <0.19"
 
 [tool.poetry.group.notebooks.dependencies]
 ipykernel = ">=6.19, <7"
-Pillow = ">=9.0, <10"
+Pillow = ">=9.0, <11"
 ftfy = ">=6.1, <7"
 pandas = ">=1, <3"
 
