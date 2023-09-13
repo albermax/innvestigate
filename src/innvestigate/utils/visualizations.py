@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -57,7 +58,7 @@ def heatmap(
     :param kwargs: Arguments passed on to :func:`project`
     :return: The tensor as color-map.
     """
-    cmap = plt.cm.get_cmap(cmap_type)
+    cmap = mpl.colormaps.get_cmap(cmap_type)
 
     tmp = X
     shape = tmp.shape
