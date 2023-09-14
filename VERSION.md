@@ -10,6 +10,12 @@
 ![Documentation][badge-docs]
 -->
 # iNNvestigate Changelog
+## Version 2.1.1
+- ![Maintenance][badge-maintenance] Support TensorFlow 2.13 
+    ([a5395f8](https://github.com/albermax/innvestigate/commit/a5395f82aabeb1c3ca7355d01bafc6a4f8aef795))
+- ![Maintenance][badge-maintenance] Fix matplotlib deprecation of `plt.cm` 
+    ([488a0fe](https://github.com/albermax/innvestigate/commit/488a0fe08d3cf4cc9656a9644f20fd0579dfc02e))
+
 ## Version 2.1.0
 - ![Feature][badge-feature] Add way to strip arbitrary output activations ([#310](https://github.com/albermax/innvestigate/pull/310))
 - ![Bugfix][badge-bugfix] Fix `is_layer_at_idx` for LRP ([#308](https://github.com/albermax/innvestigate/pull/308))
