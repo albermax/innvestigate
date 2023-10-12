@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "innvestigate"
-version = "2.1.1"
+version = "2.1.2"
 description = "A toolbox to innvestigate neural networks' predictions."
 classifiers = [
     "License :: OSI Approved :: BSD License",

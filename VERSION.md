@@ -10,6 +10,10 @@
 ![Documentation][badge-docs]
 -->
 # iNNvestigate Changelog
+## Version 2.1.2
+- ![Maintenance][badge-maintenance] Support TensorFlow 2.14 
+    ([#322](https://github.com/albermax/innvestigate/pull/322))
+
 ## Version 2.1.1
 - ![Maintenance][badge-maintenance] Support TensorFlow 2.13 
     ([a5395f8](https://github.com/albermax/innvestigate/commit/a5395f82aabeb1c3ca7355d01bafc6a4f8aef795))
