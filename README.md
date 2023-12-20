@@ -180,14 +180,14 @@ plt.imshow(a[0], cmap="seismic", clim=(-1, 1))
 
 In the directory [examples](https://github.com/albermax/innvestigate/blob/master/examples/) one can find different examples as Python scripts and as Jupyter notebooks:
 
-* **[Introduction to iNNvestigate](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/introduction.ipynb):** shows how to use **iNNvestigate**.
-* **[Comparing methods on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_compare_methods.ipynb):** shows how to train and compare analyzers on MNIST.
-* **[Comparing output neurons on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_neuron_selection.ipynb):** shows how to analyze the prediction of different classes on MNIST.
-* **[Comparing methods on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb):** shows how to compare analyzers on ImageNet.
-* **[Comparing networks on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_networks.ipynb):** shows how to compare analyzes for different networks on ImageNet.
-* **[Sentiment Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/sentiment_analysis.ipynb)**.
-* **[Development with iNNvestigate](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/introduction_development.ipynb):** shows how to develop with **iNNvestigate**.
-* **[Perturbation Analysis](https://github.com/albermax/innvestigate/blob/master/examples/notebooks/mnist_perturbation.ipynb)**.
+* **[Introduction to iNNvestigate](https://github.com/albermax/innvestigate/blob/master/examples/introduction.ipynb):** shows how to use **iNNvestigate**.
+* **[Comparing methods on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/mnist_compare_methods.ipynb):** shows how to train and compare analyzers on MNIST.
+* **[Comparing output neurons on MNIST](https://github.com/albermax/innvestigate/blob/master/examples/mnist_neuron_selection.ipynb):** shows how to analyze the prediction of different classes on MNIST.
+* **[Comparing methods on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/imagenet_compare_methods.ipynb):** shows how to compare analyzers on ImageNet.
+* **[Comparing networks on ImageNet](https://github.com/albermax/innvestigate/blob/master/examples/imagenet_compare_networks.ipynb):** shows how to compare analyzes for different networks on ImageNet.
+* **[Sentiment Analysis](https://github.com/albermax/innvestigate/blob/master/examples/sentiment_analysis.ipynb)**.
+* **[Development with iNNvestigate](https://github.com/albermax/innvestigate/blob/master/examples/introduction_development.ipynb):** shows how to develop with **iNNvestigate**.
+* **[Perturbation Analysis](https://github.com/albermax/innvestigate/blob/master/examples/mnist_perturbation.ipynb)**.
 ---
 
 **To use the ImageNet examples please download the example images first ([script](https://github.com/albermax/innvestigate/blob/master/examples/images/wget_imagenet_2011_samples.sh)).**
