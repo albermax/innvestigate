@@ -35,8 +35,8 @@ jobs:
         architecture: 
           - x64
         python-version: 
-          - '3.8'
-          - '3.11'
+          - '3.9'
+          - '3.12'
     defaults:
       run:
         shell: bash
