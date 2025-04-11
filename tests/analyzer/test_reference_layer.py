@@ -1,6 +1,7 @@
 """
 Test all LRP Analyzers over single layer models using random weights and random input.
 """
+
 import os
 
 import h5py

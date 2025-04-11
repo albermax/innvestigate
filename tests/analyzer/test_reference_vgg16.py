@@ -1,6 +1,7 @@
 """
 Test all LRP Analyzers on VGG16.
 """
+
 # NOTE:
 # For VGG16 reference tests to work, clone the repo
 # https://github.com/adrhill/test-data-innvestigate

@@ -192,9 +192,9 @@ class Perturbation:
             if region_mask:
                 for c in range(n_channels):
                     region = xp[sample_idx, c, region_row, :, region_col, :]
-                    xp[
-                        sample_idx, c, region_row, :, region_col, :
-                    ] = self.perturbation_function(region)
+                    xp[sample_idx, c, region_row, :, region_col, :] = (
+                        self.perturbation_function(region)
+                    )
 
         if self.value_range is not None:
             np.clip(xp, self.value_range[0], self.value_range[1], xp)

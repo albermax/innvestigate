@@ -20,6 +20,7 @@ and applied with
 Automated type annotations __absolutely__ need to be checked using mypy
 as well as formated using black and isort before commiting.
 """
+
 import pytest
 
 pytest.main()
