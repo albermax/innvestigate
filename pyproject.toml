@@ -75,6 +75,9 @@ known_first_party = "innvestigate"
 known_local_folder = "tests"
 
 [tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
 addopts = "-v -m fast --strict-markers --cov"
 # NOTE: locally run tests with `poetry run pytest -m precommit` before a commit 
 markers = [
