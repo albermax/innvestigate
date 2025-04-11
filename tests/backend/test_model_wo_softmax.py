@@ -1,4 +1,5 @@
 """Test function 'innvestigate.create_analyzer'"""
+
 from __future__ import annotations
 
 import pytest

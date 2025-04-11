@@ -218,8 +218,6 @@ CONVNET_LAYERS = (
     klayers.SpatialDropout2D,
     klayers.SpatialDropout3D,
     klayers.Embedding,
-    klayers.LocallyConnected1D,
-    klayers.LocallyConnected2D,
     klayers.Add,
     klayers.Average,
     klayers.Concatenate,

@@ -1,4 +1,5 @@
 """Low-level operations on Keras graph."""
+
 from __future__ import annotations
 
 import inspect
@@ -869,7 +870,7 @@ def get_model_execution_graph(
 
 
 def print_model_execution_graph(
-    graph: dict[int | None, OptionalList[NodeDict]]
+    graph: dict[int | None, OptionalList[NodeDict]],
 ) -> None:
     """Pretty print of a model execution graph."""
     # TODO: check types
@@ -1004,8 +1005,7 @@ def reverse_model(
     return_all_reversed_tensors: bool = False,
     clip_all_reversed_tensors: bool | tuple[float, float] = False,
     project_bottleneck_tensors: bool | tuple[float, float] = False,
-    execution_trace: None
-    | (
+    execution_trace: None | (
         tuple[list[Layer], list[tuple[Layer, list[Tensor], list[Tensor]]], list[Tensor]]
     ) = None,
     reapply_on_copied_layers: bool = False,

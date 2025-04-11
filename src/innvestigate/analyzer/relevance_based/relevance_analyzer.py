@@ -69,8 +69,6 @@ BASELINE_LRPZ_LAYERS = (
     klayers.SpatialDropout1D,
     klayers.SpatialDropout2D,
     klayers.SpatialDropout3D,
-    klayers.LocallyConnected1D,
-    klayers.LocallyConnected2D,
     klayers.Add,
     klayers.Concatenate,
     klayers.Dot,
